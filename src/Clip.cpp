@@ -443,6 +443,11 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Return the frame's number so the correct keyframes are applied.
 		original_frame->number = frame_number;
 
+        // Apply waveform image (if any)
+        if (Waveform()) {
+            apply_waveform(original_frame, background_frame->GetImage());
+        }
+
 		// Apply local effects to the frame (if any)
 		apply_effects(original_frame);
 
@@ -1265,35 +1270,13 @@ bool Clip::isEqual(double a, double b)
 // Apply keyframes to the source frame (if any)
 void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
     // Skip out if video was disabled or only an audio frame (no visualisation in use)
-    if (!Waveform() && !Reader()->info.has_video) {
+    if (!frame->has_image_data) {
         // Skip the rest of the image processing for performance reasons
         return;
     }
 
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
-
-    /* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
-    if (Waveform())
-    {
-        // Debug output
-        ZmqLogger::Instance()->AppendDebugMethod(
-            "Clip::get_transform (Generate Waveform Image)",
-            "frame->number", frame->number,
-            "Waveform()", Waveform(),
-            "background_canvas->width()", background_canvas->width(),
-            "background_canvas->height()", background_canvas->height());
-
-        // Get the color of the waveform
-        int red = wave_color.red.GetInt(frame->number);
-        int green = wave_color.green.GetInt(frame->number);
-        int blue = wave_color.blue.GetInt(frame->number);
-        int alpha = wave_color.alpha.GetInt(frame->number);
-
-        // Generate Waveform Dynamically (the size of the timeline)
-        source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
-        frame->AddImage(source_image);
-    }
 
     // Get transform from clip's keyframes
     QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
@@ -1349,6 +1332,30 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 
     // Add new QImage to frame
     frame->AddImage(background_canvas);
+}
+
+// Apply apply_waveform image to the source frame (if any)
+void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
+    // Get image from clip
+    std::shared_ptr<QImage> source_image = frame->GetImage();
+
+    // Debug output
+    ZmqLogger::Instance()->AppendDebugMethod(
+            "Clip::apply_waveform (Generate Waveform Image)",
+            "frame->number", frame->number,
+            "Waveform()", Waveform(),
+            "background_canvas->width()", background_canvas->width(),
+            "background_canvas->height()", background_canvas->height());
+
+    // Get the color of the waveform
+    int red = wave_color.red.GetInt(frame->number);
+    int green = wave_color.green.GetInt(frame->number);
+    int blue = wave_color.blue.GetInt(frame->number);
+    int alpha = wave_color.alpha.GetInt(frame->number);
+
+    // Generate Waveform Dynamically (the size of the timeline)
+    source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+    frame->AddImage(source_image);
 }
 
 // Apply keyframes to the source frame (if any)

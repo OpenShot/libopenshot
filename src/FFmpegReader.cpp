@@ -720,6 +720,16 @@ void FFmpegReader::UpdateAudioInfo() {
 		info.video_length = info.duration * info.fps.ToDouble();
 		info.width = 720;
 		info.height = 480;
+
+		// Use timeline to set correct width & height (if any)
+        Clip *parent = (Clip *) ParentClip();
+        if (parent) {
+            if (parent->ParentTimeline()) {
+                // Set max width/height based on parent clip's timeline (if attached to a timeline)
+                info.width = parent->ParentTimeline()->preview_width;
+                info.height = parent->ParentTimeline()->preview_height;
+            }
+        }
 	}
 
 	// Fix invalid video lengths for certain types of files (MP3 for example)
