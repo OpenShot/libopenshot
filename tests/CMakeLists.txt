@@ -24,6 +24,7 @@ set(OPENSHOT_TESTS
   AudioWaveformer
   CacheDisk
   CacheMemory
+  Caption
   Clip
   Color
   Coordinate
