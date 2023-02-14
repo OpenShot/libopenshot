@@ -62,6 +62,7 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
+        f->Save("audio-caption-line-64.png", 1.0);
 
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
@@ -77,6 +78,7 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get timeline frame
         f = t.GetFrame(10);
+        f->Save("audio-caption-line-81.png", 1.0);
 
         // Verify pixel values (black background pixels)
         pixels = f->GetPixels(1);
@@ -106,6 +108,7 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
+        f->Save("audio-caption-line-109.png", 1.0);
 
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
@@ -121,7 +124,7 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get timeline frame
         f = t.GetFrame(10);
-        f->Save("audio-caption.png", 1.0);
+        f->Save("audio-caption-line-125.png", 1.0);
 
         // Verify pixel values (black background pixels)
         pixels = f->GetPixels(1);
@@ -152,6 +155,7 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
+        f->Save("audio-caption-line-156.png", 1.0);
 
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
