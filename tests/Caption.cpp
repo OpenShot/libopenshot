@@ -29,6 +29,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
     QApplication app(argc, argv);
     QApplication::processEvents();
 
+    // Verify QT Platform
+    if (QGuiApplication::platformName().toStdString() == "offscreen") {
+        std::cout << "Ignoring Caption unit tests due to invalid QT Platform: offscreen" << std::endl;
+        return;
+    }
+
     int check_row = 0;
     int check_col = 0;
 
