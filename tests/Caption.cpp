@@ -23,6 +23,15 @@
 
 TEST_CASE( "caption effect", "[libopenshot][caption]" )
 {
+    // Check for QT Platform Environment variable - and ignore these tests if it's set to offscreen
+    if (std::getenv("QT_QPA_PLATFORM") != nullptr) {
+        std::string qt_platform_env = std::getenv("QT_QPA_PLATFORM");
+        if (qt_platform_env == "offscreen") {
+            std::cout << "Ignoring Caption unit tests due to invalid QT Platform: offscreen" << std::endl;
+            return;
+        }
+    }
+
     int argc;
     char* argv[2];
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

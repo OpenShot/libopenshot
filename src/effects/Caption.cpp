@@ -204,10 +204,10 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 				// Wrap languages which do not use spaces
 				bool use_spaces = true;
 				if (line.length() > 20 && words.length() == 1) {
-                    words = line.split("");
-                    use_spaces = false;
+					words = line.split("");
+					use_spaces = false;
 				}
-                int words_remaining = words.length();
+				int words_remaining = words.length();
 				while (words_remaining > 0) {
 					bool words_displayed = false;
 					for(int word_index = words.length(); word_index > 0; word_index--) {
@@ -222,11 +222,11 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 							// Create path and add text to it (for correct border and fill)
 							QPainterPath path1;
-                            QString fitting_line;
+							QString fitting_line;
 							if (use_spaces) {
-                                fitting_line = words.mid(0, word_index).join(" ");
+								fitting_line = words.mid(0, word_index).join(" ");
 							} else {
-                                fitting_line = words.mid(0, word_index).join("");
+								fitting_line = words.mid(0, word_index).join("");
 							}
 							path1.addText(p, font, fitting_line);
 							text_paths.push_back(path1);
