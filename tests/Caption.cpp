@@ -25,8 +25,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 {
     int argc;
     char* argv[2];
+    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
     QApplication::processEvents();
+
+    int check_row = 0;
+    int check_col = 0;
 
     SECTION("default constructor") {
 
@@ -64,13 +68,23 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
         f->Save("audio-caption-line-64.png", 1.0);
 
+#ifdef _WIN32
+        // Windows pixel location
+        check_col = 300;
+        check_row = 524;
+#else
+        // Linux/Mac pixel location
+        check_col = 252;
+        check_row = 523;
+#endif
+
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
         CHECK((int) pixels[0 * 4] == 0);
 
         // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(543);
-        CHECK((int) pixels[238 * 4] == 255);
+        pixels = f->GetPixels(check_row);
+        CHECK((int) pixels[check_col * 4] == 255);
 
         // Create Timeline
         openshot::Timeline t(1280, 720, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
@@ -80,13 +94,23 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         f = t.GetFrame(10);
         f->Save("audio-caption-line-81.png", 1.0);
 
+#ifdef _WIN32
+        // Windows pixel location
+        check_col = 300;
+        check_row = 523;
+#else
+        // Linux/Mac pixel location
+        check_col = 252;
+        check_row = 523;
+#endif
+
         // Verify pixel values (black background pixels)
         pixels = f->GetPixels(1);
         CHECK((int) pixels[0 * 4] == 0);
 
         // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(543);
-        CHECK((int) pixels[238 * 4] == 255);
+        pixels = f->GetPixels(check_row);
+        CHECK((int) pixels[check_col * 4] == 255);
 
         // Close objects
         t.Close();
@@ -110,13 +134,23 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
         f->Save("audio-caption-line-109.png", 1.0);
 
+#ifdef _WIN32
+        // Windows pixel location
+        check_col = 146;
+        check_row = 355;
+#else
+        // Linux/Mac pixel location
+        check_col = 117;
+        check_row = 355;
+#endif
+
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
         CHECK((int) pixels[0 * 4] == 0);
 
         // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(375);
-        CHECK((int) pixels[131 * 4] == 255);
+        pixels = f->GetPixels(check_row);
+        CHECK((int) pixels[check_col * 4] == 255);
 
         // Create Timeline
         openshot::Timeline t(720, 480, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
@@ -126,13 +160,23 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         f = t.GetFrame(10);
         f->Save("audio-caption-line-125.png", 1.0);
 
+#ifdef _WIN32
+        // Windows pixel location
+        check_col = 146;
+        check_row = 355;
+#else
+        // Linux/Mac pixel location
+        check_col = 117;
+        check_row = 355;
+#endif
+
         // Verify pixel values (black background pixels)
         pixels = f->GetPixels(1);
         CHECK((int) pixels[0 * 4] == 0);
 
         // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(375);
-        CHECK((int) pixels[131 * 4] == 255);
+        pixels = f->GetPixels(check_row);
+        CHECK((int) pixels[check_col * 4] == 255);
 
         // Close objects
         t.Close();
@@ -157,13 +201,23 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
         f->Save("audio-caption-line-156.png", 1.0);
 
+#ifdef _WIN32
+        // Windows pixel location
+        check_col = 325;
+        check_row = 522;
+#else
+        // Linux/Mac pixel location
+        check_col = 318;
+        check_row = 521;
+#endif
+
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
         CHECK((int) pixels[0 * 4] == 0);
 
         // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(539);
-        CHECK((int) pixels[344 * 4] == 255);
+        pixels = f->GetPixels(check_row);
+        CHECK((int) pixels[check_col * 4] == 255);
 
         // Close objects
         clip1.Close();
