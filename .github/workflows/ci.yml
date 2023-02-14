@@ -202,6 +202,10 @@ jobs:
 
       - name: Test libopenshot
         run: |
+          export DISPLAY=:0.0
+          export QT_QPA_PLATFORM=offscreen
+          echo $DISPLAY
+          echo $QT_QPA_PLATFORM
           cmake --build build --target coverage -- VERBOSE=1
 
       - name: Install libopenshot
