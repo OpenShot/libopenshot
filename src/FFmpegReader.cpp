@@ -670,13 +670,20 @@ bool FFmpegReader::HasAlbumArt() {
 }
 
 void FFmpegReader::UpdateAudioInfo() {
+	// Set default audio channel layout (if needed)
+	if (AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout == 0)
+		AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout = av_get_default_channel_layout(AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels);
+
+	if (info.sample_rate > 0) {
+		// Skip init - if info struct already populated
+		return;
+	}
+
 	// Set values of FileInfo struct
 	info.has_audio = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.acodec = aCodecCtx->codec->name;
 	info.channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
-	if (AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout == 0)
-		AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout = av_get_default_channel_layout(AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels);
 	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout;
 	info.sample_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->sample_rate;
 	info.audio_bit_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->bit_rate;
@@ -720,6 +727,16 @@ void FFmpegReader::UpdateAudioInfo() {
 		info.video_length = info.duration * info.fps.ToDouble();
 		info.width = 720;
 		info.height = 480;
+
+		// Use timeline to set correct width & height (if any)
+		Clip *parent = (Clip *) ParentClip();
+		if (parent) {
+			if (parent->ParentTimeline()) {
+				// Set max width/height based on parent clip's timeline (if attached to a timeline)
+				info.width = parent->ParentTimeline()->preview_width;
+				info.height = parent->ParentTimeline()->preview_height;
+			}
+		}
 	}
 
 	// Fix invalid video lengths for certain types of files (MP3 for example)
@@ -737,6 +754,11 @@ void FFmpegReader::UpdateAudioInfo() {
 }
 
 void FFmpegReader::UpdateVideoInfo() {
+	if (info.vcodec.length() > 0) {
+		// Skip init - if info struct already populated
+		return;
+	}
+
 	// Set values of FileInfo struct
 	info.has_video = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;

@@ -727,6 +727,9 @@ Json::Value FrameMapper::JsonValue() const {
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "FrameMapper";
+	if (reader) {
+		root["reader"] = reader->JsonValue();
+	}
 
 	// return JsonValue
 	return root;
@@ -741,6 +744,12 @@ void FrameMapper::SetJson(const std::string value) {
 		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
+
+		if (!root["reader"].isNull()) // does Json contain a reader?
+		{
+			// Placeholder to load reader
+			// TODO: need a createReader method for this and Clip JSON methods
+		}
 	}
 	catch (const std::exception& e)
 	{

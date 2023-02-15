@@ -88,8 +88,8 @@ void Caption::process_regex() {
 			caption_prepared.append("\n\n");
 		}
 
-		// Parse regex and find all matches
-		QRegularExpression allPathsRegex(QStringLiteral("(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})\\s*-->\\s*(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})([\\s\\S]*?)\\n(.*?)(?=\\n\\d{2,3}|\\Z)"), QRegularExpression::MultilineOption);
+		// Parse regex and find all matches (i.e. 00:00.000 --> 00:10.000\ncaption-text)
+		QRegularExpression allPathsRegex(QStringLiteral("(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})\\s*-->\\s*(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})([\\s\\S]*?)(.*?)(?=\\d{2}.\\d{2,3}|\\Z)"), QRegularExpression::MultilineOption);
 		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(caption_prepared);
 		while (i.hasNext()) {
 			QRegularExpressionMatch match = i.next();
@@ -200,6 +200,13 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 				// Loop through words, and find word-wrap boundaries
 				QStringList words = line.split(" ");
+
+				// Wrap languages which do not use spaces
+				bool use_spaces = true;
+				if (line.length() > 20 && words.length() == 1) {
+					words = line.split("");
+					use_spaces = false;
+				}
 				int words_remaining = words.length();
 				while (words_remaining > 0) {
 					bool words_displayed = false;
@@ -215,7 +222,12 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 							// Create path and add text to it (for correct border and fill)
 							QPainterPath path1;
-							QString fitting_line = words.mid(0, word_index).join(" ");
+							QString fitting_line;
+							if (use_spaces) {
+								fitting_line = words.mid(0, word_index).join(" ");
+							} else {
+								fitting_line = words.mid(0, word_index).join("");
+							}
 							path1.addText(p, font, fitting_line);
 							text_paths.push_back(path1);
 
