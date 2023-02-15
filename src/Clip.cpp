@@ -149,6 +149,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	if (reader) {
 		ClipBase::End(reader->info.duration);
 		reader->ParentClip(this);
+		reader_type = reader->Name();
 		// Init reader info struct
 		init_reader_settings();
 	}
@@ -208,6 +209,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 	if (reader) {
 		ClipBase::End(reader->info.duration);
 		reader->ParentClip(this);
+		reader_type = reader->Name();
 		allocated_reader = reader;
 		// Init reader info struct
 		init_reader_settings();
@@ -516,6 +518,15 @@ void Clip::reverse_buffer(juce::AudioBuffer<float>* buffer)
 
 	delete reversed;
 	reversed = nullptr;
+}
+
+bool Clip::shouldScale() const
+{
+	if (scale == SCALE_NONE && (reader_type == "QtImageReader" || reader_type == "FFmpegReader")) {
+		return false;
+	}
+
+	return true;
 }
 
 // Adjust the audio and image of a time mapped frame
@@ -1529,8 +1540,12 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		sy*= parentObject_scale_y;
 	}
 
-    float scaled_source_width = source_size.width() * sx;
-	float scaled_source_height = source_size.height() * sy;
+	float scaled_source_width = source_size.width();
+	float scaled_source_height = source_size.height();
+	if (shouldScale()) {
+		scaled_source_width *= sx;
+		scaled_source_height *= sy;
+	}
 
 	switch (gravity)
 	{
@@ -1608,11 +1623,13 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		transform.translate(-origin_x_offset,-origin_y_offset);
 	}
 	// SCALE CLIP (if needed)
-	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
-	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
-	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
-		transform.scale(source_width_scale, source_height_scale);
+	if (shouldScale()) {
+		float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
+		float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
+		if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
+			transform.scale(source_width_scale, source_height_scale);
+		}
 	}
 
-    return transform;
+	return transform;
 }
