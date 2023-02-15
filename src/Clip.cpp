@@ -45,6 +45,7 @@ void Clip::init_settings()
 	anchor = ANCHOR_CANVAS;
 	display = FRAME_DISPLAY_NONE;
 	mixing = VOLUME_MIX_NONE;
+	blend = BLEND_SOURCE_OVER;
 	waveform = false;
 	previous_properties = "";
 	parentObjectId = "";
@@ -914,6 +915,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 
 	// Keyframes
 	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", &alpha, 0.0, 1.0, false, requested_frame);
+	root["blend"] = add_property_json("Blend Mode", blend.GetValue(requested_frame), "int", "", &blend, 0, 23, false, requested_frame);
 	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
 	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
@@ -922,6 +924,32 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["channel_mapping"] = add_property_json("Channel Mapping", channel_mapping.GetValue(requested_frame), "int", "", &channel_mapping, -1, 10, false, requested_frame);
 	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
 	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
+
+	// Add video blend choices (dropdown style)
+	root["blend"]["choices"].append(add_property_choice_json("Source Over", BLEND_SOURCE_OVER, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Destination Over", BLEND_DESTINATION_OVER, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Clear", BLEND_CLEAR, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Source", BLEND_SOURCE, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Destination", BLEND_DESTINATION, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Source In", BLEND_SOURCE_IN, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Destination In", BLEND_DESTINATION_IN, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Source Out", BLEND_SOURCE_OUT, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Destination Out", BLEND_DESTINATION_OUT, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Source Atop", BLEND_SOURCE_ATOP, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Destination Atop", BLEND_DESTINATION_ATOP, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Xor", BLEND_XOR, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Plus", BLEND_PLUS, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Multiply", BLEND_MULTIPLY, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Screen", BLEND_SCREEN, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Overlay", BLEND_OVERLAY, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Darken", BLEND_DARKEN, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Lighten", BLEND_LIGHTEN, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Color Dodge", BLEND_COLOR_DODGE, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Color Burn", BLEND_COLOR_BURN, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Hard Light", BLEND_HARD_LIGHT, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Soft Light", BLEND_SOFT_LIGHT, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Difference", BLEND_DIFFERENCE, blend.GetValue(requested_frame)));
+	root["blend"]["choices"].append(add_property_choice_json("Exclusion", BLEND_EXCLUSION, blend.GetValue(requested_frame)));
 
 	// Add enable audio/video choices (dropdown style)
 	root["has_audio"]["choices"].append(add_property_choice_json("Auto", -1, has_audio.GetValue(requested_frame)));
@@ -958,6 +986,7 @@ Json::Value Clip::JsonValue() const {
 	root["location_x"] = location_x.JsonValue();
 	root["location_y"] = location_y.JsonValue();
 	root["alpha"] = alpha.JsonValue();
+	root["blend"] = blend.JsonValue();
 	root["rotation"] = rotation.JsonValue();
 	root["time"] = time.JsonValue();
 	root["volume"] = volume.JsonValue();
@@ -1052,6 +1081,8 @@ void Clip::SetJsonValue(const Json::Value root) {
 		location_y.SetJsonValue(root["location_y"]);
 	if (!root["alpha"].isNull())
 		alpha.SetJsonValue(root["alpha"]);
+	if (!root["blend"].isNull())
+		blend.SetJsonValue(root["blend"]);
 	if (!root["rotation"].isNull())
 		rotation.SetJsonValue(root["rotation"]);
 	if (!root["time"].isNull())
@@ -1296,7 +1327,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     painter.setTransform(transform);
 
     // Composite a new layer onto the image
-    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    painter.setCompositionMode(blendToQPainter((openshot::BlendMode) blend.GetValue(frame->number)));
     painter.drawImage(0, 0, *source_image);
 
     if (timeline) {
@@ -1615,4 +1646,84 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	}
 
     return transform;
+}
+
+// Transform a BlendMode to the corresponding QPainter CompositionMode
+QPainter::CompositionMode Clip::blendToQPainter(openshot::BlendMode blend) {
+	QPainter::CompositionMode painter_mode;
+	switch(blend) {
+		case BLEND_SOURCE_OVER:
+			painter_mode = QPainter::CompositionMode_SourceOver;
+			break;
+		case BLEND_DESTINATION_OVER:
+			painter_mode = QPainter::CompositionMode_DestinationOver;
+			break;
+		case BLEND_CLEAR:
+			painter_mode = QPainter::CompositionMode_Clear;
+			break;
+		case BLEND_SOURCE:
+			painter_mode = QPainter::CompositionMode_Source;
+			break;
+		case BLEND_DESTINATION:
+			painter_mode = QPainter::CompositionMode_Destination;
+			break;
+		case BLEND_SOURCE_IN:
+			painter_mode = QPainter::CompositionMode_SourceIn;
+			break;
+		case BLEND_DESTINATION_IN:
+			painter_mode = QPainter::CompositionMode_DestinationIn;
+			break;
+		case BLEND_SOURCE_OUT:
+			painter_mode = QPainter::CompositionMode_SourceOut;
+			break;
+		case BLEND_DESTINATION_OUT:
+			painter_mode = QPainter::CompositionMode_DestinationOut;
+			break;
+		case BLEND_SOURCE_ATOP:
+			painter_mode = QPainter::CompositionMode_SourceAtop;
+			break;
+		case BLEND_DESTINATION_ATOP:
+			painter_mode = QPainter::CompositionMode_DestinationAtop;
+			break;
+		case BLEND_XOR:
+			painter_mode = QPainter::CompositionMode_Xor;
+			break;
+		case BLEND_PLUS:
+			painter_mode = QPainter::CompositionMode_Plus;
+			break;
+		case BLEND_MULTIPLY:
+			painter_mode = QPainter::CompositionMode_Multiply;
+			break;
+		case BLEND_SCREEN:
+			painter_mode = QPainter::CompositionMode_Screen;
+			break;
+		case BLEND_OVERLAY:
+			painter_mode = QPainter::CompositionMode_Overlay;
+			break;
+		case BLEND_DARKEN:
+			painter_mode = QPainter::CompositionMode_Darken;
+			break;
+		case BLEND_LIGHTEN:
+			painter_mode = QPainter::CompositionMode_Lighten;
+			break;
+		case BLEND_COLOR_DODGE:
+			painter_mode = QPainter::CompositionMode_ColorDodge;
+			break;
+		case BLEND_COLOR_BURN:
+			painter_mode = QPainter::CompositionMode_ColorBurn;
+			break;
+		case BLEND_HARD_LIGHT:
+			painter_mode = QPainter::CompositionMode_HardLight;
+			break;
+		case BLEND_SOFT_LIGHT:
+			painter_mode = QPainter::CompositionMode_SoftLight;
+			break;
+		case BLEND_DIFFERENCE:
+			painter_mode = QPainter::CompositionMode_Difference;
+			break;
+		case BLEND_EXCLUSION:
+			painter_mode = QPainter::CompositionMode_Exclusion;
+			break;
+	}
+	return painter_mode;
 }

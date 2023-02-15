@@ -37,6 +37,7 @@
 #include "TrackedObjectBase.h"
 
 #include <QImage>
+#include <QPainter>
 
 namespace openshot {
 	class AudioResampler;
@@ -152,6 +153,9 @@ namespace openshot {
 
 		/// Reverse an audio buffer
 		void reverse_buffer(juce::AudioBuffer<float>* buffer);
+
+		/// Transform a BlendMode to the corresponding QPainter CompositionMode
+		QPainter::CompositionMode blendToQPainter(openshot::BlendMode blend);
 
 
 	public:
@@ -291,6 +295,7 @@ namespace openshot {
 		openshot::Keyframe location_x; ///< Curve representing the relative X position in percent based on the gravity (-1 to 1)
 		openshot::Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-1 to 1)
 		openshot::Keyframe alpha; ///< Curve representing the alpha (1 to 0)
+		openshot::Keyframe blend;  ///< What strategy should be followed when mixing video with other clips
 
 		// Rotation and Shear curves (origin point (x,y) is adjustable for both rotation and shear)
 		openshot::Keyframe rotation; ///< Curve representing the rotation (0 to 360)
