@@ -88,15 +88,15 @@ namespace openshot {
 		float Start() const { return start; } ///< Get start position (in seconds) of clip (trim start of video)
 		virtual float End() const { return end; } ///< Get end position (in seconds) of clip (trim end of video)
 		float Duration() const { return end - start; } ///< Get the length of this clip (in seconds)
-		openshot::TimelineBase* ParentTimeline() { return timeline; } ///< Get the associated Timeline pointer (if any)
+		virtual openshot::TimelineBase* ParentTimeline() { return timeline; } ///< Get the associated Timeline pointer (if any)
 
 		// Set basic properties
 		void Id(std::string value) { id = value; } ///> Set the Id of this clip object
-        void Position(float value); ///< Set position on timeline (in seconds)
-        void Layer(int value); ///< Set layer of clip on timeline (lower number is covered by higher numbers)
+		void Position(float value); ///< Set position on timeline (in seconds)
+		void Layer(int value); ///< Set layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value); ///< Set start position (in seconds) of clip (trim start of video)
 		virtual void End(float value); ///< Set end position (in seconds) of clip (trim end of video)
-		void ParentTimeline(openshot::TimelineBase* new_timeline) { timeline = new_timeline; } ///< Set associated Timeline pointer
+		virtual void ParentTimeline(openshot::TimelineBase* new_timeline) { timeline = new_timeline; } ///< Set associated Timeline pointer
 
 		// Get and Set JSON methods
 		virtual std::string Json() const = 0; ///< Generate JSON string of this object

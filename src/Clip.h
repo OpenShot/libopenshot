@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 
+#include "AudioLocation.h"
 #include "ClipBase.h"
 #include "ReaderBase.h"
 
@@ -90,7 +91,10 @@ namespace openshot {
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 	protected:
 		/// Mutex for multiple threads
-	    std::recursive_mutex getFrameMutex;
+		std::recursive_mutex getFrameMutex;
+
+		/// Previous time-mapped audio location
+		AudioLocation previous_location;
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -109,7 +113,9 @@ namespace openshot {
 		std::shared_ptr<openshot::TrackedObjectBase> parentTrackedObject; ///< Tracked object this clip is attached to
 		openshot::Clip* parentClipObject; ///< Clip object this clip is attached to
 
-
+		/// Final cache object used to hold final frames
+		CacheMemory final_cache;
+		
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
 
@@ -126,23 +132,26 @@ namespace openshot {
 		/// Apply effects to the source frame (if any)
 		void apply_effects(std::shared_ptr<openshot::Frame> frame);
 
-        /// Apply keyframes to an openshot::Frame and use an existing QImage as a background image (if any)
-        void apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas);
+		/// Apply keyframes to an openshot::Frame and use an existing QImage as a background image (if any)
+		void apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas);
 
-        /// Apply waveform image to an openshot::Frame and use an existing QImage as a background image (if any)
-        void apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas);
+		/// Apply waveform image to an openshot::Frame and use an existing QImage as a background image (if any)
+		void apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas);
 
-        /// Get QTransform from keyframes
-        QTransform get_transform(std::shared_ptr<Frame> frame, int width, int height);
+		/// Adjust frame number for Clip position and start (which can result in a different number)
+		int64_t adjust_timeline_framenumber(int64_t clip_frame_number);
+		
+		/// Get QTransform from keyframes
+		QTransform get_transform(std::shared_ptr<Frame> frame, int width, int height);
 
 		/// Get file extension
 		std::string get_file_extension(std::string path);
 
 		/// Get a frame object or create a blank one
-		std::shared_ptr<openshot::Frame> GetOrCreateFrame(int64_t number);
+		std::shared_ptr<openshot::Frame> GetOrCreateFrame(int64_t number, bool enable_time=true);
 
 		/// Adjust the audio and image of a time mapped frame
-		void get_time_mapped_frame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
+		void apply_timemapping(std::shared_ptr<openshot::Frame> frame);
 
 		/// Compare 2 floating point numbers
 		bool isEqual(double a, double b);
@@ -157,7 +166,7 @@ namespace openshot {
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
-		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
+		openshot::AnchorType anchor;	 ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
 
@@ -181,8 +190,8 @@ namespace openshot {
 		/// Destructor
 		virtual ~Clip();
 
-        /// Get the cache object (always return NULL for this reader)
-        openshot::CacheMemory* GetCache() override { return NULL; };
+		/// Get the cache object (always return NULL for this reader)
+		openshot::CacheMemory* GetCache() override { return &final_cache; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
@@ -220,38 +229,38 @@ namespace openshot {
 		/// Look up an effect by ID
 		openshot::EffectBase* GetEffect(const std::string& id);
 
-        /// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
-        /// of samples match the source reader.
-        ///
-        /// @returns A new openshot::Frame object
-        /// @param frame_number The frame number (starting at 1) of the clip
-        std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override;
+		/// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
+		/// of samples match the source reader.
+		///
+		/// @returns A new openshot::Frame object
+		/// @param clip_frame_number The frame number (starting at 1) of the clip
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t clip_frame_number) override;
 
-        /// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
-        /// of samples match the background_frame passed in and the timeline (if available).
-        ///
-        /// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
-        /// rendered/rasterized.
-        ///
-        /// @returns The modified openshot::Frame object
-        /// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
-        /// @param frame_number The frame number (starting at 1) of the clip. The image size and number
-        /// of samples match the background_frame passed in and the timeline (if available)
-        std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number) override;
+		/// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
+		/// of samples match the background_frame passed in and the timeline (if available).
+		///
+		/// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
+		/// rendered/rasterized.
+		///
+		/// @returns The modified openshot::Frame object
+		/// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
+		/// @param clip_frame_number The frame number (starting at 1) of the clip. The image size and number
+		/// of samples match the background_frame passed in and the timeline (if available)
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t clip_frame_number) override;
 
-        /// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
-        /// of samples match the background_frame passed in and the timeline (if available).
-        ///
-        /// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
-        /// rendered/rasterized.
-        ///
-        /// @returns The modified openshot::Frame object
-        /// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
-        /// @param frame_number The frame number (starting at 1) of the clip on the timeline. The image size and number
-        /// of samples match the timeline.
-        /// @param options The openshot::TimelineInfoStruct pointer, with more details about this specific timeline clip,
-        /// such as, if it's a top clip. This info is used to apply global transitions and masks, if needed.
-        std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number, openshot::TimelineInfoStruct* options);
+		/// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
+		/// of samples match the background_frame passed in and the timeline (if available).
+		///
+		/// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
+		/// rendered/rasterized.
+		///
+		/// @returns The modified openshot::Frame object
+		/// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
+		/// @param clip_frame_number The frame number (starting at 1) of the clip on the timeline. The image size and number
+		/// of samples match the timeline.
+		/// @param options The openshot::TimelineInfoStruct pointer, with more details about this specific timeline clip,
+		/// such as, if it's a top clip. This info is used to apply global transitions and masks, if needed.
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t clip_frame_number, openshot::TimelineInfoStruct* options);
 
 		/// Open the internal reader
 		void Open() override;
@@ -266,6 +275,8 @@ namespace openshot {
 		// Override End() position (in seconds) of clip (trim end of video)
 		float End() const override; ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
 		void End(float value) override; ///< Set end position (in seconds) of clip (trim end of video)
+		openshot::TimelineBase* ParentTimeline() override { return timeline; } ///< Get the associated Timeline pointer (if any)
+		void ParentTimeline(openshot::TimelineBase* new_timeline) override; ///< Set associated Timeline pointer
 
 		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

@@ -43,7 +43,7 @@ namespace openshot {
 
 	public:
 		/// Default constructor
-		AudioResampler();
+		AudioResampler(int numChannels=2);
 
 		/// Destructor
 		~AudioResampler();

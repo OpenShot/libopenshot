@@ -18,6 +18,7 @@
 #include <vector>
 #include <memory>
 
+#include "AudioResampler.h"
 #include "CacheMemory.h"
 #include "ReaderBase.h"
 #include "Frame.h"
@@ -127,8 +128,12 @@ namespace openshot
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		float parent_position;  // Position of parent clip (which is used to generate the audio mapping)
-		float parent_start;     // Start of parent clip (which is used to generate the audio mapping)
+		float parent_start;	    // Start of parent clip (which is used to generate the audio mapping)
+		int64_t previous_frame; // Used during resampling, to determine when a large gap is detected
 		SWRCONTEXT *avr;	// Audio resampling context object
+
+		// Audio resampler (if resampling audio)
+		openshot::AudioResampler *resampler;
 
 		// Internal methods used by init
 		void AddField(int64_t frame);

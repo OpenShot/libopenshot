@@ -23,7 +23,7 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
-		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL), parent_position(0.0), parent_start(0.0)
+		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL), parent_position(0.0), parent_start(0.0), previous_frame(0)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -327,6 +327,13 @@ void FrameMapper::Init()
 	// Clear the internal fields list (no longer needed)
 	fields.clear();
 	fields.shrink_to_fit();
+
+	if (avr) {
+		// Delete resampler (if exists)
+		SWR_CLOSE(avr);
+		SWR_FREE(&avr);
+		avr = NULL;
+	}
 }
 
 MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
@@ -465,10 +472,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 		// Get the mapped frame
 		MappedFrame mapped = GetMappedFrame(frame_number);
-		std::shared_ptr<Frame> mapped_frame;
-
-		// Get the mapped frame (keeping the sample rate and channels the same as the original... for the moment)
-		mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
+		std::shared_ptr<Frame> mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
 		// Get # of channels in the actual frame
 		int channels_in_frame = mapped_frame->GetAudioChannelsCount();
@@ -483,7 +487,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		if (info.sample_rate == mapped_frame->SampleRate() &&
 			info.channels == mapped_frame->GetAudioChannelsCount() &&
 			info.channel_layout == mapped_frame->ChannelsLayout() &&
-			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() &&
+			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() == samples_in_frame &&
 			mapped.Samples.frame_start == mapped.Odd.Frame &&
 			mapped.Samples.sample_start == 0 &&
 			mapped_frame->number == frame_number &&// in some conditions (e.g. end of stream)
@@ -502,8 +506,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 
 		// Copy the image from the odd field
-		std::shared_ptr<Frame> odd_frame;
-		odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
+		std::shared_ptr<Frame> odd_frame = mapped_frame;
 
 		if (odd_frame)
 			frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()), true);
@@ -512,8 +515,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			std::shared_ptr<Frame> even_frame;
 			even_frame = GetOrCreateFrame(mapped.Even.Frame);
 			if (even_frame)
-				frame->AddImage(
-					std::make_shared<QImage>(*even_frame->GetImage()), false);
+				frame->AddImage(std::make_shared<QImage>(*even_frame->GetImage()), false);
 		}
 
 		// Determine if reader contains audio samples
@@ -580,7 +582,11 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			int number_to_copy = 0;
 
 			// number of original samples on this frame
-			std::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
+			std::shared_ptr<Frame> original_frame = mapped_frame;
+			if (starting_frame != original_frame->number) {
+				original_frame = GetOrCreateFrame(starting_frame);
+			}
+
 			int original_samples = original_frame->GetAudioSamplesCount();
 
 			// Loop through each channel
@@ -1035,6 +1041,9 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Delete arrays
 	delete[] resampled_samples;
 	resampled_samples = NULL;
+
+	// Keep track of last resampled frame
+	previous_frame = frame->number;
 }
 
 // Adjust frame number for Clip position and start (which can result in a different number)

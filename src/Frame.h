@@ -35,7 +35,7 @@
 class QApplication;
 
 namespace juce {
-    template <typename Type> class AudioBuffer;
+	template <typename Type> class AudioBuffer;
 }
 
 namespace openshot
@@ -62,25 +62,25 @@ namespace openshot
 	 *
 	 * // Image only settings
 	 * Frame(1, // Frame number
-	 *       720, // Width of image
-	 *       480, // Height of image
-	 *       "#000000" // HTML color code of background color
-	 *       );
+	 *	   720, // Width of image
+	 *	   480, // Height of image
+	 *	   "#000000" // HTML color code of background color
+	 *	   );
 	 *
 	 * // Audio only
 	 * Frame(number, // Frame number
-	 *       44100, // Sample rate of audio stream
-	 *       2 // Number of audio channels
-	 *       );
+	 *	   44100, // Sample rate of audio stream
+	 *	   2 // Number of audio channels
+	 *	   );
 	 *
 	 * // Image and Audio settings (user defines all key settings)
 	 * Frame(number, // Frame number
-	 *       720, // Width of image
-	 *       480, // Height of image
-	 *       "#000000" // HTML color code of background color
-	 *       44100, // Sample rate of audio stream
-	 *       2 // Number of audio channels
-	 *       );
+	 *	   720, // Width of image
+	 *	   480, // Height of image
+	 *	   "#000000" // HTML color code of background color
+	 *	   44100, // Sample rate of audio stream
+	 *	   2 // Number of audio channels
+	 *	   );
 	 *
 	 * // Some methods require a shared pointer to an openshot::Frame object.
 	 * auto f = std::make_shared<openshot::Frame>(1, 720, 480, "#000000", 44100, 2);
@@ -186,8 +186,8 @@ namespace openshot
 		/// Get magnitude of range of samples (if channel is -1, return average of all channels for that sample)
 		float GetAudioSample(int channel, int sample, int magnitude_range);
 
-		/// Get an array of sample data
-		float* GetAudioSamples(int channel);
+		/// Get an array of sample data (and optional reverse the sample values)
+		float* GetAudioSamples(int channel, bool reverse=false);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
 		float* GetInterleavedAudioSamples(int new_sample_rate, openshot::AudioResampler* resampler, int* sample_count);
@@ -201,7 +201,7 @@ namespace openshot
 		/// Get number of audio samples
 		int GetAudioSamplesCount();
 
-	    juce::AudioBuffer<float> *GetAudioSampleBuffer();
+		juce::AudioBuffer<float> *GetAudioSampleBuffer();
 
 		/// Get the size in bytes of this frame (rough estimate)
 		int64_t GetBytes();
