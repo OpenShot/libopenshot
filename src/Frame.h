@@ -190,7 +190,7 @@ namespace openshot
 		float* GetAudioSamples(int channel, bool reverse=false);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
-		float* GetInterleavedAudioSamples(int new_sample_rate, openshot::AudioResampler* resampler, int* sample_count);
+		float* GetInterleavedAudioSamples(int new_sample_rate, openshot::AudioResampler* resampler, int* sample_count, bool reverse=false);
 
 		// Get a planar array of sample data, using any sample rate
 		float* GetPlanarAudioSamples(int new_sample_rate, openshot::AudioResampler* resampler, int* sample_count);

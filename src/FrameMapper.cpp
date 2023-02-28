@@ -831,6 +831,14 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		// Recalculate mappings
 		Init();
 
+	// Determine direction of parent clip at this frame (forward or reverse direction)
+	// This is important for reversing audio in our resampler, for smooth reversed audio.
+	Clip *parent = (Clip *) ParentClip();
+	bool is_increasing = true;
+	if (parent) {
+		is_increasing = parent->time.IsIncreasing(original_frame_number);
+	}
+
 	// Init audio buffers / variables
 	int total_frame_samples = 0;
 	int channels_in_frame = frame->GetAudioChannelsCount();
@@ -849,7 +857,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Get audio sample array
 	float* frame_samples_float = NULL;
 	// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
-	frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame);
+	frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame, !is_increasing);
 
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
@@ -875,20 +883,9 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		frame_samples[s] = conv;
 	}
 
-
 	// Deallocate float array
 	delete[] frame_samples_float;
 	frame_samples_float = NULL;
-
-	ZmqLogger::Instance()->AppendDebugMethod(
-		"FrameMapper::ResampleMappedAudio (got sample data from frame)",
-		"frame->number", frame->number,
-		"total_frame_samples", total_frame_samples,
-		"target channels", info.channels,
-		"channels_in_frame", channels_in_frame,
-		"target sample_rate", info.sample_rate,
-		"samples_in_frame", samples_in_frame);
-
 
 	// Create input frame (and allocate arrays)
 	AVFrame *audio_frame = AV_ALLOCATE_FRAME();
@@ -911,29 +908,11 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Update total samples & input frame size (due to bigger or smaller data types)
 	total_frame_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame->number), target, info.sample_rate, info.channels);
 
-	ZmqLogger::Instance()->AppendDebugMethod(
-		"FrameMapper::ResampleMappedAudio (adjust # of samples)",
-		"total_frame_samples", total_frame_samples,
-		"info.sample_rate", info.sample_rate,
-		"sample_rate_in_frame", sample_rate_in_frame,
-		"info.channels", info.channels,
-		"channels_in_frame", channels_in_frame,
-		"original_frame_number", original_frame_number);
-
 	// Create output frame (and allocate arrays)
 	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
 	AV_RESET_FRAME(audio_converted);
 	audio_converted->nb_samples = total_frame_samples;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, total_frame_samples, AV_SAMPLE_FMT_S16, 0);
-
-	ZmqLogger::Instance()->AppendDebugMethod(
-		"FrameMapper::ResampleMappedAudio (preparing for resample)",
-		"in_sample_fmt", AV_SAMPLE_FMT_S16,
-		"out_sample_fmt", AV_SAMPLE_FMT_S16,
-		"in_sample_rate", sample_rate_in_frame,
-		"out_sample_rate", info.sample_rate,
-		"in_channels", channels_in_frame,
-		"out_channels", info.channels);
 
 	int nb_samples = 0;
 
@@ -1023,11 +1002,6 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
 		// Add samples to frame for this channel
 		frame->AddAudio(true, channel_filter, 0, channel_buffer, position, 1.0f);
-
-		ZmqLogger::Instance()->AppendDebugMethod(
-			"FrameMapper::ResampleMappedAudio (Add audio to channel)",
-			"number of samples", position,
-			"channel_filter", channel_filter);
 	}
 
 	// Update frame's audio meta data

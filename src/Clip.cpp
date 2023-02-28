@@ -510,7 +510,6 @@ void Clip::reverse_buffer(juce::AudioBuffer<float>* buffer)
 		buffer->addFrom(channel, 0, reversed->getReadPointer(channel), number_of_samples, 1.0f);
 
 	delete reversed;
-	reversed = nullptr;
 }
 
 // Adjust the audio and image of a time mapped frame
@@ -569,7 +568,7 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 			frame->AddAudioSilence(target_sample_count);
 			return;
 		}
-		
+
 		// Allocate a new sample buffer for these delta frames
 		source_samples = new juce::AudioBuffer<float>(Reader()->info.channels, source_sample_count);
 		source_samples->clear();
@@ -578,26 +577,23 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 		int remaining_samples = source_sample_count;
 		int source_pos = 0;
 		while (remaining_samples > 0) {
-			int frame_sample_count = GetOrCreateFrame(location.frame, false)->GetAudioSamplesCount() - location.sample_start;
+			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false);
+			int frame_sample_count = source_frame->GetAudioSamplesCount() - location.sample_start;
 
 			if (frame_sample_count == 0) {
 				// No samples found in source frame (fill with silence)
-				int expected_frame_sample_count = Frame::GetSamplesPerFrame(clip_frame_number, Reader()->info.fps, Reader()->info.sample_rate, Reader()->info.channels);
-				source_samples->setSize(Reader()->info.channels, expected_frame_sample_count, false, true, false);
-				source_samples->clear();
 				if (is_increasing) {
 					location.frame++;
 				} else {
 					location.frame--;
 				}
 				location.sample_start = 0;
-				remaining_samples = 0;
 				break;
 			}
 			if (remaining_samples - frame_sample_count >= 0) {
 				// Use all frame samples & increment location
-				for (int channel = 0; channel < Reader()->info.channels; channel++) {
-					source_samples->addFrom(channel, source_pos, GetOrCreateFrame(location.frame, false)->GetAudioSamples(channel, !is_increasing) + location.sample_start, frame_sample_count, 1.0f);
+				for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++) {
+					source_samples->addFrom(channel, source_pos, source_frame->GetAudioSamples(channel) + location.sample_start, frame_sample_count, 1.0f);
 				}
 				if (is_increasing) {
 					location.frame++;
@@ -608,10 +604,10 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 				remaining_samples -= frame_sample_count;
 				source_pos += frame_sample_count;
 
-			} else if (remaining_samples - frame_sample_count < 0) {
+			} else {
 				// Use just what is needed (and reverse samples)
-				for (int channel = 0; channel < Reader()->info.channels; channel++) {
-					source_samples->addFrom(channel, source_pos, GetOrCreateFrame(location.frame, false)->GetAudioSamples(channel, !is_increasing) + location.sample_start, remaining_samples, 1.0f);
+				for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++) {
+					source_samples->addFrom(channel, source_pos, source_frame->GetAudioSamples(channel) + location.sample_start, remaining_samples, 1.0f);
 				}
 				location.sample_start += remaining_samples;
 				remaining_samples = 0;
@@ -620,30 +616,32 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 
 		}
 
-		// Resample audio (if needed)
+		// Resize audio for current frame object + fill with silence
+		// We are fixing to clobber this with actual audio data (possibly resampled)
+		frame->AddAudioSilence(target_sample_count);
+
 		if (source_samples->getNumSamples() != target_sample_count) {
+			// Resample audio (if needed)
 			resampler->SetBuffer(source_samples, fabs(delta));
 
 			// Resample the data
 			juce::AudioBuffer<float> *resampled_buffer = resampler->GetResampledBuffer();
 
 			// Fill the frame with resampled data
-			frame->ResizeAudio(Reader()->info.channels, target_sample_count, Reader()->info.sample_rate, Reader()->info.channel_layout);
 			for (int channel = 0; channel < Reader()->info.channels; channel++) {
 				// Add new (slower) samples, to the frame object
 				frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, 0), target_sample_count, 1.0f);
 			}
-
-			// Clean up
-			resampled_buffer = nullptr;
 		} else {
 			// Fill the frame
-			frame->ResizeAudio(Reader()->info.channels, target_sample_count, Reader()->info.sample_rate, Reader()->info.channel_layout);
 			for (int channel = 0; channel < Reader()->info.channels; channel++) {
 				// Add new (slower) samples, to the frame object
 				frame->AddAudio(true, channel, 0, source_samples->getReadPointer(channel, 0), target_sample_count, 1.0f);
 			}
 		}
+
+		// Clean up
+		delete source_samples;
 
 		// Set previous location
 		previous_location = location;

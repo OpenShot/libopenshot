@@ -372,12 +372,17 @@ float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampl
 
 
 // Get an array of sample data (all channels interleaved together), using any sample rate
-float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
+float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count, bool reverse)
 {
 	float *output = NULL;
 	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
+
+	if (reverse) {
+		// Reverse audio samples (if needed)
+		buffer->reverse(0, buffer->getNumSamples());
+	}
 
 	// Resample to new sample rate (if needed)
 	if (new_sample_rate != sample_rate && resampler)

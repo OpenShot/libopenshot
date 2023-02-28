@@ -23,6 +23,7 @@
 #include "DummyReader.h"
 #include "Enums.h"
 #include "Exceptions.h"
+#include "FFmpegReader.h"
 #include "Frame.h"
 #include "Fraction.h"
 #include "FrameMapper.h"
@@ -469,8 +470,16 @@ TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
 	// Create a reader
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
-	Clip clip(path.str());
-	int original_video_length = clip.Reader()->info.video_length;
+	openshot::FFmpegReader reader(path.str(), true);
+
+	// Map to 24 fps, 2 channels stereo, 44100 sample rate
+	FrameMapper map(&reader, Fraction(24,1), PULLDOWN_NONE, 44100, 2, LAYOUT_STEREO);
+	map.Open();
+
+	Clip clip;
+	clip.Reader(&map);
+	clip.Open();
+	int original_video_length = clip.Reader()->info.video_length + 1;
 
 	clip.Position(0.0);
 	clip.Start(0.0);
@@ -479,10 +488,6 @@ TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
 	clip.time.AddPoint(1, original_video_length, openshot::LINEAR);
 	clip.time.AddPoint(original_video_length, 1.0, openshot::LINEAR);
 
-	// Map to 24 fps, 2 channels stereo, 44100 sample rate
-	FrameMapper map(&clip, Fraction(24,1), PULLDOWN_NONE, 44100, 2, LAYOUT_STEREO);
-	map.Open();
-
 	// Loop again through frames
 	// Time-remapping should start over (detect a gap)
 	for (int64_t frame = 1; frame < 100; frame++) {
@@ -490,7 +495,7 @@ TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
 															  map.info.sample_rate,
 															  map.info.channels);
 
-		std::shared_ptr<Frame> f = map.GetFrame(frame);
+		std::shared_ptr<Frame> f = clip.GetFrame(frame);
 		if (expected_sample_count != f->GetAudioSamplesCount()) {
 			CHECK(expected_sample_count == f->GetAudioSamplesCount());
 		}
@@ -506,7 +511,7 @@ TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
 															  map.info.sample_rate,
 															  map.info.channels);
 
-		std::shared_ptr<Frame> f = map.GetFrame(frame);
+		std::shared_ptr<Frame> f = clip.GetFrame(frame);
 		if (expected_sample_count != f->GetAudioSamplesCount()) {
 			CHECK(expected_sample_count == f->GetAudioSamplesCount());
 		}
@@ -514,4 +519,6 @@ TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
 
 	// Close mapper
 	map.Close();
+	reader.Close();
+	clip.Close();
 }
