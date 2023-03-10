@@ -336,7 +336,7 @@ set(all_comps avcodec avformat avutil swscale)
 set(version_comps avcodec avformat avutil)
 
 # Pick a resampler.  Prefer swresample if possible
-if(TARGET FFmpeg::swresample AND ${FFmpeg_avformat_VERSION} VERSION_GREATER "57.0.0")
+if(TARGET FFmpeg::swresample)
   set(resample_lib swresample)
   set(USE_SW TRUE)
 else()
