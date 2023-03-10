@@ -114,7 +114,7 @@ jobs:
               mingw-w64-x86_64-qt5-winextras
               mingw-w64-x86_64-qt5-tools
               mingw-w64-x86_64-libvpx
-              mingw-w64-x86_64-ffmpeg
+              mingw-w64-x86_64-ffmpeg4.4
               mingw-w64-x86_64-zeromq
               mingw-w64-x86_64-opencv
               mingw-w64-x86_64-protobuf
