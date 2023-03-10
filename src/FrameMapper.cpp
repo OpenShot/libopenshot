@@ -117,7 +117,7 @@ void FrameMapper::Init()
 	Clear();
 
 	// Find parent position (if any)
-	Clip *parent = (Clip *) ParentClip();
+	Clip *parent = static_cast<Clip *>(ParentClip());
 	if (parent) {
 		parent_position = parent->Position();
 		parent_start = parent->Start();
@@ -430,7 +430,8 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Find parent properties (if any)
-	Clip *parent = (Clip *) ParentClip();
+	Clip *parent = static_cast<Clip *>(ParentClip());
+	bool is_increasing = true;
 	if (parent) {
 		float position = parent->Position();
 		float start = parent->Start();
@@ -439,6 +440,10 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			// since this heavily affects frame #s and audio mappings
 			is_dirty = true;
 		}
+
+		// Determine direction of parent clip at this frame (forward or reverse direction)
+		// This is important for reversing audio in our resampler, for smooth reversed audio.
+		is_increasing = parent->time.IsIncreasing(requested_frame);
 	}
 
 	// Check if mappings are dirty (and need to be recalculated)
@@ -462,7 +467,6 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	// Loop through all requested frames
 	for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 	{
-
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod(
 			"FrameMapper::GetFrame (inside omp for loop)",
@@ -487,7 +491,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		if (info.sample_rate == mapped_frame->SampleRate() &&
 			info.channels == mapped_frame->GetAudioChannelsCount() &&
 			info.channel_layout == mapped_frame->ChannelsLayout() &&
-			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() == samples_in_frame &&
+			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() == samples_in_frame && is_increasing &&
 			mapped.Samples.frame_start == mapped.Odd.Frame &&
 			mapped.Samples.sample_start == 0 &&
 			mapped_frame->number == frame_number &&// in some conditions (e.g. end of stream)
@@ -535,6 +539,16 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 		if (need_resampling)
 		{
+			// Check for non-adjacent frame requests - so the resampler can be reset
+			if (abs(frame->number - previous_frame) > 1) {
+				if (avr) {
+					// Delete resampler (if exists)
+					SWR_CLOSE(avr);
+					SWR_FREE(&avr);
+					avr = NULL;
+				}
+			}
+
 			// Resampling needed, modify copy of SampleRange object that
 			// includes some additional input samples on first iteration,
 			// and continues the offset to ensure that the sample rate
@@ -628,6 +642,10 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			samples_copied += number_to_copy;
 			starting_frame++;
 		}
+
+		// Reverse audio (if needed)
+		if (!is_increasing)
+			frame->ReverseAudio();
 
 		// Resample audio on frame (if needed)
 		if (need_resampling)
@@ -831,14 +849,6 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		// Recalculate mappings
 		Init();
 
-	// Determine direction of parent clip at this frame (forward or reverse direction)
-	// This is important for reversing audio in our resampler, for smooth reversed audio.
-	Clip *parent = (Clip *) ParentClip();
-	bool is_increasing = true;
-	if (parent) {
-		is_increasing = parent->time.IsIncreasing(original_frame_number);
-	}
-
 	// Init audio buffers / variables
 	int total_frame_samples = 0;
 	int channels_in_frame = frame->GetAudioChannelsCount();
@@ -857,7 +867,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Get audio sample array
 	float* frame_samples_float = NULL;
 	// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
-	frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame, !is_increasing);
+	frame_samples_float = frame->GetInterleavedAudioSamples(&samples_in_frame);
 
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
@@ -1026,7 +1036,7 @@ int64_t FrameMapper::AdjustFrameNumber(int64_t clip_frame_number) {
 	// Get clip position from parent clip (if any)
 	float position = 0.0;
 	float start = 0.0;
-	Clip *parent = (Clip *) ParentClip();
+	Clip *parent = static_cast<Clip *>(ParentClip());
 	if (parent) {
 		position = parent->Position();
 		start = parent->Start();

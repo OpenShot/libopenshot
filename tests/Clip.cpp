@@ -379,16 +379,16 @@ TEST_CASE( "time remapping", "[libopenshot][clip]" )
 
 	// Load clip with video
 	std::stringstream path;
-	//path << TEST_MEDIA_PATH << "piano.wav";
-	path << "/home/jonathan/Music/01 - Universal Fanfare (From _Pitch Perfect 2_ Soundtrack).mp3";
+	path << TEST_MEDIA_PATH << "piano.wav";
+
 	Clip clip(path.str());
 	int original_video_length = clip.Reader()->info.video_length;
 	clip.Position(0.0);
 	clip.Start(0.0);
 
 	// Set time keyframe (4X speed REVERSE)
-	clip.time.AddPoint(1, original_video_length, openshot::LINEAR);
-	clip.time.AddPoint(original_video_length, 1.0, openshot::LINEAR);
+	//clip.time.AddPoint(1, original_video_length, openshot::LINEAR);
+	//clip.time.AddPoint(original_video_length, 1.0, openshot::LINEAR);
 	
 	// Set time keyframe (4X speed FORWARD)
 	//clip.time.AddPoint(1, 1.0, openshot::LINEAR);
@@ -427,22 +427,6 @@ TEST_CASE( "time remapping", "[libopenshot][clip]" )
 		if (expected_sample_count != f->GetAudioSamplesCount()) {
 			CHECK(expected_sample_count == f->GetAudioSamplesCount());
 		}
-
-		// Check for X sequential empty audio samples
-//		int empty_count = 0;
-//		float previous_value = -1.0;
-//		for (int sample = 0; sample < f->GetAudioSamplesCount(); sample++) {
-//			float value = f->GetAudioSample(0, sample, 1.0);
-//			if (value == 0.0) {
-//				empty_count++;
-//			} else {
-//				empty_count = 0;
-//			}
-//
-//			if (empty_count >= 5) {
-//				bool bad = true;
-//			}
-//		}
 	}
 
 	// Clear cache
@@ -465,32 +449,32 @@ TEST_CASE( "time remapping", "[libopenshot][clip]" )
 
 }
 
-TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
+TEST_CASE( "resample_audio_8000_to_48000_reverse", "[libopenshot][clip]" )
 {
 	// Create a reader
 	std::stringstream path;
-	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	path << TEST_MEDIA_PATH << "sine.wav";
 	openshot::FFmpegReader reader(path.str(), true);
 
 	// Map to 24 fps, 2 channels stereo, 44100 sample rate
-	FrameMapper map(&reader, Fraction(24,1), PULLDOWN_NONE, 44100, 2, LAYOUT_STEREO);
+	FrameMapper map(&reader, Fraction(24,1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
 	map.Open();
 
 	Clip clip;
 	clip.Reader(&map);
 	clip.Open();
-	int original_video_length = clip.Reader()->info.video_length + 1;
+	int original_video_length = clip.Reader()->info.video_length;
 
 	clip.Position(0.0);
 	clip.Start(0.0);
 
-	// Set time keyframe (REVERSE direction)
+	// Set time keyframe (REVERSE direction using bezier curve)
 	clip.time.AddPoint(1, original_video_length, openshot::LINEAR);
-	clip.time.AddPoint(original_video_length, 1.0, openshot::LINEAR);
+	clip.time.AddPoint(original_video_length, 1.0, openshot::BEZIER);
 
 	// Loop again through frames
 	// Time-remapping should start over (detect a gap)
-	for (int64_t frame = 1; frame < 100; frame++) {
+	for (int64_t frame = 1; frame <= original_video_length; frame++) {
 		int expected_sample_count = Frame::GetSamplesPerFrame(frame, map.info.fps,
 															  map.info.sample_rate,
 															  map.info.channels);
@@ -506,15 +490,13 @@ TEST_CASE( "resample_audio_48000_to_41000_reverse", "[libopenshot][clip]" )
 
 	// Loop again through frames
 	// Time-remapping should start over (detect a gap)
-	for (int64_t frame = 1; frame < 100; frame++) {
+	for (int64_t frame = 1; frame < original_video_length; frame++) {
 		int expected_sample_count = Frame::GetSamplesPerFrame(frame, map.info.fps,
 															  map.info.sample_rate,
 															  map.info.channels);
 
 		std::shared_ptr<Frame> f = clip.GetFrame(frame);
-		if (expected_sample_count != f->GetAudioSamplesCount()) {
-			CHECK(expected_sample_count == f->GetAudioSamplesCount());
-		}
+		CHECK(expected_sample_count == f->GetAudioSamplesCount());
 	}
 
 	// Close mapper

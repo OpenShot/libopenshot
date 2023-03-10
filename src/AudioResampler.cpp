@@ -18,6 +18,7 @@ using namespace openshot;
 // Default constructor, max frames to cache is 20 // resample_source(NULL), buffer_source(NULL), num_of_samples(0), new_num_of_samples(0), dest_ratio(0), source_ratio(0), resampled_buffer(NULL), isPrepared(false)
 AudioResampler::AudioResampler(int numChannels)
 {
+	buffer = NULL;
 	resample_source = NULL;
 	buffer_source = NULL;
 	num_of_samples = 0;

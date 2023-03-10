@@ -238,7 +238,7 @@ Clip::~Clip()
 void Clip::AttachToObject(std::string object_id)
 {
 	// Search for the tracked object on the timeline
-	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+	Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 
 	if (parentTimeline) {
 		// Create a smart pointer to the tracked object from the timeline
@@ -277,7 +277,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	if (new_reader && allocated_reader) {
 		if (new_reader->Name() == "FrameMapper") {
 			// Determine if FrameMapper is pointing at the same allocated ready
-			FrameMapper* clip_mapped_reader = (FrameMapper*) new_reader;
+			FrameMapper* clip_mapped_reader = static_cast<FrameMapper*>(new_reader);
 			if (allocated_reader == clip_mapped_reader->Reader()) {
 				is_same_reader = true;
 			}
@@ -447,7 +447,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		if (timeline != NULL && options != NULL) {
 			if (options->is_top_clip) {
 				// Apply global timeline effects (only to top clip... if overlapping, pass in timeline frame number)
-				Timeline* timeline_instance = (Timeline*) timeline;
+				Timeline* timeline_instance = static_cast<Timeline*>(timeline);
 				frame = timeline_instance->apply_effects(frame, background_frame->number, Layer());
 			}
 		}
@@ -580,6 +580,10 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false);
 			int frame_sample_count = source_frame->GetAudioSamplesCount() - location.sample_start;
 
+			// Reverse audio (if needed)
+			if (!is_increasing)
+				frame->ReverseAudio();
+
 			if (frame_sample_count == 0) {
 				// No samples found in source frame (fill with silence)
 				if (is_increasing) {
@@ -620,9 +624,10 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 		// We are fixing to clobber this with actual audio data (possibly resampled)
 		frame->AddAudioSilence(target_sample_count);
 
-		if (source_samples->getNumSamples() != target_sample_count) {
+		if (source_sample_count != target_sample_count) {
 			// Resample audio (if needed)
-			resampler->SetBuffer(source_samples, fabs(delta));
+			double resample_ratio = double(source_sample_count) / double(target_sample_count);
+			resampler->SetBuffer(source_samples, resample_ratio);
 
 			// Resample the data
 			juce::AudioBuffer<float> *resampled_buffer = resampler->GetResampledBuffer();
@@ -630,7 +635,7 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 			// Fill the frame with resampled data
 			for (int channel = 0; channel < Reader()->info.channels; channel++) {
 				// Add new (slower) samples, to the frame object
-				frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, 0), target_sample_count, 1.0f);
+				frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, 0), std::min(resampled_buffer->getNumSamples(), target_sample_count), 1.0f);
 			}
 		} else {
 			// Fill the frame
@@ -1153,7 +1158,7 @@ void Clip::AddEffect(EffectBase* effect)
 	sort_effects();
 
 	// Get the parent timeline of this clip
-	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+	Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 
 	if (parentTimeline)
 		effect->ParentTimeline(parentTimeline);
@@ -1247,7 +1252,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 	painter.drawImage(0, 0, *source_image);
 
 	if (timeline) {
-		Timeline *t = (Timeline *) timeline;
+		Timeline *t = static_cast<Timeline *>(timeline);
 
 		// Draw frame #'s on top of image (if needed)
 		if (display != FRAME_DISPLAY_NONE) {
@@ -1576,7 +1581,7 @@ int64_t Clip::adjust_timeline_framenumber(int64_t clip_frame_number) {
 	// Get clip position from parent clip (if any)
 	float position = 0.0;
 	float start = 0.0;
-	Clip *parent = (Clip *) ParentClip();
+	Clip *parent = static_cast<Clip *>(ParentClip());
 	if (parent) {
 		position = parent->Position();
 		start = parent->Start();

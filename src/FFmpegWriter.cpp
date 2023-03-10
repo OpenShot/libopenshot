@@ -1628,7 +1628,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 		// Get audio sample array
 		float *frame_samples_float = NULL;
 		// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
-		frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame);
+		frame_samples_float = frame->GetInterleavedAudioSamples(&samples_in_frame);
 
 		// Calculate total samples
 		total_frame_samples = samples_in_frame * channels_in_frame;

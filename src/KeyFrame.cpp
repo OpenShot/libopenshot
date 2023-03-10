@@ -291,27 +291,41 @@ int64_t Keyframe::GetLong(int64_t index) const {
 // Get the direction of the curve at a specific index (increasing or decreasing)
 bool Keyframe::IsIncreasing(int index) const
 {
-	if (index < 1 || (index + 1) >= GetLength()) {
-		return true;
+	if (index <= 1) {
+		// Determine direction of frame 1 (and assume previous frames have same direction)
+		index = 1;
+	} else  if (index >= GetLength()) {
+		// Determine direction of last valid frame # (and assume next frames have same direction)
+		index = GetLength() - 1;
 	}
-	std::vector<Point>::const_iterator candidate =
-		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
-	if (candidate == end(Points)) {
-		return false; // After the last point, thus constant.
-	}
-	if ((candidate->co.X == index) || (candidate == begin(Points))) {
-		++candidate;
-	}
-	int64_t const value = GetLong(index);
-	do {
-		if (value < round(candidate->co.Y)) {
-			return true;
-		} else if (value > round(candidate->co.Y)) {
-			return false;
+
+	// Get current index value
+	const double current_value = GetValue(index);
+
+	// Iterate from current index to next significant value change
+	int attempts = 1;
+	while (attempts < 600 && index + attempts <= GetLength()) {
+		// Get next value
+		const double next_value = GetValue(index + attempts);
+
+		// Is value significantly different
+		const double diff = next_value - current_value;
+		if (fabs(diff) > 0.0001) {
+			if (diff < 0.0) {
+				// Decreasing value found next
+				return false;
+			} else {
+				// Increasing value found next
+				return true;
+			}
 		}
-		++candidate;
-	} while (candidate != end(Points));
-	return false;
+
+		// increment attempt
+		attempts++;
+	}
+
+	// If no next value found, assume increasing values
+	return true;
 }
 
 // Generate JSON string of this object
@@ -396,7 +410,7 @@ Point const & Keyframe::GetPoint(int64_t index) const {
 int64_t Keyframe::GetLength() const {
 	if (Points.empty()) return 0;
 	if (Points.size() == 1) return 1;
-	return round(Points.back().co.X) + 1;
+	return round(Points.back().co.X);
 }
 
 // Get the number of points (i.e. # of points)
@@ -475,7 +489,7 @@ void Keyframe::PrintValues(std::ostream* out) const {
 		 << "┼─────────"
 		 << "┼────────────┤\n";
 
-	for (int64_t i = 1; i < GetLength(); ++i) {
+	for (int64_t i = 1; i <= GetLength(); ++i) {
 		*out << "│"
 			 << std::setw(w[0]-2) << std::defaultfloat << i
 			 << (Contains(Point(i, 1)) ? " *" : "  ") << " │"

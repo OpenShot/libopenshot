@@ -1668,7 +1668,7 @@ void Timeline::ClearAllCache(bool deep) {
 
 			// Clear nested Reader (if deep clear requested)
 			if (deep && clip->Reader()->Name() == "FrameMapper") {
-				FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
+				FrameMapper *nested_reader = static_cast<FrameMapper *>(clip->Reader());
 				if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
 					nested_reader->Reader()->GetCache()->Clear();
 			}

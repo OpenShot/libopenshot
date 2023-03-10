@@ -311,91 +311,24 @@ float Frame::GetAudioSample(int channel, int sample, int magnitude_range)
 }
 
 // Get an array of sample data (and optional reverse the sample values)
-float* Frame::GetAudioSamples(int channel, bool reverse) {
-	if (reverse) {
-		// Copy audio buffer, and reverse channel
-		juce::AudioBuffer<float> *buffer(audio.get());
-		buffer->reverse(channel, 0, buffer->getNumSamples());
+float* Frame::GetAudioSamples(int channel) {
 
-		// return JUCE audio data for this channel
-		return buffer->getWritePointer(channel);
-	} else {
-		// return JUCE audio data for this channel
-		return audio->getWritePointer(channel);
-	}
-}
-
-// Get a planar array of sample data, using any sample rate
-float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
-{
-	float *output = NULL;
+	// Copy audio data
 	juce::AudioBuffer<float> *buffer(audio.get());
-	int num_of_channels = audio->getNumChannels();
-	int num_of_samples = GetAudioSamplesCount();
 
-	// Resample to new sample rate (if needed)
-	if (new_sample_rate != sample_rate)
-	{
-		// YES, RESAMPLE AUDIO
-		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
-
-		// Resample data, and return new buffer pointer
-		buffer = resampler->GetResampledBuffer();
-
-		// Update num_of_samples
-		num_of_samples = buffer->getNumSamples();
-	}
-
-	// INTERLEAVE all samples together (channel 1 + channel 2 + channel 1 + channel 2, etc...)
-	output = new float[num_of_channels * num_of_samples];
-	int position = 0;
-
-	// Loop through samples in each channel (combining them)
-	for (int channel = 0; channel < num_of_channels; channel++)
-	{
-		for (int sample = 0; sample < num_of_samples; sample++)
-		{
-			// Add sample to output array
-			output[position] = buffer->getReadPointer(channel)[sample];
-
-			// increment position
-			position++;
-		}
-	}
-
-	// Update sample count (since it might have changed due to resampling)
-	*sample_count = num_of_samples;
-
-	// return combined array
-	return output;
+	// return JUCE audio data for this channel
+	return buffer->getWritePointer(channel);
 }
-
 
 // Get an array of sample data (all channels interleaved together), using any sample rate
-float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count, bool reverse)
+float* Frame::GetInterleavedAudioSamples(int* sample_count)
 {
-	float *output = NULL;
+	// Copy audio data
 	juce::AudioBuffer<float> *buffer(audio.get());
+
+	float *output = NULL;
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
-
-	if (reverse) {
-		// Reverse audio samples (if needed)
-		buffer->reverse(0, buffer->getNumSamples());
-	}
-
-	// Resample to new sample rate (if needed)
-	if (new_sample_rate != sample_rate && resampler)
-	{
-		// YES, RESAMPLE AUDIO
-		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
-
-		// Resample data, and return new buffer pointer
-		buffer = resampler->GetResampledBuffer();
-
-		// Update num_of_samples
-		num_of_samples = buffer->getNumSamples();
-	}
 
 	// INTERLEAVE all samples together (channel 1 + channel 2 + channel 1 + channel 2, etc...)
 	output = new float[num_of_channels * num_of_samples];
@@ -700,8 +633,8 @@ void Frame::Thumbnail(std::string path, int new_width, int new_height, std::stri
 		mask->invertPixels();
 
 		// Get pixels
-		unsigned char *pixels = (unsigned char *) thumbnail->bits();
-		const unsigned char *mask_pixels = (const unsigned char *) mask->constBits();
+		unsigned char *pixels = static_cast<unsigned char *>(thumbnail->bits());
+		const unsigned char *mask_pixels = static_cast<const unsigned char *>(mask->constBits());
 
 		// Convert the mask image to grayscale
 		// Loop through pixels
@@ -865,6 +798,16 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 	max_audio_sample = length;
 }
 
+// Reverse the audio buffer of this frame (will only reverse a single time, regardless of how many times
+// you invoke this method)
+void Frame::ReverseAudio() {
+	if (audio && !audio_reversed) {
+		// Reverse audio buffer
+		audio->reverse(0, audio->getNumSamples());
+		audio_reversed = true;
+	}
+}
+
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
 	const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
@@ -891,6 +834,9 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 	// Calculate max audio sample added
 	if (new_length > max_audio_sample)
 		max_audio_sample = new_length;
+
+	// Reset audio reverse flag
+	audio_reversed = false;
 }
 
 // Apply gain ramp (i.e. fading volume)
@@ -1045,4 +991,7 @@ void Frame::AddAudioSilence(int numSamples)
 
 	// Calculate max audio sample added
 	max_audio_sample = numSamples;
+
+	// Reset audio reverse flag
+	audio_reversed = false;
 }

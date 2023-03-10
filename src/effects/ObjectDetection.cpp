@@ -154,7 +154,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                 // Get the Detected Object's child clip
                 if (trackedObject->ChildClipId() != ""){
                     // Cast the parent timeline of this effect
-                    Timeline* parentTimeline = (Timeline *) ParentTimeline();
+                    Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
                     if (parentTimeline){
                         // Get the Tracked Object's child clip
                         Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());

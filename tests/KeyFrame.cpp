@@ -93,7 +93,7 @@ TEST_CASE( "GetValue (Bezier curve, 2 Points)", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(40) == Approx(3.79733f).margin(0.0001));
 	CHECK(kf.GetValue(50) == Approx(4.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 51);
+	CHECK(kf.GetLength() == 50);
 }
 
 TEST_CASE( "GetValue (Bezier, 5 Points, 40% handle)", "[libopenshot][keyframe]" )
@@ -116,7 +116,7 @@ TEST_CASE( "GetValue (Bezier, 5 Points, 40% handle)", "[libopenshot][keyframe]" 
 	CHECK(kf.GetValue(177) == Approx(1.73860f).margin(0.0001));
 	CHECK(kf.GetValue(200) == Approx(3.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 201);
+	CHECK(kf.GetLength() == 200);
 }
 
 TEST_CASE( "GetValue (Bezier, 5 Points, 25% Handle)", "[libopenshot][keyframe]" )
@@ -139,7 +139,7 @@ TEST_CASE( "GetValue (Bezier, 5 Points, 25% Handle)", "[libopenshot][keyframe]" 
 	CHECK(kf.GetValue(177) == Approx(1.73860f).margin(0.0001));
 	CHECK(kf.GetValue(200) == Approx(3.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 201);
+	CHECK(kf.GetLength() == 200);
 }
 
 TEST_CASE( "GetValue (Linear, 3 Points)", "[libopenshot][keyframe]" )
@@ -159,7 +159,7 @@ TEST_CASE( "GetValue (Linear, 3 Points)", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(40) == Approx(4.4f).margin(0.0001));
 	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 51);
+	CHECK(kf.GetLength() == 50);
 }
 
 TEST_CASE( "GetValue (Constant, 3 Points)", "[libopenshot][keyframe]" )
@@ -180,7 +180,7 @@ TEST_CASE( "GetValue (Constant, 3 Points)", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(49) == Approx(8.0f).margin(0.0001));
 	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 51);
+	CHECK(kf.GetLength() == 50);
 }
 
 TEST_CASE( "GetDelta", "[libopenshot][keyframe]" )
@@ -201,11 +201,11 @@ TEST_CASE( "GetDelta", "[libopenshot][keyframe]" )
 	CHECK(kf.GetDelta(24) == Approx(-0.1622f).margin(0.0001));
 
 	CHECK(kf.GetLong(390) == 100);
-	CHECK(kf.IsIncreasing(390) == true);
+	CHECK(kf.IsIncreasing(390) == false);
 	CHECK(kf.GetDelta(390) == Approx(-0.0732f).margin(0.0001));
 
 	CHECK(kf.GetLong(391) == 100);
-	CHECK(kf.IsIncreasing(391) == true);
+	CHECK(kf.IsIncreasing(391) == false);
 	CHECK(kf.GetDelta(388) == Approx(-0.0886f).margin(0.0001));
 }
 
@@ -382,7 +382,7 @@ TEST_CASE( "large number values", "[libopenshot][keyframe]" )
 	kf.AddPoint(large_value, 100.0); // 90 minutes long
 
 	// Spot check values from the curve
-	CHECK(kf.GetLength() == large_value + 1);
+	CHECK(kf.GetLength() == large_value);
 	CHECK(kf.GetPoint(0).co.Y == Approx(1.0).margin(0.01));
 	CHECK(kf.GetPoint(1).co.Y == Approx(100.0).margin(0.01));
 }
@@ -434,7 +434,7 @@ TEST_CASE( "IsIncreasing", "[libopenshot][keyframe]" )
 	CHECK(kf.IsIncreasing(0) == true);
 	CHECK(kf.IsIncreasing(15) == true);
 	// all next equal
-	CHECK_FALSE(kf.IsIncreasing(12));
+	CHECK(kf.IsIncreasing(12) == true);
 	// first non-eq is larger
 	CHECK(kf.IsIncreasing(8) == true);
 	// first non-eq is smaller
@@ -451,15 +451,15 @@ TEST_CASE( "GetLength", "[libopenshot][keyframe]" )
 	f.AddPoint(1, 1);
 	CHECK(f.GetLength() == 1);
 	f.AddPoint(2, 1);
-	CHECK(f.GetLength() == 3);
+	CHECK(f.GetLength() == 2);
 	f.AddPoint(200, 1);
-	CHECK(f.GetLength() == 201);
+	CHECK(f.GetLength() == 200);
 
 	Keyframe g;
 	g.AddPoint(200, 1);
 	CHECK(g.GetLength() == 1);
 	g.AddPoint(1,1);
-	CHECK(g.GetLength() == 201);
+	CHECK(g.GetLength() == 200);
 }
 
 TEST_CASE( "use segment end point interpolation", "[libopenshot][keyframe]" )
@@ -485,7 +485,7 @@ TEST_CASE( "std::vector<Point> constructor", "[libopenshot][keyframe]" )
 	std::vector<Point> points{Point(1, 10), Point(5, 20), Point(10, 30)};
 	Keyframe k1(points);
 
-	CHECK(k1.GetLength() == 11);
+	CHECK(k1.GetLength() == 10);
 	CHECK(k1.GetValue(10) == Approx(30.0f).margin(0.0001));
 }
 
