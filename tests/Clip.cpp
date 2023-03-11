@@ -387,17 +387,9 @@ TEST_CASE( "time remapping", "[libopenshot][clip]" )
 	clip.Start(0.0);
 
 	// Set time keyframe (4X speed REVERSE)
-	//clip.time.AddPoint(1, original_video_length, openshot::LINEAR);
-	//clip.time.AddPoint(original_video_length, 1.0, openshot::LINEAR);
-	
-	// Set time keyframe (4X speed FORWARD)
-	//clip.time.AddPoint(1, 1.0, openshot::LINEAR);
-	//clip.time.AddPoint(original_video_length / 2, original_video_length, openshot::LINEAR);
-	
-	// Set time keyframe (1/4X speed FORWARD)
-	//clip.time.AddPoint(1, 1.0, openshot::LINEAR);
-	//clip.time.AddPoint(original_video_length * 4, original_video_length, openshot::LINEAR);
-	
+	clip.time.AddPoint(1, original_video_length, openshot::LINEAR);
+	clip.time.AddPoint(original_video_length, 1.0, openshot::LINEAR);
+
 	// TODO: clip.Duration() != clip.Reader->info.duration
 	// Set clip length based on time-values
 	if (clip.time.GetLength() > 1) {
@@ -424,9 +416,7 @@ TEST_CASE( "time remapping", "[libopenshot][clip]" )
 															  t1.info.channels);
 
 		std::shared_ptr<Frame> f = t1.GetFrame(frame);
-		if (expected_sample_count != f->GetAudioSamplesCount()) {
-			CHECK(expected_sample_count == f->GetAudioSamplesCount());
-		}
+		CHECK(expected_sample_count == f->GetAudioSamplesCount());
 	}
 
 	// Clear cache
@@ -440,9 +430,7 @@ TEST_CASE( "time remapping", "[libopenshot][clip]" )
 															  t1.info.channels);
 
 		std::shared_ptr<Frame> f = t1.GetFrame(frame);
-		if (expected_sample_count != f->GetAudioSamplesCount()) {
-			CHECK(expected_sample_count == f->GetAudioSamplesCount());
-		}
+		CHECK(expected_sample_count == f->GetAudioSamplesCount());
 	}
 
 	t1.Close();
@@ -480,9 +468,7 @@ TEST_CASE( "resample_audio_8000_to_48000_reverse", "[libopenshot][clip]" )
 															  map.info.channels);
 
 		std::shared_ptr<Frame> f = clip.GetFrame(frame);
-		if (expected_sample_count != f->GetAudioSamplesCount()) {
-			CHECK(expected_sample_count == f->GetAudioSamplesCount());
-		}
+		CHECK(expected_sample_count == f->GetAudioSamplesCount());
 	}
 
 	// Clear clip cache

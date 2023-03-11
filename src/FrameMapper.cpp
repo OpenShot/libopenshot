@@ -549,40 +549,18 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 				}
 			}
 
-			// Resampling needed, modify copy of SampleRange object that
-			// includes some additional input samples on first iteration,
-			// and continues the offset to ensure that the sample rate
-			// converter isn't input limited.
-			const int EXTRA_INPUT_SAMPLES = 100;
+			// Resampling needed, modify copy of SampleRange object that includes some additional input samples on
+			// first iteration, and continues the offset to ensure that the resampler is not input limited.
+			const int EXTRA_INPUT_SAMPLES = 48;
 
-			// Extend end sample count by an additional EXTRA_INPUT_SAMPLES samples
-			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
-			int samples_per_end_frame =
-				Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
-										  reader->info.sample_rate, reader->info.channels);
-			if (copy_samples.sample_end >= samples_per_end_frame)
-			{
-				// check for wrapping
-				copy_samples.frame_end++;
-				copy_samples.sample_end -= samples_per_end_frame;
-			}
-			copy_samples.total += EXTRA_INPUT_SAMPLES;
-
-			if (avr) {
-				// Sample rate conversion has been allocated on this clip, so
-				// this is not the first iteration. Extend start position by
-				// EXTRA_INPUT_SAMPLES to keep step with previous frame
-				copy_samples.sample_start += EXTRA_INPUT_SAMPLES;
-				int samples_per_start_frame =
-					Frame::GetSamplesPerFrame(copy_samples.frame_start, original,
-											  reader->info.sample_rate, reader->info.channels);
-				if (copy_samples.sample_start >= samples_per_start_frame)
-				{
-					// check for wrapping
-					copy_samples.frame_start++;
-					copy_samples.sample_start -= samples_per_start_frame;
-				}
-				copy_samples.total -= EXTRA_INPUT_SAMPLES;
+			if (!avr) {
+				// This is the first iteration, and we need to extend # of samples for this frame
+				// Extend sample count range by an additional EXTRA_INPUT_SAMPLES
+				copy_samples.Extend(EXTRA_INPUT_SAMPLES, original, reader->info.sample_rate, reader->info.channels, is_increasing);
+			} else {
+				// Sample rate conversion has already been allocated on this clip, so
+				// this is not the first iteration. Shift position by EXTRA_INPUT_SAMPLES to correctly align samples
+				copy_samples.Shift(EXTRA_INPUT_SAMPLES, original, reader->info.sample_rate, reader->info.channels, is_increasing);
 			}
 		}
 
