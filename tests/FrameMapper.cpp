@@ -542,7 +542,6 @@ TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
 			map.Open();
 
 			// Loop through samples, and verify FrameMapper didn't mess up individual sample values
-			int num_samples = 0;
 			for (int frame_index = 1; frame_index <= (map.info.fps.ToInt() * num_seconds); frame_index++) {
 				int sample_count = map.GetFrame(frame_index)->GetAudioSamplesCount();
 				for (int sample_index = 0; sample_index < sample_count; sample_index++) {
@@ -555,8 +554,6 @@ TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
 					float mapped_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
 					CHECK(predicted_value == Approx(mapped_value).margin(0.001));
 				}
-				// Increment sample value
-				num_samples += map.GetFrame(frame_index)->GetAudioSamplesCount();
 			}
 
 			float clip_position = 3.77;
