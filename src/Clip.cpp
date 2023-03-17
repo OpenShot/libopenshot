@@ -558,6 +558,14 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 			}
 			// Init resampler with # channels from Reader (should match the timeline)
 			resampler = new AudioResampler(Reader()->info.channels);
+
+			// Allocate buffer of silence to initialize some data inside the resampler
+			// To prevent it from becoming input limited
+			juce::AudioBuffer<float> init_samples(Reader()->info.channels, 64);
+			init_samples.clear();
+			resampler->SetBuffer(&init_samples, 1.0);
+			resampler->GetResampledBuffer();
+
 		} else {
 			// Use previous location
 			location = previous_location;
@@ -579,10 +587,6 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 		while (remaining_samples > 0) {
 			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false);
 			int frame_sample_count = source_frame->GetAudioSamplesCount() - location.sample_start;
-
-			// Reverse audio (if needed)
-			if (!is_increasing)
-				frame->ReverseAudio();
 
 			if (frame_sample_count == 0) {
 				// No samples found in source frame (fill with silence)
