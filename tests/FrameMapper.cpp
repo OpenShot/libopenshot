@@ -472,136 +472,133 @@ TEST_CASE( "redistribute_samples_per_frame", "[libopenshot][framemapper]" ) {
 }
 
 TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
-    // This test verifies that audio data can be redistributed correctly
-    // between common and uncommon frame rates
-    int sample_rate = 48000;
-    int channels = 2;
-    int num_seconds = 1;
+	// This test verifies that audio data can be redistributed correctly
+	// between common and uncommon frame rates
+	int sample_rate = 48000;
+	int channels = 2;
+	int num_seconds = 1;
 
-    // Source frame rates (varies the # of samples per frame)
-    std::vector<openshot::Fraction> rates = {
-        openshot::Fraction(30,1),
-        openshot::Fraction(24,1) ,
-        openshot::Fraction(119,4),
-        openshot::Fraction(30000,1001)
-    };
+	// Source frame rates (varies the # of samples per frame)
+	std::vector<openshot::Fraction> rates = {
+		openshot::Fraction(30,1),
+		openshot::Fraction(24,1) ,
+		openshot::Fraction(119,4),
+		openshot::Fraction(30000,1001)
+	};
 
-    for (auto& frame_rate : rates) {
-        // Init sin wave variables
-        const int OFFSET = 0;
-        const float AMPLITUDE = 0.75;
-        const int NUM_SAMPLES = 100;
-        double angle = 0.0;
+	for (auto& frame_rate : rates) {
+		// Init sin wave variables
+		const int OFFSET = 0;
+		const float AMPLITUDE = 0.75;
+		const int NUM_SAMPLES = 100;
+		double angle = 0.0;
 
-        // Create cache object to hold test frames
-        openshot::CacheMemory cache;
+		// Create cache object to hold test frames
+		openshot::CacheMemory cache;
 
-        // Let's create some test frames
-        for (int64_t frame_number = 1; frame_number <= (frame_rate.ToFloat() * num_seconds * 2); ++frame_number) {
-            // Create blank frame (with specific frame #, samples, and channels)
-            int sample_count = openshot::Frame::GetSamplesPerFrame(frame_number, frame_rate, sample_rate, channels);
-            auto f = std::make_shared<openshot::Frame>(frame_number, sample_count, channels);
-            f->SampleRate(sample_rate);
+		// Let's create some test frames
+		for (int64_t frame_number = 1; frame_number <= (frame_rate.ToFloat() * num_seconds * 2); ++frame_number) {
+			// Create blank frame (with specific frame #, samples, and channels)
+			int sample_count = openshot::Frame::GetSamplesPerFrame(frame_number, frame_rate, sample_rate, channels);
+			auto f = std::make_shared<openshot::Frame>(frame_number, sample_count, channels);
+			f->SampleRate(sample_rate);
 
-            // Create test samples with sin wave (predictable values)
-            float *audio_buffer = new float[sample_count * 2];
-            for (int sample_number = 0; sample_number < sample_count; sample_number++) {
-                // Calculate sin wave
-                float sample_value = float(AMPLITUDE * sin(angle) + OFFSET);
-                audio_buffer[sample_number] = abs(sample_value);
-                angle += (2 * M_PI) / NUM_SAMPLES;
-            }
+			// Create test samples with sin wave (predictable values)
+			float *audio_buffer = new float[sample_count * 2];
+			for (int sample_number = 0; sample_number < sample_count; sample_number++) {
+				// Calculate sin wave
+				float sample_value = float(AMPLITUDE * sin(angle) + OFFSET);
+				audio_buffer[sample_number] = abs(sample_value);
+				angle += (2 * M_PI) / NUM_SAMPLES;
+			}
 
-            // Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
-            f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
-            f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
+			// Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
+			f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
+			f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
 
-            // Add test frame to dummy reader
-            cache.Add(f);
+			// Add test frame to dummy reader
+			cache.Add(f);
 
-            delete[] audio_buffer;
-        }
+			delete[] audio_buffer;
+		}
 
-        openshot::DummyReader r(frame_rate, 1920, 1080, sample_rate, channels, 30.0, &cache);
-        r.Open();
+		openshot::DummyReader r(frame_rate, 1920, 1080, sample_rate, channels, 30.0, &cache);
+		r.Open();
 
-        // Target frame rates
+		// Target frame rates
 	std::vector<openshot::Fraction> mapped_rates = {
-            openshot::Fraction(30,1),
-            openshot::Fraction(24,1),
-            openshot::Fraction(119,4),
-            openshot::Fraction(30000,1001)
-        };
-        for (auto &mapped_rate : mapped_rates) {
-            // Reset SIN wave
-            angle = 0.0;
+			openshot::Fraction(30,1),
+			openshot::Fraction(24,1),
+			openshot::Fraction(119,4),
+			openshot::Fraction(30000,1001)
+		};
+		for (auto &mapped_rate : mapped_rates) {
+			// Reset SIN wave
+			angle = 0.0;
 
-            // Map to different fps
-            FrameMapper map(&r, mapped_rate, PULLDOWN_NONE, sample_rate, channels, LAYOUT_STEREO);
-            map.info.has_audio = true;
-            map.Open();
+			// Map to different fps
+			FrameMapper map(&r, mapped_rate, PULLDOWN_NONE, sample_rate, channels, LAYOUT_STEREO);
+			map.info.has_audio = true;
+			map.Open();
 
-            // Loop through samples, and verify FrameMapper didn't mess up individual sample values
-            int num_samples = 0;
-            for (int frame_index = 1; frame_index <= (map.info.fps.ToInt() * num_seconds); frame_index++) {
-                int sample_count = map.GetFrame(frame_index)->GetAudioSamplesCount();
-                for (int sample_index = 0; sample_index < sample_count; sample_index++) {
+			// Loop through samples, and verify FrameMapper didn't mess up individual sample values
+			for (int frame_index = 1; frame_index <= (map.info.fps.ToInt() * num_seconds); frame_index++) {
+				int sample_count = map.GetFrame(frame_index)->GetAudioSamplesCount();
+				for (int sample_index = 0; sample_index < sample_count; sample_index++) {
 
-                    // Calculate sin wave
-                    float predicted_value = abs(float(AMPLITUDE * sin(angle) + OFFSET));
-                    angle += (2 * M_PI) / NUM_SAMPLES;
+					// Calculate sin wave
+					float predicted_value = abs(float(AMPLITUDE * sin(angle) + OFFSET));
+					angle += (2 * M_PI) / NUM_SAMPLES;
 
-                    // Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
-                    float mapped_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
-                    CHECK(predicted_value == Approx(mapped_value).margin(0.001));
-                }
-                // Increment sample value
-                num_samples += map.GetFrame(frame_index)->GetAudioSamplesCount();
-            }
+					// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
+					float mapped_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
+					CHECK(predicted_value == Approx(mapped_value).margin(0.001));
+				}
+			}
 
-            float clip_position = 3.77;
-            int starting_clip_frame = round(clip_position * map.info.fps.ToFloat()) + 1;
+			float clip_position = 3.77;
+			int starting_clip_frame = round(clip_position * map.info.fps.ToFloat()) + 1;
 
-            // Create Timeline (same specs as reader)
-            Timeline t1(map.info.width, map.info.height, map.info.fps, map.info.sample_rate, map.info.channels,
-                        map.info.channel_layout);
+			// Create Timeline (same specs as reader)
+			Timeline t1(map.info.width, map.info.height, map.info.fps, map.info.sample_rate, map.info.channels,
+						map.info.channel_layout);
 
-            Clip c1;
-            c1.Reader(&map);
-            c1.Layer(1);
-            c1.Position(clip_position);
-            c1.Start(0.0);
-            c1.End(10.0);
+			Clip c1;
+			c1.Reader(&map);
+			c1.Layer(1);
+			c1.Position(clip_position);
+			c1.Start(0.0);
+			c1.End(10.0);
 
-            // Add clips
-            t1.AddClip(&c1);
-            t1.Open();
+			// Add clips
+			t1.AddClip(&c1);
+			t1.Open();
 
-            // Reset SIN wave
-            angle = 0.0;
+			// Reset SIN wave
+			angle = 0.0;
 
-            for (int frame_index = starting_clip_frame; frame_index < (starting_clip_frame + (t1.info.fps.ToFloat() * num_seconds)); frame_index++) {
-                for (int sample_index = 0; sample_index < t1.GetFrame(frame_index)->GetAudioSamplesCount(); sample_index++) {
-                    // Calculate sin wave
-                    float predicted_value = abs(float(AMPLITUDE * sin(angle) + OFFSET));
-                    angle += (2 * M_PI) / NUM_SAMPLES;
+			for (int frame_index = starting_clip_frame; frame_index < (starting_clip_frame + (t1.info.fps.ToFloat() * num_seconds)); frame_index++) {
+				for (int sample_index = 0; sample_index < t1.GetFrame(frame_index)->GetAudioSamplesCount(); sample_index++) {
+					// Calculate sin wave
+					float predicted_value = abs(float(AMPLITUDE * sin(angle) + OFFSET));
+					angle += (2 * M_PI) / NUM_SAMPLES;
 
-                    // Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
-                    float timeline_value = t1.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
-                    CHECK(predicted_value == Approx(timeline_value).margin(0.001));
-                }
-            }
+					// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
+					float timeline_value = t1.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
+					CHECK(predicted_value == Approx(timeline_value).margin(0.001));
+				}
+			}
 
-            // Close mapper
-            map.Close();
-            t1.Close();
-        }
+			// Close mapper
+			map.Close();
+			t1.Close();
+		}
 
-        // Clean up reader
-        r.Close();
-        cache.Clear();
+		// Clean up reader
+		r.Close();
+		cache.Clear();
 
-    } // for rates
+	} // for rates
 }
 
 TEST_CASE( "PrintMapping", "[libopenshot][framemapper]" )
@@ -650,4 +647,102 @@ TEST_CASE( "Json", "[libopenshot][framemapper]" )
 
 	CHECK(map.info.sample_rate == 48000);
 	CHECK(map.info.fps.num == 30);
+}
+
+TEST_CASE( "SampleRange", "[libopenshot][framemapper]")
+{
+	openshot::Fraction fps(30, 1);
+	int sample_rate = 44100;
+	int channels = 2;
+
+	int64_t start_frame = 10;
+	int start_sample = 0;
+	int total_samples = Frame::GetSamplesPerFrame(start_frame, fps, sample_rate, channels);
+
+	int64_t end_frame = 10;
+	int end_sample = (total_samples - 1);
+
+	SampleRange Samples = {start_frame, start_sample, end_frame, end_sample, total_samples };
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 0);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1469);
+
+	// ------ RIGHT -------
+	// Extend range to the RIGHT
+	Samples.Extend(50, fps, sample_rate, channels, true);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 0);
+	CHECK(Samples.frame_end == 11);
+	CHECK(Samples.sample_end == 49);
+	CHECK(Samples.total == total_samples + 50);
+
+	// Shrink range from the RIGHT
+	Samples.Shrink(50, fps, sample_rate, channels, true);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 0);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1469);
+	CHECK(Samples.total == total_samples);
+
+
+	// ------ LEFT -------
+	// Extend range to the LEFT
+	Samples.Extend(50, fps, sample_rate, channels, false);
+	CHECK(Samples.frame_start == 9);
+	CHECK(Samples.sample_start == 1420);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1469);
+	CHECK(Samples.total == total_samples + 50);
+
+	// Shrink range from the LEFT
+	Samples.Shrink(50, fps, sample_rate, channels, false);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 0);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1469);
+	CHECK(Samples.total == total_samples);
+
+
+	// ------ SHIFT -------
+	// Shift range to the RIGHT
+	Samples.Shift(50, fps, sample_rate, channels, true);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 50);
+	CHECK(Samples.frame_end == 11);
+	CHECK(Samples.sample_end == 49);
+	CHECK(Samples.total == total_samples);
+
+	// Shift range to the LEFT
+	Samples.Shift(50, fps, sample_rate, channels, false);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 0);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1469);
+	CHECK(Samples.total == total_samples);
+
+
+	// Shift range to the RIGHT
+	Samples.Shift(50, fps, sample_rate, channels, true);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 50);
+	CHECK(Samples.frame_end == 11);
+	CHECK(Samples.sample_end == 49);
+	CHECK(Samples.total == total_samples);
+
+	// Shift range to the LEFT
+	Samples.Shift(75, fps, sample_rate, channels, false);
+	CHECK(Samples.frame_start == 9);
+	CHECK(Samples.sample_start == 1445);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1444);
+	CHECK(Samples.total == total_samples);
+
+	// Shift range to the RIGHT
+	Samples.Shift(25, fps, sample_rate, channels, true);
+	CHECK(Samples.frame_start == 10);
+	CHECK(Samples.sample_start == 0);
+	CHECK(Samples.frame_end == 10);
+	CHECK(Samples.sample_end == 1469);
+	CHECK(Samples.total == total_samples);
 }

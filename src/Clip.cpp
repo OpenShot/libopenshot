@@ -23,9 +23,9 @@
 #include "ZmqLogger.h"
 
 #ifdef USE_IMAGEMAGICK
-    #include "MagickUtilities.h"
-    #include "ImageReader.h"
-    #include "TextReader.h"
+	#include "MagickUtilities.h"
+	#include "ImageReader.h"
+	#include "TextReader.h"
 #endif
 
 #include <Qt>
@@ -95,6 +95,9 @@ void Clip::init_settings()
 
 	// Init reader info struct
 	init_reader_settings();
+
+	// Init cache
+	final_cache.SetMaxBytesFromInfo(10, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Init reader info details
@@ -235,7 +238,7 @@ Clip::~Clip()
 void Clip::AttachToObject(std::string object_id)
 {
 	// Search for the tracked object on the timeline
-	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+	Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 
 	if (parentTimeline) {
 		// Create a smart pointer to the tracked object from the timeline
@@ -268,37 +271,37 @@ void Clip::SetAttachedClip(Clip* clipObject){
 /// Set the current reader
 void Clip::Reader(ReaderBase* new_reader)
 {
-    // Delete previously allocated reader (if not related to new reader)
-    // FrameMappers that point to the same allocated reader are ignored
-    bool is_same_reader = false;
-    if (new_reader && allocated_reader) {
-        if (new_reader->Name() == "FrameMapper") {
-            // Determine if FrameMapper is pointing at the same allocated ready
-            FrameMapper* clip_mapped_reader = (FrameMapper*) new_reader;
-            if (allocated_reader == clip_mapped_reader->Reader()) {
-                is_same_reader = true;
-            }
-        }
-    }
-    // Clear existing allocated reader (if different)
-    if (allocated_reader && !is_same_reader) {
-        reader->Close();
-        allocated_reader->Close();
-        delete allocated_reader;
-        reader = NULL;
-        allocated_reader = NULL;
-    }
+	// Delete previously allocated reader (if not related to new reader)
+	// FrameMappers that point to the same allocated reader are ignored
+	bool is_same_reader = false;
+	if (new_reader && allocated_reader) {
+		if (new_reader->Name() == "FrameMapper") {
+			// Determine if FrameMapper is pointing at the same allocated ready
+			FrameMapper* clip_mapped_reader = static_cast<FrameMapper*>(new_reader);
+			if (allocated_reader == clip_mapped_reader->Reader()) {
+				is_same_reader = true;
+			}
+		}
+	}
+	// Clear existing allocated reader (if different)
+	if (allocated_reader && !is_same_reader) {
+		reader->Close();
+		allocated_reader->Close();
+		delete allocated_reader;
+		reader = NULL;
+		allocated_reader = NULL;
+	}
 
 	// set reader pointer
 	reader = new_reader;
 
 	// set parent
 	if (reader) {
-        reader->ParentClip(this);
+		reader->ParentClip(this);
 
-        // Init reader info struct
-        init_reader_settings();
-    }
+		// Init reader info struct
+		init_reader_settings();
+	}
 }
 
 /// Get the current reader
@@ -374,50 +377,31 @@ void Clip::End(float value) {
 	ClipBase::End(value);
 }
 
-// Create an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Clip::GetFrame(int64_t frame_number)
-{
-	// Check for open reader (or throw exception)
-	if (!is_open)
-		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
+// Set associated Timeline pointer
+void Clip::ParentTimeline(openshot::TimelineBase* new_timeline) {
+	timeline = new_timeline;
 
-	if (reader)
-	{
-		// Adjust out of bounds frame number
-		frame_number = adjust_frame_number_minimum(frame_number);
-
-		// Get the original frame and pass it to GetFrame overload
-		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(frame_number);
-		return GetFrame(original_frame, frame_number, NULL);
-	}
-	else
-		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+	// Clear cache (it might have changed)
+	final_cache.Clear();
 }
 
 // Create an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number)
+std::shared_ptr<Frame> Clip::GetFrame(int64_t clip_frame_number)
 {
-    // Check for open reader (or throw exception)
-    if (!is_open)
-        throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
+	// Call override of GetFrame
+	return GetFrame(NULL, clip_frame_number, NULL);
+}
 
-    if (reader)
-    {
-        // Adjust out of bounds frame number
-        frame_number = adjust_frame_number_minimum(frame_number);
-
-        // Get the original frame and pass it to GetFrame overload
-        std::shared_ptr<Frame> original_frame = GetOrCreateFrame(frame_number);
-        return GetFrame(original_frame, frame_number, NULL);
-    }
-    else
-        // Throw error if reader not initialized
-        throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+// Create an openshot::Frame object for a specific frame number of this reader.
+// NOTE: background_frame is ignored in this method (this method is only used by Effect classes)
+std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t clip_frame_number)
+{
+	// Call override of GetFrame
+	return GetFrame(background_frame, clip_frame_number, NULL);
 }
 
 // Use an existing openshot::Frame object and draw this Clip's frame onto it
-std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number, openshot::TimelineInfoStruct* options)
+std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t clip_frame_number, openshot::TimelineInfoStruct* options)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -425,46 +409,57 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 
 	if (reader)
 	{
-		// Adjust out of bounds frame number
-		frame_number = adjust_frame_number_minimum(frame_number);
+		// Get frame object
+		std::shared_ptr<Frame> frame = NULL;
 
-		// Is a time map detected
-		int64_t new_frame_number = frame_number;
-		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(frame_number));
-		if (time.GetLength() > 1)
-			new_frame_number = time_mapped_number;
+		// Check cache
+		frame = final_cache.GetFrame(clip_frame_number);
+		if (frame) {
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod(
+					"Clip::GetFrame (Cached frame found)",
+					"requested_frame", clip_frame_number);
 
-		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
+			// Return cached frame
+			return frame;
+		}
 
-		// Get time mapped frame number (used to increase speed, change direction, etc...)
-		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
-		get_time_mapped_frame(original_frame, new_frame_number);
-		// Return the frame's number so the correct keyframes are applied.
-		original_frame->number = frame_number;
+		// Generate clip frame
+		frame = GetOrCreateFrame(clip_frame_number);
 
-        // Apply waveform image (if any)
-        if (Waveform()) {
-            apply_waveform(original_frame, background_frame->GetImage());
-        }
+		if (!background_frame) {
+			// Create missing background_frame w/ transparent color (if needed)
+			background_frame = std::make_shared<Frame>(clip_frame_number, frame->GetWidth(), frame->GetHeight(),
+													   "#00000000",  frame->GetAudioSamplesCount(),
+													   frame->GetAudioChannelsCount());
+		}
+
+		// Get time mapped frame object (used to increase speed, change direction, etc...)
+		apply_timemapping(frame);
+
+		// Apply waveform image (if any)
+		apply_waveform(frame, background_frame->GetImage());
 
 		// Apply local effects to the frame (if any)
-		apply_effects(original_frame);
+		apply_effects(frame);
 
-        // Apply global timeline effects (i.e. transitions & masks... if any)
-        if (timeline != NULL && options != NULL) {
-            if (options->is_top_clip) {
-                // Apply global timeline effects (only to top clip... if overlapping, pass in timeline frame number)
-                Timeline* timeline_instance = (Timeline*) timeline;
-                original_frame = timeline_instance->apply_effects(original_frame, background_frame->number, Layer());
-            }
-        }
+		// Apply global timeline effects (i.e. transitions & masks... if any)
+		if (timeline != NULL && options != NULL) {
+			if (options->is_top_clip) {
+				// Apply global timeline effects (only to top clip... if overlapping, pass in timeline frame number)
+				Timeline* timeline_instance = static_cast<Timeline*>(timeline);
+				frame = timeline_instance->apply_effects(frame, background_frame->number, Layer());
+			}
+		}
 
 		// Apply keyframe / transforms
-		apply_keyframes(original_frame, background_frame->GetImage());
+		apply_keyframes(frame, background_frame->GetImage());
+
+		// Add final frame to cache
+		final_cache.Add(frame);
 
 		// Return processed 'frame'
-		return original_frame;
+		return frame;
 	}
 	else
 		// Throw error if reader not initialized
@@ -515,11 +510,10 @@ void Clip::reverse_buffer(juce::AudioBuffer<float>* buffer)
 		buffer->addFrom(channel, 0, reversed->getReadPointer(channel), number_of_samples, 1.0f);
 
 	delete reversed;
-	reversed = nullptr;
 }
 
 // Adjust the audio and image of a time mapped frame
-void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number)
+void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 {
 	// Check for valid reader
 	if (!reader)
@@ -531,191 +525,135 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	{
 		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
-		// create buffer and resampler
-		juce::AudioBuffer<float> *samples = nullptr;
-		if (!resampler)
-			resampler = new AudioResampler();
+		int64_t clip_frame_number = frame->number;
+		int64_t new_frame_number = adjust_frame_number_minimum(time.GetLong(clip_frame_number));
 
-		// Get new frame number
-		int new_frame_number = frame->number;
+		// create buffer
+		juce::AudioBuffer<float> *source_samples = nullptr;
 
-		// Get delta (difference in previous Y value)
-		int delta = int(round(time.GetDelta(frame_number)));
+		// Get delta (difference from this frame to the next time mapped frame: Y value)
+		double delta = time.GetDelta(clip_frame_number + 1);
+		bool is_increasing = time.IsIncreasing(clip_frame_number + 1);
 
-		// Init audio vars
-		int channels = reader->info.channels;
-		int number_of_samples = GetOrCreateFrame(new_frame_number)->GetAudioSamplesCount();
+		// Determine length of source audio (in samples)
+		// A delta of 1.0 == normal expected samples
+		// A delta of 0.5 == 50% of normal expected samples
+		// A delta of 2.0 == 200% of normal expected samples
+		int target_sample_count = Frame::GetSamplesPerFrame(adjust_timeline_framenumber(clip_frame_number), Reader()->info.fps,
+															  Reader()->info.sample_rate,
+															  Reader()->info.channels);
+		int source_sample_count = round(target_sample_count * fabs(delta));
 
-		// Only resample audio if needed
-		if (reader->info.has_audio) {
-			// Determine if we are speeding up or slowing down
-			if (time.GetRepeatFraction(frame_number).den > 1) {
-				// SLOWING DOWN AUDIO
-				// Resample data, and return new buffer pointer
-				juce::AudioBuffer<float> *resampled_buffer = nullptr;
+		// Determine starting audio location
+		AudioLocation location;
+		if (previous_location.frame == 0 || abs(new_frame_number - previous_location.frame) > 2) {
+			// No previous location OR gap detected
+			location.frame = new_frame_number;
+			location.sample_start = 0;
 
-				// SLOW DOWN audio (split audio)
-				samples = new juce::AudioBuffer<float>(channels, number_of_samples);
-				samples->clear();
-
-				// Loop through channels, and get audio samples
-				for (int channel = 0; channel < channels; channel++)
-					// Get the audio samples for this channel
-					samples->addFrom(channel, 0, GetOrCreateFrame(new_frame_number)->GetAudioSamples(channel),
-									 number_of_samples, 1.0f);
-
-				// Reverse the samples (if needed)
-				if (!time.IsIncreasing(frame_number))
-					reverse_buffer(samples);
-
-				// Resample audio to be X times slower (where X is the denominator of the repeat fraction)
-				resampler->SetBuffer(samples, 1.0 / time.GetRepeatFraction(frame_number).den);
-
-				// Resample the data (since it's the 1st slice)
-				resampled_buffer = resampler->GetResampledBuffer();
-
-				// Just take the samples we need for the requested frame
-				int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
-				if (start > 0)
-					start -= 1;
-				for (int channel = 0; channel < channels; channel++)
-					// Add new (slower) samples, to the frame object
-					frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start),
-										number_of_samples, 1.0f);
-
-				// Clean up
-				resampled_buffer = nullptr;
-
+			// Create / Reset resampler
+			// We don't want to interpolate between unrelated audio data
+			if (resampler) {
+				delete resampler;
 			}
-			else if (abs(delta) > 1 && abs(delta) < 100) {
-				int start = 0;
-				if (delta > 0) {
-					// SPEED UP (multiple frames of audio), as long as it's not more than X frames
-					int total_delta_samples = 0;
-					for (int delta_frame = new_frame_number - (delta - 1);
-						 delta_frame <= new_frame_number; delta_frame++)
-						total_delta_samples += Frame::GetSamplesPerFrame(delta_frame, reader->info.fps,
-																		 reader->info.sample_rate,
-																		 reader->info.channels);
+			// Init resampler with # channels from Reader (should match the timeline)
+			resampler = new AudioResampler(Reader()->info.channels);
 
-					// Allocate a new sample buffer for these delta frames
-					samples = new juce::AudioBuffer<float>(channels, total_delta_samples);
-					samples->clear();
+			// Allocate buffer of silence to initialize some data inside the resampler
+			// To prevent it from becoming input limited
+			juce::AudioBuffer<float> init_samples(Reader()->info.channels, 64);
+			init_samples.clear();
+			resampler->SetBuffer(&init_samples, 1.0);
+			resampler->GetResampledBuffer();
 
-					// Loop through each frame in this delta
-					for (int delta_frame = new_frame_number - (delta - 1);
-						 delta_frame <= new_frame_number; delta_frame++) {
-						// buffer to hold detal samples
-						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						auto *delta_samples = new juce::AudioBuffer<float>(channels,
-						                                                   number_of_delta_samples);
-						delta_samples->clear();
-
-						for (int channel = 0; channel < channels; channel++)
-							delta_samples->addFrom(channel, 0, GetOrCreateFrame(delta_frame)->GetAudioSamples(channel),
-												   number_of_delta_samples, 1.0f);
-
-						// Reverse the samples (if needed)
-						if (!time.IsIncreasing(frame_number))
-							reverse_buffer(delta_samples);
-
-						// Copy the samples to
-						for (int channel = 0; channel < channels; channel++)
-							// Get the audio samples for this channel
-							samples->addFrom(channel, start, delta_samples->getReadPointer(channel),
-											 number_of_delta_samples, 1.0f);
-
-						// Clean up
-						delete delta_samples;
-						delta_samples = nullptr;
-
-						// Increment start position
-						start += number_of_delta_samples;
-					}
-				}
-				else {
-					// SPEED UP (multiple frames of audio), as long as it's not more than X frames
-					int total_delta_samples = 0;
-					for (int delta_frame = new_frame_number - (delta + 1);
-						 delta_frame >= new_frame_number; delta_frame--)
-						total_delta_samples += Frame::GetSamplesPerFrame(delta_frame, reader->info.fps,
-																		 reader->info.sample_rate,
-																		 reader->info.channels);
-
-					// Allocate a new sample buffer for these delta frames
-					samples = new juce::AudioBuffer<float>(channels, total_delta_samples);
-					samples->clear();
-
-					// Loop through each frame in this delta
-					for (int delta_frame = new_frame_number - (delta + 1);
-						 delta_frame >= new_frame_number; delta_frame--) {
-						// buffer to hold delta samples
-						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						auto *delta_samples = new juce::AudioBuffer<float>(channels,
-						                                                   number_of_delta_samples);
-						delta_samples->clear();
-
-						for (int channel = 0; channel < channels; channel++)
-							delta_samples->addFrom(channel, 0, GetOrCreateFrame(delta_frame)->GetAudioSamples(channel),
-												   number_of_delta_samples, 1.0f);
-
-						// Reverse the samples (if needed)
-						if (!time.IsIncreasing(frame_number))
-							reverse_buffer(delta_samples);
-
-						// Copy the samples to
-						for (int channel = 0; channel < channels; channel++)
-							// Get the audio samples for this channel
-							samples->addFrom(channel, start, delta_samples->getReadPointer(channel),
-											 number_of_delta_samples, 1.0f);
-
-						// Clean up
-						delete delta_samples;
-						delta_samples = NULL;
-
-						// Increment start position
-						start += number_of_delta_samples;
-					}
-				}
-
-				// Resample audio to be X times faster (where X is the delta of the repeat fraction)
-				resampler->SetBuffer(samples, float(start) / float(number_of_samples));
-
-				// Resample data, and return new buffer pointer
-				juce::AudioBuffer<float> *buffer = resampler->GetResampledBuffer();
-
-				// Add the newly resized audio samples to the current frame
-				for (int channel = 0; channel < channels; channel++)
-					// Add new (slower) samples, to the frame object
-					frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
-
-				// Clean up
-				buffer = nullptr;
-			}
-			else {
-				// Use the samples on this frame (but maybe reverse them if needed)
-				samples = new juce::AudioBuffer<float>(channels, number_of_samples);
-				samples->clear();
-
-				// Loop through channels, and get audio samples
-				for (int channel = 0; channel < channels; channel++)
-					// Get the audio samples for this channel
-					samples->addFrom(channel, 0, frame->GetAudioSamples(channel), number_of_samples, 1.0f);
-
-				// reverse the samples
-				if (!time.IsIncreasing(frame_number))
-					reverse_buffer(samples);
-
-				// Add reversed samples to the frame object
-				for (int channel = 0; channel < channels; channel++)
-					frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
-
-
-			}
-
-			delete samples;
-			samples = nullptr;
+		} else {
+			// Use previous location
+			location = previous_location;
 		}
+
+		if (source_sample_count <= 0) {
+			// Add silence and bail (we don't need any samples)
+			frame->AddAudioSilence(target_sample_count);
+			return;
+		}
+
+		// Allocate a new sample buffer for these delta frames
+		source_samples = new juce::AudioBuffer<float>(Reader()->info.channels, source_sample_count);
+		source_samples->clear();
+
+		// Determine ending audio location
+		int remaining_samples = source_sample_count;
+		int source_pos = 0;
+		while (remaining_samples > 0) {
+			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false);
+			int frame_sample_count = source_frame->GetAudioSamplesCount() - location.sample_start;
+
+			if (frame_sample_count == 0) {
+				// No samples found in source frame (fill with silence)
+				if (is_increasing) {
+					location.frame++;
+				} else {
+					location.frame--;
+				}
+				location.sample_start = 0;
+				break;
+			}
+			if (remaining_samples - frame_sample_count >= 0) {
+				// Use all frame samples & increment location
+				for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++) {
+					source_samples->addFrom(channel, source_pos, source_frame->GetAudioSamples(channel) + location.sample_start, frame_sample_count, 1.0f);
+				}
+				if (is_increasing) {
+					location.frame++;
+				} else {
+					location.frame--;   
+				}
+				location.sample_start = 0;
+				remaining_samples -= frame_sample_count;
+				source_pos += frame_sample_count;
+
+			} else {
+				// Use just what is needed (and reverse samples)
+				for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++) {
+					source_samples->addFrom(channel, source_pos, source_frame->GetAudioSamples(channel) + location.sample_start, remaining_samples, 1.0f);
+				}
+				location.sample_start += remaining_samples;
+				remaining_samples = 0;
+				source_pos += remaining_samples;
+			}
+
+		}
+
+		// Resize audio for current frame object + fill with silence
+		// We are fixing to clobber this with actual audio data (possibly resampled)
+		frame->AddAudioSilence(target_sample_count);
+
+		if (source_sample_count != target_sample_count) {
+			// Resample audio (if needed)
+			double resample_ratio = double(source_sample_count) / double(target_sample_count);
+			resampler->SetBuffer(source_samples, resample_ratio);
+
+			// Resample the data
+			juce::AudioBuffer<float> *resampled_buffer = resampler->GetResampledBuffer();
+
+			// Fill the frame with resampled data
+			for (int channel = 0; channel < Reader()->info.channels; channel++) {
+				// Add new (slower) samples, to the frame object
+				frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, 0), std::min(resampled_buffer->getNumSamples(), target_sample_count), 1.0f);
+			}
+		} else {
+			// Fill the frame
+			for (int channel = 0; channel < Reader()->info.channels; channel++) {
+				// Add new (slower) samples, to the frame object
+				frame->AddAudio(true, channel, 0, source_samples->getReadPointer(channel, 0), target_sample_count, 1.0f);
+			}
+		}
+
+		// Clean up
+		delete source_samples;
+
+		// Set previous location
+		previous_location = location;
 	}
 }
 
@@ -731,16 +669,25 @@ int64_t Clip::adjust_frame_number_minimum(int64_t frame_number)
 }
 
 // Get or generate a blank frame
-std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
+std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 {
 	try {
+		// Init to requested frame
+		int64_t clip_frame_number = adjust_frame_number_minimum(number);
+
+		// Adjust for time-mapping (if any)
+		if (enable_time && time.GetLength() > 1) {
+			clip_frame_number = adjust_frame_number_minimum(time.GetLong(clip_frame_number));
+		}
+
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod(
-			"Clip::GetOrCreateFrame (from reader)",
-			"number", number);
+				"Clip::GetOrCreateFrame (from reader)",
+				"number", number, "clip_frame_number", clip_frame_number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		auto reader_frame = reader->GetFrame(number);
+		auto reader_frame = reader->GetFrame(clip_frame_number);
+		reader_frame->number = number; // Override frame # (due to time-mapping might change it)
 
 		// Return real frame
 		if (reader_frame) {
@@ -748,14 +695,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
-            if (has_video.GetInt(number) == 0) {
-                // No video, so add transparent pixels
-                reader_copy->AddColor(QColor(Qt::transparent));
-            }
-            if (has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
-                // No audio, so include silence (also, mute audio if past end of reader)
-                reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
-            }
+			if (has_video.GetInt(number) == 0) {
+				// No video, so add transparent pixels
+				reader_copy->AddColor(QColor(Qt::transparent));
+			}
+			if (has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
+				// No audio, so include silence (also, mute audio if past end of reader)
+				reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
+			}
 			return reader_copy;
 		}
 
@@ -1127,7 +1074,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 				already_open = reader->IsOpen();
 
 				// Close and delete existing allocated reader (if any)
-                Reader(NULL);
+				Reader(NULL);
 			}
 
 			// Create new reader (and load properties)
@@ -1185,11 +1132,14 @@ void Clip::SetJsonValue(const Json::Value root) {
 			}
 
 			// Re-Open reader (if needed)
-			if (already_open)
+			if (already_open) {
 				reader->Open();
-
+			}
 		}
 	}
+
+	// Clear cache (it might have changed)
+	final_cache.Clear();
 }
 
 // Sort effects by order
@@ -1212,12 +1162,12 @@ void Clip::AddEffect(EffectBase* effect)
 	sort_effects();
 
 	// Get the parent timeline of this clip
-	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+	Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 
 	if (parentTimeline)
 		effect->ParentTimeline(parentTimeline);
 
-    #ifdef USE_OPENCV
+	#ifdef USE_OPENCV
 	// Add Tracked Object to Timeline
 	if (effect->info.has_tracked_object){
 
@@ -1240,13 +1190,19 @@ void Clip::AddEffect(EffectBase* effect)
 			}
 		}
 	}
-    #endif
+	#endif
+
+	// Clear cache (it might have changed)
+	final_cache.Clear();
 }
 
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
+
+	// Clear cache (it might have changed)
+	final_cache.Clear();
 }
 
 // Apply effects to the source frame (if any)
@@ -1269,102 +1225,108 @@ bool Clip::isEqual(double a, double b)
 
 // Apply keyframes to the source frame (if any)
 void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
-    // Skip out if video was disabled or only an audio frame (no visualisation in use)
-    if (!frame->has_image_data) {
-        // Skip the rest of the image processing for performance reasons
-        return;
-    }
+	// Skip out if video was disabled or only an audio frame (no visualisation in use)
+	if (!frame->has_image_data) {
+		// Skip the rest of the image processing for performance reasons
+		return;
+	}
 
-    // Get image from clip
-    std::shared_ptr<QImage> source_image = frame->GetImage();
+	// Get image from clip
+	std::shared_ptr<QImage> source_image = frame->GetImage();
 
-    // Get transform from clip's keyframes
-    QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
+	// Get transform from clip's keyframes
+	QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
 
-    // Debug output
-    ZmqLogger::Instance()->AppendDebugMethod(
-        "Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)",
-        "frame->number", frame->number,
-        "background_canvas->width()", background_canvas->width(),
-        "background_canvas->height()", background_canvas->height());
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)",
+		"frame->number", frame->number,
+		"background_canvas->width()", background_canvas->width(),
+		"background_canvas->height()", background_canvas->height());
 
-    // Load timeline's new frame image into a QPainter
-    QPainter painter(background_canvas.get());
-    painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+	// Load timeline's new frame image into a QPainter
+	QPainter painter(background_canvas.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
-    // Apply transform (translate, rotate, scale)
-    painter.setTransform(transform);
+	// Apply transform (translate, rotate, scale)
+	painter.setTransform(transform);
 
-    // Composite a new layer onto the image
-    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.drawImage(0, 0, *source_image);
+	// Composite a new layer onto the image
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(0, 0, *source_image);
 
-    if (timeline) {
-        Timeline *t = (Timeline *) timeline;
+	if (timeline) {
+		Timeline *t = static_cast<Timeline *>(timeline);
 
-        // Draw frame #'s on top of image (if needed)
-        if (display != FRAME_DISPLAY_NONE) {
-            std::stringstream frame_number_str;
-            switch (display) {
-                case (FRAME_DISPLAY_NONE):
-                    // This is only here to prevent unused-enum warnings
-                    break;
+		// Draw frame #'s on top of image (if needed)
+		if (display != FRAME_DISPLAY_NONE) {
+			std::stringstream frame_number_str;
+			switch (display) {
+				case (FRAME_DISPLAY_NONE):
+					// This is only here to prevent unused-enum warnings
+					break;
 
-                case (FRAME_DISPLAY_CLIP):
-                    frame_number_str << frame->number;
-                    break;
+				case (FRAME_DISPLAY_CLIP):
+					frame_number_str << frame->number;
+					break;
 
-                case (FRAME_DISPLAY_TIMELINE):
-                    frame_number_str << round((Position() - Start()) * t->info.fps.ToFloat()) + frame->number;
-                    break;
+				case (FRAME_DISPLAY_TIMELINE):
+					frame_number_str << round((Position() - Start()) * t->info.fps.ToFloat()) + frame->number;
+					break;
 
-                case (FRAME_DISPLAY_BOTH):
-                    frame_number_str << round((Position() - Start()) * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
-                    break;
-            }
+				case (FRAME_DISPLAY_BOTH):
+					frame_number_str << round((Position() - Start()) * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
+					break;
+			}
 
-            // Draw frame number on top of image
-            painter.setPen(QColor("#ffffff"));
-            painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
-        }
-    }
-    painter.end();
+			// Draw frame number on top of image
+			painter.setPen(QColor("#ffffff"));
+			painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
+		}
+	}
+	painter.end();
 
-    // Add new QImage to frame
-    frame->AddImage(background_canvas);
+	// Add new QImage to frame
+	frame->AddImage(background_canvas);
 }
 
 // Apply apply_waveform image to the source frame (if any)
 void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
-    // Get image from clip
-    std::shared_ptr<QImage> source_image = frame->GetImage();
 
-    // Debug output
-    ZmqLogger::Instance()->AppendDebugMethod(
-            "Clip::apply_waveform (Generate Waveform Image)",
-            "frame->number", frame->number,
-            "Waveform()", Waveform(),
-            "background_canvas->width()", background_canvas->width(),
-            "background_canvas->height()", background_canvas->height());
+	if (!Waveform()) {
+		// Exit if no waveform is needed
+		return;
+	}
 
-    // Get the color of the waveform
-    int red = wave_color.red.GetInt(frame->number);
-    int green = wave_color.green.GetInt(frame->number);
-    int blue = wave_color.blue.GetInt(frame->number);
-    int alpha = wave_color.alpha.GetInt(frame->number);
+	// Get image from clip
+	std::shared_ptr<QImage> source_image = frame->GetImage();
 
-    // Generate Waveform Dynamically (the size of the timeline)
-    source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
-    frame->AddImage(source_image);
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod(
+			"Clip::apply_waveform (Generate Waveform Image)",
+			"frame->number", frame->number,
+			"Waveform()", Waveform(),
+			"background_canvas->width()", background_canvas->width(),
+			"background_canvas->height()", background_canvas->height());
+
+	// Get the color of the waveform
+	int red = wave_color.red.GetInt(frame->number);
+	int green = wave_color.green.GetInt(frame->number);
+	int blue = wave_color.blue.GetInt(frame->number);
+	int alpha = wave_color.alpha.GetInt(frame->number);
+
+	// Generate Waveform Dynamically (the size of the timeline)
+	source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+	frame->AddImage(source_image);
 }
 
 // Apply keyframes to the source frame (if any)
 QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int height)
 {
-    // Get image from clip
-    std::shared_ptr<QImage> source_image = frame->GetImage();
+	// Get image from clip
+	std::shared_ptr<QImage> source_image = frame->GetImage();
 
-    /* ALPHA & OPACITY */
+	/* ALPHA & OPACITY */
 	if (alpha.GetValue(frame->number) != 1.0)
 	{
 		float alpha_value = alpha.GetValue(frame->number);
@@ -1393,7 +1355,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = source_image->size();
 
-    // Apply stretch scale to correctly fit the bounding-box
+	// Apply stretch scale to correctly fit the bounding-box
 	if (parentTrackedObject){
 		scale = SCALE_STRETCH;
 	}
@@ -1529,7 +1491,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		sy*= parentObject_scale_y;
 	}
 
-    float scaled_source_width = source_size.width() * sx;
+	float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
 
 	switch (gravity)
@@ -1614,5 +1576,28 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		transform.scale(source_width_scale, source_height_scale);
 	}
 
-    return transform;
+	return transform;
+}
+
+// Adjust frame number for Clip position and start (which can result in a different number)
+int64_t Clip::adjust_timeline_framenumber(int64_t clip_frame_number) {
+
+	// Get clip position from parent clip (if any)
+	float position = 0.0;
+	float start = 0.0;
+	Clip *parent = static_cast<Clip *>(ParentClip());
+	if (parent) {
+		position = parent->Position();
+		start = parent->Start();
+	}
+
+	// Adjust start frame and position based on parent clip.
+	// This ensures the same frame # is used by mapped readers and clips,
+	// when calculating samples per frame.
+	// Thus, this prevents gaps and mismatches in # of samples.
+	int64_t clip_start_frame = (start * info.fps.ToDouble()) + 1;
+	int64_t clip_start_position = round(position * info.fps.ToDouble()) + 1;
+	int64_t frame_number = clip_frame_number + clip_start_position - clip_start_frame;
+
+	return frame_number;
 }

@@ -26,6 +26,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <memory>
+#include "AudioLocation.h"
 #include "CacheMemory.h"
 #include "Clip.h"
 #include "OpenMPUtilities.h"
@@ -33,19 +34,6 @@
 
 
 namespace openshot {
-	/**
-	 * @brief This struct holds the associated video frame and starting sample # for an audio packet.
-	 *
-	 * Because audio packets do not match up with video frames, this helps determine exactly
-	 * where the audio packet's samples belong.
-	 */
-	struct AudioLocation {
-		int64_t frame;
-		int sample_start;
-
-		bool is_near(AudioLocation location, int samples_per_frame, int64_t amount);
-	};
-
 	/**
 	 * @brief This struct holds the packet counts and end-of-file detection for an openshot::FFmpegReader.
 	 *

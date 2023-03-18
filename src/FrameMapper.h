@@ -18,6 +18,7 @@
 #include <vector>
 #include <memory>
 
+#include "AudioResampler.h"
 #include "CacheMemory.h"
 #include "ReaderBase.h"
 #include "Frame.h"
@@ -79,6 +80,86 @@ namespace openshot
 		int64_t frame_end;
 		int sample_end;
 
+		/// Extend SampleRange on either side
+		void Extend(int64_t samples, openshot::Fraction fps, int sample_rate, int channels, bool right_side) {
+			int remaining_samples = samples;
+			while (remaining_samples > 0) {
+				if (right_side) {
+					// Extend range to the right
+					int samples_per_frame = Frame::GetSamplesPerFrame(frame_end, fps, sample_rate, channels);
+					if (remaining_samples + sample_end < samples_per_frame) {
+						sample_end += remaining_samples;
+						remaining_samples = 0;
+					} else {
+						frame_end++;
+						remaining_samples -= (samples_per_frame - sample_end);
+						sample_end = 0;
+					}
+				} else {
+					// Extend range to the left
+					if (sample_start - remaining_samples >= 0) {
+						sample_start -= remaining_samples;
+						remaining_samples = 0;
+					} else {
+						frame_start--;
+						remaining_samples -= (sample_start + 1);
+						sample_start = Frame::GetSamplesPerFrame(frame_start, fps, sample_rate, channels) - 1;
+					}
+				}
+			}
+
+			// Increase total
+			total += samples;
+		}
+
+		/// Shrink SampleRange on either side
+		void Shrink(int64_t samples, openshot::Fraction fps, int sample_rate, int channels, bool right_side) {
+			int remaining_samples = samples;
+			while (remaining_samples > 0) {
+				if (right_side) {
+					// Shrink range on the right
+					if (sample_end - remaining_samples >= 0) {
+						sample_end -= remaining_samples;
+						remaining_samples = 0;
+					} else {
+						frame_end--;
+						int samples_per_frame = Frame::GetSamplesPerFrame(frame_end, fps, sample_rate, channels);
+						remaining_samples -= (sample_end + 1);
+						sample_end = samples_per_frame - 1;
+					}
+				} else {
+					// Shrink range on the left
+					int samples_per_frame = Frame::GetSamplesPerFrame(frame_start, fps, sample_rate, channels);
+					if (sample_start + remaining_samples < samples_per_frame) {
+						sample_start += remaining_samples;
+						remaining_samples = 0;
+					} else {
+						frame_start++;
+						remaining_samples -= (samples_per_frame - sample_start);
+						sample_start = 0;
+					}
+				}
+			}
+
+			// Reduce total
+			total -= samples;
+		}
+
+		void Shift(int64_t samples, openshot::Fraction fps, int sample_rate, int channels, bool right_side) {
+			// Extend each side of the range (to SHIFT the range) by adding (or subtracting) from both sides
+			// For example:   [	range	 ]
+			// For example:	   [	range	 ]
+			if (right_side) {
+				// SHIFT both sides to the right
+				Extend(samples, fps, sample_rate, channels, true);
+				Shrink(samples, fps, sample_rate, channels, false);
+			} else {
+				// SHIFT both sides to the left
+				Extend(samples, fps, sample_rate, channels, false);
+				Shrink(samples, fps, sample_rate, channels, true);
+			}
+		}
+
 		int total;
 	};
 
@@ -127,8 +208,12 @@ namespace openshot
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		float parent_position;  // Position of parent clip (which is used to generate the audio mapping)
-		float parent_start;     // Start of parent clip (which is used to generate the audio mapping)
+		float parent_start;		// Start of parent clip (which is used to generate the audio mapping)
+		int64_t previous_frame; // Used during resampling, to determine when a large gap is detected
 		SWRCONTEXT *avr;	// Audio resampling context object
+
+		// Audio resampler (if resampling audio)
+		openshot::AudioResampler *resampler;
 
 		// Internal methods used by init
 		void AddField(int64_t frame);

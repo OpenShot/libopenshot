@@ -126,7 +126,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 		// Get the image of the Tracked Object' child clip
 		if (trackedData->ChildClipId() != ""){
 			// Cast the parent timeline of this effect
-			Timeline* parentTimeline = (Timeline *) ParentTimeline();
+			Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 			if (parentTimeline){
 				// Get the Tracked Object's child clip
 				Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());

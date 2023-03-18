@@ -93,7 +93,7 @@ TEST_CASE( "GetValue (Bezier curve, 2 Points)", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(40) == Approx(3.79733f).margin(0.0001));
 	CHECK(kf.GetValue(50) == Approx(4.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 51);
+	CHECK(kf.GetLength() == 50);
 }
 
 TEST_CASE( "GetValue (Bezier, 5 Points, 40% handle)", "[libopenshot][keyframe]" )
@@ -116,7 +116,7 @@ TEST_CASE( "GetValue (Bezier, 5 Points, 40% handle)", "[libopenshot][keyframe]" 
 	CHECK(kf.GetValue(177) == Approx(1.73860f).margin(0.0001));
 	CHECK(kf.GetValue(200) == Approx(3.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 201);
+	CHECK(kf.GetLength() == 200);
 }
 
 TEST_CASE( "GetValue (Bezier, 5 Points, 25% Handle)", "[libopenshot][keyframe]" )
@@ -139,7 +139,7 @@ TEST_CASE( "GetValue (Bezier, 5 Points, 25% Handle)", "[libopenshot][keyframe]" 
 	CHECK(kf.GetValue(177) == Approx(1.73860f).margin(0.0001));
 	CHECK(kf.GetValue(200) == Approx(3.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 201);
+	CHECK(kf.GetLength() == 200);
 }
 
 TEST_CASE( "GetValue (Linear, 3 Points)", "[libopenshot][keyframe]" )
@@ -159,7 +159,7 @@ TEST_CASE( "GetValue (Linear, 3 Points)", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(40) == Approx(4.4f).margin(0.0001));
 	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 51);
+	CHECK(kf.GetLength() == 50);
 }
 
 TEST_CASE( "GetValue (Constant, 3 Points)", "[libopenshot][keyframe]" )
@@ -180,10 +180,10 @@ TEST_CASE( "GetValue (Constant, 3 Points)", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(49) == Approx(8.0f).margin(0.0001));
 	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.0001));
 	// Check the expected number of values
-	CHECK(kf.GetLength() == 51);
+	CHECK(kf.GetLength() == 50);
 }
 
-TEST_CASE( "GetDelta and GetRepeatFraction", "[libopenshot][keyframe]" )
+TEST_CASE( "GetDelta", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -194,27 +194,19 @@ TEST_CASE( "GetDelta and GetRepeatFraction", "[libopenshot][keyframe]" )
 	// Spot check values from the curve
 	CHECK(kf.GetInt(1) == 500);
 	CHECK_FALSE(kf.IsIncreasing(1));
-	CHECK(kf.GetRepeatFraction(1).num == 1);
-	CHECK(kf.GetRepeatFraction(1).den == 13);
 	CHECK(kf.GetDelta(1) == 500);
 
 	CHECK(kf.GetInt(24) == 498);
 	CHECK_FALSE(kf.IsIncreasing(24));
-	CHECK(kf.GetRepeatFraction(24).num == 3);
-	CHECK(kf.GetRepeatFraction(24).den == 6);
-	CHECK(kf.GetDelta(24) == 0);
+	CHECK(kf.GetDelta(24) == Approx(-0.1622f).margin(0.0001));
 
 	CHECK(kf.GetLong(390) == 100);
-	CHECK(kf.IsIncreasing(390) == true);
-	CHECK(kf.GetRepeatFraction(390).num == 3);
-	CHECK(kf.GetRepeatFraction(390).den == 16);
-	CHECK(kf.GetDelta(390) == 0);
+	CHECK(kf.IsIncreasing(390) == false);
+	CHECK(kf.GetDelta(390) == Approx(-0.0732f).margin(0.0001));
 
 	CHECK(kf.GetLong(391) == 100);
-	CHECK(kf.IsIncreasing(391) == true);
-	CHECK(kf.GetRepeatFraction(391).num == 4);
-	CHECK(kf.GetRepeatFraction(391).den == 16);
-	CHECK(kf.GetDelta(388) == -1);
+	CHECK(kf.IsIncreasing(391) == false);
+	CHECK(kf.GetDelta(388) == Approx(-0.0886f).margin(0.0001));
 }
 
 
@@ -390,7 +382,7 @@ TEST_CASE( "large number values", "[libopenshot][keyframe]" )
 	kf.AddPoint(large_value, 100.0); // 90 minutes long
 
 	// Spot check values from the curve
-	CHECK(kf.GetLength() == large_value + 1);
+	CHECK(kf.GetLength() == large_value);
 	CHECK(kf.GetPoint(0).co.Y == Approx(1.0).margin(0.01));
 	CHECK(kf.GetPoint(1).co.Y == Approx(100.0).margin(0.01));
 }
@@ -442,7 +434,7 @@ TEST_CASE( "IsIncreasing", "[libopenshot][keyframe]" )
 	CHECK(kf.IsIncreasing(0) == true);
 	CHECK(kf.IsIncreasing(15) == true);
 	// all next equal
-	CHECK_FALSE(kf.IsIncreasing(12));
+	CHECK(kf.IsIncreasing(12) == true);
 	// first non-eq is larger
 	CHECK(kf.IsIncreasing(8) == true);
 	// first non-eq is smaller
@@ -459,15 +451,15 @@ TEST_CASE( "GetLength", "[libopenshot][keyframe]" )
 	f.AddPoint(1, 1);
 	CHECK(f.GetLength() == 1);
 	f.AddPoint(2, 1);
-	CHECK(f.GetLength() == 3);
+	CHECK(f.GetLength() == 2);
 	f.AddPoint(200, 1);
-	CHECK(f.GetLength() == 201);
+	CHECK(f.GetLength() == 200);
 
 	Keyframe g;
 	g.AddPoint(200, 1);
 	CHECK(g.GetLength() == 1);
 	g.AddPoint(1,1);
-	CHECK(g.GetLength() == 201);
+	CHECK(g.GetLength() == 200);
 }
 
 TEST_CASE( "use segment end point interpolation", "[libopenshot][keyframe]" )
@@ -486,9 +478,6 @@ TEST_CASE( "handle large segment", "[libopenshot][keyframe]" )
 
 	CHECK(kf.GetValue(500000) == Approx(0.5).margin(0.01));
 	CHECK(kf.IsIncreasing(10) == true);
-
-	Fraction fr = kf.GetRepeatFraction(250000);
-	CHECK((double)fr.num / fr.den == Approx(0.5).margin(0.01));
 }
 
 TEST_CASE( "std::vector<Point> constructor", "[libopenshot][keyframe]" )
@@ -496,22 +485,22 @@ TEST_CASE( "std::vector<Point> constructor", "[libopenshot][keyframe]" )
 	std::vector<Point> points{Point(1, 10), Point(5, 20), Point(10, 30)};
 	Keyframe k1(points);
 
-	CHECK(k1.GetLength() == 11);
+	CHECK(k1.GetLength() == 10);
 	CHECK(k1.GetValue(10) == Approx(30.0f).margin(0.0001));
 }
 
 TEST_CASE( "PrintPoints", "[libopenshot][keyframe]" )
 {
 	std::vector<Point> points{
-        Point(1, 10),
-        Point(225, 397),
-        Point(430, -153.4),
-        Point(999, 12345.678)
-    };
+		Point(1, 10),
+		Point(225, 397),
+		Point(430, -153.4),
+		Point(999, 12345.678)
+	};
 	Keyframe k1(points);
 
-    std::stringstream output;
-    k1.PrintPoints(&output);
+	std::stringstream output;
+	k1.PrintPoints(&output);
 
     const std::string expected =
 R"(     1       10.0000
@@ -519,54 +508,65 @@ R"(     1       10.0000
    430     -153.4000
    999    12345.6777)";
 
-    // Ensure the two strings are equal up to the limits of 'expected'
-    CHECK(output.str().substr(0, expected.size()) == expected);
+	// Ensure the two strings are equal up to the limits of 'expected'
+	CHECK(output.str().substr(0, expected.size()) == expected);
 }
 
 TEST_CASE( "PrintValues", "[libopenshot][keyframe]" )
 {
-    std::vector<Point> points{
-        Point(1, 10),
-        Point(225, 397),
-        Point(430, -153.4),
-        Point(999, 12345.678)
-    };
+	std::vector<Point> points{
+		Point(1, 10),
+		Point(225, 397),
+		Point(430, -153.4),
+		Point(999, 12345.678)
+	};
 	Keyframe k1(points);
 
-    std::stringstream output;
-    k1.PrintValues(&output);
+	std::stringstream output;
+	k1.PrintValues(&output);
 
     const std::string expected =
-R"(│Frame# (X) │     Y Value │ Delta Y │ Increasing? │ Repeat Fraction    │
-├───────────┼─────────────┼─────────┼─────────────┼────────────────────┤
-│       1 * │     10.0000 │     +10 │        true │ Fraction(1, 7)     │
-│       2   │     10.0104 │      +0 │        true │ Fraction(2, 7)     │
-│       3   │     10.0414 │      +0 │        true │ Fraction(3, 7)     │
-│       4   │     10.0942 │      +0 │        true │ Fraction(4, 7)     │
-│       5   │     10.1665 │      +0 │        true │ Fraction(5, 7)     │
-│       6   │     10.2633 │      +0 │        true │ Fraction(6, 7)     │
-│       7   │     10.3794 │      +0 │        true │ Fraction(7, 7)     │
-│       8   │     10.5193 │      +1 │        true │ Fraction(1, 5)     │
-│       9   │     10.6807 │      +0 │        true │ Fraction(2, 5)     │
-│      10   │     10.8636 │      +0 │        true │ Fraction(3, 5)     │
-│      11   │     11.0719 │      +0 │        true │ Fraction(4, 5)     │
-│      12   │     11.3021 │      +0 │        true │ Fraction(5, 5)     │
-│      13   │     11.5542 │      +1 │        true │ Fraction(1, 4)     │
-│      14   │     11.8334 │      +0 │        true │ Fraction(2, 4)     │
-│      15   │     12.1349 │      +0 │        true │ Fraction(3, 4)     │
-│      16   │     12.4587 │      +0 │        true │ Fraction(4, 4)     │
-│      17   │     12.8111 │      +1 │        true │ Fraction(1, 2)     │
-│      18   │     13.1863 │      +0 │        true │ Fraction(2, 2)     │
-│      19   │     13.5840 │      +1 │        true │ Fraction(1, 3)     │
-│      20   │     14.0121 │      +0 │        true │ Fraction(2, 3)     │
-│      21   │     14.4632 │      +0 │        true │ Fraction(3, 3)     │
-│      22   │     14.9460 │      +1 │        true │ Fraction(1, 2)     │
-│      23   │     15.4522 │      +0 │        true │ Fraction(2, 2)     │
-│      24   │     15.9818 │      +1 │        true │ Fraction(1, 1)     │
-│      25   │     16.5446 │      +1 │        true │ Fraction(1, 2)     │)";
+R"(│Frame# (X) │     Y Value │ Delta Y │ Increasing?│
+├───────────┼─────────────┼─────────┼────────────┤
+│       1 * │     10.0000 │     +10 │        true│
+│       2   │     10.0104 │+0.01036 │        true│
+│       3   │     10.0414 │+0.03101 │        true│
+│       4   │     10.0942 │+0.05279 │        true│
+│       5   │     10.1665 │+0.07234 │        true│
+│       6   │     10.2633 │+0.09682 │        true│
+│       7   │     10.3794 │ +0.1161 │        true│
+│       8   │     10.5193 │ +0.1399 │        true│
+│       9   │     10.6807 │ +0.1614 │        true│
+│      10   │     10.8636 │ +0.1828 │        true│
+│      11   │     11.0719 │ +0.2083 │        true│
+│      12   │     11.3021 │ +0.2303 │        true│
+│      13   │     11.5542 │ +0.2521 │        true│
+│      14   │     11.8334 │ +0.2792 │        true│
+│      15   │     12.1349 │ +0.3015 │        true│
+│      16   │     12.4587 │ +0.3237 │        true│
+│      17   │     12.8111 │ +0.3525 │        true│
+│      18   │     13.1863 │ +0.3752 │        true│
+│      19   │     13.5840 │ +0.3977 │        true│
+│      20   │     14.0121 │ +0.4281 │        true│
+│      21   │     14.4632 │ +0.4511 │        true│
+│      22   │     14.9460 │ +0.4828 │        true│
+│      23   │     15.4522 │ +0.5063 │        true│
+│      24   │     15.9818 │ +0.5296 │        true│
+│      25   │     16.5446 │ +0.5628 │        true│
+│      26   │     17.1312 │ +0.5866 │        true│
+│      27   │     17.7414 │ +0.6102 │        true│
+│      28   │     18.3862 │ +0.6449 │        true│
+│      29   │     19.0551 │ +0.6689 │        true│
+│      30   │     19.7599 │ +0.7048 │        true│
+│      31   │     20.4891 │ +0.7292 │        true│
+│      32   │     21.2425 │ +0.7534 │        true│
+│      33   │     22.0333 │ +0.7908 │        true│
+│      34   │     22.8486 │ +0.8153 │        true│
+│      35   │     23.7024 │ +0.8539 │        true│
+│      36   │     24.5812 │ +0.8788 │        true│)";
 
-    // Ensure the two strings are equal up to the limits of 'expected'
-    CHECK(output.str().substr(0, expected.size()) == expected);
+	// Ensure the two strings are equal up to the limits of 'expected'
+	CHECK(output.str().substr(0, expected.size()) == expected);
 }
 
 #ifdef USE_OPENCV
@@ -574,29 +574,29 @@ TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 {
 	TrackedObjectBBox kfb(62,143,0,212);
 
-    CHECK(kfb.delta_x.GetInt(1) == 0);
-    CHECK(kfb.delta_y.GetInt(1) == 0);
+	CHECK(kfb.delta_x.GetInt(1) == 0);
+	CHECK(kfb.delta_y.GetInt(1) == 0);
 
-    CHECK(kfb.scale_x.GetInt(1) == 1);
-    CHECK(kfb.scale_y.GetInt(1) == 1);
+	CHECK(kfb.scale_x.GetInt(1) == 1);
+	CHECK(kfb.scale_y.GetInt(1) == 1);
 
-    CHECK(kfb.rotation.GetInt(1) == 0);
+	CHECK(kfb.rotation.GetInt(1) == 0);
 
-    CHECK(kfb.stroke_width.GetInt(1) == 2);
-    CHECK(kfb.stroke_alpha.GetInt(1) == 0);
+	CHECK(kfb.stroke_width.GetInt(1) == 2);
+	CHECK(kfb.stroke_alpha.GetInt(1) == 0);
 
-    CHECK(kfb.background_alpha .GetInt(1)== 1);
-    CHECK(kfb.background_corner.GetInt(1) == 0);
+	CHECK(kfb.background_alpha .GetInt(1)== 1);
+	CHECK(kfb.background_corner.GetInt(1) == 0);
 
-    CHECK(kfb.stroke.red.GetInt(1) == 62);
-    CHECK(kfb.stroke.green.GetInt(1) == 143);
-    CHECK(kfb.stroke.blue.GetInt(1) == 0);
-    CHECK(kfb.stroke.alpha.GetInt(1) == 212);
+	CHECK(kfb.stroke.red.GetInt(1) == 62);
+	CHECK(kfb.stroke.green.GetInt(1) == 143);
+	CHECK(kfb.stroke.blue.GetInt(1) == 0);
+	CHECK(kfb.stroke.alpha.GetInt(1) == 212);
 
-    CHECK(kfb.background.red.GetInt(1) == 0);
-    CHECK(kfb.background.green.GetInt(1) == 0);
-    CHECK(kfb.background.blue.GetInt(1) == 255);
-    CHECK(kfb.background.alpha.GetInt(1) == 0);
+	CHECK(kfb.background.red.GetInt(1) == 0);
+	CHECK(kfb.background.green.GetInt(1) == 0);
+	CHECK(kfb.background.blue.GetInt(1) == 255);
+	CHECK(kfb.background.alpha.GetInt(1) == 0);
 
 }
 

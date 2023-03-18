@@ -16,8 +16,9 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor, max frames to cache is 20 // resample_source(NULL), buffer_source(NULL), num_of_samples(0), new_num_of_samples(0), dest_ratio(0), source_ratio(0), resampled_buffer(NULL), isPrepared(false)
-AudioResampler::AudioResampler()
+AudioResampler::AudioResampler(int numChannels)
 {
+	buffer = NULL;
 	resample_source = NULL;
 	buffer_source = NULL;
 	num_of_samples = 0;
@@ -31,7 +32,7 @@ AudioResampler::AudioResampler()
 	buffer_source = new AudioBufferSource(buffer);
 
 	// Init resampling source
-	resample_source = new juce::ResamplingAudioSource(buffer_source, false, 2);
+	resample_source = new juce::ResamplingAudioSource(buffer_source, false, numChannels);
 
 	// Init resampled buffer
 	resampled_buffer = new juce::AudioBuffer<float>(2, 1);
@@ -81,7 +82,7 @@ void AudioResampler::SetBuffer(juce::AudioBuffer<float> *new_buffer, double rati
 	source_ratio = ratio;
 	dest_ratio = 1.0 / ratio;
 	num_of_samples = buffer->getNumSamples();
-	new_num_of_samples = round(num_of_samples * dest_ratio) - 1;
+	new_num_of_samples = round(num_of_samples * dest_ratio);
 
 	// Set resample ratio
 	resample_source->setResamplingRatio(source_ratio);

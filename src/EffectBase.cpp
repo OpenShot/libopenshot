@@ -113,7 +113,7 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 
 	if (ParentTimeline()){
 		// Get parent timeline
-		Timeline* parentTimeline = (Timeline *) ParentTimeline();
+		Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 
 		// Get the list of effects on the timeline
 		std::list<EffectBase*> effects = parentTimeline->ClipEffects();
@@ -129,14 +129,14 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 	}
 
 	// Set this effect properties with the parent effect properties (except the id and parent_effect_id)
-    Json::Value my_root;
+	Json::Value my_root;
 	if (parentEffect){
 		my_root = parentEffect->JsonValue();
 		my_root["id"] = this->Id();
 		my_root["parent_effect_id"] = this->info.parent_effect_id;
 	} else {
-        my_root = root;
-    }
+		my_root = root;
+	}
 
 	// Set parent data
 	ClipBase::SetJsonValue(my_root);
@@ -183,7 +183,7 @@ void EffectBase::ParentClip(openshot::ClipBase* new_clip) {
 void EffectBase::SetParentEffect(std::string parentEffect_id) {
 
 	// Get parent Timeline
-	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+	Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
 
 	if (parentTimeline){
 
