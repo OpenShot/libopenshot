@@ -95,9 +95,6 @@ void Clip::init_settings()
 
 	// Init reader info struct
 	init_reader_settings();
-
-	// Init cache
-	final_cache.SetMaxBytesFromInfo(10, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Init reader info details
@@ -108,6 +105,9 @@ void Clip::init_reader_settings() {
 
 		// Initialize info struct
 		info = reader->info;
+
+		// Init cache
+		final_cache.SetMaxBytesFromInfo(8, info.width, info.height, info.sample_rate, info.channels);
 	}
 }
 
