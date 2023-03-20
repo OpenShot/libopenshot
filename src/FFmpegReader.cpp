@@ -1359,6 +1359,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	// Check if the AVFrame is finished and set it
 	if (!frame_finished) {
 		// No AVFrame decoded yet, bail out
+		if (pFrame) {
+			RemoveAVFrame(pFrame);
+		}
 		return;
 	}
 
@@ -1383,8 +1386,6 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	int height = info.height;
 	int width = info.width;
 	int64_t video_length = info.video_length;
-	AVFrame *my_frame = pFrame;
-	pFrame = NULL;
 
 	// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 	AVFrame *pFrameRGB = nullptr;
@@ -1485,7 +1486,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 												 height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
 
 	// Resize / Convert to RGB
-	sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
+	sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0,
 			  original_height, pFrameRGB->data, pFrameRGB->linesize);
 
 	// Create or get the existing frame object
@@ -1510,7 +1511,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	AV_FREE_FRAME(&pFrameRGB);
 
 	// Remove frame and packet
-	RemoveAVFrame(my_frame);
+	RemoveAVFrame(pFrame);
 	sws_freeContext(img_convert_ctx);
 
 	// Get video PTS in seconds
@@ -1599,6 +1600,11 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 		// Calculate total number of samples
 		packet_samples = audio_frame->nb_samples * AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
+	} else {
+		if (audio_frame) {
+			// Free audio frame
+			AV_FREE_FRAME(&audio_frame);
+		}
 	}
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)

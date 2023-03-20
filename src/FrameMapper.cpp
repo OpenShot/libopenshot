@@ -491,7 +491,8 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		if (info.sample_rate == mapped_frame->SampleRate() &&
 			info.channels == mapped_frame->GetAudioChannelsCount() &&
 			info.channel_layout == mapped_frame->ChannelsLayout() &&
-			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() == samples_in_frame && is_increasing &&
+			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() &&
+			mapped.Samples.total == samples_in_frame && is_increasing &&
 			mapped.Samples.frame_start == mapped.Odd.Frame &&
 			mapped.Samples.sample_start == 0 &&
 			mapped_frame->number == frame_number &&// in some conditions (e.g. end of stream)
