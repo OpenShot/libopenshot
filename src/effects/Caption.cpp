@@ -27,7 +27,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1),
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.70), right(0.1),
 					 stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
 					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
@@ -38,7 +38,7 @@ Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"
 // Default constructor
 Caption::Caption(std::string captions) :
 		color("#ffffff"), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
-		left(0.1), top(0.75), right(0.1), stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
+		left(0.1), top(0.70), right(0.1), stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
 		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
 	// Init effect properties
