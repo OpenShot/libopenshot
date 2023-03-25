@@ -15,6 +15,7 @@
 #include "../Clip.h"
 #include "../Timeline.h"
 
+#include <QGuiApplication>
 #include <QString>
 #include <QPoint>
 #include <QRect>
@@ -26,8 +27,8 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.15), top(0.7), right(0.15),
-					 stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1),
+					 stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
 					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
 	// Init effect properties
@@ -37,7 +38,7 @@ Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"
 // Default constructor
 Caption::Caption(std::string captions) :
 		color("#ffffff"), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
-		left(0.15), top(0.7), right(0.15), stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
+		left(0.1), top(0.75), right(0.1), stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
 		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
 	// Init effect properties
@@ -108,6 +109,9 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	// Process regex (if needed)
 	process_regex();
 
+	// Get largest pixel ratio (of screen)
+	double device_pixel_ratio = qGuiApp->devicePixelRatio();
+
 	// Get the Clip and Timeline pointers (if available)
 	Clip* clip = (Clip*) ParentClip();
 	Timeline* timeline = NULL;
@@ -142,7 +146,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	// Font options and metrics for caption text
-	double font_size_value = font_size.GetValue(frame_number) * scale_factor;
+	double font_size_value = font_size.GetValue(frame_number) * device_pixel_ratio;
 	QFont font(QString(font_name.c_str()), int(font_size_value));
 	font.setPointSizeF(std::max(font_size_value, 1.0));
 	QFontMetricsF metrics = QFontMetricsF(font);
