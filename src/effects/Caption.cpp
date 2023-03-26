@@ -27,7 +27,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.70), right(0.1),
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.72), right(0.1),
 					 stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
 					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
@@ -37,9 +37,10 @@ Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"
 
 // Default constructor
 Caption::Caption(std::string captions) :
-		color("#ffffff"), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
-		left(0.1), top(0.70), right(0.1), stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
-		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
+		color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.72), right(0.1),
+		stroke_width(0.5), font_size(20.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
+		fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0),
+		caption_text(captions)
 {
 	// Init effect properties
 	init_effect_details();
@@ -116,7 +117,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	Clip* clip = (Clip*) ParentClip();
 	Timeline* timeline = NULL;
 	Fraction fps;
-	double scale_factor = 1.0; // amount of scaling needed for text (based on preview window size)
+
 	if (clip && clip->ParentTimeline() != NULL) {
 		timeline = (Timeline*) clip->ParentTimeline();
 	} else if (this->ParentTimeline() != NULL) {
@@ -125,18 +126,17 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 	// Get the FPS from the parent object (Timeline or Clip's Reader)
 	if (timeline != NULL) {
-		fps.num = timeline->info.fps.num;
-		fps.den = timeline->info.fps.den;
-		// preview window is sometimes smaller/larger than the timeline size
-		scale_factor = (double) timeline->preview_width / (double) timeline->info.width;
+		fps = timeline->info.fps;
 	} else if (clip != NULL && clip->Reader() != NULL) {
-		fps.num = clip->Reader()->info.fps.num;
-		fps.den = clip->Reader()->info.fps.den;
-		scale_factor = 1.0;
+		fps = clip->Reader()->info.fps;
 	}
 
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
+
+	// Calculate scale factor, to keep different resolutions from
+	// having dramatically different font sizes
+	double timeline_scale_factor = frame->GetImage()->width() / 1280.0;
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(frame_image.get());
@@ -146,7 +146,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	// Font options and metrics for caption text
-	double font_size_value = font_size.GetValue(frame_number) * device_pixel_ratio;
+	double font_size_value = font_size.GetValue(frame_number) * device_pixel_ratio * timeline_scale_factor;
 	QFont font(QString(font_name.c_str()), int(font_size_value));
 	font.setPointSizeF(std::max(font_size_value, 1.0));
 	QFontMetricsF metrics = QFontMetricsF(font);
@@ -157,9 +157,9 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	double fade_in_value = fade_in.GetValue(frame_number) * fps.ToDouble();
 	double fade_out_value = fade_out.GetValue(frame_number) * fps.ToDouble();
 	double right_value = right.GetValue(frame_number);
-	double background_corner_value = background_corner.GetValue(frame_number) * scale_factor;
-	double padding_value = background_padding.GetValue(frame_number) * scale_factor;
-	double stroke_width_value = stroke_width.GetValue(frame_number) * scale_factor;
+	double background_corner_value = background_corner.GetValue(frame_number) * timeline_scale_factor;
+	double padding_value = background_padding.GetValue(frame_number) * timeline_scale_factor;
+	double stroke_width_value = stroke_width.GetValue(frame_number) * timeline_scale_factor;
 	double line_spacing_value = line_spacing.GetValue(frame_number);
 	double metrics_line_spacing = metrics.lineSpacing();
 
