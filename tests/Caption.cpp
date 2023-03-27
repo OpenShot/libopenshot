@@ -52,9 +52,9 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         CHECK(c1.background_alpha.GetValue(1) == Approx(0.0f).margin(0.00001));
         CHECK(c1.left.GetValue(1) == Approx(0.10f).margin(0.00001));
         CHECK(c1.right.GetValue(1) == Approx(0.10f).margin(0.00001));
-        CHECK(c1.top.GetValue(1) == Approx(0.72).margin(0.00001));
+        CHECK(c1.top.GetValue(1) == Approx(0.75).margin(0.00001));
         CHECK(c1.stroke_width.GetValue(1) == Approx(0.5f).margin(0.00001));
-        CHECK(c1.font_size.GetValue(1) == Approx(20.0f).margin(0.00001));
+        CHECK(c1.font_size.GetValue(1) == Approx(30.0f).margin(0.00001));
         CHECK(c1.font_alpha.GetValue(1) == Approx(1.0f).margin(0.00001));
         CHECK(c1.font_name == "sans");
         CHECK(c1.fade_in.GetValue(1) == Approx(0.35f).margin(0.00001));
@@ -80,11 +80,11 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 #ifdef _WIN32
         // Windows pixel location
         check_col = 300;
-        check_row = 544;
+        check_row = 572;
 #else
         // Linux/Mac pixel location
-        check_col = 214;
-        check_row = 544;
+        check_col = 251;
+        check_row = 572;
 #endif
 
         // Verify pixel values (black background pixels)
@@ -106,11 +106,11 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 #ifdef _WIN32
         // Windows pixel location
         check_col = 300;
-        check_row = 544;
+        check_row = 572;
 #else
         // Linux/Mac pixel location
-        check_col = 214;
-        check_row = 544;
+        check_col = 251;
+        check_row = 572;
 #endif
 
         // Verify pixel values (black background pixels)
@@ -146,11 +146,11 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 #ifdef _WIN32
         // Windows pixel location
         check_col = 146;
-        check_row = 360;
+        check_row = 378;
 #else
         // Linux/Mac pixel location
-        check_col = 118;
-        check_row = 360;
+        check_col = 141;
+        check_row = 378;
 #endif
 
         // Verify pixel values (black background pixels)
@@ -172,11 +172,11 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 #ifdef _WIN32
         // Windows pixel location
         check_col = 146;
-        check_row = 360;
+        check_row = 377;
 #else
         // Linux/Mac pixel location
-        check_col = 119;
-        check_row = 360;
+        check_col = 141;
+        check_row = 377;
 #endif
 
         // Verify pixel values (black background pixels)
@@ -213,11 +213,11 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 #ifdef _WIN32
         // Windows pixel location
         check_col = 325;
-        check_row = 542;
+        check_row = 569;
 #else
         // Linux/Mac pixel location
-        check_col = 291;
-        check_row = 542;
+        check_col = 284;
+        check_row = 569;
 #endif
 
         // Verify pixel values (black background pixels)
