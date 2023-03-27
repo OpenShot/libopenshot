@@ -75,11 +75,10 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
-        f->Save("caption-sintel-10.png", 1.0, "PNG");
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 300;
+        check_col = 185;
         check_row = 572;
 #else
         // Linux/Mac pixel location
@@ -101,11 +100,10 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get timeline frame
         f = t.GetFrame(10);
-        f->Save("caption-sintel-10B.png", 1.0, "PNG");
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 300;
+        check_col = 185;
         check_row = 572;
 #else
         // Linux/Mac pixel location
@@ -141,11 +139,10 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
-        f->Save("caption-piano-10.png", 1.0, "PNG");
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 146;
+        check_col = 105;
         check_row = 378;
 #else
         // Linux/Mac pixel location
@@ -167,11 +164,10 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get timeline frame
         f = t.GetFrame(10);
-        f->Save("caption-piano-10B.png", 1.0, "PNG");
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 146;
+        check_col = 105;
         check_row = 377;
 #else
         // Linux/Mac pixel location
@@ -208,12 +204,11 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(11);
-        f->Save("caption-sintel-11.png", 1.0, "PNG");
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 325;
-        check_row = 569;
+        check_col = 291;
+        check_row = 571;
 #else
         // Linux/Mac pixel location
         check_col = 284;
