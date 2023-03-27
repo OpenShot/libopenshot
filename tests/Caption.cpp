@@ -79,8 +79,8 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 185;
-        check_row = 572;
+        check_col = 625;
+        check_row = 600;
 #else
         // Linux/Mac pixel location
         check_col = 251;
@@ -105,8 +105,8 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 185;
-        check_row = 574;
+        check_col = 625;
+        check_row = 600;
 #else
         // Linux/Mac pixel location
         check_col = 251;
@@ -145,8 +145,8 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 105;
-        check_row = 378;
+        check_col = 351;
+        check_row = 391;
 #else
         // Linux/Mac pixel location
         check_col = 141;
@@ -171,8 +171,8 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 105;
-        check_row = 379;
+        check_col = 351;
+        check_row = 391;
 #else
         // Linux/Mac pixel location
         check_col = 141;
@@ -212,8 +212,8 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
 #ifdef _WIN32
         // Windows pixel location
-        check_col = 291;
-        check_row = 571;
+        check_col = 633;
+        check_row = 580;
 #else
         // Linux/Mac pixel location
         check_col = 284;
