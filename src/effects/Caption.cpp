@@ -110,9 +110,6 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	// Process regex (if needed)
 	process_regex();
 
-	// Get largest pixel ratio (of screen)
-	double device_pixel_ratio = qGuiApp->devicePixelRatio();
-
 	// Get the Clip and Timeline pointers (if available)
 	Clip* clip = (Clip*) ParentClip();
 	Timeline* timeline = NULL;
@@ -146,10 +143,11 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
 	// Font options and metrics for caption text
-	double font_size_value = font_size.GetValue(frame_number) * device_pixel_ratio * timeline_scale_factor;
+	double font_size_value = font_size.GetValue(frame_number) * timeline_scale_factor * qGuiApp->devicePixelRatio();
 	QFont font(QString(font_name.c_str()), int(font_size_value));
 	font.setPointSizeF(std::max(font_size_value, 1.0));
 	QFontMetricsF metrics = QFontMetricsF(font);
+	std::cout << "font_size_value: " << font_size_value << std::endl;
 
 	// Get current keyframe values
 	double left_value = left.GetValue(frame_number);
