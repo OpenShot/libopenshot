@@ -168,7 +168,7 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 #ifdef _WIN32
         // Windows pixel location
         check_col = 105;
-        check_row = 377;
+        check_row = 379;
 #else
         // Linux/Mac pixel location
         check_col = 141;
