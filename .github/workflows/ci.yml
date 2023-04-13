@@ -85,7 +85,14 @@ jobs:
             libzmq3-dev libmagick++-dev libbabl-dev \
             libopencv-dev libprotobuf-dev protobuf-compiler \
             cargo libomp5 libomp-dev
-          # Install catch2 package from Ubuntu 22.04
+
+          # Install catch2 package from source
+          git clone https://github.com/catchorg/Catch2.git
+          pushd Catch2
+          cmake -Bbuild -H. -DBUILD_TESTING=OFF
+          cmake --build build/ --target install
+          popd
+
           wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.8-1_amd64.deb
           sudo dpkg -i catch2_2.13.8-1_amd64.deb
 
