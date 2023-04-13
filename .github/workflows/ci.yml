@@ -82,7 +82,7 @@ jobs:
             qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
             libfdk-aac-dev libavcodec-dev libavformat-dev \
             libavutil-dev libswscale-dev libswresample-dev \
-            libzmq3-dev libmagick++-dev libbabl-dev \
+            libzmq3-dev libbabl-dev \
             libopencv-dev libprotobuf-dev protobuf-compiler \
             cargo libomp5 libomp-dev
 
