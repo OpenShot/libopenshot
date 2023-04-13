@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         sys:
-          - { os: ubuntu-18.04, shell: bash }
           - { os: ubuntu-20.04, shell: bash }
+          - { os: ubuntu-22.04, shell: bash }
           - { os: windows-2022, shell: 'msys2 {0}' }
         compiler:
           - { cc: gcc, cxx: g++ }
