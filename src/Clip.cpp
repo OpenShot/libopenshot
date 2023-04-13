@@ -792,7 +792,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
 
 	// Add the parentTrackedObject's properties
-	if (parentTrackedObject)
+	if (parentTrackedObject && parentClipObject)
 	{
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
@@ -1445,7 +1445,10 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parentTrackedObject's parent clip's properties
-		std::map<std::string, float> trackedObjectParentClipProperties = parentTrackedObject->GetParentClipProperties(timeline_frame_number);
+		std::map<std::string, float> trackedObjectParentClipProperties;
+		if (parentClipObject) {
+            parentTrackedObject->GetParentClipProperties(timeline_frame_number);
+        }
 
 		// Get the attached object's parent clip's properties
 		if (!trackedObjectParentClipProperties.empty())
