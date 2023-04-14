@@ -382,12 +382,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 
 	// Set the id of the child clip
 	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != Id()){
-		Clip* parentClip = (Clip *) ParentClip();
-		if (parentClip && root["child_clip_id"].asString() != parentClip->Id()) {
-            ChildClipId(root["child_clip_id"].asString());
-		} else if (parentClip == NULL) {
-            ChildClipId(root["child_clip_id"].asString());
-		}
+        ChildClipId(root["child_clip_id"].asString());
 	}
 
 	// Set the Keyframes by the given JSON object

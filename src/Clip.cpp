@@ -253,19 +253,16 @@ void Clip::AttachToObject(std::string object_id)
 			SetAttachedClip(clipObject);
 		}
 	}
-	return;
 }
 
 // Set the pointer to the trackedObject this clip is attached to
 void Clip::SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
 	parentTrackedObject = trackedObject;
-	return;
 }
 
 // Set the pointer to the clip this clip is attached to
 void Clip::SetAttachedClip(Clip* clipObject){
 	parentClipObject = clipObject;
-	return;
 }
 
 /// Set the current reader
@@ -754,11 +751,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
-	if (!parentObjectId.empty()) {
-		root["parentObjectId"] = add_property_json("Parent", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
-	} else {
-		root["parentObjectId"] = add_property_json("Parent", 0.0, "string", "", NULL, -1, -1, false, requested_frame);
-	}
+	root["parentObjectId"] = add_property_json("Parent", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
+
 	// Add gravity choices (dropdown style)
 	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));
 	root["gravity"]["choices"].append(add_property_choice_json("Top Center", GRAVITY_TOP, gravity));
@@ -1438,17 +1432,14 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
 	// Get the parentTrackedObject properties
 	if (parentTrackedObject){
-
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parentTrackedObject's parent clip's properties
-		std::map<std::string, float> trackedObjectParentClipProperties;
-		if (parentClipObject) {
-            parentTrackedObject->GetParentClipProperties(timeline_frame_number);
-        }
+		std::map<std::string, float> trackedObjectParentClipProperties =
+		        parentTrackedObject->GetParentClipProperties(timeline_frame_number);
 
 		// Get the attached object's parent clip's properties
 		if (!trackedObjectParentClipProperties.empty())

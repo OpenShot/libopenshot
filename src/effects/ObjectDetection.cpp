@@ -122,15 +122,6 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                 std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
                 float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
 
-                // Create a rotated rectangle object that holds the bounding box
-                // cv::RotatedRect box ( cv::Point2f( (int)(trackedBox.cx*fw), (int)(trackedBox.cy*fh) ),
-                //					 cv::Size2f( (int)(trackedBox.width*fw), (int)(trackedBox.height*fh) ),
-                //					 (int) (trackedBox.angle) );
-
-                // DrawRectangleRGBA(cv_image, box, bg_rgba, bg_alpha, 1, true);
-                // DrawRectangleRGBA(cv_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
-
-
                 cv::Rect2d box(
                     (int)( (trackedBox.cx-trackedBox.width/2)*fw),
                     (int)( (trackedBox.cy-trackedBox.height/2)*fh),
@@ -160,9 +151,8 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
 
                         if (childClip){
-                            std::shared_ptr<Frame> f(new Frame(1, frame->GetWidth(), frame->GetHeight(), "#00000000"));
                             // Get the image of the child clip for this frame
-					        std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(f, frame_number);
+					        std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
                             childClipImages.push_back(childClipFrame->GetImage());
 
                             // Set the Qt rectangle with the bounding-box properties
@@ -190,7 +180,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
             // Set a Qt painter to the frame image
             QPainter painter(&frameImage);
             // Draw the child clip image inside the bounding-box
-            painter.drawImage(boxRects[i], *childClipImages[i], QRectF(0, 0, frameImage.size().width(),  frameImage.size().height()));
+            painter.drawImage(boxRects[i], *childClipImages[i]);
         }
         // Set the frame image as the composed image
         frame->AddImage(std::make_shared<QImage>(frameImage));
