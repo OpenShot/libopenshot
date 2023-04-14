@@ -235,7 +235,7 @@ void TrackedObjectBBox::ScalePoints(double time_scale){
 // Load the bounding-boxes information from the protobuf file
 bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 {
-    using std::ios;
+	using std::ios;
 
 	// Variable to hold the loaded data
 	pb_tracker::Tracker bboxMessage;
@@ -282,7 +282,7 @@ bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 	if (bboxMessage.has_last_updated())
 	{
 		std::cout << " Loaded Data. Saved Time Stamp: "
-		          << TimeUtil::ToString(bboxMessage.last_updated()) << std::endl;
+				  << TimeUtil::ToString(bboxMessage.last_updated()) << std::endl;
 	}
 
 	// Delete all global objects allocated by libprotobuf.
@@ -382,7 +382,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 
 	// Set the id of the child clip
 	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != Id()){
-        ChildClipId(root["child_clip_id"].asString());
+		ChildClipId(root["child_clip_id"].asString());
 	}
 
 	// Set the Keyframes by the given JSON object

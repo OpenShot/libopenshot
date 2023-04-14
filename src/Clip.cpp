@@ -1439,7 +1439,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
 		// Get parentTrackedObject's parent clip's properties
 		std::map<std::string, float> trackedObjectParentClipProperties =
-		        parentTrackedObject->GetParentClipProperties(timeline_frame_number);
+				parentTrackedObject->GetParentClipProperties(timeline_frame_number);
 
 		// Get the attached object's parent clip's properties
 		if (!trackedObjectParentClipProperties.empty())

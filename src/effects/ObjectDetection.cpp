@@ -78,9 +78,9 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
     }
 
     // Initialize the Qt rectangle that will hold the positions of the bounding-box
-	std::vector<QRectF> boxRects;
-	// Initialize the image of the TrackedObject child clip
-	std::vector<std::shared_ptr<QImage>> childClipImages;
+    std::vector<QRectF> boxRects;
+    // Initialize the image of the TrackedObject child clip
+    std::vector<std::shared_ptr<QImage>> childClipImages;
 
     // Check if track data exists for the requested frame
     if (detectionsData.find(frame_number) != detectionsData.end()) {
@@ -152,7 +152,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 
                         if (childClip){
                             // Get the image of the child clip for this frame
-					        std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
+                            std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
                             childClipImages.push_back(childClipFrame->GetImage());
 
                             // Set the Qt rectangle with the bounding-box properties
@@ -172,8 +172,8 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
     // Update Qt image with new Opencv frame
     frame->SetImageCV(cv_image);
 
-	// Set the bounding-box image with the Tracked Object's child clip image
-	if(boxRects.size() > 0){
+    // Set the bounding-box image with the Tracked Object's child clip image
+    if(boxRects.size() > 0){
         // Get the frame image
         QImage frameImage = *(frame->GetImage());
         for(int i; i < boxRects.size();i++){
@@ -352,7 +352,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 
                 std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
                 ClipBase* parentClip = this->ParentClip();
-	            trackedObjPtr->ParentClip(parentClip);
+                trackedObjPtr->ParentClip(parentClip);
 
                 // Create a temp ID. This ID is necessary to initialize the object_id Json list
                 // this Id will be replaced by the one created in the UI
