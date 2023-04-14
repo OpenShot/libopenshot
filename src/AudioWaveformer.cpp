@@ -120,7 +120,7 @@ AudioWaveformData AudioWaveformer::ExtractSamples(int channel, int num_per_secon
 
         // Scale all values to the -1 to +1 range (regardless of how small or how large the
         // original audio sample values are)
-        if (normalize) {
+        if (normalize && samples_max > 0.0) {
             float scale = 1.0f / samples_max;
             data.scale(total_samples, scale);
         }
