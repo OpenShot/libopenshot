@@ -1150,7 +1150,7 @@ bool FFmpegReader::GetAVFrame() {
 #if IS_FFMPEG_3_2
 	int send_packet_err = 0;
 	int64_t send_packet_pts = 0;
-	if ((packet && packet->stream_index == videoStream && !hold_packet) || !packet) {
+	if ((packet && packet->stream_index == videoStream) || !packet) {
 		send_packet_err = avcodec_send_packet(pCodecCtx, packet);
 
 		if (packet && send_packet_err >= 0) {
