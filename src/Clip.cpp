@@ -438,7 +438,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		apply_timemapping(frame);
 
 		// Apply waveform image (if any)
-		apply_waveform(frame, background_frame->GetImage());
+		apply_waveform(frame, background_frame);
 
 		// Apply local effects to the frame (if any)
 		apply_effects(frame);
@@ -453,7 +453,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		}
 
 		// Apply keyframe / transforms
-		apply_keyframes(frame, background_frame->GetImage());
+		apply_keyframes(frame, background_frame);
 
 		// Add final frame to cache
 		final_cache.Add(frame);
@@ -1224,7 +1224,7 @@ bool Clip::isEqual(double a, double b)
 }
 
 // Apply keyframes to the source frame (if any)
-void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
+void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame) {
 	// Skip out if video was disabled or only an audio frame (no visualisation in use)
 	if (!frame->has_image_data) {
 		// Skip the rest of the image processing for performance reasons
@@ -1233,6 +1233,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 
 	// Get image from clip
 	std::shared_ptr<QImage> source_image = frame->GetImage();
+	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
 
 	// Get transform from clip's keyframes
 	QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
@@ -1291,7 +1292,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 }
 
 // Apply apply_waveform image to the source frame (if any)
-void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
+void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame) {
 
 	if (!Waveform()) {
 		// Exit if no waveform is needed
@@ -1300,6 +1301,7 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> 
 
 	// Get image from clip
 	std::shared_ptr<QImage> source_image = frame->GetImage();
+	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod(

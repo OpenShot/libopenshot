@@ -114,6 +114,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	Clip* clip = (Clip*) ParentClip();
 	Timeline* timeline = NULL;
 	Fraction fps;
+	QSize image_size(1, 1);
 
 	if (clip && clip->ParentTimeline() != NULL) {
 		timeline = (Timeline*) clip->ParentTimeline();
@@ -124,8 +125,15 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	// Get the FPS from the parent object (Timeline or Clip's Reader)
 	if (timeline != NULL) {
 		fps = timeline->info.fps;
+		image_size = QSize(timeline->info.width, timeline->info.height);
 	} else if (clip != NULL && clip->Reader() != NULL) {
 		fps = clip->Reader()->info.fps;
+		image_size = QSize(clip->Reader()->info.width, clip->Reader()->info.height);
+	}
+
+	if (!frame->has_image_data) {
+		// Give audio-only files a full frame image of solid color
+		frame->AddColor(image_size.width(), image_size.height(), "#000000");
 	}
 
 	// Get the frame's image
@@ -133,7 +141,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 	// Calculate scale factor, to keep different resolutions from
 	// having dramatically different font sizes
-	double timeline_scale_factor = frame->GetImage()->width() / 600.0;
+	double timeline_scale_factor = frame_image->width() / 600.0;
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(frame_image.get());
