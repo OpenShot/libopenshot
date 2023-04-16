@@ -22,8 +22,8 @@
 
 namespace openshot {
 
-    // Forward decls
-    class ClipBase;
+	// Forward decls
+	class ClipBase;
 
 	/**
 	 * @brief This abstract class is the base class of all Tracked Objects.
@@ -50,8 +50,8 @@ namespace openshot {
 		/// Constructor which takes an object ID
 		TrackedObjectBase(std::string _id);
 
-        /// Destructor
-        virtual ~TrackedObjectBase() = default;
+		/// Destructor
+		virtual ~TrackedObjectBase() = default;
 
 		/// Get the id of this object
 		std::string Id() const { return id; }

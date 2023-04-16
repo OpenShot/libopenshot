@@ -34,9 +34,9 @@ using google::protobuf::util::TimeUtil;
 /// Blank constructor, useful when using Json to load the effect properties
 Tracker::Tracker(std::string clipTrackerDataPath)
 {
-    // Init effect properties
+	// Init effect properties
 	init_effect_details();
-    // Instantiate a TrackedObjectBBox object and point to it
+	// Instantiate a TrackedObjectBBox object and point to it
 	TrackedObjectBBox trackedDataObject;
 	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
 	// Tries to load the tracked object's data from protobuf file
@@ -85,7 +85,7 @@ void Tracker::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
-    // Get the frame's image
+	// Get the frame's image
 	cv::Mat frame_image = frame->GetImageCV();
 
 	// Initialize the Qt rectangle that will hold the positions of the bounding-box
@@ -93,8 +93,8 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	// Initialize the image of the TrackedObject child clip
 	std::shared_ptr<QImage> childClipImage = nullptr;
 
-    // Check if frame isn't NULL
-    if(!frame_image.empty() &&
+	// Check if frame isn't NULL
+	if(!frame_image.empty() &&
 		trackedData->Contains(frame_number) &&
 		trackedData->visible.GetValue(frame_number) == 1)
 	{
@@ -105,8 +105,8 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 		// Get the bounding-box of given frame
 		BBox fd = trackedData->GetBox(frame_number);
 
-        // Check if track data exists for the requested frame
-        if (trackedData->draw_box.GetValue(frame_number) == 1)
+		// Check if track data exists for the requested frame
+		if (trackedData->draw_box.GetValue(frame_number) == 1)
 		{
 			std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
 			int stroke_width = trackedData->stroke_width.GetValue(frame_number);
@@ -132,8 +132,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 				Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
 				if (childClip){
 					// Get the image of the child clip for this frame
-					std::shared_ptr<Frame> f(new Frame(1, frame->GetWidth(), frame->GetHeight(), "#00000000"));
-					std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(f, frame_number);
+					std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
 					childClipImage = childClipFrame->GetImage();
 
 					// Set the Qt rectangle with the bounding-box properties
@@ -145,10 +144,10 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			}
 		}
 
-    }
+	}
 
 	// Set image with drawn box to frame
-    // If the input image is NULL or doesn't have tracking data, it's returned as it came
+	// If the input image is NULL or doesn't have tracking data, it's returned as it came
 	frame->SetImageCV(frame_image);
 
 	// Set the bounding-box image with the Tracked Object's child clip image
@@ -160,7 +159,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 		QPainter painter(&frameImage);
 
 		// Draw the child clip image inside the bounding-box
-		painter.drawImage(boxRect, *childClipImage, QRectF(0, 0, frameImage.size().width(),  frameImage.size().height()));
+		painter.drawImage(boxRect, *childClipImage);
 
 		// Set the frame image as the composed image
 		frame->AddImage(std::make_shared<QImage>(frameImage));
@@ -212,23 +211,23 @@ void Tracker::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::
 // Get the indexes and IDs of all visible objects in the given frame
 std::string Tracker::GetVisibleObjects(int64_t frame_number) const{
 
-    // Initialize the JSON objects
-    Json::Value root;
-    root["visible_objects_index"] = Json::Value(Json::arrayValue);
-    root["visible_objects_id"] = Json::Value(Json::arrayValue);
+	// Initialize the JSON objects
+	Json::Value root;
+	root["visible_objects_index"] = Json::Value(Json::arrayValue);
+	root["visible_objects_id"] = Json::Value(Json::arrayValue);
 
-    // Iterate through the tracked objects
-    for (const auto& trackedObject : trackedObjects){
-        // Get the tracked object JSON properties for this frame
-        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(frame_number);
-        if (trackedObjectJSON["visible"]["value"].asBool()){
-            // Save the object's index and ID if it's visible in this frame
-            root["visible_objects_index"].append(trackedObject.first);
-            root["visible_objects_id"].append(trackedObject.second->Id());
-        }
-    }
+	// Iterate through the tracked objects
+	for (const auto& trackedObject : trackedObjects){
+		// Get the tracked object JSON properties for this frame
+		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(frame_number);
+		if (trackedObjectJSON["visible"]["value"].asBool()){
+			// Save the object's index and ID if it's visible in this frame
+			root["visible_objects_index"].append(trackedObject.first);
+			root["visible_objects_id"].append(trackedObject.second->Id());
+		}
+	}
 
-    return root.toStyledString();
+	return root.toStyledString();
 }
 
 // Generate JSON string of this object
@@ -253,12 +252,12 @@ Json::Value Tracker::JsonValue() const {
 
 	// Add trackedObjects IDs to JSON
 	Json::Value objects;
-    for (auto const& trackedObject : trackedObjects){
-        Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
-        // add object json
-        objects[trackedObject.second->Id()] = trackedObjectJSON;
-    }
-    root["objects"] = objects;
+	for (auto const& trackedObject : trackedObjects){
+		Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
+		// add object json
+		objects[trackedObject.second->Id()] = trackedObjectJSON;
+	}
+	root["objects"] = objects;
 
 	// return JsonValue
 	return root;
@@ -314,23 +313,23 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		}
 	}
 
-    if (!root["objects"].isNull()){
-        for (auto const& trackedObject : trackedObjects){
-            std::string obj_id = std::to_string(trackedObject.first);
-            if(!root["objects"][obj_id].isNull()){
-                trackedObject.second->SetJsonValue(root["objects"][obj_id]);
-            }
-        }
+	if (!root["objects"].isNull()){
+		for (auto const& trackedObject : trackedObjects){
+			std::string obj_id = std::to_string(trackedObject.first);
+			if(!root["objects"][obj_id].isNull()){
+				trackedObject.second->SetJsonValue(root["objects"][obj_id]);
+			}
+		}
 	}
 
-    // Set the tracked object's ids
-    if (!root["objects_id"].isNull()){
-        for (auto const& trackedObject : trackedObjects){
-            Json::Value trackedObjectJSON;
-            trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
-            trackedObject.second->SetJsonValue(trackedObjectJSON);
-        }
-    }
+	// Set the tracked object's ids
+	if (!root["objects_id"].isNull()){
+		for (auto const& trackedObject : trackedObjects){
+			Json::Value trackedObjectJSON;
+			trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
+			trackedObject.second->SetJsonValue(trackedObjectJSON);
+		}
+	}
 
 	return;
 }
@@ -346,8 +345,8 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	for (auto const& trackedObject : trackedObjects){
 		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
 		// add object json
-        objects[trackedObject.second->Id()] = trackedObjectJSON;
-    }
+		objects[trackedObject.second->Id()] = trackedObjectJSON;
+	}
 	root["objects"] = objects;
 
 	// Append effect's properties

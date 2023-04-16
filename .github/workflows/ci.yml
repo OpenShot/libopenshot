@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         sys:
-          - { os: ubuntu-18.04, shell: bash }
           - { os: ubuntu-20.04, shell: bash }
+          - { os: ubuntu-22.04, shell: bash }
           - { os: windows-2022, shell: 'msys2 {0}' }
         compiler:
           - { cc: gcc, cxx: g++ }
@@ -82,13 +82,19 @@ jobs:
             qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
             libfdk-aac-dev libavcodec-dev libavformat-dev \
             libavutil-dev libswscale-dev libswresample-dev \
-            libzmq3-dev libmagick++-dev libbabl-dev \
+            libzmq3-dev libbabl-dev \
             libopencv-dev libprotobuf-dev protobuf-compiler \
             cargo libomp5 libomp-dev
-          # Install catch2 package from Ubuntu 20.10, since for some reason
-          # even 20.04 only has Catch 1.12.1 available.
-          wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb
-          sudo dpkg -i catch2_2.13.0-1_all.deb
+
+          # Install catch2 package from source
+          git clone https://github.com/catchorg/Catch2.git
+          pushd Catch2
+          cmake -Bbuild -H. -DBUILD_TESTING=OFF
+          sudo cmake --build build/ --target install
+          popd
+
+          wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.8-1_amd64.deb
+          sudo dpkg -i catch2_2.13.8-1_amd64.deb
 
       - name: Install macOS dependencies
         if: ${{ runner.os == 'macos' }}

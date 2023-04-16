@@ -78,9 +78,9 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
     }
 
     // Initialize the Qt rectangle that will hold the positions of the bounding-box
-	std::vector<QRectF> boxRects;
-	// Initialize the image of the TrackedObject child clip
-	std::vector<std::shared_ptr<QImage>> childClipImages;
+    std::vector<QRectF> boxRects;
+    // Initialize the image of the TrackedObject child clip
+    std::vector<std::shared_ptr<QImage>> childClipImages;
 
     // Check if track data exists for the requested frame
     if (detectionsData.find(frame_number) != detectionsData.end()) {
@@ -122,15 +122,6 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                 std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
                 float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
 
-                // Create a rotated rectangle object that holds the bounding box
-                // cv::RotatedRect box ( cv::Point2f( (int)(trackedBox.cx*fw), (int)(trackedBox.cy*fh) ),
-                //					 cv::Size2f( (int)(trackedBox.width*fw), (int)(trackedBox.height*fh) ),
-                //					 (int) (trackedBox.angle) );
-
-                // DrawRectangleRGBA(cv_image, box, bg_rgba, bg_alpha, 1, true);
-                // DrawRectangleRGBA(cv_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
-
-
                 cv::Rect2d box(
                     (int)( (trackedBox.cx-trackedBox.width/2)*fw),
                     (int)( (trackedBox.cy-trackedBox.height/2)*fh),
@@ -160,9 +151,8 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
 
                         if (childClip){
-                            std::shared_ptr<Frame> f(new Frame(1, frame->GetWidth(), frame->GetHeight(), "#00000000"));
                             // Get the image of the child clip for this frame
-					        std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(f, frame_number);
+                            std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
                             childClipImages.push_back(childClipFrame->GetImage());
 
                             // Set the Qt rectangle with the bounding-box properties
@@ -182,15 +172,15 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
     // Update Qt image with new Opencv frame
     frame->SetImageCV(cv_image);
 
-	// Set the bounding-box image with the Tracked Object's child clip image
-	if(boxRects.size() > 0){
+    // Set the bounding-box image with the Tracked Object's child clip image
+    if(boxRects.size() > 0){
         // Get the frame image
         QImage frameImage = *(frame->GetImage());
         for(int i; i < boxRects.size();i++){
             // Set a Qt painter to the frame image
             QPainter painter(&frameImage);
             // Draw the child clip image inside the bounding-box
-            painter.drawImage(boxRects[i], *childClipImages[i], QRectF(0, 0, frameImage.size().width(),  frameImage.size().height()));
+            painter.drawImage(boxRects[i], *childClipImages[i]);
         }
         // Set the frame image as the composed image
         frame->AddImage(std::make_shared<QImage>(frameImage));
@@ -362,7 +352,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 
                 std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
                 ClipBase* parentClip = this->ParentClip();
-	            trackedObjPtr->ParentClip(parentClip);
+                trackedObjPtr->ParentClip(parentClip);
 
                 // Create a temp ID. This ID is necessary to initialize the object_id Json list
                 // this Id will be replaced by the one created in the UI
