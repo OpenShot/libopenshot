@@ -706,8 +706,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	ZmqLogger::Instance()->AppendDebugMethod(
 		"Timeline::add_layer (Transform: Composite Image Layer: Completed)",
 		"source_frame->number", source_frame->number,
-		"new_frame->GetImage()->width()", new_frame->GetImage()->width(),
-		"new_frame->GetImage()->height()", new_frame->GetImage()->height());
+		"new_frame->GetImage()->width()", new_frame->GetWidth(),
+		"new_frame->GetImage()->height()", new_frame->GetHeight());
 }
 
 // Update the list of 'opened' clips
