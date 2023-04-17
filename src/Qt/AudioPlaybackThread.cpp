@@ -210,6 +210,8 @@ namespace openshot
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
+        ZmqLogger::Instance()->AppendDebugMethod("AudioPlaybackThread::Reader", "rate", sampleRate, "channel", numChannels);
+
 		// Set video cache thread
 		source->setVideoCache(videoCache);
 
