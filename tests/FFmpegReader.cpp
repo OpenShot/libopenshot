@@ -253,6 +253,9 @@ TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 	// Check size of frame image (it should now match the parent timeline)
 	CHECK(r.GetFrame(1)->GetImage()->width() == 640);
 	CHECK(r.GetFrame(1)->GetImage()->height() == 360);
+
+	c1.Close();
+	t1.Close();
 }
 
 TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )

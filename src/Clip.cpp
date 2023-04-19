@@ -232,6 +232,9 @@ Clip::~Clip()
 		delete resampler;
 		resampler = NULL;
 	}
+
+	// Close clip
+	Close();
 }
 
 // Attach clip to bounding box
@@ -335,16 +338,16 @@ void Clip::Open()
 // Close the internal reader
 void Clip::Close()
 {
-	is_open = false;
-	if (reader) {
+	if (is_open && reader) {
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
 
 		// Close the reader
 		reader->Close();
 	}
-	else
-		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+
+	// Clear cache
+	final_cache.Clear();
+	is_open = false;
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
