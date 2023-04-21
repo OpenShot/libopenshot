@@ -19,10 +19,12 @@
 #include "../AudioReaderSource.h"
 #include "../AudioDevices.h"
 #include "../Settings.h"
+#include "../ZmqLogger.h"
 
 #include <mutex>
 #include <thread>	// for std::this_thread::sleep_for
 #include <chrono>	// for std::chrono::milliseconds
+#include <sstream>
 
 using namespace juce;
 
@@ -52,6 +54,12 @@ namespace openshot
 			m_pInstance->currentAudioDevice.name = "";
 			m_pInstance->currentAudioDevice.type = "";
 			m_pInstance->defaultSampleRate = 0.0;
+
+			std::stringstream constructor_title;
+			constructor_title << "AudioDeviceManagerSingleton::Instance (default audio device type: " <<
+			Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE << ", default audio device name: " <<
+			Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME << ")";
+			ZmqLogger::Instance()->AppendDebugMethod(constructor_title.str(), "channels", channels);
 
 			// Get preferred audio device type and name (if any - these can be blank)
 			openshot::AudioDeviceInfo requested_device = {Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE,
@@ -102,6 +110,10 @@ namespace openshot
 				// do not support 48000 causing no audio device to be found.
 				int possible_rates[] { rate, 48000, 44100, 22050 };
 				for(int attempt_rate : possible_rates) {
+					std::stringstream title_rate;
+					title_rate << "AudioDeviceManagerSingleton::Instance (attempt audio device name: " <<  attempt_device.name << ")";
+					ZmqLogger::Instance()->AppendDebugMethod(title_rate.str(), "rate", attempt_rate, "channels", channels);
+
 					// Update the audio device setup for the current sample rate
 					m_pInstance->defaultSampleRate = attempt_rate;
 					deviceSetup.sampleRate = attempt_rate;
@@ -121,11 +133,22 @@ namespace openshot
 					// Persist any errors detected
 					m_pInstance->initialise_error = audio_error.toStdString();
 
+					if (!m_pInstance->initialise_error.empty()) {
+						std::stringstream title_error;
+						title_error << "AudioDeviceManagerSingleton::Instance (audio device error: " <<
+						m_pInstance->initialise_error << ")";
+						ZmqLogger::Instance()->AppendDebugMethod(title_error.str(), "rate", attempt_rate, "channels", channels);
+					}
+
 					// Determine if audio device was opened successfully, and matches the attempted sample rate
 					// If all rates fail to match, a default audio device and sample rate will be opened if possible
 					foundAudioIODevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
 					if (foundAudioIODevice && foundAudioIODevice->getCurrentSampleRate() == attempt_rate) {
 						// Successfully tested a sample rate
+						std::stringstream title_found;
+						title_found << "AudioDeviceManagerSingleton::Instance (successful audio device found: " <<
+						foundAudioIODevice->getTypeName() << ", name: " << foundAudioIODevice->getName() << ")";
+						ZmqLogger::Instance()->AppendDebugMethod(title_found.str(), "rate", attempt_rate, "channels", channels);
 						break;
 					}
 				}
@@ -136,6 +159,7 @@ namespace openshot
 				}
 			}
 
+			ZmqLogger::Instance()->AppendDebugMethod("AudioDeviceManagerSingleton::Instance (audio device initialization completed)");
 		}
 		return m_pInstance;
 	}
@@ -185,6 +209,8 @@ namespace openshot
 		// Set local vars
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
+
+        ZmqLogger::Instance()->AppendDebugMethod("AudioPlaybackThread::Reader", "rate", sampleRate, "channel", numChannels);
 
 		// Set video cache thread
 		source->setVideoCache(videoCache);
