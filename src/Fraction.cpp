@@ -66,7 +66,7 @@ void Fraction::Reduce() {
 	// Get the greatest common denominator
 	int GCD = GreatestCommonDenominator();
 	if (GCD == 0) {
-	    return;
+		return;
 	}
 
 	// Reduce this fraction to the smallest possible whole numbers
