@@ -63,21 +63,16 @@ option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
 option(VERBOSE_TESTS "Run CTest with maximum verbosity" OFF)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
+
 option(ENABLE_LIB_DOCS "Build API documentation (requires Doxygen)" ON)
+
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
+
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)" ON)
 option(USE_HW_ACCEL "Enable hardware-accelerated encoding-decoding with FFmpeg 3.4+" ON)
-
-if (APPIMAGE_BUILD)
-  # Force older version of glibc and -pthread flag when building AppImage
-  # for better backwards compatibility (i.e older distros)
-  message("Wrapping libc for compatibility with version glibc_2.23")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include /usr/local/include/force_link_glibc_2.23.h -static-libgcc")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include /usr/local/include/force_link_glibc_2.23.h -static-libgcc")
-endif()
 
 # Legacy commandline override
 if (DISABLE_TESTS)
