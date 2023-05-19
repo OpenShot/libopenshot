@@ -91,7 +91,7 @@ void Caption::process_regex() {
 		}
 
 		// Parse regex and find all matches (i.e. 00:00.000 --> 00:10.000\ncaption-text)
-		QRegularExpression allPathsRegex(QStringLiteral("(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})\\s*-->\\s*(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})([\\s\\S]*?)(.*?)(?=\\d{2}.\\d{2,3}|\\Z)"), QRegularExpression::MultilineOption);
+		QRegularExpression allPathsRegex(QStringLiteral("(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})\\s*-->\\s*(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})([\\s\\S]*?)(.*?)(?=\\d{2}:\\d{2,3}|\\Z)"), QRegularExpression::MultilineOption);
 		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(caption_prepared);
 		while (i.hasNext()) {
 			QRegularExpressionMatch match = i.next();
