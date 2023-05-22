@@ -552,7 +552,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 			// Resampling needed, modify copy of SampleRange object that includes some additional input samples on
 			// first iteration, and continues the offset to ensure that the resampler is not input limited.
-			const int EXTRA_INPUT_SAMPLES = 48;
+			const int EXTRA_INPUT_SAMPLES = 64;
 
 			if (!avr) {
 				// This is the first iteration, and we need to extend # of samples for this frame
