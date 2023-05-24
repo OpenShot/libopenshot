@@ -106,7 +106,11 @@ namespace openshot
 			return;
 		};
 
-		Json::Value JsonInfo() const; ///< Generate JSON object of meta data / info
+		/// Generate JSON object of meta data / info
+		Json::Value JsonInfo() const; 
+
+		/// Generate JSON object of base properties (recommended to be used by all effects)
+		Json::Value BasePropertiesJSON(int64_t requested_frame) const;
 
 		/// Get the order that this effect should be executed.
 		int Order() const { return order; }

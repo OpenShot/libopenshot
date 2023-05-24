@@ -175,6 +175,25 @@ Json::Value EffectBase::JsonInfo() const {
 	return root;
 }
 
+// Get all properties for a specific frame
+Json::Value EffectBase::BasePropertiesJSON(int64_t requested_frame) const {
+	// Generate JSON properties list
+	Json::Value root;
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
+	root["apply_before_clip"] = add_property_json("Apply Before Clip Keyframes", info.apply_before_clip, "int", "", NULL, 0, 1, false, requested_frame);
+
+	// Add replace_image choices (dropdown style)
+	root["apply_before_clip"]["choices"].append(add_property_choice_json("Yes", true, info.apply_before_clip));
+	root["apply_before_clip"]["choices"].append(add_property_choice_json("No", false, info.apply_before_clip));
+
+	return root;
+}
+
 /// Parent clip object of this reader (which can be unparented and NULL)
 openshot::ClipBase* EffectBase::ParentClip() {
 	return clip;
