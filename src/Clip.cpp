@@ -440,20 +440,17 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Apply waveform image (if any)
 		apply_waveform(frame, background_frame);
 
-		// Apply local effects to the frame (if any)
-		apply_effects(frame);
+		// Apply effects BEFORE applying keyframes (if any local or global effects are used)
+		apply_effects(frame, background_frame, options, true);
 
-		// Apply global timeline effects (i.e. transitions & masks... if any)
-		if (timeline != NULL && options != NULL) {
-			if (options->is_top_clip) {
-				// Apply global timeline effects (only to top clip... if overlapping, pass in timeline frame number)
-				Timeline* timeline_instance = static_cast<Timeline*>(timeline);
-				frame = timeline_instance->apply_effects(frame, background_frame->number, Layer());
-			}
-		}
-
-		// Apply keyframe / transforms
+		// Apply keyframe / transforms to current clip image
 		apply_keyframes(frame, background_frame);
+
+		// Apply effects AFTER applying keyframes (if any local or global effects are used)
+		apply_effects(frame, background_frame, options, false);
+
+		// Apply background canvas (i.e. flatten this image onto previous layer image)
+		apply_background(frame, background_frame);
 
 		// Add final frame to cache
 		final_cache.Add(frame);
@@ -1202,16 +1199,41 @@ void Clip::RemoveEffect(EffectBase* effect)
 	final_cache.Clear();
 }
 
+// Apply background image to the current clip image (i.e. flatten this image onto previous layer)
+void Clip::apply_background(std::shared_ptr<openshot::Frame> frame, std::shared_ptr<openshot::Frame> background_frame) {
+	// Add background canvas
+	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
+	QPainter painter(background_canvas.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+
+	// Composite a new layer onto the image
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(0, 0, *frame->GetImage());
+	painter.end();
+
+	// Add new QImage to frame
+	frame->AddImage(background_canvas);
+}
+
 // Apply effects to the source frame (if any)
-void Clip::apply_effects(std::shared_ptr<Frame> frame)
+void Clip::apply_effects(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame, TimelineInfoStruct* options, bool before_keyframes)
 {
-	// Find Effects at this position and layer
 	for (auto effect : effects)
 	{
 		// Apply the effect to this frame
-		frame = effect->GetFrame(frame, frame->number);
+		if (effect->info.apply_before_clip && before_keyframes) {
+			effect->GetFrame(frame, frame->number);
+		} else if (!effect->info.apply_before_clip && !before_keyframes) {
+			effect->GetFrame(frame, frame->number);
+		}
+	}
 
-	} // end effect loop
+	if (timeline != NULL && options != NULL) {
+		// Apply global timeline effects (i.e. transitions & masks... if any)
+		Timeline* timeline_instance = static_cast<Timeline*>(timeline);
+		options->is_before_clip_keyframes = before_keyframes;
+		timeline_instance->apply_effects(frame, background_frame->number, Layer(), options);
+	}
 }
 
 // Compare 2 floating point numbers for equality
@@ -1228,19 +1250,15 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> 
 		return;
 	}
 
-	// Get image from clip
+	// Get image from clip, and create transparent background image
 	std::shared_ptr<QImage> source_image = frame->GetImage();
-	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
+	std::shared_ptr<QImage> background_canvas = std::make_shared<QImage>(background_frame->GetImage()->width(),
+																		 background_frame->GetImage()->height(),
+																		 QImage::Format_RGBA8888_Premultiplied);
+	background_canvas->fill(QColor(Qt::transparent));
 
 	// Get transform from clip's keyframes
 	QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
-
-	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod(
-		"Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)",
-		"frame->number", frame->number,
-		"background_canvas->width()", background_canvas->width(),
-		"background_canvas->height()", background_canvas->height());
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(background_canvas.get());

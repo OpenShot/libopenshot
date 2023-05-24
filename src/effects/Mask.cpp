@@ -128,7 +128,7 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 			pixels[byte_index + 2] = constrain(255 * alpha_percent);
 			pixels[byte_index + 3] = constrain(255 * alpha_percent);
 		} else {
-			// Mulitply new alpha value with all the colors (since we are using a premultiplied
+			// Multiply new alpha value with all the colors (since we are using a premultiplied
 			// alpha format)
 			pixels[byte_index + 0] *= alpha_percent;
 			pixels[byte_index + 1] *= alpha_percent;
@@ -263,10 +263,15 @@ std::string Mask::PropertiesJSON(int64_t requested_frame) const {
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
 	root["replace_image"] = add_property_json("Replace Image", replace_image, "int", "", NULL, 0, 1, false, requested_frame);
+	root["apply_before_clip"] = add_property_json("Apply Before Clip Keyframes", info.apply_before_clip, "int", "", NULL, 0, 1, false, requested_frame);
 
 	// Add replace_image choices (dropdown style)
 	root["replace_image"]["choices"].append(add_property_choice_json("Yes", true, replace_image));
 	root["replace_image"]["choices"].append(add_property_choice_json("No", false, replace_image));
+
+	// Add replace_image choices (dropdown style)
+	root["apply_before_clip"]["choices"].append(add_property_choice_json("Yes", true, info.apply_before_clip));
+	root["apply_before_clip"]["choices"].append(add_property_choice_json("No", false, info.apply_before_clip));
 
 	// Keyframes
 	root["brightness"] = add_property_json("Brightness", brightness.GetValue(requested_frame), "float", "", &brightness, -1.0, 1.0, false, requested_frame);

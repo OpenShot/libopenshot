@@ -523,7 +523,7 @@ double Timeline::calculate_time(int64_t number, Fraction rate)
 }
 
 // Apply effects to the source frame (if any)
-std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_number, int layer)
+std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_number, int layer, TimelineInfoStruct* options)
 {
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod(
@@ -541,20 +541,18 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 
 		bool does_effect_intersect = (effect_start_position <= timeline_frame_number && effect_end_position >= timeline_frame_number && effect->Layer() == layer);
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod(
-			"Timeline::apply_effects (Does effect intersect)",
-			"effect->Position()", effect->Position(),
-			"does_effect_intersect", does_effect_intersect,
-			"timeline_frame_number", timeline_frame_number,
-			"layer", layer);
-
 		// Clip is visible
 		if (does_effect_intersect)
 		{
 			// Determine the frame needed for this clip (based on the position on the timeline)
 			long effect_start_frame = (effect->Start() * info.fps.ToDouble()) + 1;
 			long effect_frame_number = timeline_frame_number - effect_start_position + effect_start_frame;
+
+			if (!options->is_top_clip)
+				continue; // skip effect, if overlapped/covered by another clip on same layer
+
+			if (options->is_before_clip_keyframes != effect->info.apply_before_clip)
+				continue; // skip effect, if this filter does not match
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod(
@@ -615,6 +613,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Create timeline options (with details about this current frame request)
 	TimelineInfoStruct* options = new TimelineInfoStruct();
 	options->is_top_clip = is_top_clip;
+	options->is_before_clip_keyframes = true;
 
 	// Get the clip's frame, composited on top of the current timeline frame
 	std::shared_ptr<Frame> source_frame;

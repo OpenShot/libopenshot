@@ -68,15 +68,13 @@ namespace openshot {
 	/// the Clip with the highest end-frame number using std::max_element
 	struct CompareClipEndFrames {
 		bool operator()(const openshot::Clip* lhs, const openshot::Clip* rhs) {
-			return (lhs->Position() + lhs->Duration())
-			       <= (rhs->Position() + rhs->Duration());
+			return (lhs->Position() + lhs->Duration()) <= (rhs->Position() + rhs->Duration());
 	}};
 
 	/// Like CompareClipEndFrames, but for effects
 	struct CompareEffectEndFrames {
 		bool operator()(const openshot::EffectBase* lhs, const openshot::EffectBase* rhs) {
-			return (lhs->Position() + lhs->Duration())
-				<= (rhs->Position() + rhs->Duration());
+			return (lhs->Position() + lhs->Duration()) <= (rhs->Position() + rhs->Duration());
 	}};
 
 	/**
@@ -231,7 +229,7 @@ namespace openshot {
 		/// @param convert_absolute_paths Should all paths be converted to absolute paths (relative to the location of projectPath)
 		Timeline(const std::string& projectPath, bool convert_absolute_paths);
 
-        virtual ~Timeline();
+		virtual ~Timeline();
 
 		/// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
 		void AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
@@ -240,9 +238,9 @@ namespace openshot {
 		/// Return the ID's of the tracked objects as a list of strings
 		std::list<std::string> GetTrackedObjectsIds() const;
 		/// Return the trackedObject's properties as a JSON string
-        #ifdef USE_OPENCV
+		#ifdef USE_OPENCV
 		std::string GetTrackedObjectValues(std::string id, int64_t frame_number) const;
-        #endif
+		#endif
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
@@ -252,8 +250,8 @@ namespace openshot {
 		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
 		void AddEffect(openshot::EffectBase* effect);
 
-        /// Apply global/timeline effects to the source frame (if any)
-        std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, int layer);
+		/// Apply global/timeline effects to the source frame (if any)
+		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, int layer, TimelineInfoStruct* options);
 
 		/// Apply the timeline's framerate and samplerate to all clips
 		void ApplyMapperToClips();
@@ -266,7 +264,7 @@ namespace openshot {
 
 		/// Clear all clips, effects, and frame mappers from timeline (and free memory)
 		void Clear();
-        
+
 		/// Clear all cache for this timeline instance, including all clips' cache
 		/// @param deep If True, clear all FrameMappers and nested Readers (QtImageReader, FFmpegReader, etc...)
 		void ClearAllCache(bool deep=false);
