@@ -68,34 +68,34 @@ std::shared_ptr<openshot::Frame> Delay::GetFrame(std::shared_ptr<openshot::Frame
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
 	{
 		float *channel_data = frame->audio->getWritePointer(channel);
-        float *delay_data = delay_buffer.getWritePointer(channel);
-        local_write_position = delay_write_position;
+		float *delay_data = delay_buffer.getWritePointer(channel);
+		local_write_position = delay_write_position;
 
 		for (auto sample = 0; sample < frame->audio->getNumSamples(); ++sample)
 		{
 			const float in = (float)(channel_data[sample]);
-            float out = 0.0f;
+			float out = 0.0f;
 
-            float read_position = fmodf((float)local_write_position - delay_time_value + (float)delay_buffer_samples, delay_buffer_samples);
-            int local_read_position = floorf(read_position);
+			float read_position = fmodf((float)local_write_position - delay_time_value + (float)delay_buffer_samples, delay_buffer_samples);
+			int local_read_position = floorf(read_position);
 
-            if (local_read_position != local_write_position)
+			if (local_read_position != local_write_position)
 			{
-                float fraction = read_position - (float)local_read_position;
-                float delayed1 = delay_data[(local_read_position + 0)];
-                float delayed2 = delay_data[(local_read_position + 1) % delay_buffer_samples];
-                out = (float)(delayed1 + fraction * (delayed2 - delayed1));
+				float fraction = read_position - (float)local_read_position;
+				float delayed1 = delay_data[(local_read_position + 0)];
+				float delayed2 = delay_data[(local_read_position + 1) % delay_buffer_samples];
+				out = (float)(delayed1 + fraction * (delayed2 - delayed1));
 
-                channel_data[sample] = in + (out - in);
+				channel_data[sample] = in + (out - in);
 				delay_data[local_write_position] = in;
-            }
+			}
 
-            if (++local_write_position >= delay_buffer_samples)
-                local_write_position -= delay_buffer_samples;
+			if (++local_write_position >= delay_buffer_samples)
+				local_write_position -= delay_buffer_samples;
 		}
 	}
 
-    delay_write_position = local_write_position;
+	delay_write_position = local_write_position;
 
 	// return the modified frame
 	return frame;
@@ -152,12 +152,7 @@ void Delay::SetJsonValue(const Json::Value root) {
 std::string Delay::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["delay_time"] = add_property_json("Delay Time", delay_time.GetValue(requested_frame), "float", "", &delay_time, 0, 5, false, requested_frame);

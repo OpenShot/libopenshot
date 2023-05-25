@@ -115,12 +115,7 @@ void Noise::SetJsonValue(const Json::Value root) {
 std::string Noise::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["level"] = add_property_json("Level", level.GetValue(requested_frame), "int", "", &level, 0, 100, false, requested_frame);

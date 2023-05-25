@@ -160,13 +160,7 @@ void Bars::SetJsonValue(const Json::Value root) {
 std::string Bars::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["color"] = add_property_json("Bar Color", 0.0, "color", "", &color.red, 0, 255, false, requested_frame);

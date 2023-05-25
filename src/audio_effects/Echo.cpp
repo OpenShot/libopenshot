@@ -19,7 +19,7 @@ using namespace openshot;
 Echo::Echo() : Echo::Echo(0.1, 0.5, 0.5) { }
 
 Echo::Echo(Keyframe echo_time, Keyframe feedback, Keyframe mix) :
-    echo_time(echo_time), feedback(feedback), mix(mix)
+	echo_time(echo_time), feedback(feedback), mix(mix)
 {
 	// Init effect properties
 	init_effect_details();
@@ -72,33 +72,33 @@ std::shared_ptr<openshot::Frame> Echo::GetFrame(std::shared_ptr<openshot::Frame>
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
 	{
 		float *channel_data = frame->audio->getWritePointer(channel);
-        float *echo_data = echo_buffer.getWritePointer(channel);
-        local_write_position = echo_write_position;
+		float *echo_data = echo_buffer.getWritePointer(channel);
+		local_write_position = echo_write_position;
 
 		for (auto sample = 0; sample < frame->audio->getNumSamples(); ++sample)
 		{
 			const float in = (float)(channel_data[sample]);
-            float out = 0.0f;
+			float out = 0.0f;
 
-            float read_position = fmodf((float)local_write_position - echo_time_value + (float)echo_buffer_samples, echo_buffer_samples);
-            int local_read_position = floorf(read_position);
+			float read_position = fmodf((float)local_write_position - echo_time_value + (float)echo_buffer_samples, echo_buffer_samples);
+			int local_read_position = floorf(read_position);
 
-            if (local_read_position != local_write_position)
+			if (local_read_position != local_write_position)
 			{
-                float fraction = read_position - (float)local_read_position;
-                float echoed1 = echo_data[(local_read_position + 0)];
-                float echoed2 = echo_data[(local_read_position + 1) % echo_buffer_samples];
-                out = (float)(echoed1 + fraction * (echoed2 - echoed1));
-                channel_data[sample] = in + mix_value*(out - in);
+				float fraction = read_position - (float)local_read_position;
+				float echoed1 = echo_data[(local_read_position + 0)];
+				float echoed2 = echo_data[(local_read_position + 1) % echo_buffer_samples];
+				out = (float)(echoed1 + fraction * (echoed2 - echoed1));
+				channel_data[sample] = in + mix_value*(out - in);
 				echo_data[local_write_position] = in + out*feedback_value;
-            }
+			}
 
-            if (++local_write_position >= echo_buffer_samples)
-                local_write_position -= echo_buffer_samples;
+			if (++local_write_position >= echo_buffer_samples)
+				local_write_position -= echo_buffer_samples;
 		}
 	}
 
-    echo_write_position = local_write_position;
+	echo_write_position = local_write_position;
 
 	// return the modified frame
 	return frame;
@@ -161,12 +161,7 @@ void Echo::SetJsonValue(const Json::Value root) {
 std::string Echo::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["echo_time"] = add_property_json("Time", echo_time.GetValue(requested_frame), "float", "", &echo_time, 0, 5, false, requested_frame);

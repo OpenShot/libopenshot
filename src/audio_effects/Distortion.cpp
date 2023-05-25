@@ -18,10 +18,10 @@ using namespace openshot;
 Distortion::Distortion(): Distortion::Distortion(HARD_CLIPPING, 10, -10, 5) { }
 
 Distortion::Distortion(openshot::DistortionType distortion_type,
-                       Keyframe input_gain, Keyframe output_gain,
-                       Keyframe tone):
-    distortion_type(distortion_type), input_gain(input_gain),
-    output_gain(output_gain), tone(tone)
+					   Keyframe input_gain, Keyframe output_gain,
+					   Keyframe tone):
+	distortion_type(distortion_type), input_gain(input_gain),
+	output_gain(output_gain), tone(tone)
 {
 	// Init effect properties
 	init_effect_details();
@@ -48,12 +48,12 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 {
 	filters.clear();
 
-    for (int i = 0; i < frame->audio->getNumChannels(); ++i) {
-        Filter* filter;
-        filters.add (filter = new Filter());
-    }
+	for (int i = 0; i < frame->audio->getNumChannels(); ++i) {
+		Filter* filter;
+		filters.add (filter = new Filter());
+	}
 
-    updateFilters(frame_number);
+	updateFilters(frame_number);
 
 	// Add distortion
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
@@ -73,53 +73,53 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 
 				case HARD_CLIPPING: {
 					float threshold = 0.5f;
-                    if (in > threshold)
-                        out = threshold;
-                    else if (in < -threshold)
-                        out = -threshold;
-                    else
-                        out = in;
-                    break;
-                }
+					if (in > threshold)
+						out = threshold;
+					else if (in < -threshold)
+						out = -threshold;
+					else
+						out = in;
+					break;
+				}
 
-                case SOFT_CLIPPING: {
-                    float threshold1 = 1.0f / 3.0f;
-                    float threshold2 = 2.0f / 3.0f;
-                    if (in > threshold2)
-                        out = 1.0f;
-                    else if (in > threshold1)
-                        out = 1.0f - powf (2.0f - 3.0f * in, 2.0f) / 3.0f;
-                    else if (in < -threshold2)
-                        out = -1.0f;
-                    else if (in < -threshold1)
-                        out = -1.0f + powf (2.0f + 3.0f * in, 2.0f) / 3.0f;
-                    else
-                        out = 2.0f * in;
-                    out *= 0.5f;
-                    break;
-                }
+				case SOFT_CLIPPING: {
+					float threshold1 = 1.0f / 3.0f;
+					float threshold2 = 2.0f / 3.0f;
+					if (in > threshold2)
+						out = 1.0f;
+					else if (in > threshold1)
+						out = 1.0f - powf (2.0f - 3.0f * in, 2.0f) / 3.0f;
+					else if (in < -threshold2)
+						out = -1.0f;
+					else if (in < -threshold1)
+						out = -1.0f + powf (2.0f + 3.0f * in, 2.0f) / 3.0f;
+					else
+						out = 2.0f * in;
+					out *= 0.5f;
+					break;
+				}
 
-                case EXPONENTIAL: {
-                    if (in > 0.0f)
-                        out = 1.0f - expf (-in);
-                    else
-                        out = -1.0f + expf (in);
-                    break;
-                }
+				case EXPONENTIAL: {
+					if (in > 0.0f)
+						out = 1.0f - expf (-in);
+					else
+						out = -1.0f + expf (in);
+					break;
+				}
 
-                case FULL_WAVE_RECTIFIER: {
-                    out = fabsf (in);
-                    break;
-                }
+				case FULL_WAVE_RECTIFIER: {
+					out = fabsf (in);
+					break;
+				}
 
-                case HALF_WAVE_RECTIFIER: {
-                    if (in > 0.0f)
-                        out = in;
-                    else
-                        out = 0.0f;
-                    break;
-                }
-            }
+				case HALF_WAVE_RECTIFIER: {
+					if (in > 0.0f)
+						out = in;
+					else
+						out = 0.0f;
+					break;
+				}
+			}
 
 			float filtered = filters[channel]->processSingleSampleRaw(out);
 			channel_data[sample] = filtered*powf(10.0f, output_gain_value * 0.05f);
@@ -132,11 +132,11 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 
 void Distortion::updateFilters(int64_t frame_number)
 {
-    double discrete_frequency = M_PI * 0.01;
-    double gain = pow(10.0, (float)tone.GetValue(frame_number) * 0.05);
+	double discrete_frequency = M_PI * 0.01;
+	double gain = pow(10.0, (float)tone.GetValue(frame_number) * 0.05);
 
-    for (int i = 0; i < filters.size(); ++i)
-        filters[i]->updateCoefficients(discrete_frequency, gain);
+	for (int i = 0; i < filters.size(); ++i)
+		filters[i]->updateCoefficients(discrete_frequency, gain);
 }
 
 // Generate JSON string of this object
@@ -216,12 +216,7 @@ void Distortion::SetJsonValue(const Json::Value root) {
 std::string Distortion::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["distortion_type"] = add_property_json("Distortion Type", distortion_type, "int", "", NULL, 0, 3, false, requested_frame);
