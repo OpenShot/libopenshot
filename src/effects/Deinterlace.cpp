@@ -138,9 +138,6 @@ std::string Deinterlace::PropertiesJSON(int64_t requested_frame) const {
 	root["isOdd"]["choices"].append(add_property_choice_json("Yes", true, isOdd));
 	root["isOdd"]["choices"].append(add_property_choice_json("No", false, isOdd));
 
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
-
 	// Return formatted string
 	return root.toStyledString();
 }

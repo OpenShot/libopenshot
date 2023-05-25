@@ -29,7 +29,7 @@ Crop::Crop(
 	Keyframe left, Keyframe top,
 	Keyframe right, Keyframe bottom,
 	Keyframe x, Keyframe y) :
-		left(left), top(top), right(right), bottom(bottom), x(x), y(y)
+		left(left), top(top), right(right), bottom(bottom), x(x), y(y), resize(false)
 {
 	// Init effect properties
 	init_effect_details();
@@ -99,14 +99,17 @@ std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame>
 	QImage cropped(sz, QImage::Format_RGBA8888_Premultiplied);
 	cropped.fill(Qt::transparent);
 
-	const QImage src(*frame_image);
-
 	QPainter p(&cropped);
-	p.drawImage(paint_r, src, copy_r);
+	p.drawImage(paint_r, *frame_image, copy_r);
 	p.end();
 
-	// Set frame image
-	frame->AddImage(std::make_shared<QImage>(cropped.copy()));
+	if (resize) {
+		// Resize image to match cropped QRect (reduce frame size)
+		frame->AddImage(std::make_shared<QImage>(cropped.copy(paint_r.toRect())));
+	} else {
+		// Copy cropped image into transparent frame image (maintain frame size)
+		frame->AddImage(std::make_shared<QImage>(cropped.copy()));
+	}
 
 	// return the modified frame
 	return frame;
@@ -131,6 +134,7 @@ Json::Value Crop::JsonValue() const {
 	root["bottom"] = bottom.JsonValue();
 	root["x"] = x.JsonValue();
 	root["y"] = y.JsonValue();
+	root["resize"] = resize;
 
 	// return JsonValue
 	return root;
@@ -172,6 +176,8 @@ void Crop::SetJsonValue(const Json::Value root) {
 		x.SetJsonValue(root["x"]);
 	if (!root["y"].isNull())
 		y.SetJsonValue(root["y"]);
+	if (!root["resize"].isNull())
+		resize = root["resize"].asBool();
 }
 
 // Get all properties for a specific frame
@@ -188,8 +194,10 @@ std::string Crop::PropertiesJSON(int64_t requested_frame) const {
 	root["x"] = add_property_json("X Offset", x.GetValue(requested_frame), "float", "", &x, -1.0, 1.0, false, requested_frame);
 	root["y"] = add_property_json("Y Offset", y.GetValue(requested_frame), "float", "", &y, -1.0, 1.0, false, requested_frame);
 
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+	// Add replace_image choices (dropdown style)
+	root["resize"] = add_property_json("Resize Image", resize, "int", "", NULL, 0, 1, false, requested_frame);
+	root["resize"]["choices"].append(add_property_choice_json("Yes", true, resize));
+	root["resize"]["choices"].append(add_property_choice_json("No", false, resize));
 
 	// Return formatted string
 	return root.toStyledString();

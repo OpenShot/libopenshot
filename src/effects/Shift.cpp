@@ -175,9 +175,6 @@ std::string Shift::PropertiesJSON(int64_t requested_frame) const {
 	root["x"] = add_property_json("X Shift", x.GetValue(requested_frame), "float", "", &x, -1, 1, false, requested_frame);
 	root["y"] = add_property_json("Y Shift", y.GetValue(requested_frame), "float", "", &y, -1, 1, false, requested_frame);
 
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
-
 	// Return formatted string
 	return root.toStyledString();
 }

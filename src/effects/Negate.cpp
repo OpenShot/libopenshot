@@ -89,9 +89,6 @@ std::string Negate::PropertiesJSON(int64_t requested_frame) const {
 	// Generate JSON properties list
 	Json::Value root = BasePropertiesJSON(requested_frame);
 
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
-
 	// Return formatted string
 	return root.toStyledString();
 }

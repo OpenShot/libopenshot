@@ -595,9 +595,6 @@ std::string ChromaKey::PropertiesJSON(int64_t requested_frame) const {
 	root["keymethod"]["choices"].append(add_property_choice_json("CIE Distance", 9, method));
 	root["keymethod"]["choices"].append(add_property_choice_json("Cb,Cr vector", 10, method));
 
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
-
 	// Return formatted string
 	return root.toStyledString();
 }
