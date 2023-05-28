@@ -13,6 +13,7 @@
 
 #include <sstream>
 #include <memory>
+#include <cmath>
 
 #include "openshot_catch.h"
 
@@ -56,7 +57,7 @@ TEST_CASE( "Stabilize_Video", "[libopenshot][opencv][stabilizer]" )
     int dy = tp.dy*1000;
     int da = tp.da*1000;
     int x = ct.x*1000;
-    int y = ct.y*1000;
+    int y = std::round(ct.y*1000);
     int a = ct.a*1000;
 
     CHECK(dx == (int) (58));
