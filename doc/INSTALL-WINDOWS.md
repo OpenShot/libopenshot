@@ -204,7 +204,7 @@ pacman -S mingw64/mingw-w64-x86_64-python3-pyzmq
 pacman -S mingw64/mingw-w64-x86_64-python3-cx_Freeze
 pacman -S mingw64/mingw-w64-x86_64-ninja
 pacman -S mingw64/mingw-w64-x86_64-catch
-pacman -S mingw-w64-x86_64-python3-pyopengl
+pacman -S mingw-w64-x86_64-python3-PyOpenGL
 pacman -S mingw-w64-clang-x86_64-python-pyopengl-accelerate
 pacman -S mingw-w64-x86_64-python-pyopengl-accelerate
 pacman -S mingw-w64-x86_64-python-pywin32
