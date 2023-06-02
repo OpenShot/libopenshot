@@ -455,6 +455,10 @@ void Frame::SetFrameNumber(int64_t new_number)
 // Calculate the # of samples per video frame (for a specific frame number and frame rate)
 int Frame::GetSamplesPerFrame(int64_t number, Fraction fps, int sample_rate, int channels)
 {
+	// Directly return 0 if there are no channels
+	// so that we do not need to deal with NaNs later
+	if (channels == 0) return 0;
+
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
 	double fps_rate = fps.Reciprocal().ToDouble();
 
