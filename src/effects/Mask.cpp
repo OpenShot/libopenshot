@@ -262,10 +262,6 @@ std::string Mask::PropertiesJSON(int64_t requested_frame) const {
 	root["replace_image"]["choices"].append(add_property_choice_json("Yes", true, replace_image));
 	root["replace_image"]["choices"].append(add_property_choice_json("No", false, replace_image));
 
-	// Add replace_image choices (dropdown style)
-	root["apply_before_clip"]["choices"].append(add_property_choice_json("Yes", true, info.apply_before_clip));
-	root["apply_before_clip"]["choices"].append(add_property_choice_json("No", false, info.apply_before_clip));
-
 	// Keyframes
 	root["brightness"] = add_property_json("Brightness", brightness.GetValue(requested_frame), "float", "", &brightness, -1.0, 1.0, false, requested_frame);
 	root["contrast"] = add_property_json("Contrast", contrast.GetValue(requested_frame), "float", "", &contrast, 0, 20, false, requested_frame);
