@@ -28,10 +28,10 @@ using google::protobuf::util::TimeUtil;
 /// Blank constructor, useful when using Json to load the effect properties
 Stabilizer::Stabilizer(std::string clipStabilizedDataPath):protobuf_data_path(clipStabilizedDataPath)
 {
-    // Init effect properties
+	// Init effect properties
 	init_effect_details();
-    // Tries to load the stabilization data from protobuf
-    LoadStabilizedData(clipStabilizedDataPath);
+	// Tries to load the stabilization data from protobuf
+	LoadStabilizedData(clipStabilizedDataPath);
 }
 
 // Default constructor
@@ -104,51 +104,51 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 
 // Load protobuf data file
 bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
-    using std::ios;
-    // Create stabilization message
-    pb_stabilize::Stabilization stabilizationMessage;
+	using std::ios;
+	// Create stabilization message
+	pb_stabilize::Stabilization stabilizationMessage;
 
-    // Read the existing tracker message.
-    std::fstream input(inputFilePath, ios::in | ios::binary);
-    if (!stabilizationMessage.ParseFromIstream(&input)) {
-        std::cerr << "Failed to parse protobuf message." << std::endl;
-        return false;
-    }
+	// Read the existing tracker message.
+	std::fstream input(inputFilePath, ios::in | ios::binary);
+	if (!stabilizationMessage.ParseFromIstream(&input)) {
+		std::cerr << "Failed to parse protobuf message." << std::endl;
+		return false;
+	}
 
-    // Make sure the data maps are empty
-    transformationData.clear();
-    trajectoryData.clear();
+	// Make sure the data maps are empty
+	transformationData.clear();
+	trajectoryData.clear();
 
-    // Iterate over all frames of the saved message and assign to the data maps
-    for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
+	// Iterate over all frames of the saved message and assign to the data maps
+	for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
 
 		// Create stabilization message
-        const pb_stabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
+		const pb_stabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
 
-        // Load frame number
-        size_t id = pbFrameData.id();
+		// Load frame number
+		size_t id = pbFrameData.id();
 
-        // Load camera trajectory data
-        float x = pbFrameData.x();
-        float y = pbFrameData.y();
-        float a = pbFrameData.a();
+		// Load camera trajectory data
+		float x = pbFrameData.x();
+		float y = pbFrameData.y();
+		float a = pbFrameData.a();
 
-        // Assign data to trajectory map
-        trajectoryData[i] = EffectCamTrajectory(x,y,a);
+		// Assign data to trajectory map
+		trajectoryData[i] = EffectCamTrajectory(x,y,a);
 
-        // Load transformation data
-        float dx = pbFrameData.dx();
-        float dy = pbFrameData.dy();
-        float da = pbFrameData.da();
+		// Load transformation data
+		float dx = pbFrameData.dx();
+		float dy = pbFrameData.dy();
+		float da = pbFrameData.da();
 
-        // Assing data to transformation map
-        transformationData[id] = EffectTransformParam(dx,dy,da);
-    }
+		// Assing data to transformation map
+		transformationData[id] = EffectTransformParam(dx,dy,da);
+	}
 
-    // Delete all global objects allocated by libprotobuf.
-    google::protobuf::ShutdownProtobufLibrary();
+	// Delete all global objects allocated by libprotobuf.
+	google::protobuf::ShutdownProtobufLibrary();
 
-    return true;
+	return true;
 }
 
 
@@ -213,18 +213,9 @@ void Stabilizer::SetJsonValue(const Json::Value root) {
 std::string Stabilizer::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	root["zoom"] = add_property_json("Zoom", zoom.GetValue(requested_frame), "float", "", &zoom, 0.0, 2.0, false, requested_frame);
-
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

@@ -30,7 +30,6 @@ void EffectBase::InitEffectInfo()
 	End(0.0);
 	Order(0);
 	ParentClip(NULL);
-
 	parentEffect = NULL;
 
 	info.has_video = false;
@@ -39,6 +38,7 @@ void EffectBase::InitEffectInfo()
 	info.name = "";
 	info.description = "";
 	info.parent_effect_id = "";
+	info.apply_before_clip = true;
 }
 
 // Display file information
@@ -51,6 +51,8 @@ void EffectBase::DisplayInfo(std::ostream* out) {
 	*out << "--> Description: " << info.description << std::endl;
 	*out << "--> Has Video: " << info.has_video << std::endl;
 	*out << "--> Has Audio: " << info.has_audio << std::endl;
+	*out << "--> Apply Before Clip Keyframes: " << info.apply_before_clip << std::endl;
+	*out << "--> Order: " << order << std::endl;
 	*out << "----------------------------" << std::endl;
 }
 
@@ -85,6 +87,7 @@ Json::Value EffectBase::JsonValue() const {
 	root["has_video"] = info.has_video;
 	root["has_audio"] = info.has_audio;
 	root["has_tracked_object"] = info.has_tracked_object;
+	root["apply_before_clip"] = info.apply_before_clip;
 	root["order"] = Order();
 
 	// return JsonValue
@@ -145,6 +148,9 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 	if (!my_root["order"].isNull())
 		Order(my_root["order"].asInt());
 
+	if (!my_root["apply_before_clip"].isNull())
+		info.apply_before_clip = my_root["apply_before_clip"].asBool();
+
 	if (!my_root["parent_effect_id"].isNull()){
 		info.parent_effect_id = my_root["parent_effect_id"].asString();
 		if (info.parent_effect_id.size() > 0 && info.parent_effect_id != "" && parentEffect == NULL)
@@ -166,6 +172,28 @@ Json::Value EffectBase::JsonInfo() const {
 	root["has_audio"] = info.has_audio;
 
 	// return JsonValue
+	return root;
+}
+
+// Get all properties for a specific frame
+Json::Value EffectBase::BasePropertiesJSON(int64_t requested_frame) const {
+	// Generate JSON properties list
+	Json::Value root;
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
+
+	// Add replace_image choices (dropdown style)
+	root["apply_before_clip"] = add_property_json("Apply Before Clip Keyframes", info.apply_before_clip, "int", "", NULL, 0, 1, false, requested_frame);
+	root["apply_before_clip"]["choices"].append(add_property_choice_json("Yes", true, info.apply_before_clip));
+	root["apply_before_clip"]["choices"].append(add_property_choice_json("No", false, info.apply_before_clip));
+
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+
 	return root;
 }
 

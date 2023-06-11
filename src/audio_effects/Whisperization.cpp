@@ -18,13 +18,13 @@ using namespace openshot;
 using namespace juce;
 
 Whisperization::Whisperization():
-    Whisperization::Whisperization(FFT_SIZE_512, HOP_SIZE_8, RECTANGULAR) {}
+	Whisperization::Whisperization(FFT_SIZE_512, HOP_SIZE_8, RECTANGULAR) {}
 
 Whisperization::Whisperization(openshot::FFTSize fft_size,
-                               openshot::HopSize hop_size,
-                               openshot::WindowType window_type) :
-    fft_size(fft_size), hop_size(hop_size),
-    window_type(window_type), stft(*this)
+							   openshot::HopSize hop_size,
+							   openshot::WindowType window_type) :
+	fft_size(fft_size), hop_size(hop_size),
+	window_type(window_type), stft(*this)
 {
 	// Init effect properties
 	init_effect_details();
@@ -48,21 +48,21 @@ void Whisperization::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Whisperization::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-    const std::lock_guard<std::recursive_mutex> lock(mutex);
-    ScopedNoDenormals noDenormals;
+	const std::lock_guard<std::recursive_mutex> lock(mutex);
+	ScopedNoDenormals noDenormals;
 
-    const int num_input_channels = frame->audio->getNumChannels();
-    const int num_output_channels = frame->audio->getNumChannels();
-    const int num_samples = frame->audio->getNumSamples();
-    const int hop_size_value = 1 << ((int)hop_size + 1);
+	const int num_input_channels = frame->audio->getNumChannels();
+	const int num_output_channels = frame->audio->getNumChannels();
+	const int num_samples = frame->audio->getNumSamples();
+	const int hop_size_value = 1 << ((int)hop_size + 1);
 	const int fft_size_value = 1 << ((int)fft_size + 5);
 
-    stft.setup(num_output_channels);
-    stft.updateParameters((int)fft_size_value,
-                          (int)hop_size_value,
-                          (int)window_type);
+	stft.setup(num_output_channels);
+	stft.updateParameters((int)fft_size_value,
+						  (int)hop_size_value,
+						  (int)window_type);
 
-    stft.process(*frame->audio);
+	stft.process(*frame->audio);
 
 	// return the modified frame
 	return frame;
@@ -147,12 +147,7 @@ void Whisperization::SetJsonValue(const Json::Value root) {
 std::string Whisperization::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["fft_size"] = add_property_json("FFT Size", fft_size, "int", "", NULL, 0, 8, false, requested_frame);

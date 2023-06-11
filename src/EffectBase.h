@@ -40,6 +40,7 @@ namespace openshot
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
 		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
 		bool has_tracked_object; ///< Determines if this effect track objects through the clip
+		bool apply_before_clip; ///< Apply effect before we evaluate the clip's keyframes
 	};
 
 	/**
@@ -58,7 +59,6 @@ namespace openshot
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
-
 		/// Parent effect (which properties will set this effect properties)
 		EffectBase* parentEffect;
 
@@ -106,7 +106,11 @@ namespace openshot
 			return;
 		};
 
-		Json::Value JsonInfo() const; ///< Generate JSON object of meta data / info
+		/// Generate JSON object of meta data / info
+		Json::Value JsonInfo() const; 
+
+		/// Generate JSON object of base properties (recommended to be used by all effects)
+		Json::Value BasePropertiesJSON(int64_t requested_frame) const;
 
 		/// Get the order that this effect should be executed.
 		int Order() const { return order; }

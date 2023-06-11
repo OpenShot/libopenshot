@@ -497,7 +497,7 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 			unsigned char G = (pixel[1] / A) * 255.0;
 			unsigned char B = (pixel[2] / A) * 255.0;
 
-		        // Get distance between mask color and pixel color
+			// Get distance between mask color and pixel color
 			long distance = Color::GetDistance((long)R, (long)G, (long)B, mask_R, mask_G, mask_B);
 
 			if (distance <= threshold) {
@@ -573,13 +573,7 @@ void ChromaKey::SetJsonValue(const Json::Value root) {
 std::string ChromaKey::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["color"] = add_property_json("Key Color", 0.0, "color", "", &color.red, 0, 255, false, requested_frame);
@@ -600,9 +594,6 @@ std::string ChromaKey::PropertiesJSON(int64_t requested_frame) const {
 	root["keymethod"]["choices"].append(add_property_choice_json("LCH hue", 8, method));
 	root["keymethod"]["choices"].append(add_property_choice_json("CIE Distance", 9, method));
 	root["keymethod"]["choices"].append(add_property_choice_json("Cb,Cr vector", 10, method));
-
-	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

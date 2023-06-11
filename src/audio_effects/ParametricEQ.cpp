@@ -19,9 +19,9 @@ using namespace juce;
 ParametricEQ::ParametricEQ(): ParametricEQ::ParametricEQ(LOW_PASS, 500, 0, 0) {}
 
 ParametricEQ::ParametricEQ(openshot::FilterType filter_type,
-                           Keyframe frequency, Keyframe gain, Keyframe q_factor) :
-    filter_type(filter_type),
-    frequency(frequency), gain(gain), q_factor(q_factor)
+						   Keyframe frequency, Keyframe gain, Keyframe q_factor) :
+	filter_type(filter_type),
+	frequency(frequency), gain(gain), q_factor(q_factor)
 {
 	// Init effect properties
 	init_effect_details();
@@ -59,9 +59,9 @@ std::shared_ptr<openshot::Frame> ParametricEQ::GetFrame(std::shared_ptr<openshot
 	}
 
 	const int num_input_channels = frame->audio->getNumChannels();
-    const int num_output_channels = frame->audio->getNumChannels();
-    const int num_samples = frame->audio->getNumSamples();
-    updateFilters(frame_number, num_samples);
+	const int num_output_channels = frame->audio->getNumChannels();
+	const int num_samples = frame->audio->getNumSamples();
+	updateFilters(frame_number, num_samples);
 
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
 	{
@@ -69,9 +69,9 @@ std::shared_ptr<openshot::Frame> ParametricEQ::GetFrame(std::shared_ptr<openshot
 		filters[channel]->processSamples(channel_data, num_samples);
 	}
 
-    for (int channel = num_input_channels; channel < num_output_channels; ++channel)
+	for (int channel = num_input_channels; channel < num_output_channels; ++channel)
 	{
-        frame->audio->clear(channel, 0, num_samples);
+		frame->audio->clear(channel, 0, num_samples);
 	}
 
 	// return the modified frame
@@ -161,12 +161,12 @@ void ParametricEQ::Filter::updateCoefficients (
 
 void ParametricEQ::updateFilters(int64_t frame_number, double sample_rate)
 {
-    double discrete_frequency = 2.0 * M_PI * (double)frequency.GetValue(frame_number) / sample_rate;
+	double discrete_frequency = 2.0 * M_PI * (double)frequency.GetValue(frame_number) / sample_rate;
 	double q_value = (double)q_factor.GetValue(frame_number);
 	double gain_value = pow(10.0, (double)gain.GetValue(frame_number) * 0.05);
 	int filter_type_value = (int)filter_type;
 
-    for (int i = 0; i < filters.size(); ++i)
+	for (int i = 0; i < filters.size(); ++i)
 		filters[i]->updateCoefficients(discrete_frequency, q_value, gain_value, filter_type_value);
 }
 
@@ -233,12 +233,7 @@ void ParametricEQ::SetJsonValue(const Json::Value root) {
 std::string ParametricEQ::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["filter_type"] = add_property_json("Filter Type", filter_type, "int", "", NULL, 0, 3, false, requested_frame);

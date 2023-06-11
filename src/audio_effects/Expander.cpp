@@ -20,9 +20,9 @@ Expander::Expander(): Expander::Expander(-10, 1, 1, 1, 1, false) { }
 
 // Default constructor
 Expander::Expander(Keyframe threshold, Keyframe ratio, Keyframe attack,
-                   Keyframe release, Keyframe makeup_gain, Keyframe bypass) :
-    threshold(threshold), ratio(ratio), attack(attack),
-    release(release), makeup_gain(makeup_gain), bypass(bypass)
+				   Keyframe release, Keyframe makeup_gain, Keyframe bypass) :
+	threshold(threshold), ratio(ratio), attack(attack),
+	release(release), makeup_gain(makeup_gain), bypass(bypass)
 {
 	// Init effect properties
 	init_effect_details();
@@ -41,8 +41,8 @@ void Expander::init_effect_details()
 	info.has_audio = true;
 	info.has_video = false;
 
-    input_level = 0.0f;
-    yl_prev = 0.0f;
+	input_level = 0.0f;
+	yl_prev = 0.0f;
 
 
 }
@@ -52,34 +52,34 @@ void Expander::init_effect_details()
 std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Adding Expander
-    const int num_input_channels = frame->audio->getNumChannels();
-    const int num_output_channels = frame->audio->getNumChannels();
-    const int num_samples = frame->audio->getNumSamples();
+	const int num_input_channels = frame->audio->getNumChannels();
+	const int num_output_channels = frame->audio->getNumChannels();
+	const int num_samples = frame->audio->getNumSamples();
 
-    mixed_down_input.setSize(1, num_samples);
+	mixed_down_input.setSize(1, num_samples);
 	inverse_sample_rate = 1.0f / frame->SampleRate();
-    inverseE = 1.0f / M_E;
+	inverseE = 1.0f / M_E;
 
 	if ((bool)bypass.GetValue(frame_number))
-        return frame;
+		return frame;
 
 	mixed_down_input.clear();
 
 	for (int channel = 0; channel < num_input_channels; ++channel)
-        mixed_down_input.addFrom(0, 0, *frame->audio, channel, 0, num_samples, 1.0f / num_input_channels);
+		mixed_down_input.addFrom(0, 0, *frame->audio, channel, 0, num_samples, 1.0f / num_input_channels);
 
-    for (int sample = 0; sample < num_samples; ++sample) {
-        float T = threshold.GetValue(frame_number);
-        float R = ratio.GetValue(frame_number);
-        float alphaA = calculateAttackOrRelease(attack.GetValue(frame_number));
-        float alphaR = calculateAttackOrRelease(release.GetValue(frame_number));
-        float gain = makeup_gain.GetValue(frame_number);
+	for (int sample = 0; sample < num_samples; ++sample) {
+		float T = threshold.GetValue(frame_number);
+		float R = ratio.GetValue(frame_number);
+		float alphaA = calculateAttackOrRelease(attack.GetValue(frame_number));
+		float alphaR = calculateAttackOrRelease(release.GetValue(frame_number));
+		float gain = makeup_gain.GetValue(frame_number);
 		float input_squared = powf(mixed_down_input.getSample(0, sample), 2.0f);
 
 		const float average_factor = 0.9999f;
 		input_level = average_factor * input_level + (1.0f - average_factor) * input_squared;
 
-        xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
+		xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
 
 		if (xg > T)
 			yg = xg;
@@ -94,17 +94,17 @@ std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Fr
 			yl = alphaR * yl_prev + (1.0f - alphaR) * xl;
 
 
-        control = powf (10.0f, (gain - yl) * 0.05f);
-        yl_prev = yl;
+		control = powf (10.0f, (gain - yl) * 0.05f);
+		yl_prev = yl;
 
-        for (int channel = 0; channel < num_input_channels; ++channel) {
-            float new_value = frame->audio->getSample(channel, sample)*control;
-            frame->audio->setSample(channel, sample, new_value);
-        }
+		for (int channel = 0; channel < num_input_channels; ++channel) {
+			float new_value = frame->audio->getSample(channel, sample)*control;
+			frame->audio->setSample(channel, sample, new_value);
+		}
 	}
 
-    for (int channel = num_input_channels; channel < num_output_channels; ++channel)
-        frame->audio->clear(channel, 0, num_samples);
+	for (int channel = num_input_channels; channel < num_output_channels; ++channel)
+		frame->audio->clear(channel, 0, num_samples);
 
 	// return the modified frame
 	return frame;
@@ -112,10 +112,10 @@ std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Fr
 
 float Expander::calculateAttackOrRelease(float value)
 {
-    if (value == 0.0f)
-        return 0.0f;
-    else
-        return pow (inverseE, inverse_sample_rate / value);
+	if (value == 0.0f)
+		return 0.0f;
+	else
+		return pow (inverseE, inverse_sample_rate / value);
 }
 
 // Generate JSON string of this object
@@ -189,12 +189,7 @@ void Expander::SetJsonValue(const Json::Value root) {
 std::string Expander::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
-	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
 	root["threshold"] = add_property_json("Threshold (dB)", threshold.GetValue(requested_frame), "float", "", &threshold, -60, 0, false, requested_frame);
