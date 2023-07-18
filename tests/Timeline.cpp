@@ -139,7 +139,7 @@ TEST_CASE( "Framerate", "[libopenshot][timeline]" )
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
 	// Check values
-	CHECK(t1.info.fps.ToFloat() == Approx(24.0f).margin(0.00001));
+	CHECK(t1.info.fps.ToFloat() == Detail::Approx(24.0f).margin(0.00001));
 }
 
 TEST_CASE( "two-track video", "[libopenshot][timeline]" )
@@ -174,58 +174,58 @@ TEST_CASE( "two-track video", "[libopenshot][timeline]" )
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(21).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(191).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(21).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(191).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	f = t.GetFrame(2);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(176).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(186).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(176).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(186).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	f = t.GetFrame(3);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(23).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(190).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(23).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(190).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	f = t.GetFrame(24);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(176).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(186).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(176).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(186).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	f = t.GetFrame(5);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(23).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(190).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(23).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(190).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	f = t.GetFrame(25);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(20).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(190).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(20).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(190).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	f = t.GetFrame(4);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(176).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(186).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Detail::Approx(176).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Detail::Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Detail::Approx(186).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	t.Close();
 }
@@ -283,11 +283,11 @@ TEST_CASE( "Clip order", "[libopenshot][timeline]" )
 			break;
 		case 1:
 			CHECK(clip->Layer() == 1);
-			CHECK(clip->Position() == Approx(0.0).margin(0.0001));
+			CHECK(clip->Position() == Detail::Approx(0.0).margin(0.0001));
 			break;
 		case 2:
 			CHECK(clip->Layer() == 1);
-			CHECK(clip->Position() == Approx(0.5).margin(0.0001));
+			CHECK(clip->Position() == Detail::Approx(0.5).margin(0.0001));
 			break;
 		case 3:
 			CHECK(clip->Layer() == 2);
@@ -407,25 +407,25 @@ TEST_CASE( "Effect order", "[libopenshot][timeline]" )
 		case 1:
 			CHECK(effect->Layer() == 1);
 			CHECK(effect->Id() == "B-1");
-			CHECK(effect->Position() == Approx(0.0).margin(0.0001));
+			CHECK(effect->Position() == Detail::Approx(0.0).margin(0.0001));
 			CHECK(effect->Order() == 3);
 			break;
 		case 2:
 			CHECK(effect->Layer() == 1);
 			CHECK(effect->Id() == "B");
-			CHECK(effect->Position() == Approx(0.0).margin(0.0001));
+			CHECK(effect->Position() == Detail::Approx(0.0).margin(0.0001));
 			CHECK(effect->Order() == 0);
 			break;
 		case 3:
 			CHECK(effect->Layer() == 1);
 			CHECK(effect->Id() == "B-2");
-			CHECK(effect->Position() == Approx(0.5).margin(0.0001));
+			CHECK(effect->Position() == Detail::Approx(0.5).margin(0.0001));
 			CHECK(effect->Order() == 2);
 			break;
 		case 4:
 			CHECK(effect->Layer() == 1);
 			CHECK(effect->Id() == "B-3");
-			CHECK(effect->Position() == Approx(0.5).margin(0.0001));
+			CHECK(effect->Position() == Detail::Approx(0.5).margin(0.0001));
 			CHECK(effect->Order() == 1);
 			break;
 		case 5:
@@ -614,7 +614,7 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	clip1.End(45);
 	t.AddClip(&clip1);
 
-	CHECK(t.GetMaxTime() == Approx(95.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(95.0).margin(0.001));
 	CHECK(t.GetMaxFrame() == 95 * 30 + 1);
 
 	Clip clip2(path1.str());
@@ -625,24 +625,24 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	t.AddClip(&clip2);
 
 	CHECK(t.GetMaxFrame() == 95 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(95.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(95.0).margin(0.001));
 
 	clip1.Position(80);
 	clip2.Position(100);
 	CHECK(t.GetMaxFrame() == 155 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(155.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(155.0).margin(0.001));
 
 	clip2.Start(20);
 	CHECK(t.GetMaxFrame() == 135 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(135.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(135.0).margin(0.001));
 
 	clip2.End(35);
 	CHECK(t.GetMaxFrame() == 125 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(125.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(125.0).margin(0.001));
 
 	t.RemoveClip(&clip1);
 	CHECK(t.GetMaxFrame() == 115 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(115.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(115.0).margin(0.001));
 
 	// Update Clip's basic properties with JSON Diff
 	std::stringstream json_change1;
@@ -650,7 +650,7 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	t.ApplyJsonDiff(json_change1.str());
 
 	CHECK(t.GetMaxFrame() == 10 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(10.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(10.0).margin(0.001));
 
 	// Insert NEW Clip with JSON Diff
 	std::stringstream json_change2;
@@ -658,7 +658,7 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	t.ApplyJsonDiff(json_change2.str());
 
 	CHECK(t.GetMaxFrame() == 20 * 30 + 1);
-	CHECK(t.GetMaxTime() == Approx(20.0).margin(0.001));
+	CHECK(t.GetMaxTime() == Detail::Approx(20.0).margin(0.001));
 }
 
 TEST_CASE( "Multi-threaded Timeline GetFrame", "[libopenshot][timeline]" )
@@ -828,7 +828,7 @@ TEST_CASE( "ApplyJSONDiff Update Reader Info", "[libopenshot][timeline]" )
 	CHECK(clip1.info.fps.den == 1);
 	CHECK(clip1.info.video_timebase.num == 1);
 	CHECK(clip1.info.video_timebase.den == 24);
-	CHECK(clip1.info.duration == Approx(51.94667).margin(0.00001));
+	CHECK(clip1.info.duration == Detail::Approx(51.94667).margin(0.00001));
 
 	// Create JSON change to increase FPS from 24 to 60
 	Json::Value reader_root = openshot::stringToJson(reader_json);
@@ -853,14 +853,14 @@ TEST_CASE( "ApplyJSONDiff Update Reader Info", "[libopenshot][timeline]" )
 	CHECK(mapper->Reader()->info.fps.den == 1);
 	CHECK(mapper->Reader()->info.video_timebase.num == 1);
 	CHECK(mapper->Reader()->info.video_timebase.den == 60);
-	CHECK(mapper->Reader()->info.duration == Approx(20.77867).margin(0.00001));
+	CHECK(mapper->Reader()->info.duration == Detail::Approx(20.77867).margin(0.00001));
 
 	// Verify clip has updated properties and info struct
 	CHECK(clip1.info.fps.num == 24);
 	CHECK(clip1.info.fps.den == 1);
 	CHECK(clip1.info.video_timebase.num == 1);
 	CHECK(clip1.info.video_timebase.den == 24);
-	CHECK(clip1.info.duration == Approx(20.77867).margin(0.00001));
+	CHECK(clip1.info.duration == Detail::Approx(20.77867).margin(0.00001));
 
 	// Open Clip object, and verify this does not clobber our 60 FPS change
 	clip1.Open();
@@ -868,6 +868,6 @@ TEST_CASE( "ApplyJSONDiff Update Reader Info", "[libopenshot][timeline]" )
 	CHECK(mapper->Reader()->info.fps.den == 1);
 	CHECK(mapper->Reader()->info.video_timebase.num == 1);
 	CHECK(mapper->Reader()->info.video_timebase.den == 60);
-	CHECK(mapper->Reader()->info.duration == Approx(20.77867).margin(0.00001));
+	CHECK(mapper->Reader()->info.duration == Detail::Approx(20.77867).margin(0.00001));
 
 }

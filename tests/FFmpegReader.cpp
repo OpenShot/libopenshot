@@ -59,12 +59,12 @@ TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 	CHECK(f->GetAudioSamplesCount() == 332);
 
 	// Check actual sample values (to be sure the waveform is correct)
-	CHECK(samples[0] == Approx(0.0f).margin(0.00001));
-	CHECK(samples[50] == Approx(0.0f).margin(0.00001));
-	CHECK(samples[100] == Approx(0.0f).margin(0.00001));
-	CHECK(samples[200] == Approx(0.0f).margin(0.00001));
-	CHECK(samples[230] == Approx(0.16406f).margin(0.00001));
-	CHECK(samples[300] == Approx(-0.06250f).margin(0.00001));
+	CHECK(samples[0] == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(samples[50] == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(samples[100] == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(samples[200] == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(samples[230] == Detail::Approx(0.16406f).margin(0.00001));
+	CHECK(samples[300] == Detail::Approx(-0.06250f).margin(0.00001));
 
 	// Close reader
 	r.Close();
@@ -86,10 +86,10 @@ TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK((int)pixels[pixel_index] == Approx(21).margin(5));
-	CHECK((int)pixels[pixel_index + 1] == Approx(191).margin(5));
-	CHECK((int)pixels[pixel_index + 2] == Approx(0).margin(5));
-	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index] == Detail::Approx(21).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Detail::Approx(191).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Detail::Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	// Check pixel function
 	CHECK(f->CheckPixel(10, 112, 21, 191, 0, 255, 5) == true);
@@ -103,10 +103,10 @@ TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 	pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK((int)pixels[pixel_index] == Approx(0).margin(5));
-	CHECK((int)pixels[pixel_index + 1] == Approx(96).margin(5));
-	CHECK((int)pixels[pixel_index + 2] == Approx(188).margin(5));
-	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index] == Detail::Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Detail::Approx(96).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Detail::Approx(188).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 	// Check pixel function
 	CHECK(f->CheckPixel(10, 112, 0, 96, 188, 255, 5) == true);
@@ -304,10 +304,10 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		int pixel_index = 112 * 4;
 
 		// Check image properties on scanline 10, pixel 112
-		CHECK((int) pixels[pixel_index] == Approx(0).margin(5));
-		CHECK((int) pixels[pixel_index + 1] == Approx(0).margin(5));
-		CHECK((int) pixels[pixel_index + 2] == Approx(0).margin(5));
-		CHECK((int) pixels[pixel_index + 3] == Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index] == Detail::Approx(0).margin(5));
+		CHECK((int) pixels[pixel_index + 1] == Detail::Approx(0).margin(5));
+		CHECK((int) pixels[pixel_index + 2] == Detail::Approx(0).margin(5));
+		CHECK((int) pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 		f = r.GetFrame(90);
 
@@ -316,10 +316,10 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		pixel_index = 930 * 4;
 
 		// Check image properties on scanline 820, pixel 930
-		CHECK((int) pixels[pixel_index] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 1] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 2] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 3] == Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 1] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 2] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 		f = r.GetFrame(160);
 
@@ -328,10 +328,10 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		pixel_index = 930 * 4;
 
 		// Check image properties on scanline 820, pixel 930
-		CHECK((int) pixels[pixel_index] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 1] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 2] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 3] == Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 1] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 2] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 		f = r.GetFrame(240);
 
@@ -340,10 +340,10 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		pixel_index = 930 * 4;
 
 		// Check image properties on scanline 820, pixel 930
-		CHECK((int) pixels[pixel_index] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 1] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 2] == Approx(255).margin(5));
-		CHECK((int) pixels[pixel_index + 3] == Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 1] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 2] == Detail::Approx(255).margin(5));
+		CHECK((int) pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 
 		// Close reader
 		r.Close();

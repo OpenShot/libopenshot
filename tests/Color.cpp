@@ -27,9 +27,9 @@ TEST_CASE( "default constructor", "[libopenshot][color]" )
 	// Create an empty color
 	openshot::Color c1;
 
-	CHECK(c1.red.GetValue(0) == Approx(0.0f).margin(0.00001));
-	CHECK(c1.green.GetValue(0) == Approx(0.0f).margin(0.00001));
-	CHECK(c1.blue.GetValue(0) == Approx(0.0f).margin(0.00001));
+	CHECK(c1.red.GetValue(0) == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.green.GetValue(0) == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.blue.GetValue(0) == Detail::Approx(0.0f).margin(0.00001));
 }
 
 TEST_CASE( "Keyframe constructor", "[libopenshot][color]" )
@@ -41,10 +41,10 @@ TEST_CASE( "Keyframe constructor", "[libopenshot][color]" )
 	}
 	auto c = openshot::Color(kfs[0], kfs[1], kfs[2], kfs[3]);
 
-	CHECK(c.red.GetLong(100) == Approx(20).margin(0.01));
-	CHECK(c.green.GetLong(100) == Approx(40).margin(0.01));
-	CHECK(c.blue.GetLong(100) == Approx(60).margin(0.01));
-	CHECK(c.alpha.GetLong(100) == Approx(80).margin(0.01));
+	CHECK(c.red.GetLong(100) == Detail::Approx(20).margin(0.01));
+	CHECK(c.green.GetLong(100) == Detail::Approx(40).margin(0.01));
+	CHECK(c.blue.GetLong(100) == Detail::Approx(60).margin(0.01));
+	CHECK(c.alpha.GetLong(100) == Detail::Approx(80).margin(0.01));
 }
 
 TEST_CASE( "Animate_Colors", "[libopenshot][color]" )
@@ -63,9 +63,9 @@ TEST_CASE( "Animate_Colors", "[libopenshot][color]" )
 	c1.blue.AddPoint(1000, 65);
 
 	// Check the color at frame 500
-	CHECK(c1.red.GetLong(500) == Approx(0).margin(0.01));
-	CHECK(c1.green.GetLong(500) == Approx(187).margin(0.01));
-	CHECK(c1.blue.GetLong(500) == Approx(160).margin(0.01));
+	CHECK(c1.red.GetLong(500) == Detail::Approx(0).margin(0.01));
+	CHECK(c1.green.GetLong(500) == Detail::Approx(187).margin(0.01));
+	CHECK(c1.blue.GetLong(500) == Detail::Approx(160).margin(0.01));
 }
 
 TEST_CASE( "HEX_Value", "[libopenshot][color]" )
@@ -90,10 +90,10 @@ TEST_CASE( "QColor ctor", "[libopenshot][color]" )
     QColor qc(Qt::red);
     openshot::Color c(qc);
 
-    CHECK(c.red.GetLong(1) == Approx(255.0).margin(0.0001));
-    CHECK(c.green.GetLong(1) == Approx(0.0).margin(0.0001));
-    CHECK(c.blue.GetLong(1) == Approx(0.0).margin(0.0001));
-    CHECK(c.alpha.GetLong(1) == Approx(255.0).margin(0.0001));
+    CHECK(c.red.GetLong(1) == Detail::Approx(255.0).margin(0.0001));
+    CHECK(c.green.GetLong(1) == Detail::Approx(0.0).margin(0.0001));
+    CHECK(c.blue.GetLong(1) == Detail::Approx(0.0).margin(0.0001));
+    CHECK(c.alpha.GetLong(1) == Detail::Approx(255.0).margin(0.0001));
 }
 
 TEST_CASE( "std::string construction", "[libopenshot][color]" )
@@ -121,12 +121,12 @@ TEST_CASE( "Distance", "[libopenshot][color]" )
 		openshot::Color::GetDistance(
 			c1.red.GetInt(1), c1.blue.GetInt(1), c1.green.GetInt(1),
 			c2.red.GetInt(1), c2.blue.GetInt(1), c2.green.GetInt(1)
-		) == Approx(19.0f).margin(0.001));
+		) == Detail::Approx(19.0f).margin(0.001));
 	CHECK(
 		openshot::Color::GetDistance(
 			c3.red.GetInt(1), c3.blue.GetInt(1), c3.green.GetInt(1),
 			c4.red.GetInt(1), c4.blue.GetInt(1), c4.green.GetInt(1)
-		) == Approx(764.0f).margin(0.001));
+		) == Detail::Approx(764.0f).margin(0.001));
 }
 
 TEST_CASE( "RGBA_Constructor", "[libopenshot][color]" )
@@ -177,8 +177,8 @@ TEST_CASE( "SetJson", "[libopenshot][color]" ) {
 	openshot::Color c;
 	CHECK_THROWS_AS(c.SetJson("}{"), openshot::InvalidJSON);
 	c.SetJson(json_input);
-	CHECK(c.red.GetLong(10) == Approx(0).margin(0.01));
-	CHECK(c.green.GetLong(10) == Approx(128).margin(0.01));
-	CHECK(c.blue.GetLong(10) == Approx(64).margin(0.01));
-	CHECK(c.alpha.GetLong(10) == Approx(192).margin(0.01));
+	CHECK(c.red.GetLong(10) == Detail::Approx(0).margin(0.01));
+	CHECK(c.green.GetLong(10) == Detail::Approx(128).margin(0.01));
+	CHECK(c.blue.GetLong(10) == Detail::Approx(64).margin(0.01));
+	CHECK(c.alpha.GetLong(10) == Detail::Approx(192).margin(0.01));
 }

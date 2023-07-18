@@ -28,8 +28,8 @@ TEST_CASE( "Constructors", "[libopenshot][fraction]" )
 	// Check default fraction
 	CHECK(f1.num == 1);
 	CHECK(f1.den == 1);
-	CHECK(f1.ToFloat() == Approx(1.0f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.0f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.0f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.0f).margin(0.00001));
 
 	// reduce fraction
 	f1.Reduce();
@@ -37,8 +37,8 @@ TEST_CASE( "Constructors", "[libopenshot][fraction]" )
 	// Check the reduced fraction
 	CHECK(f1.num == 1);
 	CHECK(f1.den == 1);
-	CHECK(f1.ToFloat() == Approx(1.0f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.0f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.0f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.0f).margin(0.00001));
 }
 
 TEST_CASE( "Alt_Constructors", "[libopenshot][fraction]" )
@@ -48,12 +48,12 @@ TEST_CASE( "Alt_Constructors", "[libopenshot][fraction]" )
 	Fraction f1(args);
 	CHECK(f1.num == 24);
 	CHECK(f1.den == 1);
-	CHECK(f1.ToFloat() == Approx(24.0f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(24.0f).margin(0.00001));
 
 	// Use the delegating constructor for std::vector
 	std::vector<int> v{30000, 1001};
 	Fraction f2(v);
-	CHECK(f2.ToFloat() == Approx(30000.0/1001.0).margin(0.00001));
+	CHECK(f2.ToFloat() == Detail::Approx(30000.0/1001.0).margin(0.00001));
 
 	// Use the delegating constructor for std::map<std::string, int>
 	std::map<std::string, int> dict;
@@ -62,7 +62,7 @@ TEST_CASE( "Alt_Constructors", "[libopenshot][fraction]" )
 	Fraction f3(dict);
 	CHECK(f3.den == 1001);
 	CHECK(f3.num == 24000);
-	CHECK(f3.Reciprocal().ToFloat() == Approx(1001.0/24000.0).margin(0.00001));
+	CHECK(f3.Reciprocal().ToFloat() == Detail::Approx(1001.0/24000.0).margin(0.00001));
 }
 
 TEST_CASE( "WxH_640_480", "[libopenshot][fraction]" )
@@ -73,8 +73,8 @@ TEST_CASE( "WxH_640_480", "[libopenshot][fraction]" )
 	// Check fraction
 	CHECK(f1.num == 640);
 	CHECK(f1.den == 480);
-	CHECK(f1.ToFloat() == Approx(1.33333f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.33333f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.33333f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.33333f).margin(0.00001));
 
 	// reduce fraction
 	f1.Reduce();
@@ -82,8 +82,8 @@ TEST_CASE( "WxH_640_480", "[libopenshot][fraction]" )
 	// Check the reduced fraction
 	CHECK(f1.num == 4);
 	CHECK(f1.den == 3);
-	CHECK(f1.ToFloat() == Approx(1.33333f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.33333f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.33333f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.33333f).margin(0.00001));
 }
 
 TEST_CASE( "WxH_1280_720", "[libopenshot][fraction]" )
@@ -94,8 +94,8 @@ TEST_CASE( "WxH_1280_720", "[libopenshot][fraction]" )
 	// Check fraction
 	CHECK(f1.num == 1280);
 	CHECK(f1.den == 720);
-	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.77777f).margin(0.00001));
 
 	// reduce fraction
 	f1.Reduce();
@@ -103,8 +103,8 @@ TEST_CASE( "WxH_1280_720", "[libopenshot][fraction]" )
 	// Check the reduced fraction
 	CHECK(f1.num == 16);
 	CHECK(f1.den == 9);
-	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.77777f).margin(0.00001));
 }
 
 TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
@@ -115,8 +115,8 @@ TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 	// Check fraction
 	CHECK(f1.num == 1280);
 	CHECK(f1.den == 720);
-	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.77777f).margin(0.00001));
 
 	// Get the reciprocal of the fraction (i.e. flip the fraction)
 	Fraction f2 = f1.Reciprocal();
@@ -124,14 +124,14 @@ TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 	// Check the reduced fraction
 	CHECK(f2.num == 720);
 	CHECK(f2.den == 1280);
-	CHECK(f2.ToFloat() == Approx(0.5625f).margin(0.00001));
-	CHECK(f2.ToDouble() == Approx(0.5625f).margin(0.00001));
+	CHECK(f2.ToFloat() == Detail::Approx(0.5625f).margin(0.00001));
+	CHECK(f2.ToDouble() == Detail::Approx(0.5625f).margin(0.00001));
 
 	// Re-Check the original fraction (to be sure it hasn't changed)
 	CHECK(f1.num == 1280);
 	CHECK(f1.den == 720);
-	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
-	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToFloat() == Detail::Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Detail::Approx(1.77777f).margin(0.00001));
 }
 
 TEST_CASE( "Fraction operations", "[libopenshot][fraction]" ) {
@@ -162,9 +162,9 @@ TEST_CASE( "Numeric multiplication", "[libopenshot][fraction]" )
     CHECK_FALSE(f1 * num1 == f1.ToDouble() * num1);
     CHECK_FALSE(f1 * num1 == f1.ToInt() * num1);
 
-    CHECK(f1 * num2 == Approx(static_cast<double>(f1.ToDouble() * num2))
+    CHECK(f1 * num2 == Detail::Approx(static_cast<double>(f1.ToDouble() * num2))
                        .margin(0.0001));
-    CHECK(f1 * num3 == Approx(static_cast<float>(f1.ToDouble() * num3))
+    CHECK(f1 * num3 == Detail::Approx(static_cast<float>(f1.ToDouble() * num3))
                        .margin(0.0001));
 
     CHECK(f1 * num4 == static_cast<int>(f1.ToDouble() * num4));
@@ -176,9 +176,9 @@ TEST_CASE( "Numeric multiplication", "[libopenshot][fraction]" )
     CHECK_FALSE(num1 * f1 == num1 * f1.ToDouble());
     CHECK_FALSE(num1 * f1 == num1 * f1.ToInt());
 
-    CHECK(num2 * f1 == Approx(static_cast<double>(f1.ToDouble() * num2))
+    CHECK(num2 * f1 == Detail::Approx(static_cast<double>(f1.ToDouble() * num2))
                        .margin(0.0001));
-    CHECK(num3 * f1 == Approx(static_cast<float>(f1.ToDouble() * num3))
+    CHECK(num3 * f1 == Detail::Approx(static_cast<float>(f1.ToDouble() * num3))
                        .margin(0.0001));
 
     CHECK(num4 * f1 == static_cast<int>(f1.ToDouble() * num4));
@@ -187,8 +187,8 @@ TEST_CASE( "Numeric multiplication", "[libopenshot][fraction]" )
 
     // Transposition
     CHECK(num1 * f1 == f1 * num1);
-    CHECK(num2 * f1 == Approx(f1 * num2).margin(0.0001));
-    CHECK(num3 * f1 == Approx(f1 * num3).margin(0.0001));
+    CHECK(num2 * f1 == Detail::Approx(f1 * num2).margin(0.0001));
+    CHECK(num3 * f1 == Detail::Approx(f1 * num3).margin(0.0001));
     CHECK(num4 * f1 == f1 * num4);
 }
 
@@ -204,31 +204,31 @@ TEST_CASE( "Numeric division", "[libopenshot][fraction]" )
 
     // operator* with Fraction on LHS
     CHECK(f1 / num1 == static_cast<int64_t>(f1.ToDouble() / num1));
-    CHECK(f1 / num2 == Approx(static_cast<double>(f1.ToDouble() / num2))
+    CHECK(f1 / num2 == Detail::Approx(static_cast<double>(f1.ToDouble() / num2))
                        .margin(0.0001));
-    CHECK(f1 / num3 == Approx(static_cast<float>(f1.ToDouble() / num3))
+    CHECK(f1 / num3 == Detail::Approx(static_cast<float>(f1.ToDouble() / num3))
                        .margin(0.0001));
     CHECK(f1 / num4 == static_cast<int>(f1.ToDouble() / num4));
 
     CHECK(f2 / num1 == static_cast<int64_t>(f2.ToDouble() / num1));
-    CHECK(f2 / num2 == Approx(static_cast<double>(f2.ToDouble() / num2))
+    CHECK(f2 / num2 == Detail::Approx(static_cast<double>(f2.ToDouble() / num2))
                        .margin(0.0001));
-    CHECK(f2 / num3 == Approx(static_cast<float>(f2.ToDouble() / num3))
+    CHECK(f2 / num3 == Detail::Approx(static_cast<float>(f2.ToDouble() / num3))
                        .margin(0.0001));
     CHECK(f2 / num4 == static_cast<int>(f2.ToDouble() / num4));
 
     // operator* with Fraction on RHS
     CHECK(num1 / f1 == static_cast<int64_t>(num1 / f1.ToDouble()));
-    CHECK(num2 / f1 == Approx(static_cast<double>(num2 / f1.ToDouble()))
+    CHECK(num2 / f1 == Detail::Approx(static_cast<double>(num2 / f1.ToDouble()))
                        .margin(0.0001));
-    CHECK(num3 / f1 == Approx(static_cast<float>(num3 / f1.ToDouble()))
+    CHECK(num3 / f1 == Detail::Approx(static_cast<float>(num3 / f1.ToDouble()))
                        .margin(0.0001));
     CHECK(num4 / f1 == static_cast<int>(num4 / f1.ToDouble()));
 
     CHECK(num1 / f2 == static_cast<int64_t>(num1 / f2.ToDouble()));
-    CHECK(num2 / f2 == Approx(static_cast<double>(num2 / f2.ToDouble()))
+    CHECK(num2 / f2 == Detail::Approx(static_cast<double>(num2 / f2.ToDouble()))
                        .margin(0.0001));
-    CHECK(num3 / f2 == Approx(static_cast<float>(num3 / f2.ToDouble()))
+    CHECK(num3 / f2 == Detail::Approx(static_cast<float>(num3 / f2.ToDouble()))
                        .margin(0.0001));
     CHECK(num4 / f2 == static_cast<int>(num4 / f2.ToDouble()));
 }

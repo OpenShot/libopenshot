@@ -47,8 +47,8 @@ TEST_CASE( "GetPoint (1 Point)", "[libopenshot][keyframe]" )
 
 	CHECK_THROWS_AS(k1.GetPoint(-1), OutOfBoundsPoint);
 	CHECK(k1.GetCount() == 1);
-	CHECK(k1.GetPoint(0).co.X == Approx(2.0f).margin(0.00001));
-	CHECK(k1.GetPoint(0).co.Y == Approx(3.0f).margin(0.00001));
+	CHECK(k1.GetPoint(0).co.X == Detail::Approx(2.0f).margin(0.00001));
+	CHECK(k1.GetPoint(0).co.Y == Detail::Approx(3.0f).margin(0.00001));
 	CHECK_THROWS_AS(k1.GetPoint(1), OutOfBoundsPoint);
 }
 
@@ -59,7 +59,7 @@ TEST_CASE( "AddPoint (1 Point)", "[libopenshot][keyframe]" )
 	Keyframe k1;
 	k1.AddPoint(openshot::Point(2,9));
 
-	CHECK(k1.GetPoint(0).co.X == Approx(2.0f).margin(0.00001));
+	CHECK(k1.GetPoint(0).co.X == Detail::Approx(2.0f).margin(0.00001));
 	CHECK_THROWS_AS(k1.GetPoint(-1), OutOfBoundsPoint);
 	CHECK_THROWS_AS(k1.GetPoint(1), OutOfBoundsPoint);
 }
@@ -71,8 +71,8 @@ TEST_CASE( "AddPoint (2 Points)", "[libopenshot][keyframe]" )
 	k1.AddPoint(openshot::Point(2,9));
 	k1.AddPoint(openshot::Point(5,20));
 
-	CHECK(k1.GetPoint(0).co.X == Approx(2.0f).margin(0.00001));
-	CHECK(k1.GetPoint(1).co.X == Approx(5.0f).margin(0.00001));
+	CHECK(k1.GetPoint(0).co.X == Detail::Approx(2.0f).margin(0.00001));
+	CHECK(k1.GetPoint(1).co.X == Detail::Approx(5.0f).margin(0.00001));
 	CHECK_THROWS_AS(k1.GetPoint(-1), OutOfBoundsPoint);
 	CHECK_THROWS_AS(k1.GetPoint(2), OutOfBoundsPoint);
 }
@@ -85,13 +85,13 @@ TEST_CASE( "GetValue (Bezier curve, 2 Points)", "[libopenshot][keyframe]" )
 	kf.AddPoint(openshot::Point(Coordinate(50, 4), BEZIER));
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(-1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(0) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(9) == Approx(1.12414f).margin(0.0001));
-	CHECK(kf.GetValue(20) == Approx(1.86370f).margin(0.0001));
-	CHECK(kf.GetValue(40) == Approx(3.79733f).margin(0.0001));
-	CHECK(kf.GetValue(50) == Approx(4.0f).margin(0.0001));
+	CHECK(kf.GetValue(-1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(0) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(9) == Detail::Approx(1.12414f).margin(0.0001));
+	CHECK(kf.GetValue(20) == Detail::Approx(1.86370f).margin(0.0001));
+	CHECK(kf.GetValue(40) == Detail::Approx(3.79733f).margin(0.0001));
+	CHECK(kf.GetValue(50) == Detail::Approx(4.0f).margin(0.0001));
 	// Check the expected number of values
 	CHECK(kf.GetLength() == 50);
 }
@@ -107,14 +107,14 @@ TEST_CASE( "GetValue (Bezier, 5 Points, 40% handle)", "[libopenshot][keyframe]" 
 	kf.AddPoint(openshot::Point(Coordinate(200, 3), BEZIER));
 
 	// Spot check values from the curve
-	CHECK(1.0f == Approx(kf.GetValue(-1)).margin(0.0001));
-	CHECK(kf.GetValue(0) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(27) == Approx(2.68197f).margin(0.0001));
-	CHECK(kf.GetValue(77) == Approx(7.47719f).margin(0.0001));
-	CHECK(kf.GetValue(127) == Approx(4.20468f).margin(0.0001));
-	CHECK(kf.GetValue(177) == Approx(1.73860f).margin(0.0001));
-	CHECK(kf.GetValue(200) == Approx(3.0f).margin(0.0001));
+	CHECK(1.0f == Detail::Approx(kf.GetValue(-1)).margin(0.0001));
+	CHECK(kf.GetValue(0) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(27) == Detail::Approx(2.68197f).margin(0.0001));
+	CHECK(kf.GetValue(77) == Detail::Approx(7.47719f).margin(0.0001));
+	CHECK(kf.GetValue(127) == Detail::Approx(4.20468f).margin(0.0001));
+	CHECK(kf.GetValue(177) == Detail::Approx(1.73860f).margin(0.0001));
+	CHECK(kf.GetValue(200) == Detail::Approx(3.0f).margin(0.0001));
 	// Check the expected number of values
 	CHECK(kf.GetLength() == 200);
 }
@@ -130,14 +130,14 @@ TEST_CASE( "GetValue (Bezier, 5 Points, 25% Handle)", "[libopenshot][keyframe]" 
 	kf.AddPoint(openshot::Point(Coordinate(200, 3), BEZIER));
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(-1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(0) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(27) == Approx(2.68197f).margin(0.0001));
-	CHECK(kf.GetValue(77) == Approx(7.47719f).margin(0.0001));
-	CHECK(kf.GetValue(127) == Approx(4.20468f).margin(0.0001));
-	CHECK(kf.GetValue(177) == Approx(1.73860f).margin(0.0001));
-	CHECK(kf.GetValue(200) == Approx(3.0f).margin(0.0001));
+	CHECK(kf.GetValue(-1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(0) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(27) == Detail::Approx(2.68197f).margin(0.0001));
+	CHECK(kf.GetValue(77) == Detail::Approx(7.47719f).margin(0.0001));
+	CHECK(kf.GetValue(127) == Detail::Approx(4.20468f).margin(0.0001));
+	CHECK(kf.GetValue(177) == Detail::Approx(1.73860f).margin(0.0001));
+	CHECK(kf.GetValue(200) == Detail::Approx(3.0f).margin(0.0001));
 	// Check the expected number of values
 	CHECK(kf.GetLength() == 200);
 }
@@ -151,13 +151,13 @@ TEST_CASE( "GetValue (Linear, 3 Points)", "[libopenshot][keyframe]" )
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), LINEAR));
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(-1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(0) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(9) == Approx(3.33333f).margin(0.0001));
-	CHECK(kf.GetValue(20) == Approx(6.54167f).margin(0.0001));
-	CHECK(kf.GetValue(40) == Approx(4.4f).margin(0.0001));
-	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.0001));
+	CHECK(kf.GetValue(-1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(0) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(9) == Detail::Approx(3.33333f).margin(0.0001));
+	CHECK(kf.GetValue(20) == Detail::Approx(6.54167f).margin(0.0001));
+	CHECK(kf.GetValue(40) == Detail::Approx(4.4f).margin(0.0001));
+	CHECK(kf.GetValue(50) == Detail::Approx(2.0f).margin(0.0001));
 	// Check the expected number of values
 	CHECK(kf.GetLength() == 50);
 }
@@ -171,14 +171,14 @@ TEST_CASE( "GetValue (Constant, 3 Points)", "[libopenshot][keyframe]" )
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), CONSTANT));
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(-1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(0) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(24) == Approx(1.0f).margin(0.0001));
-	CHECK(kf.GetValue(25) == Approx(8.0f).margin(0.0001));
-	CHECK(kf.GetValue(40) == Approx(8.0f).margin(0.0001));
-	CHECK(kf.GetValue(49) == Approx(8.0f).margin(0.0001));
-	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.0001));
+	CHECK(kf.GetValue(-1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(0) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(24) == Detail::Approx(1.0f).margin(0.0001));
+	CHECK(kf.GetValue(25) == Detail::Approx(8.0f).margin(0.0001));
+	CHECK(kf.GetValue(40) == Detail::Approx(8.0f).margin(0.0001));
+	CHECK(kf.GetValue(49) == Detail::Approx(8.0f).margin(0.0001));
+	CHECK(kf.GetValue(50) == Detail::Approx(2.0f).margin(0.0001));
 	// Check the expected number of values
 	CHECK(kf.GetLength() == 50);
 }
@@ -198,15 +198,15 @@ TEST_CASE( "GetDelta", "[libopenshot][keyframe]" )
 
 	CHECK(kf.GetInt(24) == 498);
 	CHECK_FALSE(kf.IsIncreasing(24));
-	CHECK(kf.GetDelta(24) == Approx(-0.1622f).margin(0.0001));
+	CHECK(kf.GetDelta(24) == Detail::Approx(-0.1622f).margin(0.0001));
 
 	CHECK(kf.GetLong(390) == 100);
 	CHECK(kf.IsIncreasing(390) == false);
-	CHECK(kf.GetDelta(390) == Approx(-0.0732f).margin(0.0001));
+	CHECK(kf.GetDelta(390) == Detail::Approx(-0.0732f).margin(0.0001));
 
 	CHECK(kf.GetLong(391) == 100);
 	CHECK(kf.IsIncreasing(391) == false);
-	CHECK(kf.GetDelta(388) == Approx(-0.0886f).margin(0.0001));
+	CHECK(kf.GetDelta(388) == Detail::Approx(-0.0886f).margin(0.0001));
 }
 
 
@@ -291,36 +291,36 @@ TEST_CASE( "Keyframe scaling", "[libopenshot][keyframe]" )
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), BEZIER));
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.01));
-	CHECK(kf.GetValue(24) == Approx(7.99f).margin(0.01));
-	CHECK(kf.GetValue(25) == Approx(8.0f).margin(0.01));
-	CHECK(kf.GetValue(40) == Approx(3.85f).margin(0.01));
-	CHECK(kf.GetValue(49) == Approx(2.01f).margin(0.01));
-	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.01));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.01));
+	CHECK(kf.GetValue(24) == Detail::Approx(7.99f).margin(0.01));
+	CHECK(kf.GetValue(25) == Detail::Approx(8.0f).margin(0.01));
+	CHECK(kf.GetValue(40) == Detail::Approx(3.85f).margin(0.01));
+	CHECK(kf.GetValue(49) == Detail::Approx(2.01f).margin(0.01));
+	CHECK(kf.GetValue(50) == Detail::Approx(2.0f).margin(0.01));
 
 	// Resize / Scale the keyframe
 	kf.ScalePoints(2.0); // 100% larger
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.01));
-	CHECK(kf.GetValue(24) == Approx(4.08f).margin(0.01));
-	CHECK(kf.GetValue(25) == Approx(4.36f).margin(0.01));
-	CHECK(kf.GetValue(40) == Approx(7.53f).margin(0.01));
-	CHECK(kf.GetValue(49) == Approx(7.99f).margin(0.01));
-	CHECK(kf.GetValue(50) == Approx(8.0f).margin(0.01));
-	CHECK(kf.GetValue(90) == Approx(2.39f).margin(0.01));
-	CHECK(kf.GetValue(100) == Approx(2.0f).margin(0.01));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.01));
+	CHECK(kf.GetValue(24) == Detail::Approx(4.08f).margin(0.01));
+	CHECK(kf.GetValue(25) == Detail::Approx(4.36f).margin(0.01));
+	CHECK(kf.GetValue(40) == Detail::Approx(7.53f).margin(0.01));
+	CHECK(kf.GetValue(49) == Detail::Approx(7.99f).margin(0.01));
+	CHECK(kf.GetValue(50) == Detail::Approx(8.0f).margin(0.01));
+	CHECK(kf.GetValue(90) == Detail::Approx(2.39f).margin(0.01));
+	CHECK(kf.GetValue(100) == Detail::Approx(2.0f).margin(0.01));
 
 	// Resize / Scale the keyframe
 	kf.ScalePoints(0.5); // 50% smaller, which should match the original size
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.01));
-	CHECK(kf.GetValue(24) == Approx(7.99f).margin(0.01));
-	CHECK(kf.GetValue(25) == Approx(8.0f).margin(0.01));
-	CHECK(kf.GetValue(40) == Approx(3.85f).margin(0.01));
-	CHECK(kf.GetValue(49) == Approx(2.01f).margin(0.01));
-	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.01));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.01));
+	CHECK(kf.GetValue(24) == Detail::Approx(7.99f).margin(0.01));
+	CHECK(kf.GetValue(25) == Detail::Approx(8.0f).margin(0.01));
+	CHECK(kf.GetValue(40) == Detail::Approx(3.85f).margin(0.01));
+	CHECK(kf.GetValue(49) == Detail::Approx(2.01f).margin(0.01));
+	CHECK(kf.GetValue(50) == Detail::Approx(2.0f).margin(0.01));
 
 }
 
@@ -334,28 +334,28 @@ TEST_CASE( "flip Keyframe", "[libopenshot][keyframe]" )
 	kf.AddPoint(openshot::Point(Coordinate(100, 10), LINEAR));
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.01));
-	CHECK(kf.GetValue(25) == Approx(8.0f).margin(0.01));
-	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.01));
-	CHECK(kf.GetValue(100) == Approx(10.0f).margin(0.01));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.01));
+	CHECK(kf.GetValue(25) == Detail::Approx(8.0f).margin(0.01));
+	CHECK(kf.GetValue(50) == Detail::Approx(2.0f).margin(0.01));
+	CHECK(kf.GetValue(100) == Detail::Approx(10.0f).margin(0.01));
 
 	// Flip the points
 	kf.FlipPoints();
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(1) == Approx(10.0f).margin(0.01));
-	CHECK(kf.GetValue(25) == Approx(2.0f).margin(0.01));
-	CHECK(kf.GetValue(50) == Approx(8.0f).margin(0.01));
-	CHECK(kf.GetValue(100) == Approx(1.0f).margin(0.01));
+	CHECK(kf.GetValue(1) == Detail::Approx(10.0f).margin(0.01));
+	CHECK(kf.GetValue(25) == Detail::Approx(2.0f).margin(0.01));
+	CHECK(kf.GetValue(50) == Detail::Approx(8.0f).margin(0.01));
+	CHECK(kf.GetValue(100) == Detail::Approx(1.0f).margin(0.01));
 
 	// Flip the points again (back to the original)
 	kf.FlipPoints();
 
 	// Spot check values from the curve
-	CHECK(kf.GetValue(1) == Approx(1.0f).margin(0.01));
-	CHECK(kf.GetValue(25) == Approx(8.0f).margin(0.01));
-	CHECK(kf.GetValue(50) == Approx(2.0f).margin(0.01));
-	CHECK(kf.GetValue(100) == Approx(10.0f).margin(0.01));
+	CHECK(kf.GetValue(1) == Detail::Approx(1.0f).margin(0.01));
+	CHECK(kf.GetValue(25) == Detail::Approx(8.0f).margin(0.01));
+	CHECK(kf.GetValue(50) == Detail::Approx(2.0f).margin(0.01));
+	CHECK(kf.GetValue(100) == Detail::Approx(10.0f).margin(0.01));
 }
 
 TEST_CASE( "remove duplicate Point", "[libopenshot][keyframe]" )
@@ -368,7 +368,7 @@ TEST_CASE( "remove duplicate Point", "[libopenshot][keyframe]" )
 
 	// Spot check values from the curve
 	CHECK(kf.GetLength() == 1);
-	CHECK(kf.GetPoint(0).co.Y == Approx(2.0).margin(0.01));
+	CHECK(kf.GetPoint(0).co.Y == Detail::Approx(2.0).margin(0.01));
 }
 
 TEST_CASE( "large number values", "[libopenshot][keyframe]" )
@@ -383,8 +383,8 @@ TEST_CASE( "large number values", "[libopenshot][keyframe]" )
 
 	// Spot check values from the curve
 	CHECK(kf.GetLength() == large_value);
-	CHECK(kf.GetPoint(0).co.Y == Approx(1.0).margin(0.01));
-	CHECK(kf.GetPoint(1).co.Y == Approx(100.0).margin(0.01));
+	CHECK(kf.GetPoint(0).co.Y == Detail::Approx(1.0).margin(0.01));
+	CHECK(kf.GetPoint(1).co.Y == Detail::Approx(100.0).margin(0.01));
 }
 
 TEST_CASE( "remove Point", "[libopenshot][keyframe]" )
@@ -467,7 +467,7 @@ TEST_CASE( "use segment end point interpolation", "[libopenshot][keyframe]" )
 	Keyframe f;
 	f.AddPoint(1,0, CONSTANT);
 	f.AddPoint(100,155, BEZIER);
-	CHECK(f.GetValue(50) == Approx(75.9).margin(0.1));
+	CHECK(f.GetValue(50) == Detail::Approx(75.9).margin(0.1));
 }
 
 TEST_CASE( "handle large segment", "[libopenshot][keyframe]" )
@@ -476,7 +476,7 @@ TEST_CASE( "handle large segment", "[libopenshot][keyframe]" )
 	kf.AddPoint(1, 0, CONSTANT);
 	kf.AddPoint(1000000, 1, LINEAR);
 
-	CHECK(kf.GetValue(500000) == Approx(0.5).margin(0.01));
+	CHECK(kf.GetValue(500000) == Detail::Approx(0.5).margin(0.01));
 	CHECK(kf.IsIncreasing(10) == true);
 }
 
@@ -486,7 +486,7 @@ TEST_CASE( "std::vector<Point> constructor", "[libopenshot][keyframe]" )
 	Keyframe k1(points);
 
 	CHECK(k1.GetLength() == 10);
-	CHECK(k1.GetValue(10) == Approx(30.0f).margin(0.0001));
+	CHECK(k1.GetValue(10) == Detail::Approx(30.0f).margin(0.0001));
 }
 
 TEST_CASE( "PrintPoints", "[libopenshot][keyframe]" )

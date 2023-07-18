@@ -100,11 +100,11 @@ TEST_CASE( "Fake_Frame", "[libopenshot][dummyreader]" ) {
 	// Verify our artificial audio sample data is correct
 	CHECK(r.GetFrame(1)->number == 1);
 	CHECK(r.GetFrame(1)->GetAudioSamples(0)[0] == 1);
-	CHECK(r.GetFrame(1)->GetAudioSamples(0)[1] == Approx(1.00068033).margin(0.00001));
-	CHECK(r.GetFrame(1)->GetAudioSamples(0)[2] == Approx(1.00136054).margin(0.00001));
+	CHECK(r.GetFrame(1)->GetAudioSamples(0)[1] == Detail::Approx(1.00068033).margin(0.00001));
+	CHECK(r.GetFrame(1)->GetAudioSamples(0)[2] == Detail::Approx(1.00136054).margin(0.00001));
 	CHECK(r.GetFrame(2)->GetAudioSamples(0)[0] == 2);
-	CHECK(r.GetFrame(2)->GetAudioSamples(0)[1] == Approx(2.00068033).margin(0.00001));
-	CHECK(r.GetFrame(2)->GetAudioSamples(0)[2] == Approx(2.00136054).margin(0.00001));
+	CHECK(r.GetFrame(2)->GetAudioSamples(0)[1] == Detail::Approx(2.00068033).margin(0.00001));
+	CHECK(r.GetFrame(2)->GetAudioSamples(0)[2] == Detail::Approx(2.00136054).margin(0.00001));
 
 	// Clean up
 	cache.Clear();
