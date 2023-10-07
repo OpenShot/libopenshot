@@ -1193,6 +1193,11 @@ void Timeline::SetJsonValue(const Json::Value root) {
 
 		// loop through clips
 		for (const Json::Value existing_clip : root["clips"]) {
+			// Skip NULL nodes
+			if (existing_clip.isNull()) {
+				continue;
+			}
+
 			// Create Clip
 			Clip *c = new Clip();
 
@@ -1220,6 +1225,11 @@ void Timeline::SetJsonValue(const Json::Value root) {
 
 		// loop through effects
 		for (const Json::Value existing_effect :root["effects"]) {
+			// Skip NULL nodes
+			if (existing_effect.isNull()) {
+				continue;
+			}
+
 			// Create Effect
 			EffectBase *e = NULL;
 
