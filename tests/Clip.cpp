@@ -43,9 +43,9 @@ TEST_CASE( "default constructor", "[libopenshot][clip]" )
 	CHECK(c1.gravity == GRAVITY_CENTER);
 	CHECK(c1.scale == SCALE_FIT);
 	CHECK(c1.Layer() == 0);
-	CHECK(c1.Position() == Approx(0.0f).margin(0.00001));
-	CHECK(c1.Start() == Approx(0.0f).margin(0.00001));
-	CHECK(c1.End() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.Position() == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.Start() == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.End() == Detail::Approx(0.0f).margin(0.00001));
 }
 
 TEST_CASE( "path string constructor", "[libopenshot][clip]" )
@@ -61,9 +61,9 @@ TEST_CASE( "path string constructor", "[libopenshot][clip]" )
 	CHECK(c1.gravity == GRAVITY_CENTER);
 	CHECK(c1.scale == SCALE_FIT);
 	CHECK(c1.Layer() == 0);
-	CHECK(c1.Position() == Approx(0.0f).margin(0.00001));
-	CHECK(c1.Start() == Approx(0.0f).margin(0.00001));
-	CHECK(c1.End() == Approx(4.39937f).margin(0.00001));
+	CHECK(c1.Position() == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.Start() == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.End() == Detail::Approx(4.39937f).margin(0.00001));
 }
 
 TEST_CASE( "basic getters and setters", "[libopenshot][clip]" )
@@ -77,9 +77,9 @@ TEST_CASE( "basic getters and setters", "[libopenshot][clip]" )
 	CHECK(c1.gravity == GRAVITY_CENTER);
 	CHECK(c1.scale == SCALE_FIT);
 	CHECK(c1.Layer() == 0);
-	CHECK(c1.Position() == Approx(0.0f).margin(0.00001));
-	CHECK(c1.Start() == Approx(0.0f).margin(0.00001));
-	CHECK(c1.End() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.Position() == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.Start() == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.End() == Detail::Approx(0.0f).margin(0.00001));
 
 	// Change some properties
 	c1.Layer(1);
@@ -88,9 +88,9 @@ TEST_CASE( "basic getters and setters", "[libopenshot][clip]" )
 	c1.End(10.5);
 
 	CHECK(c1.Layer() == 1);
-	CHECK(c1.Position() == Approx(5.0f).margin(0.00001));
-	CHECK(c1.Start() == Approx(3.5f).margin(0.00001));
-	CHECK(c1.End() == Approx(10.5f).margin(0.00001));
+	CHECK(c1.Position() == Detail::Approx(5.0f).margin(0.00001));
+	CHECK(c1.Start() == Detail::Approx(3.5f).margin(0.00001));
+	CHECK(c1.End() == Detail::Approx(10.5f).margin(0.00001));
 }
 
 TEST_CASE( "properties", "[libopenshot][clip]" )
@@ -121,7 +121,7 @@ TEST_CASE( "properties", "[libopenshot][clip]" )
 	CHECK(success == true);
 
 	// Check for specific things
-	CHECK(root["alpha"]["value"].asDouble() == Approx(1.0f).margin(0.01));
+	CHECK(root["alpha"]["value"].asDouble() == Detail::Approx(1.0f).margin(0.01));
 	CHECK(root["alpha"]["keyframe"].asBool() == true);
 
 	// Get properties JSON string at frame 250
@@ -136,7 +136,7 @@ TEST_CASE( "properties", "[libopenshot][clip]" )
 	CHECK(success == true);
 
 	// Check for specific things
-	CHECK(root["alpha"]["value"].asDouble() == Approx(0.5f).margin(0.01));
+	CHECK(root["alpha"]["value"].asDouble() == Detail::Approx(0.5f).margin(0.01));
 	CHECK_FALSE(root["alpha"]["keyframe"].asBool());
 
 	// Get properties JSON string at frame 250 (again)
@@ -165,7 +165,7 @@ TEST_CASE( "properties", "[libopenshot][clip]" )
 	CHECK(success == true);
 
 	// Check for specific things
-	CHECK(root["alpha"]["value"].asDouble() == Approx(0.0f).margin(0.00001));
+	CHECK(root["alpha"]["value"].asDouble() == Detail::Approx(0.0f).margin(0.00001));
 	CHECK(root["alpha"]["keyframe"].asBool() == true);
 
 	// Free up the reader we allocated
@@ -321,23 +321,23 @@ TEST_CASE( "access frames past reader length", "[libopenshot][clip]" )
 	// Get the last valid frame #
 	std::shared_ptr<openshot::Frame> frame = c1.GetFrame(30);
 
-	CHECK(frame->GetAudioSamples(0)[0] == Approx(30.0).margin(0.00001));
-	CHECK(frame->GetAudioSamples(0)[600] == Approx(30.4081631).margin(0.00001));
-	CHECK(frame->GetAudioSamples(0)[1200] == Approx(30.8163261).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[0] == Detail::Approx(30.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[600] == Detail::Approx(30.4081631).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[1200] == Detail::Approx(30.8163261).margin(0.00001));
 
 	// Get the +1 past the end of the reader (should be audio silence)
 	frame = c1.GetFrame(31);
 
-	CHECK(frame->GetAudioSamples(0)[0] == Approx(0.0).margin(0.00001));
-	CHECK(frame->GetAudioSamples(0)[600] == Approx(0.0).margin(0.00001));
-	CHECK(frame->GetAudioSamples(0)[1200] == Approx(0.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[0] == Detail::Approx(0.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[600] == Detail::Approx(0.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[1200] == Detail::Approx(0.0).margin(0.00001));
 
 	// Get the +2 past the end of the reader (should be audio silence)
 	frame = c1.GetFrame(32);
 
-	CHECK(frame->GetAudioSamples(0)[0] == Approx(0.0).margin(0.00001));
-	CHECK(frame->GetAudioSamples(0)[600] == Approx(0.0).margin(0.00001));
-	CHECK(frame->GetAudioSamples(0)[1200] == Approx(0.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[0] == Detail::Approx(0.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[600] == Detail::Approx(0.0).margin(0.00001));
+	CHECK(frame->GetAudioSamples(0)[1200] == Detail::Approx(0.0).margin(0.00001));
 }
 
 TEST_CASE( "setting and clobbering readers", "[libopenshot][clip]" )

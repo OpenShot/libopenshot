@@ -50,8 +50,8 @@ TEST_CASE( "std::pair ctor", "[libopenshot][point]" )
 	std::pair<double, double> coordinates(22, 5);
 	openshot::Point p1(coordinates);
 
-	CHECK(p1.co.X == Approx(22.0f).margin(0.00001));
-	CHECK(p1.co.Y == Approx(5.0f).margin(0.00001));
+	CHECK(p1.co.X == Detail::Approx(22.0f).margin(0.00001));
+	CHECK(p1.co.Y == Detail::Approx(5.0f).margin(0.00001));
 }
 
 TEST_CASE( "Coordinate ctor", "[libopenshot][point]" )
@@ -60,8 +60,8 @@ TEST_CASE( "Coordinate ctor", "[libopenshot][point]" )
 	openshot::Coordinate c1(3,7);
 	openshot::Point p1(c1);
 
-	CHECK(p1.co.X == Approx(3.0f).margin(0.00001));
-	CHECK(p1.co.Y == Approx(7.0f).margin(0.00001));
+	CHECK(p1.co.X == Detail::Approx(3.0f).margin(0.00001));
+	CHECK(p1.co.Y == Detail::Approx(7.0f).margin(0.00001));
 	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 

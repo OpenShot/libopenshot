@@ -22,8 +22,8 @@ TEST_CASE( "default constructor", "[libopenshot][coordinate]" )
 	// Create an empty coordinate
 	Coordinate c1;
 
-	CHECK(c1.X == Approx(0.0f).margin(0.00001));
-	CHECK(c1.Y == Approx(0.0f).margin(0.00001));
+	CHECK(c1.X == Detail::Approx(0.0f).margin(0.00001));
+	CHECK(c1.Y == Detail::Approx(0.0f).margin(0.00001));
 }
 
 TEST_CASE( "XY constructor", "[libopenshot][coordinate]" )
@@ -31,15 +31,15 @@ TEST_CASE( "XY constructor", "[libopenshot][coordinate]" )
 	// Create an empty coordinate
 	Coordinate c1(2,8);
 
-	CHECK(c1.X == Approx(2.0f).margin(0.00001));
-	CHECK(c1.Y == Approx(8.0f).margin(0.00001));
+	CHECK(c1.X == Detail::Approx(2.0f).margin(0.00001));
+	CHECK(c1.Y == Detail::Approx(8.0f).margin(0.00001));
 }
 
 TEST_CASE( "std::pair constructor", "[libopenshot][coordinate]" )
 {
 	Coordinate c1(std::pair<double,double>(12, 10));
-	CHECK(c1.X == Approx(12.0f).margin(0.00001));
-	CHECK(c1.Y == Approx(10.0f).margin(0.00001));
+	CHECK(c1.X == Detail::Approx(12.0f).margin(0.00001));
+	CHECK(c1.Y == Detail::Approx(10.0f).margin(0.00001));
 }
 
 TEST_CASE( "Json", "[libopenshot][coordinate]" )
@@ -70,6 +70,6 @@ TEST_CASE( "SetJson", "[libopenshot][coordinate]" ) {
 	CHECK_THROWS_AS(c.SetJson("}{"), openshot::InvalidJSON);
 	// Check that values set via SetJson() are correct
 	c.SetJson(json_input);
-	CHECK(c.X == Approx(100.0).margin(0.01));
-	CHECK(c.Y == Approx(50.0).margin(0.01));
+	CHECK(c.X == Detail::Approx(100.0).margin(0.01));
+	CHECK(c.Y == Detail::Approx(50.0).margin(0.01));
 }

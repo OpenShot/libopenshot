@@ -111,9 +111,9 @@ TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK((int)pixels[pixel_index] == Approx(20).margin(5));
-	CHECK((int)pixels[pixel_index + 1] == Approx(18).margin(5));
-	CHECK((int)pixels[pixel_index + 2] == Approx(11).margin(5));
-	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index] == Detail::Approx(20).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Detail::Approx(18).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Detail::Approx(11).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Detail::Approx(255).margin(5));
 }
 #endif  // USE_IMAGEMAGICK

@@ -49,19 +49,19 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         CHECK(c1.color.GetColorHex(1) == "#ffffff");
         CHECK(c1.stroke.GetColorHex(1) == "#a9a9a9");
         CHECK(c1.background.GetColorHex(1) == "#000000");
-        CHECK(c1.background_alpha.GetValue(1) == Approx(0.0f).margin(0.00001));
-        CHECK(c1.left.GetValue(1) == Approx(0.10f).margin(0.00001));
-        CHECK(c1.right.GetValue(1) == Approx(0.10f).margin(0.00001));
-        CHECK(c1.top.GetValue(1) == Approx(0.75).margin(0.00001));
-        CHECK(c1.stroke_width.GetValue(1) == Approx(0.5f).margin(0.00001));
-        CHECK(c1.font_size.GetValue(1) == Approx(30.0f).margin(0.00001));
-        CHECK(c1.font_alpha.GetValue(1) == Approx(1.0f).margin(0.00001));
+        CHECK(c1.background_alpha.GetValue(1) == Detail::Approx(0.0f).margin(0.00001));
+        CHECK(c1.left.GetValue(1) == Detail::Approx(0.10f).margin(0.00001));
+        CHECK(c1.right.GetValue(1) == Detail::Approx(0.10f).margin(0.00001));
+        CHECK(c1.top.GetValue(1) == Detail::Approx(0.75).margin(0.00001));
+        CHECK(c1.stroke_width.GetValue(1) == Detail::Approx(0.5f).margin(0.00001));
+        CHECK(c1.font_size.GetValue(1) == Detail::Approx(30.0f).margin(0.00001));
+        CHECK(c1.font_alpha.GetValue(1) == Detail::Approx(1.0f).margin(0.00001));
         CHECK(c1.font_name == "sans");
-        CHECK(c1.fade_in.GetValue(1) == Approx(0.35f).margin(0.00001));
-        CHECK(c1.fade_out.GetValue(1) == Approx(0.35f).margin(0.00001));
-        CHECK(c1.background_corner.GetValue(1) == Approx(10.0f).margin(0.00001));
-        CHECK(c1.background_padding.GetValue(1) == Approx(20.0f).margin(0.00001));
-        CHECK(c1.line_spacing.GetValue(1) == Approx(1.0f).margin(0.00001));
+        CHECK(c1.fade_in.GetValue(1) == Detail::Approx(0.35f).margin(0.00001));
+        CHECK(c1.fade_out.GetValue(1) == Detail::Approx(0.35f).margin(0.00001));
+        CHECK(c1.background_corner.GetValue(1) == Detail::Approx(10.0f).margin(0.00001));
+        CHECK(c1.background_padding.GetValue(1) == Detail::Approx(20.0f).margin(0.00001));
+        CHECK(c1.line_spacing.GetValue(1) == Detail::Approx(1.0f).margin(0.00001));
         CHECK(c1.CaptionText() == "00:00:00:000 --> 00:10:00:000\nEdit this caption with our caption editor");
 
         // Load clip with video

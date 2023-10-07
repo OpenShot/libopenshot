@@ -195,9 +195,9 @@ TEST_CASE( "resample_audio_48000_to_41000", "[libopenshot][framemapper]" )
 
 	// Check details
 	CHECK(map.GetFrame(1)->GetAudioChannelsCount() == 1);
-	CHECK(map.GetFrame(1)->GetAudioSamplesCount() == Approx(882).margin(10.0));
-	CHECK(map.GetFrame(2)->GetAudioSamplesCount() == Approx(882).margin(10.0));
-	CHECK(map.GetFrame(50)->GetAudioSamplesCount() == Approx(882).margin(10.0));
+	CHECK(map.GetFrame(1)->GetAudioSamplesCount() == Detail::Approx(882).margin(10.0));
+	CHECK(map.GetFrame(2)->GetAudioSamplesCount() == Detail::Approx(882).margin(10.0));
+	CHECK(map.GetFrame(50)->GetAudioSamplesCount() == Detail::Approx(882).margin(10.0));
 	CHECK(map.info.video_length == 1299);
 
 	// Close mapper
@@ -277,7 +277,7 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 				float resampled_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
 
 				// TODO: 0.1 is much to broad to accurately test this, but without this, all the resampled values are too far away from expected
-				CHECK(resampled_value == Approx(sample_value).margin(0.1));
+				CHECK(resampled_value == Detail::Approx(sample_value).margin(0.1));
 			}
 			// Increment sample value
 			num_samples += map.GetFrame(frame_index)->GetAudioSamplesCount();
@@ -330,7 +330,7 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 
 				// TODO: 0.1 is much to broad to accurately test this, but without this, all the resampled values are too far away from expected
 				// Testing wave value X 2, since we have 2 overlapping clips
-				CHECK(resampled_value == Approx(sample_value * 2.0).margin(0.1));
+				CHECK(resampled_value == Detail::Approx(sample_value * 2.0).margin(0.1));
 
 			}
 		}
@@ -552,7 +552,7 @@ TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
 
 					// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
 					float mapped_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
-					CHECK(predicted_value == Approx(mapped_value).margin(0.001));
+					CHECK(predicted_value == Detail::Approx(mapped_value).margin(0.001));
 				}
 			}
 
@@ -585,7 +585,7 @@ TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
 
 					// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
 					float timeline_value = t1.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
-					CHECK(predicted_value == Approx(timeline_value).margin(0.001));
+					CHECK(predicted_value == Detail::Approx(timeline_value).margin(0.001));
 				}
 			}
 

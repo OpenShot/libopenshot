@@ -69,7 +69,7 @@ TEST_CASE( "derived class", "[libopenshot][readerbase]" )
 	// Check some of the default values of the FileInfo struct on the base class
 	CHECK_FALSE(t1.info.has_audio);
 	CHECK_FALSE(t1.info.has_audio);
-	CHECK(t1.info.duration == Approx(0.0f).margin(0.00001));
+	CHECK(t1.info.duration == Detail::Approx(0.0f).margin(0.00001));
 	CHECK(t1.info.height == 0);
 	CHECK(t1.info.width == 0);
 	CHECK(t1.info.fps.num == 1);

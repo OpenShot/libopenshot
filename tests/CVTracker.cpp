@@ -101,10 +101,10 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     int height = ((float)fd.y2*360) - y;
 
     // Compare if tracked data is equal to pre-tested ones
-    CHECK(x == Approx(256).margin(1));
-    CHECK(y == Approx(132).margin(1));
-    CHECK(width == Approx(180).margin(1));
-    CHECK(height == Approx(166).margin(2));
+    CHECK(x == Detail::Approx(256).margin(1));
+    CHECK(y == Detail::Approx(132).margin(1));
+    CHECK(width == Detail::Approx(180).margin(1));
+    CHECK(height == Detail::Approx(166).margin(2));
 }
 
 
@@ -178,9 +178,9 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     float height_2 = fd_2.y2 - y_2;
 
     // Compare first tracker data with second tracker data
-    CHECK(x_1 == Approx(x_2).margin(0.01));
-    CHECK(y_1 == Approx(y_2).margin(0.01));
-    CHECK(width_1 == Approx(width_2).margin(0.01));
-    CHECK(height_1 == Approx(height_2).margin(0.01));
+    CHECK(x_1 == Detail::Approx(x_2).margin(0.01));
+    CHECK(y_1 == Detail::Approx(y_2).margin(0.01));
+    CHECK(width_1 == Detail::Approx(width_2).margin(0.01));
+    CHECK(height_1 == Detail::Approx(height_2).margin(0.01));
 
 }

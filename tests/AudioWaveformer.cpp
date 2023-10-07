@@ -32,14 +32,14 @@ TEST_CASE( "Extract waveform data piano.wav", "[libopenshot][audiowaveformer]" )
 
         if (channel == 0) {
             CHECK(waveform.rms_samples.size() == 107);
-            CHECK(waveform.rms_samples[0] == Approx(0.04879f).margin(0.00001));
-            CHECK(waveform.rms_samples[86] == Approx(0.13578f).margin(0.00001));
-            CHECK(waveform.rms_samples[87] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples[0] == Detail::Approx(0.04879f).margin(0.00001));
+            CHECK(waveform.rms_samples[86] == Detail::Approx(0.13578f).margin(0.00001));
+            CHECK(waveform.rms_samples[87] == Detail::Approx(0.0f).margin(0.00001));
         } else if (channel == 1) {
             CHECK(waveform.rms_samples.size() == 107);
-            CHECK(waveform.rms_samples[0] == Approx(0.04879f).margin(0.00001));
-            CHECK(waveform.rms_samples[86] == Approx(0.13578f).margin(0.00001));
-            CHECK(waveform.rms_samples[87] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples[0] == Detail::Approx(0.04879f).margin(0.00001));
+            CHECK(waveform.rms_samples[86] == Detail::Approx(0.13578f).margin(0.00001));
+            CHECK(waveform.rms_samples[87] == Detail::Approx(0.0f).margin(0.00001));
         }
 
         waveform.clear();
@@ -63,14 +63,14 @@ TEST_CASE( "Extract waveform data sintel", "[libopenshot][audiowaveformer]" )
 
         if (channel == 0) {
             CHECK(waveform.rms_samples.size() == 1058);
-            CHECK(waveform.rms_samples[0] == Approx(0.00001f).margin(0.00001));
-            CHECK(waveform.rms_samples[1037] == Approx(0.00003f).margin(0.00001));
-            CHECK(waveform.rms_samples[1038] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples[0] == Detail::Approx(0.00001f).margin(0.00001));
+            CHECK(waveform.rms_samples[1037] == Detail::Approx(0.00003f).margin(0.00001));
+            CHECK(waveform.rms_samples[1038] == Detail::Approx(0.0f).margin(0.00001));
         } else if (channel == 1) {
             CHECK(waveform.rms_samples.size() == 1058);
-            CHECK(waveform.rms_samples[0] == Approx(0.00001f ).margin(0.00001));
-            CHECK(waveform.rms_samples[1037] == Approx(0.00003f).margin(0.00001));
-            CHECK(waveform.rms_samples[1038] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples[0] == Detail::Approx(0.00001f ).margin(0.00001));
+            CHECK(waveform.rms_samples[1037] == Detail::Approx(0.00003f).margin(0.00001));
+            CHECK(waveform.rms_samples[1038] == Detail::Approx(0.0f).margin(0.00001));
         }
 
         waveform.clear();
@@ -93,9 +93,9 @@ TEST_CASE( "Extract waveform data sintel (all channels)", "[libopenshot][audiowa
     AudioWaveformData waveform = waveformer.ExtractSamples(-1, 20, false);
 
     CHECK(waveform.rms_samples.size() == 1058);
-    CHECK(waveform.rms_samples[0] == Approx(0.00001f).margin(0.00001));
-    CHECK(waveform.rms_samples[1037] == Approx(0.00003f).margin(0.00001));
-    CHECK(waveform.rms_samples[1038] == Approx(0.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[0] == Detail::Approx(0.00001f).margin(0.00001));
+    CHECK(waveform.rms_samples[1037] == Detail::Approx(0.00003f).margin(0.00001));
+    CHECK(waveform.rms_samples[1038] == Detail::Approx(0.0f).margin(0.00001));
 
     waveform.clear();
 
@@ -118,10 +118,10 @@ TEST_CASE( "Normalize & scale waveform data piano.wav", "[libopenshot][audiowave
 
         if (channel == 0) {
             CHECK(waveform.rms_samples.size() == 107);
-            CHECK(waveform.rms_samples[0] == Approx(0.07524f).margin(0.00001));
-            CHECK(waveform.rms_samples[35] == Approx(0.20063f).margin(0.00001));
-            CHECK(waveform.rms_samples[86] == Approx(0.2094f).margin(0.00001));
-            CHECK(waveform.rms_samples[87] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples[0] == Detail::Approx(0.07524f).margin(0.00001));
+            CHECK(waveform.rms_samples[35] == Detail::Approx(0.20063f).margin(0.00001));
+            CHECK(waveform.rms_samples[86] == Detail::Approx(0.2094f).margin(0.00001));
+            CHECK(waveform.rms_samples[87] == Detail::Approx(0.0f).margin(0.00001));
         }
 
         waveform.clear();
@@ -164,28 +164,28 @@ TEST_CASE( "AudioWaveformData struct methods", "[libopenshot][audiowaveformer]" 
         waveform.rms_samples[s] = 1.0;
         waveform.max_samples[s] = 1.0;
     }
-    CHECK(waveform.rms_samples[0] == Approx(1.0f).margin(0.00001));
-    CHECK(waveform.rms_samples[9] == Approx(1.0f).margin(0.00001));
-    CHECK(waveform.max_samples[0] == Approx(1.0f).margin(0.00001));
-    CHECK(waveform.max_samples[9] == Approx(1.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[0] == Detail::Approx(1.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[9] == Detail::Approx(1.0f).margin(0.00001));
+    CHECK(waveform.max_samples[0] == Detail::Approx(1.0f).margin(0.00001));
+    CHECK(waveform.max_samples[9] == Detail::Approx(1.0f).margin(0.00001));
 
     // Scale all values by 2
     waveform.scale(10, 2.0);
     CHECK(waveform.rms_samples.size() == 10);
     CHECK(waveform.max_samples.size() == 10);
-    CHECK(waveform.rms_samples[0] == Approx(2.0f).margin(0.00001));
-    CHECK(waveform.rms_samples[9] == Approx(2.0f).margin(0.00001));
-    CHECK(waveform.max_samples[0] == Approx(2.0f).margin(0.00001));
-    CHECK(waveform.max_samples[9] == Approx(2.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[0] == Detail::Approx(2.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[9] == Detail::Approx(2.0f).margin(0.00001));
+    CHECK(waveform.max_samples[0] == Detail::Approx(2.0f).margin(0.00001));
+    CHECK(waveform.max_samples[9] == Detail::Approx(2.0f).margin(0.00001));
 
     // Zero out all values
     waveform.zero(10);
     CHECK(waveform.rms_samples.size() == 10);
     CHECK(waveform.max_samples.size() == 10);
-    CHECK(waveform.rms_samples[0] == Approx(0.0f).margin(0.00001));
-    CHECK(waveform.rms_samples[9] == Approx(0.0f).margin(0.00001));
-    CHECK(waveform.max_samples[0] == Approx(0.0f).margin(0.00001));
-    CHECK(waveform.max_samples[9] == Approx(0.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[0] == Detail::Approx(0.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[9] == Detail::Approx(0.0f).margin(0.00001));
+    CHECK(waveform.max_samples[0] == Detail::Approx(0.0f).margin(0.00001));
+    CHECK(waveform.max_samples[9] == Detail::Approx(0.0f).margin(0.00001));
 
     // Access vectors and verify size
     std::vector<std::vector<float>> vectors = waveform.vectors();
