@@ -699,11 +699,11 @@ void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
 	// Create blank exception
 	bool has_error_encoding_video = false;
 
-	// Process all audio frames (in a separate thread)
+	// Process audio frame
 	if (info.has_audio && audio_st)
 		write_audio_packets(false, frame);
 
-	// Encode and add the frame to the output file
+	// Process video frame
 	if (info.has_video && video_st)
 		process_video_packet(frame);
 
@@ -714,21 +714,15 @@ void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
 			AVFrame *frame_final = av_frames[frame];
 
 			// Write frame to video file
-			bool success = write_video_packet(frame, frame_final);
-			if (!success)
+			if (!write_video_packet(frame, frame_final)) {
 				has_error_encoding_video = true;
+			}
+
+			// Deallocate buffer and AVFrame
+			av_freep(&(frame_final->data[0]));
+			AV_FREE_FRAME(&frame_final);
+			av_frames.erase(frame);
 		}
-	}
-
-	// Does this frame's AVFrame still exist
-	if (av_frames.count(frame)) {
-		// Get AVFrame
-		AVFrame *av_frame = av_frames[frame];
-
-		// Deallocate buffer and AVFrame
-		av_freep(&(av_frame->data[0]));
-		AV_FREE_FRAME(&av_frame);
-		av_frames.erase(frame);
 	}
 
 	// Done writing
@@ -758,6 +752,10 @@ void FFmpegWriter::WriteFrame(ReaderBase *reader, int64_t start, int64_t length)
 
 // Write the file trailer (after all frames are written)
 void FFmpegWriter::WriteTrailer() {
+	// Process final audio frame (if any)
+	if (info.has_audio && audio_st)
+		write_audio_packets(true, NULL);
+
 	// Flush encoders (who sometimes hold on to frames)
 	flush_encoders();
 
@@ -1530,7 +1528,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 
 // write all queued frames' audio to the video file
 void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::Frame> frame) {
-	if (!frame)
+	if (!frame && !is_final)
 		return;
 
 	// Init audio buffers / variables
@@ -1548,17 +1546,19 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 	int16_t *final_samples_planar = NULL;
 	int16_t *final_samples = NULL;
 
-
-	// Get the audio details from this frame
-	sample_rate_in_frame = frame->SampleRate();
-	samples_in_frame = frame->GetAudioSamplesCount();
-	channels_in_frame = frame->GetAudioChannelsCount();
-	channel_layout_in_frame = frame->ChannelsLayout();
-
 	// Get audio sample array
 	float *frame_samples_float = NULL;
-	// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
-	frame_samples_float = frame->GetInterleavedAudioSamples(&samples_in_frame);
+
+	// Get the audio details from this frame
+	if (frame) {
+		sample_rate_in_frame = frame->SampleRate();
+		samples_in_frame = frame->GetAudioSamplesCount();
+		channels_in_frame = frame->GetAudioChannelsCount();
+		channel_layout_in_frame = frame->ChannelsLayout();
+
+		// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
+		frame_samples_float = frame->GetInterleavedAudioSamples(&samples_in_frame);
+	}
 
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
