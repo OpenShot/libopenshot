@@ -122,6 +122,7 @@ jobs:
               mingw-w64-x86_64-libvpx
               mingw-w64-x86_64-ffmpeg
               mingw-w64-x86_64-zeromq
+              mingw-w64-x86_64-cppzmq
               mingw-w64-x86_64-opencv
               mingw-w64-x86_64-protobuf
               mingw-w64-x86_64-babl
