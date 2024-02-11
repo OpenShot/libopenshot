@@ -1593,10 +1593,8 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 		// determine how many samples were decoded
 		int plane_size = -1;
-		data_size = av_samples_get_buffer_size(&plane_size,
-											   AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
-											   audio_frame->nb_samples,
-											   (AVSampleFormat) (AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx)), 1);
+		data_size = av_samples_get_buffer_size(&plane_size, AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
+											   audio_frame->nb_samples, (AVSampleFormat) (AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx)), 1);
 
 		// Calculate total number of samples
 		packet_samples = audio_frame->nb_samples * AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
@@ -1641,31 +1639,26 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 		}
 	}
 
-	// Allocate audio buffer
-	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE];
-
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)",
 										  "packet_samples", packet_samples,
 										  "info.channels", info.channels,
 										  "info.sample_rate", info.sample_rate,
-										  "aCodecCtx->sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx),
-										  "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16);
+										  "aCodecCtx->sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx));
 
 	// Create output frame
 	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
 	AV_RESET_FRAME(audio_converted);
 	audio_converted->nb_samples = audio_frame->nb_samples;
-	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_FLTP, 0);
 
 	SWRCONTEXT *avr = NULL;
-	int nb_samples = 0;
 
 	// setup resample context
 	avr = SWR_ALLOC();
 	av_opt_set_int(avr, "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr, "in_sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
-	av_opt_set_int(avr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+	av_opt_set_int(avr, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
 	av_opt_set_int(avr, "in_sample_rate", info.sample_rate, 0);
 	av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
 	av_opt_set_int(avr, "in_channels", info.channels, 0);
@@ -1673,7 +1666,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 	SWR_INIT(avr);
 
 	// Convert audio samples
-	nb_samples = SWR_CONVERT(avr,	// audio resample context
+	int nb_samples = SWR_CONVERT(avr,	// audio resample context
 							 audio_converted->data,		  // output data pointers
 							 audio_converted->linesize[0],   // output plane size, in bytes. (0 if unknown)
 							 audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
@@ -1681,83 +1674,33 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 							 audio_frame->linesize[0],	   // input plane size, in bytes (0 if unknown)
 							 audio_frame->nb_samples);	   // number of input samples to convert
 
-	// Copy audio samples over original samples
-	memcpy(audio_buf,
-		audio_converted->data[0],
-		static_cast<size_t>(audio_converted->nb_samples)
-		* av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)
-		* info.channels);
-
 	// Deallocate resample buffer
 	SWR_CLOSE(avr);
 	SWR_FREE(&avr);
 	avr = NULL;
 
-	// Free AVFrames
-	av_free(audio_converted->data[0]);
-	AV_FREE_FRAME(&audio_converted);
-
 	int64_t starting_frame_number = -1;
-	bool partial_frame = true;
 	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++) {
 		// Array of floats (to hold samples for each channel)
 		starting_frame_number = location.frame;
-		int channel_buffer_size = packet_samples / info.channels;
-		float *channel_buffer = new float[channel_buffer_size];
-
-		// Init buffer array
-		for (int z = 0; z < channel_buffer_size; z++)
-			channel_buffer[z] = 0.0f;
-
-		// Loop through all samples and add them to our Frame based on channel.
-		// Toggle through each channel number, since channel data is stored like (left right left right)
-		int channel = 0;
-		int position = 0;
-		for (int sample = 0; sample < packet_samples; sample++) {
-			// Only add samples for current channel
-			if (channel_filter == channel) {
-				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
-				channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 15));
-
-				// Increment audio position
-				position++;
-			}
-
-			// increment channel (if needed)
-			if ((channel + 1) < info.channels)
-				// move to next channel
-				channel++;
-			else
-				// reset channel
-				channel = 0;
-		}
+		int channel_buffer_size = nb_samples;
+		auto *channel_buffer = (float *) (audio_converted->data[channel_filter]);
 
 		// Loop through samples, and add them to the correct frames
 		int start = location.sample_start;
 		int remaining_samples = channel_buffer_size;
-		float *iterate_channel_buffer = channel_buffer;	// pointer to channel buffer
 		while (remaining_samples > 0) {
 			// Get Samples per frame (for this frame number)
-			int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number,
-													 info.fps, info.sample_rate, info.channels);
+			int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number, info.fps, info.sample_rate, info.channels);
 
 			// Calculate # of samples to add to this frame
-			int samples = samples_per_frame - start;
-			if (samples > remaining_samples)
-				samples = remaining_samples;
+			int samples = std::fmin(samples_per_frame - start, remaining_samples);
 
 			// Create or get the existing frame object
 			std::shared_ptr<Frame> f = CreateFrame(starting_frame_number);
 
-			// Determine if this frame was "partially" filled in
-			if (samples_per_frame == start + samples)
-				partial_frame = false;
-			else
-				partial_frame = true;
-
 			// Add samples for current channel to the frame.
-			f->AddAudio(true, channel_filter, start, iterate_channel_buffer,
-			   samples, 1.0f);
+			f->AddAudio(true, channel_filter, start, channel_buffer, samples, 1.0f);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)",
@@ -1765,7 +1708,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 											"start", start,
 											"samples", samples,
 											"channel", channel_filter,
-											"partial_frame", partial_frame,
 											"samples_per_frame", samples_per_frame);
 
 			// Add or update cache
@@ -1776,7 +1718,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 			// Increment buffer (to next set of samples)
 			if (remaining_samples > 0)
-				iterate_channel_buffer += samples;
+				channel_buffer += samples;
 
 			// Increment frame number
 			starting_frame_number++;
@@ -1784,18 +1726,11 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 			// Reset starting sample #
 			start = 0;
 		}
-
-		// clear channel buffer
-		delete[] channel_buffer;
-		channel_buffer = NULL;
-		iterate_channel_buffer = NULL;
 	}
 
-	// Clean up some arrays
-	delete[] audio_buf;
-	audio_buf = NULL;
-
-	// Free audio frame
+	// Free AVFrames
+	av_free(audio_converted->data[0]);
+	AV_FREE_FRAME(&audio_converted);
 	AV_FREE_FRAME(&audio_frame);
 
 	// Get audio PTS in seconds

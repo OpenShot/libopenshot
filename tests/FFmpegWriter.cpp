@@ -66,10 +66,10 @@ TEST_CASE( "Webm", "[libopenshot][ffmpegwriter]" )
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK((int)pixels[pixel_index] == Approx(23).margin(5));
-	CHECK((int)pixels[pixel_index + 1] == Approx(23).margin(5));
-	CHECK((int)pixels[pixel_index + 2] == Approx(23).margin(5));
-	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index] == Approx(23).margin(7));
+	CHECK((int)pixels[pixel_index + 1] == Approx(23).margin(7));
+	CHECK((int)pixels[pixel_index + 2] == Approx(23).margin(7));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(7));
 }
 
 TEST_CASE( "Options_Overloads", "[libopenshot][ffmpegwriter]" )

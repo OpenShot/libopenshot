@@ -26,8 +26,8 @@ namespace openshot {
 
 	/// This enumeration designates the type of stream when encoding (video or audio)
 	enum StreamType {
-		VIDEO_STREAM,    ///< A video stream (used to determine which type of stream)
-		AUDIO_STREAM     ///< An audio stream (used to determine which type of stream)
+		VIDEO_STREAM,	///< A video stream (used to determine which type of stream)
+		AUDIO_STREAM	///< An audio stream (used to determine which type of stream)
 	};
 
 	/**
@@ -116,7 +116,6 @@ namespace openshot {
 	class FFmpegWriter : public WriterBase {
 	private:
 		std::string path;
-		int cache_size;
 		bool is_writing;
 		bool is_open;
 		int64_t video_timestamp;
@@ -152,15 +151,6 @@ namespace openshot {
 		int original_channels;
 
 		std::shared_ptr<openshot::Frame> last_frame;
-		std::deque<std::shared_ptr<openshot::Frame> > spooled_audio_frames;
-		std::deque<std::shared_ptr<openshot::Frame> > spooled_video_frames;
-
-		std::deque<std::shared_ptr<openshot::Frame> > queued_audio_frames;
-		std::deque<std::shared_ptr<openshot::Frame> > queued_video_frames;
-
-		std::deque<std::shared_ptr<openshot::Frame> > processed_frames;
-		std::deque<std::shared_ptr<openshot::Frame> > deallocate_frames;
-
 		std::map<std::shared_ptr<openshot::Frame>, AVFrame *> av_frames;
 
 		/// Add an AVFrame to the cache
@@ -205,13 +195,13 @@ namespace openshot {
 		void process_video_packet(std::shared_ptr<openshot::Frame> frame);
 
 		/// write all queued frames' audio to the video file
-		void write_audio_packets(bool is_final);
+		void write_audio_packets(bool is_final, std::shared_ptr<openshot::Frame> frame);
 
 		/// write video frame
 		bool write_video_packet(std::shared_ptr<openshot::Frame> frame, AVFrame *frame_final);
 
 		/// write all queued frames
-		void write_queued_frames();
+		void write_frame(std::shared_ptr<Frame> frame);
 
 	public:
 
@@ -223,9 +213,6 @@ namespace openshot {
 
 		/// Close the writer
 		void Close();
-
-		/// Get the cache size (number of frames to queue before writing)
-		int GetCacheSize() { return cache_size; };
 
 		/// Determine if writer is open or closed
 		bool IsOpen() { return is_open; };
@@ -272,10 +259,6 @@ namespace openshot {
 		///
 		/// \note This is an overloaded function.
 		void SetAudioOptions(std::string codec, int sample_rate, int bit_rate);
-
-		/// @brief Set the cache size
-		/// @param new_size The number of frames to queue before writing to the file
-		void SetCacheSize(int new_size) { cache_size = new_size; };
 
 		/// @brief Set video export options
 		/// @param has_video Does this file need a video stream
