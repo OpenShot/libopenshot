@@ -179,7 +179,7 @@ directions to setup a Windows build environment for OpenShot.
 ```
 PATH=$PATH:/c/msys64/mingw64/bin:/c/msys64/mingw64/lib     (64-bit PATH)
   or 
-PATH=$PATH:/c/msys32/mingw32/bin:/c/msys32/mingw32/lib     (32-bit PATH)
+PATH=$PATH:/c/msys64/mingw32/bin:/c/msys64/mingw32/lib     (32-bit PATH)
 ```
 
 4) Update and upgrade all packages
@@ -191,24 +191,14 @@ pacman -Syu
 5a) Install the following packages (**64-Bit**)
 
 ```
-pacman -S --needed base-devel mingw-w64-x86_64-toolchain
-pacman -S mingw64/mingw-w64-x86_64-ffmpeg
-pacman -S mingw64/mingw-w64-x86_64-qt5
-pacman -S mingw64/mingw-w64-x86_64-python3-pyqt5
-pacman -S mingw64/mingw-w64-x86_64-swig
-pacman -S mingw64/mingw-w64-x86_64-cmake
-pacman -S mingw64/mingw-w64-x86_64-doxygen
-pacman -S mingw64/mingw-w64-x86_64-python3-pip
-pacman -S mingw32/mingw-w64-i686-zeromq
-pacman -S mingw64/mingw-w64-x86_64-python3-pyzmq
-pacman -S mingw64/mingw-w64-x86_64-python3-cx_Freeze
-pacman -S mingw64/mingw-w64-x86_64-ninja
-pacman -S mingw64/mingw-w64-x86_64-catch
-pacman -S mingw-w64-x86_64-python3-PyOpenGL
-pacman -S mingw-w64-clang-x86_64-python-pyopengl-accelerate
-pacman -S mingw-w64-x86_64-python-pyopengl-accelerate
-pacman -S mingw-w64-x86_64-python-pywin32
-pacman -S git
+pacman -S --needed --noconfirm \
+mingw-w64-x86_64-rust base-devel mingw-w64-x86_64-toolchain \
+mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-qt5 mingw-w64-x86_64-python3-pyqt5 \
+mingw-w64-x86_64-swig mingw-w64-x86_64-cmake mingw-w64-x86_64-doxygen \
+mingw-w64-x86_64-python3-pip mingw-w64-i686-zeromq mingw-w64-x86_64-python3-pyzmq \
+mingw-w64-x86_64-python3-cx_Freeze mingw-w64-x86_64-ninja mingw-w64-x86_64-catch \
+mingw-w64-x86_64-python3-PyOpenGL mingw-w64-clang-x86_64-python-pyopengl-accelerate \
+mingw-w64-x86_64-python-pyopengl-accelerate mingw-w64-x86_64-python-pywin32 git
 
 # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
 pacman -S mingw64/mingw-w64-x86_64-imagemagick
@@ -217,23 +207,13 @@ pacman -S mingw64/mingw-w64-x86_64-imagemagick
 5b) **Or** Install the following packages (**32-Bit**)
 
 ```
-pacman -S --needed base-devel mingw32/mingw-w64-i686-toolchain
-pacman -S mingw32/mingw-w64-i686-ffmpeg
-pacman -S mingw32/mingw-w64-i686-qt5
-pacman -S mingw32/mingw-w64-i686-python3-pyqt5
-pacman -S mingw32/mingw-w64-i686-swig
-pacman -S mingw32/mingw-w64-i686-cmake
-pacman -S mingw32/mingw-w64-i686-doxygen
-pacman -S mingw32/mingw-w64-i686-python3-pip
-pacman -S mingw32/mingw-w64-i686-zeromq
-pacman -S mingw32/mingw-w64-i686-python3-pyzmq
-pacman -S mingw32/mingw-w64-i686-python3-cx_Freeze
-pacman -S mingw32/mingw-w64-i686-ninja
-pacman -S mingw32/mingw-w64-i686-catch
-pacman -S mingw-w64-i686-python-pyopengl
-pacman -S mingw-w64-i686-python-pyopengl-accelerate
-pacman -S mingw-w64-i686-python-pywin32
-pacman -S git
+pacman -S --needed --noconfirm \
+mingw-w64-i686-rust mingw-w64-i686-toolchain mingw-w64-i686-ffmpeg \
+mingw-w64-i686-qt5 mingw-w64-i686-python3-pyqt5 mingw-w64-i686-swig \
+mingw-w64-i686-cmake mingw-w64-i686-doxygen mingw-w64-i686-python3-pip \
+mingw-w64-i686-zeromq mingw-w64-i686-python3-pyzmq mingw-w64-i686-python3-cx_Freeze \
+mingw-w64-i686-ninja mingw-w64-i686-catch mingw-w64-i686-python-pyopengl \
+mingw-w64-i686-python-pyopengl-accelerate mingw-w64-i686-python-pywin32
 
 # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
 pacman -S mingw32/mingw-w32-x86_32-imagemagick
@@ -294,17 +274,17 @@ make install -i
 
 ``` 
 git clone https://github.com/RazrFalcon/resvg
-cd resvg/c-api
+cd resvg/crates/c-api
 QT_DIR="C:\\msys64\\mingw64\\" cargo build --verbose --release
   **OR**
 QT_DIR="C:\\msys64\\mingw32\\" cargo build --verbose --release
 
-cd ../
+cd ../../
 
 # copy all required files into the system directories
 cp target/release/resvg.dll /usr/lib/
 mkdir -p /usr/include/resvg/
-cp c-api/*.h /usr/include/resvg/
+cp crates/c-api/*.h /usr/include/resvg/
 ```
 
 11) ZMQ++ Header (This might not be needed anymore)
