@@ -26,20 +26,19 @@ using namespace openshot;
 
 // Default Constructor, delegating
 TrackedObjectBBox::TrackedObjectBBox()
-	: TrackedObjectBBox::TrackedObjectBBox(0, 0, 255, 0) {}
+	: TrackedObjectBBox::TrackedObjectBBox(0, 0, 255, 255) {}
 
 // Constructor that takes RGBA values for stroke, and sets the bounding-box
 // displacement as 0 and the scales as 1 for the first frame
 TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa)
 	: delta_x(0.0), delta_y(0.0),
 	  scale_x(1.0), scale_y(1.0), rotation(0.0),
-	  background_alpha(1.0), background_corner(0),
-	  stroke_width(2) , stroke_alpha(0.0),
+	  background_alpha(0.0), background_corner(12),
+	  stroke_width(2) , stroke_alpha(0.5),
 	  stroke(Red, Green, Blue, Alfa),
-	  background(0, 0, 255, 0)
+	  background(0, 0, 255, Alfa)
 {
 	this->TimeScale = 1.0;
-	return;
 }
 
 // Add a BBox to the BoxVec map
@@ -442,10 +441,12 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
 	root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, false, requested_frame);
+    root["visible"]["choices"].append(add_property_choice_json("Yes", true, visible.GetValue(requested_frame)));
+    root["visible"]["choices"].append(add_property_choice_json("No", false, visible.GetValue(requested_frame)));
 
-	root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, -1, 1.0, false, requested_frame);
-	root["draw_box"]["choices"].append(add_property_choice_json("Off", 0, draw_box.GetValue(requested_frame)));
-	root["draw_box"]["choices"].append(add_property_choice_json("On", 1, draw_box.GetValue(requested_frame)));
+	root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, 0, 1, false, requested_frame);
+    root["draw_box"]["choices"].append(add_property_choice_json("Yes", true, draw_box.GetValue(requested_frame)));
+	root["draw_box"]["choices"].append(add_property_choice_json("No", false, draw_box.GetValue(requested_frame)));
 
 	root["stroke"] = add_property_json("Border", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["stroke"]["red"] = add_property_json("Red", stroke.red.GetValue(requested_frame), "float", "", &stroke.red, 0, 255, false, requested_frame);
