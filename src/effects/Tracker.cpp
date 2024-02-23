@@ -142,9 +142,6 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 
                     // Scale the original bounding box to this image
                     QRectF scaledRect = scaleAndCenterRect(QRectF(childClipImage->rect()), boxRect);
-                    QImage scaledImage = childClipImage->scaled(scaledRect.size().toSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-                    // Draw the child clip image inside the bounding-box
                     painter.drawImage(scaledRect, *childClipImage);
                 }
             }

@@ -44,9 +44,6 @@ namespace openshot
         /// Init effect settings
         void init_effect_details();
 
-        /// Find a rectangle inside another (centered)
-        QRectF scaleAndCenterRect(const QRectF& sourceRect, const QRectF& targetRect);
-
         Fraction BaseFPS;
         double TimeScale;
 
@@ -73,6 +70,9 @@ namespace openshot
 
         /// Get the indexes and IDs of all visible objects in the given frame
         std::string GetVisibleObjects(int64_t frame_number) const override;
+
+        /// Find a rectangle inside another (centered)
+        static QRectF scaleAndCenterRect(const QRectF& sourceRect, const QRectF& targetRect);
 
         // Get and Set JSON methods
 

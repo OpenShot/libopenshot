@@ -34,7 +34,7 @@ TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa)
 	: delta_x(0.0), delta_y(0.0),
 	  scale_x(1.0), scale_y(1.0), rotation(0.0),
 	  background_alpha(0.0), background_corner(12),
-	  stroke_width(2) , stroke_alpha(0.5),
+	  stroke_width(2) , stroke_alpha(0.70),
 	  stroke(Red, Green, Blue, Alfa),
 	  background(0, 0, 255, Alfa)
 {
