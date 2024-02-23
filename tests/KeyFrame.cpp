@@ -583,10 +583,10 @@ TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 	CHECK(kfb.rotation.GetInt(1) == 0);
 
 	CHECK(kfb.stroke_width.GetInt(1) == 2);
-	CHECK(kfb.stroke_alpha.GetInt(1) == 0);
+    CHECK(kfb.stroke_alpha.GetValue(1) == Approx(0.7f).margin(0.0001));
 
-	CHECK(kfb.background_alpha .GetInt(1)== 1);
-	CHECK(kfb.background_corner.GetInt(1) == 0);
+	CHECK(kfb.background_alpha .GetInt(1) == 0);
+	CHECK(kfb.background_corner.GetInt(1) == 12);
 
 	CHECK(kfb.stroke.red.GetInt(1) == 62);
 	CHECK(kfb.stroke.green.GetInt(1) == 143);
@@ -596,8 +596,7 @@ TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 	CHECK(kfb.background.red.GetInt(1) == 0);
 	CHECK(kfb.background.green.GetInt(1) == 0);
 	CHECK(kfb.background.blue.GetInt(1) == 255);
-	CHECK(kfb.background.alpha.GetInt(1) == 0);
-
+	CHECK(kfb.background.alpha.GetInt(1) == 212);
 }
 
 TEST_CASE( "TrackedObjectBBox AddBox and RemoveBox", "[libopenshot][keyframe]" )
