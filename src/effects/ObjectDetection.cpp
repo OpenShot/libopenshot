@@ -19,11 +19,12 @@
 #include "Exceptions.h"
 #include "Timeline.h"
 #include "objdetectdata.pb.h"
-#include "Tracker.h"
 
 #include <QImage>
 #include <QPainter>
 #include <QRectF>
+#include <QString>
+#include <QStringList>
 using namespace std;
 using namespace openshot;
 
@@ -407,18 +408,24 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 	if (!root["display_box_text"].isNull())
 		display_box_text.SetJsonValue(root["display_box_text"]);
 
-	if (!root["class_filter"].isNull()){
-		class_filter = root["class_filter"].asString();
-		std::stringstream ss(class_filter);
-		display_classes.clear();
-		while( ss.good() )
-		{
-			// Parse comma separated string
-			std::string substr;
-			std::getline( ss, substr, ',' );
-			display_classes.push_back( substr );
-		}
-	}
+    if (!root["class_filter"].isNull()) {
+        class_filter = root["class_filter"].asString();
+
+        // Convert the class_filter to a QString
+        QString qClassFilter = QString::fromStdString(root["class_filter"].asString());
+
+        // Split the QString by commas and automatically trim each resulting string
+        QStringList classList = qClassFilter.split(',', QString::SkipEmptyParts);
+        display_classes.clear();
+
+        // Iterate over the QStringList and add each trimmed, non-empty string
+        for (const QString &classItem : classList) {
+            QString trimmedItem = classItem.trimmed();
+            if (!trimmedItem.isEmpty()) {
+                display_classes.push_back(trimmedItem.toStdString());
+            }
+        }
+    }
 
 	if (!root["objects"].isNull()){
 		for (auto const& trackedObject : trackedObjects){
