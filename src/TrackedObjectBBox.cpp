@@ -456,7 +456,7 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["stroke_alpha"] = add_property_json("Stroke alpha", stroke_alpha.GetValue(requested_frame), "float", "", &stroke_alpha, 0.0, 1.0, false, requested_frame);
 
 	root["background_alpha"] = add_property_json("Background Alpha", background_alpha.GetValue(requested_frame), "float", "", &background_alpha, 0.0, 1.0, false, requested_frame);
-	root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 60.0, false, requested_frame);
+	root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 150.0, false, requested_frame);
 
 	root["background"] = add_property_json("Background", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["background"]["red"] = add_property_json("Red", background.red.GetValue(requested_frame), "float", "", &background.red, 0, 255, false, requested_frame);

@@ -420,7 +420,7 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 
         // Iterate over the QStringList and add each trimmed, non-empty string
         for (const QString &classItem : classList) {
-            QString trimmedItem = classItem.trimmed();
+            QString trimmedItem = classItem.trimmed().toLower();
             if (!trimmedItem.isEmpty()) {
                 display_classes.push_back(trimmedItem.toStdString());
             }
