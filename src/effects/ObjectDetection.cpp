@@ -132,11 +132,10 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         if(display_text) {
                             // Draw text label above bounding box
                             // Get the confidence and classId for the current detection
-                            float conf = detections.confidences.at(i);
                             int classId = detections.classIds.at(i);
 
                             // Get the label for the class name and its confidence
-                            QString label = QString::number(conf, 'f', 2); // Format confidence to two decimal places
+                            QString label = QString::number(objectId);
                             if (!classNames.empty()) {
                                 label = QString::fromStdString(classNames[classId]) + ":" + label;
                             }
@@ -297,6 +296,7 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
 	Json::Value root;
 	root["visible_objects_index"] = Json::Value(Json::arrayValue);
 	root["visible_objects_id"] = Json::Value(Json::arrayValue);
+    root["visible_class_names"] = Json::Value(Json::arrayValue);
 
 	// Check if track data exists for the requested frame
 	if (detectionsData.find(frame_number) == detectionsData.end()){
@@ -311,11 +311,21 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
 			continue;
 		}
 
-		// Just display selected classes
-		if( display_classes.size() > 0 &&
-			std::find(display_classes.begin(), display_classes.end(), classNames[detections.classIds.at(i)]) == display_classes.end()){
-			continue;
-		}
+		// Get class name of tracked object
+        auto className = classNames[detections.classIds.at(i)];
+
+        // If display_classes is not empty, check if className is in it
+        if (!display_classes.empty()) {
+            auto it = std::find(display_classes.begin(), display_classes.end(), className);
+            if (it == display_classes.end()) {
+                // If not in display_classes, skip this detection
+                continue;
+            }
+            root["visible_class_names"].append(className);
+        } else {
+            // include all class names
+            root["visible_class_names"].append(className);
+        }
 
 		int objectId = detections.objectIds.at(i);
 		// Search for the object in the trackedObjects map
