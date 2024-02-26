@@ -414,46 +414,48 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 
 		// Check cache
 		frame = final_cache.GetFrame(clip_frame_number);
-		if (frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod(
-					"Clip::GetFrame (Cached frame found)",
-					"requested_frame", clip_frame_number);
+		if (!frame) {
+            // Generate clip frame
+            frame = GetOrCreateFrame(clip_frame_number);
 
-			// Return cached frame
-			return frame;
-		}
+            // Get frame size and frame #
+            int64_t timeline_frame_number = clip_frame_number;
+            QSize timeline_size(frame->GetWidth(), frame->GetHeight());
+            if (background_frame) {
+                // If a background frame is provided, use it instead
+                timeline_frame_number = background_frame->number;
+                timeline_size.setWidth(background_frame->GetWidth());
+                timeline_size.setHeight(background_frame->GetHeight());
+            }
 
-		// Generate clip frame
-		frame = GetOrCreateFrame(clip_frame_number);
+            // Get time mapped frame object (used to increase speed, change direction, etc...)
+            apply_timemapping(frame);
 
-		if (!background_frame) {
-			// Create missing background_frame w/ transparent color (if needed)
-			background_frame = std::make_shared<Frame>(clip_frame_number, frame->GetWidth(), frame->GetHeight(),
-													   "#00000000",  frame->GetAudioSamplesCount(),
-													   frame->GetAudioChannelsCount());
-		}
+            // Apply waveform image (if any)
+            apply_waveform(frame, timeline_size);
 
-		// Get time mapped frame object (used to increase speed, change direction, etc...)
-		apply_timemapping(frame);
+            // Apply effects BEFORE applying keyframes (if any local or global effects are used)
+            apply_effects(frame, timeline_frame_number, options, true);
 
-		// Apply waveform image (if any)
-		apply_waveform(frame, background_frame);
+            // Apply keyframe / transforms to current clip image
+            apply_keyframes(frame, timeline_size);
 
-		// Apply effects BEFORE applying keyframes (if any local or global effects are used)
-		apply_effects(frame, background_frame, options, true);
+            // Apply effects AFTER applying keyframes (if any local or global effects are used)
+            apply_effects(frame, timeline_frame_number, options, false);
 
-		// Apply keyframe / transforms to current clip image
-		apply_keyframes(frame, background_frame);
+            // Add final frame to cache (before flattening into background_frame)
+            final_cache.Add(frame);
+        }
 
-		// Apply effects AFTER applying keyframes (if any local or global effects are used)
-		apply_effects(frame, background_frame, options, false);
+        if (!background_frame) {
+            // Create missing background_frame w/ transparent color (if needed)
+            background_frame = std::make_shared<Frame>(frame->number, frame->GetWidth(), frame->GetHeight(),
+                                                       "#00000000",  frame->GetAudioSamplesCount(),
+                                                       frame->GetAudioChannelsCount());
+        }
 
 		// Apply background canvas (i.e. flatten this image onto previous layer image)
 		apply_background(frame, background_frame);
-
-		// Add final frame to cache
-		final_cache.Add(frame);
 
 		// Return processed 'frame'
 		return frame;
@@ -1221,7 +1223,7 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame, std::shared_
 }
 
 // Apply effects to the source frame (if any)
-void Clip::apply_effects(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame, TimelineInfoStruct* options, bool before_keyframes)
+void Clip::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_number, TimelineInfoStruct* options, bool before_keyframes)
 {
 	for (auto effect : effects)
 	{
@@ -1237,18 +1239,18 @@ void Clip::apply_effects(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> ba
 		// Apply global timeline effects (i.e. transitions & masks... if any)
 		Timeline* timeline_instance = static_cast<Timeline*>(timeline);
 		options->is_before_clip_keyframes = before_keyframes;
-		timeline_instance->apply_effects(frame, background_frame->number, Layer(), options);
+		timeline_instance->apply_effects(frame, timeline_frame_number, Layer(), options);
 	}
 }
 
 // Compare 2 floating point numbers for equality
-bool Clip::isEqual(double a, double b)
+bool Clip::isNear(double a, double b)
 {
 	return fabs(a - b) < 0.000001;
 }
 
 // Apply keyframes to the source frame (if any)
-void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame) {
+void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	// Skip out if video was disabled or only an audio frame (no visualisation in use)
 	if (!frame->has_image_data) {
 		// Skip the rest of the image processing for performance reasons
@@ -1257,8 +1259,8 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> 
 
 	// Get image from clip, and create transparent background image
 	std::shared_ptr<QImage> source_image = frame->GetImage();
-	std::shared_ptr<QImage> background_canvas = std::make_shared<QImage>(background_frame->GetImage()->width(),
-																		 background_frame->GetImage()->height(),
+	std::shared_ptr<QImage> background_canvas = std::make_shared<QImage>(timeline_size.width(),
+                                                                         timeline_size.height(),
 																		 QImage::Format_RGBA8888_Premultiplied);
 	background_canvas->fill(QColor(Qt::transparent));
 
@@ -1312,7 +1314,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> 
 }
 
 // Apply apply_waveform image to the source frame (if any)
-void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame) {
+void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 
 	if (!Waveform()) {
 		// Exit if no waveform is needed
@@ -1321,15 +1323,14 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> b
 
 	// Get image from clip
 	std::shared_ptr<QImage> source_image = frame->GetImage();
-	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod(
 			"Clip::apply_waveform (Generate Waveform Image)",
 			"frame->number", frame->number,
 			"Waveform()", Waveform(),
-			"background_canvas->width()", background_canvas->width(),
-			"background_canvas->height()", background_canvas->height());
+			"width", timeline_size.width(),
+			"height", timeline_size.height());
 
 	// Get the color of the waveform
 	int red = wave_color.red.GetInt(frame->number);
@@ -1338,7 +1339,7 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> b
 	int alpha = wave_color.alpha.GetInt(frame->number);
 
 	// Generate Waveform Dynamically (the size of the timeline)
-	source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+	source_image = frame->GetWaveform(timeline_size.width(), timeline_size.height(), red, green, blue, alpha);
 	frame->AddImage(source_image);
 }
 
@@ -1376,11 +1377,6 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = source_image->size();
-
-	// Apply stretch scale to correctly fit the bounding-box
-	if (parentTrackedObject){
-		scale = SCALE_STRETCH;
-	}
 
 	switch (scale)
 	{
@@ -1578,11 +1574,11 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		"r", r,
 		"sx", sx, "sy", sy);
 
-	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+	if (!isNear(x, 0) || !isNear(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
 	}
-	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
+	if (!isNear(r, 0) || !isNear(shear_x_value, 0) || !isNear(shear_y_value, 0)) {
 		// ROTATE CLIP (around origin_x, origin_y)
 		float origin_x_offset = (scaled_source_width * origin_x_value);
 		float origin_y_offset = (scaled_source_height * origin_y_value);
@@ -1594,7 +1590,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	// SCALE CLIP (if needed)
 	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
 	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
-	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
+	if (!isNear(source_width_scale, 1.0) || !isNear(source_height_scale, 1.0)) {
 		transform.scale(source_width_scale, source_height_scale);
 	}
 

@@ -131,13 +131,13 @@ namespace openshot {
 		void apply_background(std::shared_ptr<openshot::Frame> frame, std::shared_ptr<openshot::Frame> background_frame);
 
 		/// Apply effects to the source frame (if any)
-		void apply_effects(std::shared_ptr<openshot::Frame> frame, std::shared_ptr<openshot::Frame> background_frame, TimelineInfoStruct* options, bool before_keyframes);
+		void apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, TimelineInfoStruct* options, bool before_keyframes);
 
 		/// Apply keyframes to an openshot::Frame and use an existing background frame (if any)
-		void apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame);
+		void apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size);
 
 		/// Apply waveform image to an openshot::Frame and use an existing background frame (if any)
-		void apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame);
+		void apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size);
 
 		/// Adjust frame number for Clip position and start (which can result in a different number)
 		int64_t adjust_timeline_framenumber(int64_t clip_frame_number);
@@ -154,8 +154,8 @@ namespace openshot {
 		/// Adjust the audio and image of a time mapped frame
 		void apply_timemapping(std::shared_ptr<openshot::Frame> frame);
 
-		/// Compare 2 floating point numbers
-		bool isEqual(double a, double b);
+		/// Compare 2 floating point numbers and return true if they are extremely close
+		bool isNear(double a, double b);
 
 		/// Sort effects by order
 		void sort_effects();
