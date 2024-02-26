@@ -314,7 +314,6 @@ Json::Value TrackedObjectBBox::JsonValue() const
 	root["BaseFPS"]["num"] = BaseFps.num;
 	root["BaseFPS"]["den"] = BaseFps.den;
 	root["TimeScale"] = TimeScale;
-	root["child_clip_id"] = ChildClipId();
 
 	// Keyframe's properties
 	root["delta_x"] = delta_x.JsonValue();
@@ -379,11 +378,6 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 	if (!root["protobuf_data_path"].isNull())
 		protobufDataPath = root["protobuf_data_path"].asString();
 
-	// Set the id of the child clip
-	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != Id()){
-		ChildClipId(root["child_clip_id"].asString());
-	}
-
 	// Set the Keyframes by the given JSON object
 	if (!root["delta_x"].isNull())
 		delta_x.SetJsonValue(root["delta_x"]);
@@ -424,9 +418,6 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 
 	// Add the ID of this object to the JSON object
 	root["box_id"] = add_property_json("Box ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-
-	// Add the ID of this object's child clip to the JSON object
-	root["child_clip_id"] = add_property_json("Child Clip ID", 0.0, "string", ChildClipId(), NULL, -1, -1, false, requested_frame);
 
 	// Add the data of given frame bounding-box to the JSON object
 	root["x1"] = add_property_json("X1", box.cx-(box.width/2), "float", "", NULL, 0.0, 1.0, true, requested_frame);

@@ -128,25 +128,6 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
             painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
         }
 
-        // Get the image of the Tracked Object' child clip
-        if (trackedData->ChildClipId() != ""){
-            // Cast the parent timeline of this effect
-            Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
-            if (parentTimeline){
-                // Get the Tracked Object's child clip
-                Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
-                if (childClip){
-                    // Get the image of the child clip for this frame
-                    std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
-                    std::shared_ptr<QImage> childClipImage = childClipFrame->GetImage();
-
-                    // Scale the original bounding box to this image
-                    QRectF scaledRect = scaleAndCenterRect(QRectF(childClipImage->rect()), boxRect);
-                    painter.drawImage(scaledRect, *childClipImage);
-                }
-            }
-        }
-
         painter.end();
     }
 

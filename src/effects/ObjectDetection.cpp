@@ -157,22 +157,6 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                             painter.drawText(QPointF(left, top), label);
                         }
                     }
-
-                    // Get the image of the Tracked Object' child clip
-                    if (trackedObject->ChildClipId() != "") {
-                        Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
-                        if (parentTimeline) {
-                            Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
-                            if (childClip) {
-                                std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
-                                std::shared_ptr<QImage> childClipImage = childClipFrame->GetImage();
-
-                                // Scale the original bounding box to this image
-                                QRectF scaledRect = Tracker::scaleAndCenterRect(QRectF(childClipImage->rect()), boxRect);
-                                painter.drawImage(scaledRect, *childClipImage);
-                            }
-                        }
-                    }
                 }
             }
         }
