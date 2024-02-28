@@ -251,9 +251,11 @@ void Clip::AttachToObject(std::string object_id)
 		// Check for valid tracked object
 		if (trackedObject){
 			SetAttachedObject(trackedObject);
+            parentClipObject = NULL;
 		}
 		else if (clipObject) {
 			SetAttachedClip(clipObject);
+            parentTrackedObject = nullptr;
 		}
 	}
 }
