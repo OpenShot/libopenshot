@@ -109,7 +109,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 
                     if (trackedObject->draw_box.GetValue(frame_number) == 1) {
                         // Draw bounding box
-                        bool display_text = !display_box_text.GetValue(frame_number);
+                        bool display_text = display_box_text.GetValue(frame_number);
                         std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
                         std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
                         int stroke_width = trackedObject->stroke_width.GetValue(frame_number);
