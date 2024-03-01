@@ -135,29 +135,6 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
     return frame;
 }
 
-QRectF Tracker::scaleAndCenterRect(const QRectF& sourceRect, const QRectF& targetRect) {
-    float sourceAspectRatio = sourceRect.width() / sourceRect.height();
-    float targetWidth = targetRect.width();
-    float targetHeight = targetRect.height();
-    float newWidth, newHeight;
-
-    if (sourceAspectRatio > targetRect.width() / targetRect.height()) {
-        // Source is wider relative to target, so it's constrained by target's width
-        newWidth = targetWidth;
-        newHeight = newWidth / sourceAspectRatio;
-    } else {
-        // Source is taller relative to target, so it's constrained by target's height
-        newHeight = targetHeight;
-        newWidth = newHeight * sourceAspectRatio;
-    }
-
-    // Center the new rectangle within the target rectangle
-    float newX = targetRect.left() + (targetWidth - newWidth) / 2.0;
-    float newY = targetRect.top() + (targetHeight - newHeight) / 2.0;
-
-    return QRectF(newX, newY, newWidth, newHeight);
-}
-
 // Get the indexes and IDs of all visible objects in the given frame
 std::string Tracker::GetVisibleObjects(int64_t frame_number) const{
 

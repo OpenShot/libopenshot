@@ -522,36 +522,3 @@ std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_numbe
 
 	return boxValues;
 }
-
-// Return a map that contains the properties of this object's parent clip
-std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number) const {
-
-	// Get the parent clip of this object as a Clip pointer
-	Clip* parentClip = (Clip *) ParentClip();
-
-	// Calculate parentClip's frame number
-	long parentClip_start_position = round( parentClip->Position() * parentClip->info.fps.ToDouble() ) + 1;
-	long parentClip_start_frame = ( parentClip->Start() * parentClip->info.fps.ToDouble() ) + 1;
-	float parentClip_frame_number = round(frame_number - parentClip_start_position) + parentClip_start_frame;
-
-	// Get parentClip's Keyframes
-	float parentClip_location_x = parentClip->location_x.GetValue(parentClip_frame_number);
-	float parentClip_location_y = parentClip->location_y.GetValue(parentClip_frame_number);
-	float parentClip_scale_x = parentClip->scale_x.GetValue(parentClip_frame_number);
-	float parentClip_scale_y = parentClip->scale_y.GetValue(parentClip_frame_number);
-	float parentClip_rotation = parentClip->rotation.GetValue(parentClip_frame_number);
-
-	// Initialize the parent clip properties map
-	std::map<std::string, float> parentClipProperties;
-
-	// Set the map properties
-	parentClipProperties["frame_number"] = parentClip_frame_number;
-	parentClipProperties["timeline_frame_number"] = frame_number;
-	parentClipProperties["location_x"] = parentClip_location_x;
-	parentClipProperties["location_y"] = parentClip_location_y;
-	parentClipProperties["scale_x"] = parentClip_scale_x;
-	parentClipProperties["scale_y"] = parentClip_scale_y;
-	parentClipProperties["rotation"] = parentClip_rotation;
-
-	return parentClipProperties;
-}

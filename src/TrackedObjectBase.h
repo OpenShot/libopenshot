@@ -66,8 +66,6 @@ namespace openshot {
 		virtual void ScalePoints(double scale) { return; };
 		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation
 		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
-		/// Return the main properties of the tracked object's parent clip - such as position, size and rotation
-		virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
 		/// Add a bounding box to the tracked object's BoxVec map
 		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };
 

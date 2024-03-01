@@ -71,9 +71,6 @@ namespace openshot
         /// Get the indexes and IDs of all visible objects in the given frame
         std::string GetVisibleObjects(int64_t frame_number) const override;
 
-        /// Find a rectangle inside another (centered)
-        static QRectF scaleAndCenterRect(const QRectF& sourceRect, const QRectF& targetRect);
-
         // Get and Set JSON methods
 
         /// Generate JSON string of this object

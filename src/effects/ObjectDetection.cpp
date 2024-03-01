@@ -82,9 +82,6 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
     painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 
     if (detectionsData.find(frame_number) != detectionsData.end()) {
-        float fw = frame_image->width();
-        float fh = frame_image->height();
-
         DetectionData detections = detectionsData[frame_number];
         for (int i = 0; i < detections.boxes.size(); i++) {
             if (detections.confidences.at(i) < confidence_threshold ||
@@ -99,13 +96,13 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
             if (trackedObject_it != trackedObjects.end()) {
                 std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_it->second);
 
-                if (trackedObject->Contains(frame_number) && trackedObject->visible.GetValue(frame_number) == 1) {
+                Clip* parentClip = (Clip*) trackedObject->ParentClip();
+                if (parentClip && trackedObject->Contains(frame_number) && trackedObject->visible.GetValue(frame_number) == 1) {
                     BBox trackedBox = trackedObject->GetBox(frame_number);
-
-                    QRectF boxRect((trackedBox.cx - trackedBox.width / 2) * fw,
-                                   (trackedBox.cy - trackedBox.height / 2) * fh,
-                                   trackedBox.width * fw,
-                                   trackedBox.height * fh);
+                    QRectF boxRect((trackedBox.cx - trackedBox.width / 2) * frame_image->width(),
+                                   (trackedBox.cy - trackedBox.height / 2) * frame_image->height(),
+                                   trackedBox.width * frame_image->width(),
+                                   trackedBox.height * frame_image->height());
 
                     if (trackedObject->draw_box.GetValue(frame_number) == 1) {
                         // Draw bounding box

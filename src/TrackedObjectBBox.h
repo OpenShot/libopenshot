@@ -211,9 +211,6 @@ namespace openshot
 
 		/// Return a map that contains the bounding box properties and it's keyframes indexed by their names
 		std::map<std::string, float> GetBoxValues(int64_t frame_number) const override;
-		/// Return a map that contains the properties of this object's parent clip
-		std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const override;
-
 	};
 } // namespace openshot
 
