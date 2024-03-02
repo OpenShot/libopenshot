@@ -479,6 +479,24 @@ openshot::EffectBase* Clip::GetEffect(const std::string& id)
 	return nullptr;
 }
 
+// Return the associated ParentClip (if any)
+openshot::Clip* Clip::GetParentClip() {
+    if (!parentObjectId.empty() && (!parentClipObject && !parentTrackedObject)) {
+        // Attach parent clip OR object to this clip
+        AttachToObject(parentObjectId);
+    }
+    return parentClipObject;
+}
+
+// Return the associated Parent Tracked Object (if any)
+std::shared_ptr<openshot::TrackedObjectBase> Clip::GetParentTrackedObject() {
+    if (!parentObjectId.empty() && (!parentClipObject && !parentTrackedObject)) {
+        // Attach parent clip OR object to this clip
+        AttachToObject(parentObjectId);
+    }
+    return parentTrackedObject;
+}
+
 // Get file extension
 std::string Clip::get_file_extension(std::string path)
 {
@@ -1409,7 +1427,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	float parentObject_rotation = 0.0;
 
 	// Get the parentClipObject properties
-	if (parentClipObject){
+	if (GetParentClip()){
         // Get the start trim position of the parent clip
         long parent_start_offset = parentClipObject->Start() * info.fps.ToDouble();
         long parent_frame_number = frame->number + parent_start_offset;
@@ -1425,7 +1443,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	}
 
     // Get the parentTrackedObject properties
-    if (parentTrackedObject){
+    if (GetParentTrackedObject()){
         // Get the attached object's parent clip's properties
         Clip* parentClip = (Clip*) parentTrackedObject->ParentClip();
         if (parentClip)

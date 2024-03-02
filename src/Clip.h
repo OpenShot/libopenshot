@@ -224,6 +224,12 @@ namespace openshot {
 		/// Close the internal reader
 		void Close() override;
 
+		/// Return the associated ParentClip (if any)
+		openshot::Clip* GetParentClip();
+
+		/// Return the associated Parent Tracked Object (if any)
+		std::shared_ptr<openshot::TrackedObjectBase> GetParentTrackedObject();
+
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
 
