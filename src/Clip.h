@@ -160,9 +160,8 @@ namespace openshot {
 		/// Sort effects by order
 		void sort_effects();
 
-		/// Reverse an audio buffer
-		void reverse_buffer(juce::AudioBuffer<float>* buffer);
-
+		/// Scale a source size to a target size (given a specific scale-type)
+		QSize scale_size(QSize source_size, ScaleType source_scale, int target_width, int target_height);
 
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent

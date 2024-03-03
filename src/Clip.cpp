@@ -504,33 +504,6 @@ std::string Clip::get_file_extension(std::string path)
 	return path.substr(path.find_last_of(".") + 1);
 }
 
-// Reverse an audio buffer
-void Clip::reverse_buffer(juce::AudioBuffer<float>* buffer)
-{
-	int number_of_samples = buffer->getNumSamples();
-	int channels = buffer->getNumChannels();
-
-	// Reverse array (create new buffer to hold the reversed version)
-	auto *reversed = new juce::AudioBuffer<float>(channels, number_of_samples);
-	reversed->clear();
-
-	for (int channel = 0; channel < channels; channel++)
-	{
-		int n=0;
-		for (int s = number_of_samples - 1; s >= 0; s--, n++)
-			reversed->getWritePointer(channel)[n] = buffer->getWritePointer(channel)[s];
-	}
-
-	// Copy the samples back to the original array
-	buffer->clear();
-	// Loop through channels, and get audio samples
-	for (int channel = 0; channel < channels; channel++)
-		// Get the audio samples for this channel
-		buffer->addFrom(channel, 0, reversed->getReadPointer(channel), number_of_samples, 1.0f);
-
-	delete reversed;
-}
-
 // Adjust the audio and image of a time mapped frame
 void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 {
@@ -1315,8 +1288,7 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	std::shared_ptr<QImage> source_image = frame->GetImage();
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod(
-			"Clip::apply_waveform (Generate Waveform Image)",
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_waveform (Generate Waveform Image)",
 			"frame->number", frame->number,
 			"Waveform()", Waveform(),
 			"width", timeline_size.width(),
@@ -1331,6 +1303,27 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	// Generate Waveform Dynamically (the size of the timeline)
 	source_image = frame->GetWaveform(timeline_size.width(), timeline_size.height(), red, green, blue, alpha);
 	frame->AddImage(source_image);
+}
+
+// Scale a source size to a target size (given a specific scale-type)
+QSize Clip::scale_size(QSize source_size, ScaleType source_scale, int target_width, int target_height) {
+    switch (source_scale)
+    {
+        case (SCALE_FIT): {
+            source_size.scale(target_width, target_height, Qt::KeepAspectRatio);
+            break;
+        }
+        case (SCALE_STRETCH): {
+            source_size.scale(target_width, target_height, Qt::IgnoreAspectRatio);
+            break;
+        }
+        case (SCALE_CROP): {
+            source_size.scale(target_width, target_height, Qt::KeepAspectRatioByExpanding);;
+            break;
+        }
+    }
+
+    return source_size;
 }
 
 // Get QTransform from keyframes
@@ -1359,63 +1352,13 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		}
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod(
-			"Clip::get_transform (Set Alpha & Opacity)",
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Set Alpha & Opacity)",
 			"alpha_value", alpha_value,
 			"frame->number", frame->number);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
-	QSize source_size = source_image->size();
-
-	switch (scale)
-	{
-		case (SCALE_FIT): {
-			source_size.scale(width, height, Qt::KeepAspectRatio);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod(
-				"Clip::get_transform (Scale: SCALE_FIT)",
-				"frame->number", frame->number,
-				"source_width", source_size.width(),
-				"source_height", source_size.height());
-			break;
-		}
-		case (SCALE_STRETCH): {
-			source_size.scale(width, height, Qt::IgnoreAspectRatio);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod(
-				"Clip::get_transform (Scale: SCALE_STRETCH)",
-				"frame->number", frame->number,
-				"source_width", source_size.width(),
-				"source_height", source_size.height());
-			break;
-		}
-		case (SCALE_CROP): {
-			source_size.scale(width, height, Qt::KeepAspectRatioByExpanding);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod(
-				"Clip::get_transform (Scale: SCALE_CROP)",
-				"frame->number", frame->number,
-				"source_width", source_size.width(),
-				"source_height", source_size.height());
-			break;
-		}
-		case (SCALE_NONE): {
-			// Image is already the original size (i.e. no scaling mode) relative
-			// to the preview window size (i.e. timeline / preview ratio). No further
-			// scaling is needed here.
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod(
-				"Clip::get_transform (Scale: SCALE_NONE)",
-				"frame->number", frame->number,
-				"source_width", source_size.width(),
-				"source_height", source_size.height());
-			break;
-		}
-	}
+	QSize source_size = scale_size(source_image->size(), scale, width, height);
 
 	// Initialize parent object's properties (Clip or Tracked Object)
 	float parentObject_location_x = 0.0;
@@ -1455,11 +1398,22 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
             // Access the parentTrackedObject's properties
             std::map<std::string, float> trackedObjectProperties = parentTrackedObject->GetBoxValues(parent_frame_number);
 
-            // Get the Tracked Object's properties and correct them by the clip's reference system
+            // Get actual scaled parent size
+            QSize parent_size = scale_size(QSize(parentClip->info.width, parentClip->info.height),
+                                           parentClip->scale, width, height);
+
+            // Get actual scaled tracked object size
+            int trackedWidth = trackedObjectProperties["w"] * trackedObjectProperties["sx"] * parent_size.width() *
+                    parentClip->scale_x.GetValue(parent_frame_number);
+            int trackedHeight = trackedObjectProperties["h"] * trackedObjectProperties["sy"] * parent_size.height() *
+                    parentClip->scale_y.GetValue(parent_frame_number);
+
+            // Scale the clip source_size based on the actual tracked object size
+            source_size = scale_size(source_size, scale, trackedWidth, trackedHeight);
+
+            // Update parentObject's properties based on the tracked object's properties and parent clip's scale
             parentObject_location_x = parentClip->location_x.GetValue(parent_frame_number) + ((trackedObjectProperties["cx"] - 0.5) * parentClip->scale_x.GetValue(parent_frame_number));
             parentObject_location_y = parentClip->location_y.GetValue(parent_frame_number) + ((trackedObjectProperties["cy"] - 0.5) * parentClip->scale_y.GetValue(parent_frame_number));
-            parentObject_scale_x = trackedObjectProperties["w"] * trackedObjectProperties["sx"] * parentClip->scale_x.GetValue(parent_frame_number);
-            parentObject_scale_y = trackedObjectProperties["h"] * trackedObjectProperties["sy"] * parentClip->scale_y.GetValue(parent_frame_number);
             parentObject_rotation = trackedObjectProperties["r"] + parentClip->rotation.GetValue(parent_frame_number);
         }
     }
