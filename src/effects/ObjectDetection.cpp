@@ -30,7 +30,8 @@ using namespace openshot;
 
 
 /// Blank constructor, useful when using Json to load the effect properties
-ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
+ObjectDetection::ObjectDetection(std::string clipObDetectDataPath) :
+display_box_text(1.0), display_boxes(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -43,7 +44,8 @@ ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
 }
 
 // Default constructor
-ObjectDetection::ObjectDetection()
+ObjectDetection::ObjectDetection() :
+        display_box_text(1.0), display_boxes(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -104,55 +106,54 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                                    trackedBox.width * frame_image->width(),
                                    trackedBox.height * frame_image->height());
 
-                    if (trackedObject->draw_box.GetValue(frame_number) == 1) {
-                        // Draw bounding box
-                        bool display_text = display_box_text.GetValue(frame_number);
-                        std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
-                        std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
-                        int stroke_width = trackedObject->stroke_width.GetValue(frame_number);
-                        float stroke_alpha = trackedObject->stroke_alpha.GetValue(frame_number);
-                        float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
-                        float bg_corner = trackedObject->background_corner.GetValue(frame_number);
+                    // Get properties of tracked object (i.e. colors, stroke width, etc...)
+                    std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
+                    std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
+                    int stroke_width = trackedObject->stroke_width.GetValue(frame_number);
+                    float stroke_alpha = trackedObject->stroke_alpha.GetValue(frame_number);
+                    float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
+                    float bg_corner = trackedObject->background_corner.GetValue(frame_number);
 
-                        // Set the pen for the border
-                        QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
-                        pen.setWidth(stroke_width);
-                        painter.setPen(pen);
+                    // Set the pen for the border
+                    QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
+                    pen.setWidth(stroke_width);
+                    painter.setPen(pen);
 
-                        // Set the brush for the background
-                        QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
-                        painter.setBrush(brush);
+                    // Set the brush for the background
+                    QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
+                    painter.setBrush(brush);
 
-                        // Draw the rounded rectangle
+                    if (display_boxes.GetValue(frame_number) == 1 && trackedObject->draw_box.GetValue(frame_number) == 1) {
+                        // Only draw boxes if both properties are set to YES (draw all boxes, and draw box of the selected box)
                         painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
+                    }
 
-                        if(display_text) {
-                            // Draw text label above bounding box
-                            // Get the confidence and classId for the current detection
-                            int classId = detections.classIds.at(i);
+                    if(display_box_text.GetValue(frame_number) == 1) {
+                        // Draw text label above bounding box
+                        // Get the confidence and classId for the current detection
+                        int classId = detections.classIds.at(i);
 
-                            // Get the label for the class name and its confidence
-                            QString label = QString::number(objectId);
-                            if (!classNames.empty()) {
-                                label = QString::fromStdString(classNames[classId]) + ":" + label;
-                            }
-
-                            // Set up the painter, font, and pen
-                            QFont font;
-                            font.setPixelSize(14);
-                            painter.setFont(font);
-
-                            // Calculate the size of the text
-                            QFontMetrics fontMetrics(font);
-                            QSize labelSize = fontMetrics.size(Qt::TextSingleLine, label);
-
-                            // Define the top left point of the rectangle
-                            double left = boxRect.center().x() - (labelSize.width() / 2.0);
-                            double top = std::max(static_cast<int>(boxRect.top()), labelSize.height()) - 4.0;
-
-                            // Draw the text
-                            painter.drawText(QPointF(left, top), label);
+                        // Get the label for the class name and its confidence
+                        QString label = QString::number(objectId);
+                        if (!classNames.empty()) {
+                            label = QString::fromStdString(classNames[classId]) + ":" + label;
                         }
+
+                        // Set up the painter, font, and pen
+                        QFont font;
+                        font.setPixelSize(14);
+                        painter.setFont(font);
+
+                        // Calculate the size of the text
+                        QFontMetrics fontMetrics(font);
+                        QSize labelSize = fontMetrics.size(Qt::TextSingleLine, label);
+
+                        // Define the top left point of the rectangle
+                        double left = boxRect.center().x() - (labelSize.width() / 2.0);
+                        double top = std::max(static_cast<int>(boxRect.top()), labelSize.height()) - 4.0;
+
+                        // Draw the text
+                        painter.drawText(QPointF(left, top), label);
                     }
                 }
             }
@@ -343,6 +344,7 @@ Json::Value ObjectDetection::JsonValue() const {
 	root["selected_object_index"] = selectedObjectIndex;
 	root["confidence_threshold"] = confidence_threshold;
 	root["display_box_text"] = display_box_text.JsonValue();
+	root["display_boxes"] = display_boxes.JsonValue();
 
 	// Add tracked object's IDs to root
 	Json::Value objects;
@@ -398,6 +400,9 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 
 	if (!root["display_box_text"].isNull())
 		display_box_text.SetJsonValue(root["display_box_text"]);
+
+    if (!root["display_boxes"].isNull())
+        display_boxes.SetJsonValue(root["display_boxes"]);
 
     if (!root["class_filter"].isNull()) {
         class_filter = root["class_filter"].asString();
@@ -458,9 +463,13 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	root["confidence_threshold"] = add_property_json("Confidence Theshold", confidence_threshold, "float", "", NULL, 0, 1, false, requested_frame);
 	root["class_filter"] = add_property_json("Class Filter", 0.0, "string", class_filter, NULL, -1, -1, false, requested_frame);
 
-	root["display_box_text"] = add_property_json("Draw Box Text", display_box_text.GetValue(requested_frame), "int", "", &display_box_text, 0, 1, false, requested_frame);
+	root["display_box_text"] = add_property_json("Draw All Text", display_box_text.GetValue(requested_frame), "int", "", &display_box_text, 0, 1, false, requested_frame);
 	root["display_box_text"]["choices"].append(add_property_choice_json("Yes", true, display_box_text.GetValue(requested_frame)));
 	root["display_box_text"]["choices"].append(add_property_choice_json("No", false, display_box_text.GetValue(requested_frame)));
+
+    root["display_boxes"] = add_property_json("Draw All Boxes", display_boxes.GetValue(requested_frame), "int", "", &display_boxes, 0, 1, false, requested_frame);
+    root["display_boxes"]["choices"].append(add_property_choice_json("Yes", true, display_boxes.GetValue(requested_frame)));
+    root["display_boxes"]["choices"].append(add_property_choice_json("No", false, display_boxes.GetValue(requested_frame)));
 
 	// Return formatted string
 	return root.toStyledString();

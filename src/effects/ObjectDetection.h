@@ -62,10 +62,15 @@ namespace openshot
         std::vector<std::string> classNames;
         std::vector<cv::Scalar> classesColor;
 
-        /// Draw class name and confidence score on top of the bounding box
+        /// Draw ALL class name and ID #'s on top of the bounding boxes (or hide all text)
         Keyframe display_box_text;
+
+        /// Draw ALL tracked bounding boxes (or hide all boxes)
+        Keyframe display_boxes;
+
         /// Minimum confidence value to display the detected objects
         float confidence_threshold = 0.5;
+
         /// Contain the user selected classes for visualization
         std::vector<std::string> display_classes;
         std::string class_filter;

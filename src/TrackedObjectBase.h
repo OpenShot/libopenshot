@@ -39,7 +39,10 @@ namespace openshot {
 
 	public:
 
+	    /// Keyframe to track if a box is visible in the current frame (read-only)
 		Keyframe visible;
+
+	    /// Keyframe to determine if a specific box is drawn (or hidden)
 		Keyframe draw_box;
 
 		/// Default constructor
