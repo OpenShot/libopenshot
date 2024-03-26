@@ -374,18 +374,25 @@ void Keyframe::SetJsonValue(const Json::Value root) {
 	Points.clear();
 	Points.shrink_to_fit();
 
-	if (!root["Points"].isNull())
-		// loop through points
-		for (const auto existing_point : root["Points"]) {
-			// Create Point
-			Point p;
+	if (root.isObject() && !root["Points"].isNull()) {
+        // loop through points in JSON Object
+        for (const auto existing_point : root["Points"]) {
+            // Create Point
+            Point p;
 
-			// Load Json into Point
-			p.SetJsonValue(existing_point);
+            // Load Json into Point
+            p.SetJsonValue(existing_point);
 
-			// Add Point to Keyframe
-			AddPoint(p);
-		}
+            // Add Point to Keyframe
+            AddPoint(p);
+        }
+    } else if (root.isNumeric()) {
+        // Create Point from Numeric value
+        Point p(root.asFloat());
+
+        // Add Point to Keyframe
+        AddPoint(p);
+	}
 }
 
 // Get the change in Y value (from the previous Y value)

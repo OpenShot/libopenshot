@@ -26,20 +26,19 @@ using namespace openshot;
 
 // Default Constructor, delegating
 TrackedObjectBBox::TrackedObjectBBox()
-	: TrackedObjectBBox::TrackedObjectBBox(0, 0, 255, 0) {}
+	: TrackedObjectBBox::TrackedObjectBBox(0, 0, 255, 255) {}
 
 // Constructor that takes RGBA values for stroke, and sets the bounding-box
 // displacement as 0 and the scales as 1 for the first frame
 TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa)
 	: delta_x(0.0), delta_y(0.0),
 	  scale_x(1.0), scale_y(1.0), rotation(0.0),
-	  background_alpha(1.0), background_corner(0),
-	  stroke_width(2) , stroke_alpha(0.0),
+	  background_alpha(0.0), background_corner(12),
+	  stroke_width(2) , stroke_alpha(0.7),
 	  stroke(Red, Green, Blue, Alfa),
-	  background(0, 0, 255, 0)
+	  background(0, 0, 255, Alfa)
 {
 	this->TimeScale = 1.0;
-	return;
 }
 
 // Add a BBox to the BoxVec map
@@ -315,7 +314,6 @@ Json::Value TrackedObjectBBox::JsonValue() const
 	root["BaseFPS"]["num"] = BaseFps.num;
 	root["BaseFPS"]["den"] = BaseFps.den;
 	root["TimeScale"] = TimeScale;
-	root["child_clip_id"] = ChildClipId();
 
 	// Keyframe's properties
 	root["delta_x"] = delta_x.JsonValue();
@@ -380,11 +378,6 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 	if (!root["protobuf_data_path"].isNull())
 		protobufDataPath = root["protobuf_data_path"].asString();
 
-	// Set the id of the child clip
-	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != Id()){
-		ChildClipId(root["child_clip_id"].asString());
-	}
-
 	// Set the Keyframes by the given JSON object
 	if (!root["delta_x"].isNull())
 		delta_x.SetJsonValue(root["delta_x"]);
@@ -426,14 +419,11 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	// Add the ID of this object to the JSON object
 	root["box_id"] = add_property_json("Box ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 
-	// Add the ID of this object's child clip to the JSON object
-	root["child_clip_id"] = add_property_json("Child Clip ID", 0.0, "string", ChildClipId(), NULL, -1, -1, false, requested_frame);
-
 	// Add the data of given frame bounding-box to the JSON object
-	root["x1"] = add_property_json("X1", box.cx-(box.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["y1"] = add_property_json("Y1", box.cy-(box.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["x2"] = add_property_json("X2", box.cx+(box.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["y2"] = add_property_json("Y2", box.cy+(box.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["x1"] = add_property_json("X1", box.cx-(box.width/2), "float", "", NULL, 0.0, 1.0, true, requested_frame);
+	root["y1"] = add_property_json("Y1", box.cy-(box.height/2), "float", "", NULL, 0.0, 1.0, true, requested_frame);
+	root["x2"] = add_property_json("X2", box.cx+(box.width/2), "float", "", NULL, 0.0, 1.0, true, requested_frame);
+	root["y2"] = add_property_json("Y2", box.cy+(box.height/2), "float", "", NULL, 0.0, 1.0, true, requested_frame);
 
 	// Add the bounding-box Keyframes to the JSON object
 	root["delta_x"] = add_property_json("Displacement X-axis", delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
@@ -441,11 +431,11 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
 	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
-	root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, false, requested_frame);
+	root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, true, requested_frame);
 
-	root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, -1, 1.0, false, requested_frame);
-	root["draw_box"]["choices"].append(add_property_choice_json("Off", 0, draw_box.GetValue(requested_frame)));
-	root["draw_box"]["choices"].append(add_property_choice_json("On", 1, draw_box.GetValue(requested_frame)));
+	root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, 0, 1, false, requested_frame);
+    root["draw_box"]["choices"].append(add_property_choice_json("Yes", true, draw_box.GetValue(requested_frame)));
+	root["draw_box"]["choices"].append(add_property_choice_json("No", false, draw_box.GetValue(requested_frame)));
 
 	root["stroke"] = add_property_json("Border", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["stroke"]["red"] = add_property_json("Red", stroke.red.GetValue(requested_frame), "float", "", &stroke.red, 0, 255, false, requested_frame);
@@ -455,7 +445,7 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["stroke_alpha"] = add_property_json("Stroke alpha", stroke_alpha.GetValue(requested_frame), "float", "", &stroke_alpha, 0.0, 1.0, false, requested_frame);
 
 	root["background_alpha"] = add_property_json("Background Alpha", background_alpha.GetValue(requested_frame), "float", "", &background_alpha, 0.0, 1.0, false, requested_frame);
-	root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 60.0, false, requested_frame);
+	root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 150.0, false, requested_frame);
 
 	root["background"] = add_property_json("Background", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["background"]["red"] = add_property_json("Red", background.red.GetValue(requested_frame), "float", "", &background.red, 0, 255, false, requested_frame);
@@ -529,37 +519,4 @@ std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_numbe
 
 
 	return boxValues;
-}
-
-// Return a map that contains the properties of this object's parent clip
-std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number) const {
-
-	// Get the parent clip of this object as a Clip pointer
-	Clip* parentClip = (Clip *) ParentClip();
-
-	// Calculate parentClip's frame number
-	long parentClip_start_position = round( parentClip->Position() * parentClip->info.fps.ToDouble() ) + 1;
-	long parentClip_start_frame = ( parentClip->Start() * parentClip->info.fps.ToDouble() ) + 1;
-	float parentClip_frame_number = round(frame_number - parentClip_start_position) + parentClip_start_frame;
-
-	// Get parentClip's Keyframes
-	float parentClip_location_x = parentClip->location_x.GetValue(parentClip_frame_number);
-	float parentClip_location_y = parentClip->location_y.GetValue(parentClip_frame_number);
-	float parentClip_scale_x = parentClip->scale_x.GetValue(parentClip_frame_number);
-	float parentClip_scale_y = parentClip->scale_y.GetValue(parentClip_frame_number);
-	float parentClip_rotation = parentClip->rotation.GetValue(parentClip_frame_number);
-
-	// Initialize the parent clip properties map
-	std::map<std::string, float> parentClipProperties;
-
-	// Set the map properties
-	parentClipProperties["frame_number"] = parentClip_frame_number;
-	parentClipProperties["timeline_frame_number"] = frame_number;
-	parentClipProperties["location_x"] = parentClip_location_x;
-	parentClipProperties["location_y"] = parentClip_location_y;
-	parentClipProperties["scale_x"] = parentClip_scale_x;
-	parentClipProperties["scale_y"] = parentClip_scale_y;
-	parentClipProperties["rotation"] = parentClip_rotation;
-
-	return parentClipProperties;
 }

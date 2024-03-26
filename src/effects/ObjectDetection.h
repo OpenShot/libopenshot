@@ -60,25 +60,23 @@ namespace openshot
         std::string protobuf_data_path;
         std::map<size_t, DetectionData> detectionsData;
         std::vector<std::string> classNames;
-
         std::vector<cv::Scalar> classesColor;
 
-        /// Draw class name and confidence score on top of the bounding box
+        /// Draw ALL class name and ID #'s on top of the bounding boxes (or hide all text)
         Keyframe display_box_text;
+
+        /// Draw ALL tracked bounding boxes (or hide all boxes)
+        Keyframe display_boxes;
+
         /// Minimum confidence value to display the detected objects
         float confidence_threshold = 0.5;
+
         /// Contain the user selected classes for visualization
         std::vector<std::string> display_classes;
         std::string class_filter;
 
         /// Init effect settings
         void init_effect_details();
-        /// Draw bounding box with class and score text
-        void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color, float alpha,
-                        int thickness, bool is_background, bool draw_text);
-        /// Draw rotated rectangle with alpha channel
-        void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
-
 
     public:
         /// Index of the Tracked Object that was selected to modify it's properties

@@ -35,13 +35,14 @@ namespace openshot {
 	class TrackedObjectBase {
 	protected:
 		std::string id;
-		std::string childClipId;
-
 		ClipBase* parentClip;
 
 	public:
 
+	    /// Keyframe to track if a box is visible in the current frame (read-only)
 		Keyframe visible;
+
+	    /// Keyframe to determine if a specific box is drawn (or hidden)
 		Keyframe draw_box;
 
 		/// Default constructor
@@ -60,9 +61,6 @@ namespace openshot {
 		/// Get and set the parentClip of this object
 		ClipBase* ParentClip() const { return parentClip; }
 		void ParentClip(ClipBase* clip) { parentClip = clip; }
-		/// Get and set the Id of the childClip of this object
-		std::string ChildClipId() const { return childClipId; };
-		void ChildClipId(std::string _childClipId) { childClipId = _childClipId; };
 
 		/// Check if there is data for the exact frame number
 		virtual bool ExactlyContains(int64_t frame_number) const { return {}; };
@@ -71,8 +69,6 @@ namespace openshot {
 		virtual void ScalePoints(double scale) { return; };
 		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation
 		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
-		/// Return the main properties of the tracked object's parent clip - such as position, size and rotation
-		virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
 		/// Add a bounding box to the tracked object's BoxVec map
 		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };
 

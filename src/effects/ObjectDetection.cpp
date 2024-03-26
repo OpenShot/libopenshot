@@ -23,12 +23,15 @@
 #include <QImage>
 #include <QPainter>
 #include <QRectF>
+#include <QString>
+#include <QStringList>
 using namespace std;
 using namespace openshot;
 
 
 /// Blank constructor, useful when using Json to load the effect properties
-ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
+ObjectDetection::ObjectDetection(std::string clipObDetectDataPath) :
+display_box_text(1.0), display_boxes(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -41,7 +44,8 @@ ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
 }
 
 // Default constructor
-ObjectDetection::ObjectDetection()
+ObjectDetection::ObjectDetection() :
+        display_box_text(1.0), display_boxes(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -67,213 +71,99 @@ void ObjectDetection::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
-{
-	// Get the frame's image
-	cv::Mat cv_image = frame->GetImageCV();
+std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) {
+    // Get the frame's QImage
+    std::shared_ptr<QImage> frame_image = frame->GetImage();
 
-	// Check if frame isn't NULL
-	if(cv_image.empty()){
-		return frame;
-	}
+    // Check if frame isn't NULL
+    if(!frame_image || frame_image->isNull()) {
+        return frame;
+    }
 
-	// Initialize the Qt rectangle that will hold the positions of the bounding-box
-	std::vector<QRectF> boxRects;
-	// Initialize the image of the TrackedObject child clip
-	std::vector<std::shared_ptr<QImage>> childClipImages;
+    QPainter painter(frame_image.get());
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 
-	// Check if track data exists for the requested frame
-	if (detectionsData.find(frame_number) != detectionsData.end()) {
-		float fw = cv_image.size().width;
-		float fh = cv_image.size().height;
+    if (detectionsData.find(frame_number) != detectionsData.end()) {
+        DetectionData detections = detectionsData[frame_number];
+        for (int i = 0; i < detections.boxes.size(); i++) {
+            if (detections.confidences.at(i) < confidence_threshold ||
+                (!display_classes.empty() &&
+                 std::find(display_classes.begin(), display_classes.end(), classNames[detections.classIds.at(i)]) == display_classes.end())) {
+                continue;
+            }
 
-		DetectionData detections = detectionsData[frame_number];
-		for(int i = 0; i<detections.boxes.size(); i++){
+            int objectId = detections.objectIds.at(i);
+            auto trackedObject_it = trackedObjects.find(objectId);
 
-			// Does not show boxes with confidence below the threshold
-			if(detections.confidences.at(i) < confidence_threshold){
-				continue;
-			}
-			// Just display selected classes
-			if( display_classes.size() > 0 &&
-				std::find(display_classes.begin(), display_classes.end(), classNames[detections.classIds.at(i)]) == display_classes.end()){
-				continue;
-			}
+            if (trackedObject_it != trackedObjects.end()) {
+                std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_it->second);
 
-			// Get the object id
-			int objectId = detections.objectIds.at(i);
+                Clip* parentClip = (Clip*) trackedObject->ParentClip();
+                if (parentClip && trackedObject->Contains(frame_number) && trackedObject->visible.GetValue(frame_number) == 1) {
+                    BBox trackedBox = trackedObject->GetBox(frame_number);
+                    QRectF boxRect((trackedBox.cx - trackedBox.width / 2) * frame_image->width(),
+                                   (trackedBox.cy - trackedBox.height / 2) * frame_image->height(),
+                                   trackedBox.width * frame_image->width(),
+                                   trackedBox.height * frame_image->height());
 
-			// Search for the object in the trackedObjects map
-			auto trackedObject_it = trackedObjects.find(objectId);
+                    // Get properties of tracked object (i.e. colors, stroke width, etc...)
+                    std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
+                    std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
+                    int stroke_width = trackedObject->stroke_width.GetValue(frame_number);
+                    float stroke_alpha = trackedObject->stroke_alpha.GetValue(frame_number);
+                    float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
+                    float bg_corner = trackedObject->background_corner.GetValue(frame_number);
 
-			// Cast the object as TrackedObjectBBox
-			std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_it->second);
+                    // Set the pen for the border
+                    QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
+                    pen.setWidth(stroke_width);
+                    painter.setPen(pen);
 
-			// Check if the tracked object has data for this frame
-			if (trackedObject->Contains(frame_number) &&
-				trackedObject->visible.GetValue(frame_number) == 1)
-			{
-				// Get the bounding-box of given frame
-				BBox trackedBox = trackedObject->GetBox(frame_number);
-				bool draw_text = !display_box_text.GetValue(frame_number);
-				std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
-				int stroke_width = trackedObject->stroke_width.GetValue(frame_number);
-				float stroke_alpha = trackedObject->stroke_alpha.GetValue(frame_number);
-				std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
-				float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
+                    // Set the brush for the background
+                    QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
+                    painter.setBrush(brush);
 
-				cv::Rect2d box(
-					(int)( (trackedBox.cx-trackedBox.width/2)*fw),
-					(int)( (trackedBox.cy-trackedBox.height/2)*fh),
-					(int)(  trackedBox.width*fw),
-					(int)(  trackedBox.height*fh)
-					);
+                    if (display_boxes.GetValue(frame_number) == 1 && trackedObject->draw_box.GetValue(frame_number) == 1) {
+                        // Only draw boxes if both properties are set to YES (draw all boxes, and draw box of the selected box)
+                        painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
+                    }
 
-				// If the Draw Box property is off, then make the box invisible
-				if (trackedObject->draw_box.GetValue(frame_number) == 0)
-				{
-					bg_alpha = 1.0;
-					stroke_alpha = 1.0;
-				}
+                    if(display_box_text.GetValue(frame_number) == 1) {
+                        // Draw text label above bounding box
+                        // Get the confidence and classId for the current detection
+                        int classId = detections.classIds.at(i);
 
-				drawPred(detections.classIds.at(i), detections.confidences.at(i),
-					box, cv_image, detections.objectIds.at(i), bg_rgba, bg_alpha, 1, true, draw_text);
-				drawPred(detections.classIds.at(i), detections.confidences.at(i),
-					box, cv_image, detections.objectIds.at(i), stroke_rgba, stroke_alpha, stroke_width, false, draw_text);
+                        // Get the label for the class name and its confidence
+                        QString label = QString::number(objectId);
+                        if (!classNames.empty()) {
+                            label = QString::fromStdString(classNames[classId]) + ":" + label;
+                        }
 
+                        // Set up the painter, font, and pen
+                        QFont font;
+                        font.setPixelSize(14);
+                        painter.setFont(font);
 
-				// Get the Detected Object's child clip
-				if (trackedObject->ChildClipId() != ""){
-					// Cast the parent timeline of this effect
-					Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
-					if (parentTimeline){
-						// Get the Tracked Object's child clip
-						Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
+                        // Calculate the size of the text
+                        QFontMetrics fontMetrics(font);
+                        QSize labelSize = fontMetrics.size(Qt::TextSingleLine, label);
 
-						if (childClip){
-							// Get the image of the child clip for this frame
-							std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
-							childClipImages.push_back(childClipFrame->GetImage());
+                        // Define the top left point of the rectangle
+                        double left = boxRect.center().x() - (labelSize.width() / 2.0);
+                        double top = std::max(static_cast<int>(boxRect.top()), labelSize.height()) - 4.0;
 
-							// Set the Qt rectangle with the bounding-box properties
-							QRectF boxRect;
-							boxRect.setRect((int)((trackedBox.cx-trackedBox.width/2)*fw),
-											(int)((trackedBox.cy - trackedBox.height/2)*fh),
-											(int)(trackedBox.width*fw),
-											(int)(trackedBox.height*fh));
-							boxRects.push_back(boxRect);
-						}
-					}
-				}
-			}
-		}
-	}
+                        // Draw the text
+                        painter.drawText(QPointF(left, top), label);
+                    }
+                }
+            }
+        }
+    }
 
-	// Update Qt image with new Opencv frame
-	frame->SetImageCV(cv_image);
+    painter.end();
 
-	// Set the bounding-box image with the Tracked Object's child clip image
-	if(boxRects.size() > 0){
-		// Get the frame image
-		QImage frameImage = *(frame->GetImage());
-		for(int i; i < boxRects.size();i++){
-			// Set a Qt painter to the frame image
-			QPainter painter(&frameImage);
-			// Draw the child clip image inside the bounding-box
-			painter.drawImage(boxRects[i], *childClipImages[i]);
-		}
-		// Set the frame image as the composed image
-		frame->AddImage(std::make_shared<QImage>(frameImage));
-	}
-
-	return frame;
-}
-
-void ObjectDetection::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha,
-										int thickness, bool is_background){
-	// Get the bouding box vertices
-	cv::Point2f vertices2f[4];
-	box.points(vertices2f);
-
-	// TODO: take a rectangle of frame_image by refencence and draw on top of that to improve speed
-	// select min enclosing rectangle to draw on a small portion of the image
-	// cv::Rect rect  = box.boundingRect();
-	// cv::Mat image = frame_image(rect)
-
-	if(is_background){
-		cv::Mat overlayFrame;
-		frame_image.copyTo(overlayFrame);
-
-		// draw bounding box background
-		cv::Point vertices[4];
-		for(int i = 0; i < 4; ++i){
-			vertices[i] = vertices2f[i];}
-
-		cv::Rect rect  = box.boundingRect();
-		cv::fillConvexPoly(overlayFrame, vertices, 4, cv::Scalar(color[2],color[1],color[0]), cv::LINE_AA);
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
-	}
-	else{
-		cv::Mat overlayFrame;
-		frame_image.copyTo(overlayFrame);
-
-		// Draw bounding box
-		for (int i = 0; i < 4; i++)
-		{
-			cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
-						thickness, cv::LINE_AA);
-		}
-
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
-	}
-}
-
-void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color,
-								float alpha, int thickness, bool is_background, bool display_text)
-{
-
-	if(is_background){
-		cv::Mat overlayFrame;
-		frame.copyTo(overlayFrame);
-
-		//Draw a rectangle displaying the bounding box
-		cv::rectangle(overlayFrame, box, cv::Scalar(color[2],color[1],color[0]), cv::FILLED);
-
-	   // add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame, alpha, 0, frame);
-	}
-	else{
-		cv::Mat overlayFrame;
-		frame.copyTo(overlayFrame);
-
-		//Draw a rectangle displaying the bounding box
-		cv::rectangle(overlayFrame, box, cv::Scalar(color[2],color[1],color[0]), thickness);
-
-		if(display_text){
-			//Get the label for the class name and its confidence
-			std::string label = cv::format("%.2f", conf);
-			if (!classNames.empty())
-			{
-				CV_Assert(classId < (int)classNames.size());
-				label = classNames[classId] + ":" + label;
-			}
-
-			//Display the label at the top of the bounding box
-			int baseLine;
-			cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-
-			double left = box.x;
-			double top = std::max((int)box.y, labelSize.height);
-
-			cv::rectangle(overlayFrame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine),
-							cv::Scalar(color[2],color[1],color[0]), cv::FILLED);
-			putText(overlayFrame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
-		}
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame, alpha, 0, frame);
-	}
+    // The frame's QImage has been modified in place, so we just return the original frame
+    return frame;
 }
 
 // Load protobuf data file
@@ -348,6 +238,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 			{
 				// There is no tracked object with that id, so insert a new one
 				TrackedObjectBBox trackedObj((int)classesColor[classId](0), (int)classesColor[classId](1), (int)classesColor[classId](2), (int)0);
+                trackedObj.stroke_alpha = Keyframe(1.0);
 				trackedObj.AddBox(id, x+(w/2), y+(h/2), w, h, 0.0);
 
 				std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
@@ -387,6 +278,7 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
 	Json::Value root;
 	root["visible_objects_index"] = Json::Value(Json::arrayValue);
 	root["visible_objects_id"] = Json::Value(Json::arrayValue);
+    root["visible_class_names"] = Json::Value(Json::arrayValue);
 
 	// Check if track data exists for the requested frame
 	if (detectionsData.find(frame_number) == detectionsData.end()){
@@ -401,11 +293,21 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
 			continue;
 		}
 
-		// Just display selected classes
-		if( display_classes.size() > 0 &&
-			std::find(display_classes.begin(), display_classes.end(), classNames[detections.classIds.at(i)]) == display_classes.end()){
-			continue;
-		}
+		// Get class name of tracked object
+        auto className = classNames[detections.classIds.at(i)];
+
+        // If display_classes is not empty, check if className is in it
+        if (!display_classes.empty()) {
+            auto it = std::find(display_classes.begin(), display_classes.end(), className);
+            if (it == display_classes.end()) {
+                // If not in display_classes, skip this detection
+                continue;
+            }
+            root["visible_class_names"].append(className);
+        } else {
+            // include all class names
+            root["visible_class_names"].append(className);
+        }
 
 		int objectId = detections.objectIds.at(i);
 		// Search for the object in the trackedObjects map
@@ -442,6 +344,7 @@ Json::Value ObjectDetection::JsonValue() const {
 	root["selected_object_index"] = selectedObjectIndex;
 	root["confidence_threshold"] = confidence_threshold;
 	root["display_box_text"] = display_box_text.JsonValue();
+	root["display_boxes"] = display_boxes.JsonValue();
 
 	// Add tracked object's IDs to root
 	Json::Value objects;
@@ -498,18 +401,27 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 	if (!root["display_box_text"].isNull())
 		display_box_text.SetJsonValue(root["display_box_text"]);
 
-	if (!root["class_filter"].isNull()){
-		class_filter = root["class_filter"].asString();
-		std::stringstream ss(class_filter);
-		display_classes.clear();
-		while( ss.good() )
-		{
-			// Parse comma separated string
-			std::string substr;
-			std::getline( ss, substr, ',' );
-			display_classes.push_back( substr );
-		}
-	}
+    if (!root["display_boxes"].isNull())
+        display_boxes.SetJsonValue(root["display_boxes"]);
+
+    if (!root["class_filter"].isNull()) {
+        class_filter = root["class_filter"].asString();
+
+        // Convert the class_filter to a QString
+        QString qClassFilter = QString::fromStdString(root["class_filter"].asString());
+
+        // Split the QString by commas and automatically trim each resulting string
+        QStringList classList = qClassFilter.split(',', QString::SkipEmptyParts);
+        display_classes.clear();
+
+        // Iterate over the QStringList and add each trimmed, non-empty string
+        for (const QString &classItem : classList) {
+            QString trimmedItem = classItem.trimmed().toLower();
+            if (!trimmedItem.isEmpty()) {
+                display_classes.push_back(trimmedItem.toStdString());
+            }
+        }
+    }
 
 	if (!root["objects"].isNull()){
 		for (auto const& trackedObject : trackedObjects){
@@ -551,9 +463,13 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	root["confidence_threshold"] = add_property_json("Confidence Theshold", confidence_threshold, "float", "", NULL, 0, 1, false, requested_frame);
 	root["class_filter"] = add_property_json("Class Filter", 0.0, "string", class_filter, NULL, -1, -1, false, requested_frame);
 
-	root["display_box_text"] = add_property_json("Draw Box Text", display_box_text.GetValue(requested_frame), "int", "", &display_box_text, 0, 1.0, false, requested_frame);
-	root["display_box_text"]["choices"].append(add_property_choice_json("Off", 1, display_box_text.GetValue(requested_frame)));
-	root["display_box_text"]["choices"].append(add_property_choice_json("On", 0, display_box_text.GetValue(requested_frame)));
+	root["display_box_text"] = add_property_json("Draw All Text", display_box_text.GetValue(requested_frame), "int", "", &display_box_text, 0, 1, false, requested_frame);
+	root["display_box_text"]["choices"].append(add_property_choice_json("Yes", true, display_box_text.GetValue(requested_frame)));
+	root["display_box_text"]["choices"].append(add_property_choice_json("No", false, display_box_text.GetValue(requested_frame)));
+
+    root["display_boxes"] = add_property_json("Draw All Boxes", display_boxes.GetValue(requested_frame), "int", "", &display_boxes, 0, 1, false, requested_frame);
+    root["display_boxes"]["choices"].append(add_property_choice_json("Yes", true, display_boxes.GetValue(requested_frame)));
+    root["display_boxes"]["choices"].append(add_property_choice_json("No", false, display_boxes.GetValue(requested_frame)));
 
 	// Return formatted string
 	return root.toStyledString();

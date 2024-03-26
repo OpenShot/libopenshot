@@ -131,13 +131,13 @@ namespace openshot {
 		void apply_background(std::shared_ptr<openshot::Frame> frame, std::shared_ptr<openshot::Frame> background_frame);
 
 		/// Apply effects to the source frame (if any)
-		void apply_effects(std::shared_ptr<openshot::Frame> frame, std::shared_ptr<openshot::Frame> background_frame, TimelineInfoStruct* options, bool before_keyframes);
+		void apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, TimelineInfoStruct* options, bool before_keyframes);
 
 		/// Apply keyframes to an openshot::Frame and use an existing background frame (if any)
-		void apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame);
+		void apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size);
 
 		/// Apply waveform image to an openshot::Frame and use an existing background frame (if any)
-		void apply_waveform(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame);
+		void apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size);
 
 		/// Adjust frame number for Clip position and start (which can result in a different number)
 		int64_t adjust_timeline_framenumber(int64_t clip_frame_number);
@@ -154,15 +154,14 @@ namespace openshot {
 		/// Adjust the audio and image of a time mapped frame
 		void apply_timemapping(std::shared_ptr<openshot::Frame> frame);
 
-		/// Compare 2 floating point numbers
-		bool isEqual(double a, double b);
+		/// Compare 2 floating point numbers and return true if they are extremely close
+		bool isNear(double a, double b);
 
 		/// Sort effects by order
 		void sort_effects();
 
-		/// Reverse an audio buffer
-		void reverse_buffer(juce::AudioBuffer<float>* buffer);
-
+		/// Scale a source size to a target size (given a specific scale-type)
+		QSize scale_size(QSize source_size, ScaleType source_scale, int target_width, int target_height);
 
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
@@ -223,6 +222,12 @@ namespace openshot {
 
 		/// Close the internal reader
 		void Close() override;
+
+		/// Return the associated ParentClip (if any)
+		openshot::Clip* GetParentClip();
+
+		/// Return the associated Parent Tracked Object (if any)
+		std::shared_ptr<openshot::TrackedObjectBase> GetParentTrackedObject();
 
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };

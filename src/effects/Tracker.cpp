@@ -13,7 +13,6 @@
 
 #include <string>
 #include <memory>
-#include <fstream>
 #include <iostream>
 
 #include "effects/Tracker.h"
@@ -25,6 +24,8 @@
 
 #include <QImage>
 #include <QPainter>
+#include <QPen>
+#include <QBrush>
 #include <QRectF>
 
 using namespace std;
@@ -83,129 +84,55 @@ void Tracker::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
-{
-	// Get the frame's image
-	cv::Mat frame_image = frame->GetImageCV();
+std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) {
+    // Get the frame's QImage
+    std::shared_ptr<QImage> frame_image = frame->GetImage();
 
-	// Initialize the Qt rectangle that will hold the positions of the bounding-box
-	QRectF boxRect;
-	// Initialize the image of the TrackedObject child clip
-	std::shared_ptr<QImage> childClipImage = nullptr;
+    // Check if frame isn't NULL
+    if(frame_image && !frame_image->isNull() &&
+       trackedData->Contains(frame_number) &&
+       trackedData->visible.GetValue(frame_number) == 1) {
+        QPainter painter(frame_image.get());
 
-	// Check if frame isn't NULL
-	if(!frame_image.empty() &&
-		trackedData->Contains(frame_number) &&
-		trackedData->visible.GetValue(frame_number) == 1)
-	{
-		// Get the width and height of the image
-		float fw = frame_image.size().width;
-		float fh = frame_image.size().height;
+        // Get the bounding-box of the given frame
+        BBox fd = trackedData->GetBox(frame_number);
 
-		// Get the bounding-box of given frame
-		BBox fd = trackedData->GetBox(frame_number);
+        // Create a QRectF for the bounding box
+        QRectF boxRect((fd.cx - fd.width / 2) * frame_image->width(),
+                       (fd.cy - fd.height / 2) * frame_image->height(),
+                       fd.width * frame_image->width(),
+                       fd.height * frame_image->height());
 
-		// Check if track data exists for the requested frame
-		if (trackedData->draw_box.GetValue(frame_number) == 1)
-		{
-			std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
-			int stroke_width = trackedData->stroke_width.GetValue(frame_number);
-			float stroke_alpha = trackedData->stroke_alpha.GetValue(frame_number);
-			std::vector<int> bg_rgba = trackedData->background.GetColorRGBA(frame_number);
-			float bg_alpha = trackedData->background_alpha.GetValue(frame_number);
+        // Check if track data exists for the requested frame
+        if (trackedData->draw_box.GetValue(frame_number) == 1) {
+            painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 
-			// Create a rotated rectangle object that holds the bounding box
-			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ),
-								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ),
-								  (int) (fd.angle) );
+            // Get trackedObjectBox keyframes
+            std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
+            int stroke_width = trackedData->stroke_width.GetValue(frame_number);
+            float stroke_alpha = trackedData->stroke_alpha.GetValue(frame_number);
+            std::vector<int> bg_rgba = trackedData->background.GetColorRGBA(frame_number);
+            float bg_alpha = trackedData->background_alpha.GetValue(frame_number);
+            float bg_corner = trackedData->background_corner.GetValue(frame_number);
 
-			DrawRectangleRGBA(frame_image, box, bg_rgba, bg_alpha, 1, true);
-			DrawRectangleRGBA(frame_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
-		}
+            // Set the pen for the border
+            QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
+            pen.setWidth(stroke_width);
+            painter.setPen(pen);
 
-		// Get the image of the Tracked Object' child clip
-		if (trackedData->ChildClipId() != ""){
-			// Cast the parent timeline of this effect
-			Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
-			if (parentTimeline){
-				// Get the Tracked Object's child clip
-				Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
-				if (childClip){
-					// Get the image of the child clip for this frame
-					std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
-					childClipImage = childClipFrame->GetImage();
+            // Set the brush for the background
+            QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
+            painter.setBrush(brush);
 
-					// Set the Qt rectangle with the bounding-box properties
-					boxRect.setRect((int)((fd.cx-fd.width/2)*fw),
-									(int)((fd.cy - fd.height/2)*fh),
-									(int)(fd.width*fw),
-									(int)(fd.height*fh) );
-				}
-			}
-		}
+            // Draw the rounded rectangle
+            painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
+        }
 
-	}
+        painter.end();
+    }
 
-	// Set image with drawn box to frame
-	// If the input image is NULL or doesn't have tracking data, it's returned as it came
-	frame->SetImageCV(frame_image);
-
-	// Set the bounding-box image with the Tracked Object's child clip image
-	if (childClipImage){
-		// Get the frame image
-		QImage frameImage = *(frame->GetImage());
-
-		// Set a Qt painter to the frame image
-		QPainter painter(&frameImage);
-
-		// Draw the child clip image inside the bounding-box
-		painter.drawImage(boxRect, *childClipImage);
-
-		// Set the frame image as the composed image
-		frame->AddImage(std::make_shared<QImage>(frameImage));
-	}
-
-	return frame;
-}
-
-void Tracker::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background){
-	// Get the bouding box vertices
-	cv::Point2f vertices2f[4];
-	box.points(vertices2f);
-
-	// TODO: take a rectangle of frame_image by refencence and draw on top of that to improve speed
-	// select min enclosing rectangle to draw on a small portion of the image
-	// cv::Rect rect  = box.boundingRect();
-	// cv::Mat image = frame_image(rect)
-
-	if(is_background){
-		cv::Mat overlayFrame;
-		frame_image.copyTo(overlayFrame);
-
-		// draw bounding box background
-		cv::Point vertices[4];
-		for(int i = 0; i < 4; ++i){
-			vertices[i] = vertices2f[i];}
-
-		cv::Rect rect  = box.boundingRect();
-		cv::fillConvexPoly(overlayFrame, vertices, 4, cv::Scalar(color[2],color[1],color[0]), cv::LINE_AA);
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
-	}
-	else{
-		cv::Mat overlayFrame;
-		frame_image.copyTo(overlayFrame);
-
-		// Draw bounding box
-		for (int i = 0; i < 4; i++)
-		{
-			cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
-						thickness, cv::LINE_AA);
-		}
-
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
-	}
+    // No need to set the image back to the frame, as we directly modified the frame's QImage
+    return frame;
 }
 
 // Get the indexes and IDs of all visible objects in the given frame
