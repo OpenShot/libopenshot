@@ -9,7 +9,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+// Copyright (c) 2008-2024 OpenShot Studios, LLC, Fabrice Bellard
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -671,8 +671,13 @@ bool FFmpegReader::HasAlbumArt() {
 
 void FFmpegReader::UpdateAudioInfo() {
 	// Set default audio channel layout (if needed)
+#if HAVE_CH_LAYOUT
+	if (!av_channel_layout_check(&(AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout)))
+		AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout = (AVChannelLayout) AV_CHANNEL_LAYOUT_STEREO;
+#else
 	if (AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout == 0)
 		AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout = av_get_default_channel_layout(AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels);
+#endif
 
 	if (info.sample_rate > 0) {
 		// Skip init - if info struct already populated
@@ -683,8 +688,13 @@ void FFmpegReader::UpdateAudioInfo() {
 	info.has_audio = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.acodec = aCodecCtx->codec->name;
+#if HAVE_CH_LAYOUT
+	info.channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout.nb_channels;
+	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout.u.mask;
+#else
 	info.channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
 	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout;
+#endif
 	info.sample_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->sample_rate;
 	info.audio_bit_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->bit_rate;
 	if (info.audio_bit_rate <= 0) {
@@ -1593,11 +1603,16 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 		// determine how many samples were decoded
 		int plane_size = -1;
-		data_size = av_samples_get_buffer_size(&plane_size, AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
+#if HAVE_CH_LAYOUT
+		int nb_channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout.nb_channels;
+#else
+		int nb_channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
+#endif
+		data_size = av_samples_get_buffer_size(&plane_size, nb_channels,
 											   audio_frame->nb_samples, (AVSampleFormat) (AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx)), 1);
 
 		// Calculate total number of samples
-		packet_samples = audio_frame->nb_samples * AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
+		packet_samples = audio_frame->nb_samples * nb_channels;
 	} else {
 		if (audio_frame) {
 			// Free audio frame
@@ -1655,14 +1670,19 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 	// setup resample context
 	avr = SWR_ALLOC();
+#if HAVE_CH_LAYOUT
+	av_opt_set_chlayout(avr, "in_chlayout", &AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout, 0);
+	av_opt_set_chlayout(avr, "out_chlayout", &AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->ch_layout, 0);
+#else
 	av_opt_set_int(avr, "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
+	av_opt_set_int(avr, "in_channels", info.channels, 0);
+	av_opt_set_int(avr, "out_channels", info.channels, 0);
+#endif
 	av_opt_set_int(avr, "in_sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
 	av_opt_set_int(avr, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
 	av_opt_set_int(avr, "in_sample_rate", info.sample_rate, 0);
 	av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
-	av_opt_set_int(avr, "in_channels", info.channels, 0);
-	av_opt_set_int(avr, "out_channels", info.channels, 0);
 	SWR_INIT(avr);
 
 	// Convert audio samples
