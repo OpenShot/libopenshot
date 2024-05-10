@@ -1061,7 +1061,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		// Set sample rate
 		c->sample_rate = info.sample_rate;
 
-auto channel_layout = info.channel_layout;
+uint64_t channel_layout = info.channel_layout;
 #if HAVE_CH_LAYOUT
 	// Set a valid number of channels (or throw error)
 	AVChannelLayout ch_layout;
@@ -1131,7 +1131,6 @@ const char* channel_layout_label;
     channel_layout_label = "c->ch_layout.u.mask";
 #else
     nb_channels = c->channels;
-    channel_layout = c->channel_layout;
     nb_channels_label = "c->channels";
     channel_layout_label = "c->channel_layout";
 #endif
