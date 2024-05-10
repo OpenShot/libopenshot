@@ -1061,7 +1061,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		// Set sample rate
 		c->sample_rate = info.sample_rate;
 
-
+const uint64_t channel_layout = info.channel_layout;
 #if HAVE_CH_LAYOUT
 	// Set a valid number of channels (or throw error)
 	AVChannelLayout ch_layout;
@@ -1081,7 +1081,6 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		av_channel_layout_copy(&c->ch_layout, &ch_layout);
 #else
 	// Set a valid number of channels (or throw error)
-	const uint64_t channel_layout = info.channel_layout;
 	if (codec->channel_layouts) {
 		int i;
 		for (i = 0; codec->channel_layouts[i] != 0; i++)
@@ -1092,9 +1091,9 @@ AVStream *FFmpegWriter::add_audio_stream() {
 			}
 		if (codec->channel_layouts[i] == 0)
 			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-	} else
-		// Set valid channel layout
-		c->channel_layout = channel_layout;
+		} else
+			// Set valid channel layout
+			c->channel_layout = channel_layout;
 #endif
 
 	// Choose a valid sample_fmt
@@ -1122,7 +1121,6 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 
 int nb_channels;
-uint64_t channel_layout;
 const char* nb_channels_label;
 const char* channel_layout_label;
 
