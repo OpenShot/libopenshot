@@ -64,7 +64,7 @@ TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
 	r.Open();
 
 	/* WRITER ---------------- */
-	ImageWriter w("output1.gif");
+	ImageWriter w("ImageWriter-Gif-output1.gif");
 
 	CHECK_FALSE(w.IsOpen());
 
@@ -87,7 +87,7 @@ TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
 	r.Close();
 
 	// Open up the 5th frame from the newly created GIF
-	ImageReader r1("output1.gif[4]");
+	ImageReader r1("ImageWriter-Gif-output1.gif[4]");
 
 	// Basic Reader state queries
 	CHECK(r1.Name() == "ImageReader");
