@@ -9,7 +9,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+// Copyright (c) 2008-2024 OpenShot Studios, LLC, Fabrice Bellard
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -1042,7 +1042,9 @@ AVStream *FFmpegWriter::add_audio_stream() {
 
 	// Set the sample parameters
 	c->bit_rate = info.audio_bit_rate;
+#if !HAVE_CH_LAYOUT
 	c->channels = info.channels;
+#endif
 
 	// Set valid sample rate (or throw error)
 	if (codec->supported_samplerates) {
@@ -1059,9 +1061,26 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		// Set sample rate
 		c->sample_rate = info.sample_rate;
 
-
+uint64_t channel_layout = info.channel_layout;
+#if HAVE_CH_LAYOUT
 	// Set a valid number of channels (or throw error)
-	const uint64_t channel_layout = info.channel_layout;
+	AVChannelLayout ch_layout;
+	av_channel_layout_from_mask(&ch_layout, info.channel_layout);
+	if (codec->ch_layouts) {
+		int i;
+		for (i = 0; av_channel_layout_check(&codec->ch_layouts[i]); i++)
+			if (av_channel_layout_compare(&ch_layout, &codec->ch_layouts[i])) {
+				// Set valid channel layout
+				av_channel_layout_copy(&c->ch_layout, &ch_layout);
+				break;
+			}
+		if (!av_channel_layout_check(&codec->ch_layouts[i]))
+			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
+	} else
+		// Set valid channel layout
+		av_channel_layout_copy(&c->ch_layout, &ch_layout);
+#else
+	// Set a valid number of channels (or throw error)
 	if (codec->channel_layouts) {
 		int i;
 		for (i = 0; codec->channel_layouts[i] != 0; i++)
@@ -1072,9 +1091,10 @@ AVStream *FFmpegWriter::add_audio_stream() {
 			}
 		if (codec->channel_layouts[i] == 0)
 			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-	} else
-		// Set valid channel layout
-		c->channel_layout = channel_layout;
+		} else
+			// Set valid channel layout
+			c->channel_layout = channel_layout;
+#endif
 
 	// Choose a valid sample_fmt
 	if (codec->sample_fmts) {
@@ -1100,13 +1120,28 @@ AVStream *FFmpegWriter::add_audio_stream() {
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 
+int nb_channels;
+const char* nb_channels_label;
+const char* channel_layout_label;
+
+#if HAVE_CH_LAYOUT
+    nb_channels = c->ch_layout.nb_channels;
+    channel_layout = c->ch_layout.u.mask;
+    nb_channels_label = "c->ch_layout.nb_channels";
+    channel_layout_label = "c->ch_layout.u.mask";
+#else
+    nb_channels = c->channels;
+    nb_channels_label = "c->channels";
+    channel_layout_label = "c->channel_layout";
+#endif
+
 	ZmqLogger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::add_audio_stream",
 		"c->codec_id", c->codec_id,
 		"c->bit_rate", c->bit_rate,
-		"c->channels", c->channels,
+		nb_channels_label, nb_channels,
 		"c->sample_fmt", c->sample_fmt,
-		"c->channel_layout", c->channel_layout,
+		channel_layout_label, channel_layout,
 		"c->sample_rate", c->sample_rate);
 
 	return st;
@@ -1665,14 +1700,23 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		// setup resample context
 		if (!avr) {
 			avr = SWR_ALLOC();
+#if HAVE_CH_LAYOUT
+			AVChannelLayout in_chlayout;
+			AVChannelLayout out_chlayout;
+			av_channel_layout_from_mask(&in_chlayout, channel_layout_in_frame);
+			av_channel_layout_from_mask(&out_chlayout, info.channel_layout);
+			av_opt_set_chlayout(avr, "in_chlayout", &in_chlayout, 0);
+			av_opt_set_chlayout(avr, "out_chlayout", &out_chlayout, 0);
+#else
 			av_opt_set_int(avr, "in_channel_layout", channel_layout_in_frame, 0);
 			av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
+			av_opt_set_int(avr, "in_channels", channels_in_frame, 0);
+			av_opt_set_int(avr, "out_channels", info.channels, 0);
+#endif
 			av_opt_set_int(avr, "in_sample_fmt", AV_SAMPLE_FMT_S16, 0);
 			av_opt_set_int(avr, "out_sample_fmt", output_sample_fmt, 0); // planar not allowed here
 			av_opt_set_int(avr, "in_sample_rate", sample_rate_in_frame, 0);
 			av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
-			av_opt_set_int(avr, "in_channels", channels_in_frame, 0);
-			av_opt_set_int(avr, "out_channels", info.channels, 0);
 			SWR_INIT(avr);
 		}
 		// Convert audio samples
@@ -1768,14 +1812,21 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			// setup resample context
 			if (!avr_planar) {
 				avr_planar = SWR_ALLOC();
+#if HAVE_CH_LAYOUT
+				AVChannelLayout layout;
+				av_channel_layout_from_mask(&layout, info.channel_layout);
+				av_opt_set_chlayout(avr_planar, "in_chlayout", &layout, 0);
+				av_opt_set_chlayout(avr_planar, "out_chlayout", &layout, 0);
+#else
 				av_opt_set_int(avr_planar, "in_channel_layout", info.channel_layout, 0);
 				av_opt_set_int(avr_planar, "out_channel_layout", info.channel_layout, 0);
+				av_opt_set_int(avr_planar, "in_channels", info.channels, 0);
+				av_opt_set_int(avr_planar, "out_channels", info.channels, 0);
+#endif
 				av_opt_set_int(avr_planar, "in_sample_fmt", output_sample_fmt, 0);
 				av_opt_set_int(avr_planar, "out_sample_fmt", audio_codec_ctx->sample_fmt, 0); // planar not allowed here
 				av_opt_set_int(avr_planar, "in_sample_rate", info.sample_rate, 0);
 				av_opt_set_int(avr_planar, "out_sample_rate", info.sample_rate, 0);
-				av_opt_set_int(avr_planar, "in_channels", info.channels, 0);
-				av_opt_set_int(avr_planar, "out_channels", info.channels, 0);
 				SWR_INIT(avr_planar);
 			}
 
@@ -1803,9 +1854,13 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 
 			// Create output frame (and allocate arrays)
 			frame_final->nb_samples = audio_input_frame_size;
+#if HAVE_CH_LAYOUT
+			av_channel_layout_from_mask(&frame_final->ch_layout, info.channel_layout);
+#else
 			frame_final->channels = info.channels;
-			frame_final->format = audio_codec_ctx->sample_fmt;
 			frame_final->channel_layout = info.channel_layout;
+#endif
+			frame_final->format = audio_codec_ctx->sample_fmt;
 			av_samples_alloc(frame_final->data, frame_final->linesize, info.channels,
 				frame_final->nb_samples, audio_codec_ctx->sample_fmt, 0);
 
@@ -1854,7 +1909,12 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			frame_final->nb_samples = audio_input_frame_size;
 
 			// Fill the final_frame AVFrame with audio (non planar)
-			avcodec_fill_audio_frame(frame_final, audio_codec_ctx->channels,
+#if HAVE_CH_LAYOUT
+			int nb_channels = audio_codec_ctx->ch_layout.nb_channels;
+#else
+			int nb_channels = audio_codec_ctx->channels;
+#endif
+			avcodec_fill_audio_frame(frame_final, nb_channels,
 				audio_codec_ctx->sample_fmt, (uint8_t *) final_samples,
 				audio_encoder_buffer_size, 0);
 		}

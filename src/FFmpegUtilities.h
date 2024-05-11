@@ -6,7 +6,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2024 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -32,6 +32,8 @@
 #ifndef USE_SW
 #define USE_SW FFMPEG_USE_SWRESAMPLE
 #endif
+
+#define HAVE_CH_LAYOUT (LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 28, 100))
 
 // Include the FFmpeg headers
 extern "C" {
