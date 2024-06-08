@@ -56,14 +56,6 @@ namespace openshot
 	{
 		int64_t Frame;
 		bool isOdd;
-
-		Field() : Frame(0), isOdd(true) { };
-
-		Field(int64_t frame, bool isodd)
-		{
-			Frame = frame;
-			isOdd = isodd;
-		}
 	};
 
 	/**
@@ -217,6 +209,7 @@ namespace openshot
 
 		// Internal methods used by init
 		void AddField(int64_t frame);
+        void AddField(int64_t frame, bool isOdd);
 		void AddField(Field field);
 
 		// Clear both the fields & frames lists
