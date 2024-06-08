@@ -62,7 +62,7 @@ jobs:
       - uses: haya14busa/action-cond@v1
         id: coverage
         with:
-          cond: ${{ (matrix.compiler.cc == 'gcc' && runner.os == 'linux') || (matrix.compiler.cc == 'clang' && runner.os == 'macos') }}
+          cond: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
           if_true: "-DENABLE_COVERAGE:BOOL=1"
 
       - uses: haya14busa/action-cond@v1
@@ -96,80 +96,18 @@ jobs:
           wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.8-1_amd64.deb
           sudo dpkg -i catch2_2.13.8-1_amd64.deb
 
-      - name: Install macOS dependencies
-        if: ${{ runner.os == 'macos' }}
-        run: |
-          brew install \
-            qt5 ffmpeg zeromq cppzmq libomp opencv protobuf babl \
-            python3 swig catch2 doxygen graphviz lcov
-
-      - name: Set up MSYS and install Windows dependencies
-        if: ${{ runner.os == 'Windows' }}
-        uses: msys2/setup-msys2@v2
-        with:
-          release: true
-          update: true
-          install: >-
-              mingw-w64-x86_64-gcc
-              mingw-w64-x86_64-lld
-              mingw-w64-x86_64-make
-              mingw-w64-x86_64-cmake
-              mingw-w64-x86_64-pkgconf
-              mingw-w64-x86_64-qt5-base
-              mingw-w64-x86_64-qt5-svg
-              mingw-w64-x86_64-qt5-winextras
-              mingw-w64-x86_64-qt5-tools
-              mingw-w64-x86_64-libvpx
-              mingw-w64-x86_64-ffmpeg
-              mingw-w64-x86_64-zeromq
-              mingw-w64-x86_64-cppzmq
-              mingw-w64-x86_64-opencv
-              mingw-w64-x86_64-protobuf
-              mingw-w64-x86_64-babl
-              mingw-w64-x86_64-catch
-              mingw-w64-x86_64-python3
-              mingw-w64-x86_64-swig
-
-      - uses: actions/cache@v3.0.1
-        name: Import OpenShotAudio cache
-        id: cache-audio
-        with:
-          path: audio/build
-          key: audio-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('audio/CMakeLists.txt') }}
-
-      - uses: actions/cache@v3.0.1
-        name: Import Resvg cache
-        if: ${{ steps.use-resvg.outputs.value }}
-        id: cache-resvg
-        with:
-          path: resvg/target
-          key: resvg-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('resvg/Cargo.toml') }}
-
-      - name: Build OpenShotAudio (if not cached)
-        if: steps.cache-audio.outputs.cache-hit != 'true'
+      - name: Build OpenShotAudio
         run: |
           pushd audio
-          if [ ! -d build ]; then
-            mkdir build
-            if [ "_${{ runner.os }}" == "_macOS" ]; then
-              export CMAKE_EXTRA="${CMAKE_EXTRA} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
-            fi
-            if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
-              export CMAKE_EXTRA="${CMAKE_EXTRA} \
-                -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
-                -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
-                -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
-            fi
-            cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
-              -DCMAKE_BUILD_TYPE="Debug" \
-              -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
-              ${CMAKE_EXTRA}
-          fi
+          mkdir -p build
+          cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
+            -DCMAKE_BUILD_TYPE="Debug" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
           cmake --build build
           popd
 
-      - name: Build Resvg (if enabled and not cached)
-        if: steps.cache-resvg && (steps.cache-resvg.outputs.cache-hit != 'true')
+      - name: Build Resvg (if enabled)
+        if: steps.use-resvg
         run: |
           if [ -d "resvg/c-api" ]; then
             pushd resvg/c-api
@@ -179,24 +117,6 @@ jobs:
 
       - name: Build libopenshot
         run: |
-          if [ "_${{ runner.os }}" == "_macOS" ]; then
-            export CMAKE_EXTRA="${CMAKE_EXTRA} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
-            -DQt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5 \
-            -DENABLE_RUBY=0";
-            export PATH="/usr/local/opt/qt@5/bin:$PATH";
-          fi
-          if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
-            export CMAKE_EXTRA="${CMAKE_EXTRA} \
-            -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
-            -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
-            -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
-          fi
-          if [ "_${{ runner.os }}" == "_Windows" ]; then
-            export CMAKE_EXTRA="${CMAKE_EXTRA} \
-              -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
-              -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld \
-              -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
-          fi
           mkdir build
           cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
             -DCMAKE_BUILD_TYPE="Debug" \
