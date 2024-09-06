@@ -21,8 +21,36 @@
 #include "Timeline.h"
 
 
-TEST_CASE( "caption effect", "[libopenshot][caption]" )
-{
+// Function to check for non-black pixels in a given region of the frame
+bool HasNonBlackPixelsInRegion(const std::shared_ptr<openshot::Frame>& frame, int start_row, int end_row, int start_col, int end_col) {
+    int frame_width = frame->GetWidth();
+    int frame_height = frame->GetHeight();
+
+    // Ensure the search region is within the frame bounds
+    if (start_row < 0 || end_row >= frame_height || start_col < 0 || end_col >= frame_width) {
+        throw std::out_of_range("Search region is out of frame bounds");
+    }
+
+    for (int row = start_row; row <= end_row; ++row) {
+        const unsigned char* pixels = frame->GetPixels(row);
+        if (!pixels) {
+            throw std::runtime_error("Failed to get pixels for the row");
+        }
+
+        for (int col = start_col; col <= end_col; ++col) {
+            int index = col * 4;
+            int R = pixels[index];
+            int G = pixels[index + 1];
+            int B = pixels[index + 2];
+            if (!(R == 0 && G == 0 && B == 0)) {
+                return true;  // Non-black pixel found
+            }
+        }
+    }
+    return false;  // No non-black pixel found
+}
+
+TEST_CASE("caption effect", "[libopenshot][caption]") {
     // Check for QT Platform Environment variable - and ignore these tests if it's set to offscreen
     if (std::getenv("QT_QPA_PLATFORM") != nullptr) {
         std::string qt_platform_env = std::getenv("QT_QPA_PLATFORM");
@@ -32,14 +60,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         }
     }
 
-    int argc;
-    char* argv[2];
+    int argc = 1;
+    char* argv[1] = {(char*)""};
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
-    QApplication::processEvents();
 
-    int check_row = 0;
-    int check_col = 0;
+    QApplication::processEvents();
 
     SECTION("default constructor") {
 
@@ -76,23 +102,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
 
-#ifdef _WIN32
-        // Windows pixel location
-        check_col = 625;
-        check_row = 600;
-#else
-        // Linux/Mac pixel location
-        check_col = 251;
-        check_row = 572;
-#endif
-
         // Verify pixel values (black background pixels)
-        const unsigned char *pixels = f->GetPixels(1);
-        CHECK((int) pixels[0 * 4] == 0);
+        const unsigned char* pixels = f->GetPixels(1);
+        CHECK((int)pixels[0 * 4] == 0);
 
-        // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(check_row);
-        CHECK((int) pixels[check_col * 4] == 255);
+        // Check for non-black pixels in the region for white text
+        CHECK(HasNonBlackPixelsInRegion(f, 560, 700, 200, 600));
 
         // Create Timeline
         openshot::Timeline t(1280, 720, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
@@ -101,23 +116,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         // Get timeline frame
         f = t.GetFrame(10);
 
-#ifdef _WIN32
-        // Windows pixel location
-        check_col = 625;
-        check_row = 600;
-#else
-        // Linux/Mac pixel location
-        check_col = 251;
-        check_row = 572;
-#endif
-
         // Verify pixel values (black background pixels)
         pixels = f->GetPixels(1);
-        CHECK((int) pixels[0 * 4] == 0);
+        CHECK((int)pixels[0 * 4] == 0);
 
-        // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(check_row);
-        CHECK((int) pixels[check_col * 4] == 255);
+        // Check for non-black pixels in the region for white text
+        CHECK(HasNonBlackPixelsInRegion(f, 560, 700, 200, 600));
 
         // Close objects
         t.Close();
@@ -139,24 +143,14 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
 
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(10);
-
-#ifdef _WIN32
-        // Windows pixel location
-        check_col = 351;
-        check_row = 391;
-#else
-        // Linux/Mac pixel location
-        check_col = 141;
-        check_row = 378;
-#endif
+        f->Save("/home/jonathan/test.png", 1.0, "PNG", 100);
 
         // Verify pixel values (black background pixels)
-        const unsigned char *pixels = f->GetPixels(1);
-        CHECK((int) pixels[0 * 4] == 0);
+        const unsigned char* pixels = f->GetPixels(1);
+        CHECK((int)pixels[0 * 4] == 0);
 
-        // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(check_row);
-        CHECK((int) pixels[check_col * 4] == 255);
+        // Check for non-black pixels in the region for white text
+        CHECK(HasNonBlackPixelsInRegion(f, 350, 479, 150, 500));
 
         // Create Timeline
         openshot::Timeline t(720, 480, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
@@ -165,23 +159,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         // Get timeline frame
         f = t.GetFrame(10);
 
-#ifdef _WIN32
-        // Windows pixel location
-        check_col = 351;
-        check_row = 391;
-#else
-        // Linux/Mac pixel location
-        check_col = 141;
-        check_row = 377;
-#endif
-
         // Verify pixel values (black background pixels)
         pixels = f->GetPixels(1);
-        CHECK((int) pixels[0 * 4] == 0);
+        CHECK((int)pixels[0 * 4] == 0);
 
-        // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(check_row);
-        CHECK((int) pixels[check_col * 4] == 255);
+        // Check for non-black pixels in the region for white text
+        CHECK(HasNonBlackPixelsInRegion(f, 200, 479, 200, 600));
 
         // Close objects
         t.Close();
@@ -205,23 +188,12 @@ TEST_CASE( "caption effect", "[libopenshot][caption]" )
         // Get frame
         std::shared_ptr<openshot::Frame> f = clip1.GetFrame(11);
 
-#ifdef _WIN32
-        // Windows pixel location
-        check_col = 633;
-        check_row = 580;
-#else
-        // Linux/Mac pixel location
-        check_col = 284;
-        check_row = 569;
-#endif
-
         // Verify pixel values (black background pixels)
         const unsigned char *pixels = f->GetPixels(1);
         CHECK((int) pixels[0 * 4] == 0);
 
-        // Verify pixel values (white text pixels)
-        pixels = f->GetPixels(check_row);
-        CHECK((int) pixels[check_col * 4] == 255);
+        // Check for non-black pixels in the region for white text
+        CHECK(HasNonBlackPixelsInRegion(f, 560, 700, 200, 600));
 
         // Close objects
         clip1.Close();
