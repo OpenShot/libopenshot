@@ -695,6 +695,16 @@ void FFmpegReader::UpdateAudioInfo() {
 	info.channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
 	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout;
 #endif
+
+	// If channel layout is not set, guess based on the number of channels
+	if (info.channel_layout == 0) {
+		if (info.channels == 1) {
+			info.channel_layout = openshot::LAYOUT_MONO;
+		} else if (info.channels == 2) {
+			info.channel_layout = openshot::LAYOUT_STEREO;
+		}
+	}
+
 	info.sample_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->sample_rate;
 	info.audio_bit_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->bit_rate;
 	if (info.audio_bit_rate <= 0) {
