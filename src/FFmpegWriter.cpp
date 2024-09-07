@@ -2233,7 +2233,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 				ret = avcodec_receive_packet(video_codec_ctx, pkt);
 
 				if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-					avcodec_flush_buffers(video_codec_ctx);
 					got_packet_ptr = 0;
 					break;
 				}
