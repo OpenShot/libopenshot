@@ -469,7 +469,7 @@ double Timeline::GetMaxTime() {
 int64_t Timeline::GetMaxFrame() {
 	double fps = info.fps.ToDouble();
 	auto max_time = GetMaxTime();
-	return std::round(max_time * fps) + 1;
+	return std::round(max_time * fps);
 }
 
 // Apply a FrameMapper to a clip which matches the settings of this timeline

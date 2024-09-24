@@ -615,7 +615,7 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	t.AddClip(&clip1);
 
 	CHECK(t.GetMaxTime() == Approx(95.0).margin(0.001));
-	CHECK(t.GetMaxFrame() == 95 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 95 * 30);
 
 	Clip clip2(path1.str());
 	clip2.Id("C2");
@@ -624,24 +624,24 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	clip2.End(55);
 	t.AddClip(&clip2);
 
-	CHECK(t.GetMaxFrame() == 95 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 95 * 30);
 	CHECK(t.GetMaxTime() == Approx(95.0).margin(0.001));
 
 	clip1.Position(80);
 	clip2.Position(100);
-	CHECK(t.GetMaxFrame() == 155 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 155 * 30);
 	CHECK(t.GetMaxTime() == Approx(155.0).margin(0.001));
 
 	clip2.Start(20);
-	CHECK(t.GetMaxFrame() == 135 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 135 * 30);
 	CHECK(t.GetMaxTime() == Approx(135.0).margin(0.001));
 
 	clip2.End(35);
-	CHECK(t.GetMaxFrame() == 125 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 125 * 30);
 	CHECK(t.GetMaxTime() == Approx(125.0).margin(0.001));
 
 	t.RemoveClip(&clip1);
-	CHECK(t.GetMaxFrame() == 115 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 115 * 30);
 	CHECK(t.GetMaxTime() == Approx(115.0).margin(0.001));
 
 	// Update Clip's basic properties with JSON Diff
@@ -649,7 +649,7 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	json_change1 << "[{\"type\":\"update\",\"key\":[\"clips\",{\"id\":\"C2\"}],\"value\":{\"id\":\"C2\",\"layer\":4000000,\"position\":0.0,\"start\":0,\"end\":10},\"partial\":false}]";
 	t.ApplyJsonDiff(json_change1.str());
 
-	CHECK(t.GetMaxFrame() == 10 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 10 * 30);
 	CHECK(t.GetMaxTime() == Approx(10.0).margin(0.001));
 
 	// Insert NEW Clip with JSON Diff
@@ -657,7 +657,7 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	json_change2 << "[{\"type\":\"insert\",\"key\":[\"clips\"],\"value\":{\"id\":\"C3\",\"layer\":4000000,\"position\":10.0,\"start\":0,\"end\":10,\"reader\":{\"acodec\":\"\",\"audio_bit_rate\":0,\"audio_stream_index\":-1,\"audio_timebase\":{\"den\":1,\"num\":1},\"channel_layout\":4,\"channels\":0,\"display_ratio\":{\"den\":1,\"num\":1},\"duration\":3600.0,\"file_size\":\"160000\",\"fps\":{\"den\":1,\"num\":30},\"has_audio\":false,\"has_single_image\":true,\"has_video\":true,\"height\":200,\"interlaced_frame\":false,\"metadata\":{},\"path\":\"" << path1.str() << "\",\"pixel_format\":-1,\"pixel_ratio\":{\"den\":1,\"num\":1},\"sample_rate\":0,\"top_field_first\":true,\"type\":\"QtImageReader\",\"vcodec\":\"\",\"video_bit_rate\":0,\"video_length\":\"108000\",\"video_stream_index\":-1,\"video_timebase\":{\"den\":30,\"num\":1},\"width\":200}},\"partial\":false}]";
 	t.ApplyJsonDiff(json_change2.str());
 
-	CHECK(t.GetMaxFrame() == 20 * 30 + 1);
+	CHECK(t.GetMaxFrame() == 20 * 30);
 	CHECK(t.GetMaxTime() == Approx(20.0).margin(0.001));
 }
 
