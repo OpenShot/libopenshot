@@ -472,6 +472,19 @@ int64_t Timeline::GetMaxFrame() {
 	return std::round(max_time * fps);
 }
 
+// Compute the start time of the first timeline clip
+double Timeline::GetMinTime() {
+	// Return cached min_time variable (threadsafe)
+	return min_time;
+}
+
+// Compute the first frame# based on the first clip position
+int64_t Timeline::GetMinFrame() {
+	double fps = info.fps.ToDouble();
+	auto min_time = GetMinTime();
+	return std::round(min_time * fps);
+}
+
 // Apply a FrameMapper to a clip which matches the settings of this timeline
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
@@ -755,22 +768,51 @@ void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 		"open_clips.size()", open_clips.size());
 }
 
-// Calculate the max duration (in seconds) of the timeline, based on all the clips, and cache the value
+// Calculate the max and min duration (in seconds) of the timeline, based on all the clips, and cache the value
 void Timeline::calculate_max_duration() {
 	double last_clip = 0.0;
 	double last_effect = 0.0;
+	double first_clip = std::numeric_limits<double>::max();
+	double first_effect = std::numeric_limits<double>::max();
 
+	// Find the last and first clip
 	if (!clips.empty()) {
+		// Find the clip with the maximum end frame
 		const auto max_clip = std::max_element(
-				clips.begin(), clips.end(), CompareClipEndFrames());
+			clips.begin(), clips.end(), CompareClipEndFrames());
 		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
+
+		// Find the clip with the minimum start position (ignoring layer)
+		const auto min_clip = std::min_element(
+			clips.begin(), clips.end(), [](const openshot::Clip* lhs, const openshot::Clip* rhs) {
+				return lhs->Position() < rhs->Position();
+			});
+		first_clip = (*min_clip)->Position();
 	}
+
+	// Find the last and first effect
 	if (!effects.empty()) {
+		// Find the effect with the maximum end frame
 		const auto max_effect = std::max_element(
-				effects.begin(), effects.end(), CompareEffectEndFrames());
+			effects.begin(), effects.end(), CompareEffectEndFrames());
 		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
+
+		// Find the effect with the minimum start position
+		const auto min_effect = std::min_element(
+			effects.begin(), effects.end(), [](const openshot::EffectBase* lhs, const openshot::EffectBase* rhs) {
+				return lhs->Position() < rhs->Position();
+			});
+		first_effect = (*min_effect)->Position();
 	}
+
+	// Calculate the max and min time
 	max_time = std::max(last_clip, last_effect);
+	min_time = std::min(first_clip, first_effect);
+
+	// If no clips or effects exist, set min_time to 0
+	if (clips.empty() && effects.empty()) {
+		min_time = 0.0;
+	}
 }
 
 // Sort clips by position on the timeline

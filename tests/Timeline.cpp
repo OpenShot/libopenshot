@@ -661,6 +661,67 @@ TEST_CASE( "GetMaxFrame and GetMaxTime", "[libopenshot][timeline]" )
 	CHECK(t.GetMaxTime() == Approx(20.0).margin(0.001));
 }
 
+TEST_CASE( "GetMinFrame and GetMinTime", "[libopenshot][timeline]" )
+{
+    // Create a timeline
+    Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+    std::stringstream path1;
+    path1 << TEST_MEDIA_PATH << "interlaced.png";
+    Clip clip1(path1.str());
+    clip1.Id("C1");
+    clip1.Layer(1);
+    clip1.Position(50); // Start at 50 seconds
+    clip1.End(45);      // Ends at 95 seconds
+    t.AddClip(&clip1);
+
+    CHECK(t.GetMinTime() == Approx(50.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 50 * 30);
+
+    Clip clip2(path1.str());
+    clip2.Id("C2");
+    clip2.Layer(2);
+    clip2.Position(0);  // Start at 0 seconds
+    clip2.End(55);      // Ends at 55 seconds
+    t.AddClip(&clip2);
+
+    CHECK(t.GetMinTime() == Approx(0.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 0);
+
+    clip1.Position(80); // Move clip1 to start at 80 seconds
+    clip2.Position(100); // Move clip2 to start at 100 seconds
+    CHECK(t.GetMinTime() == Approx(80.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 80 * 30);
+
+    clip2.Position(20); // Adjust clip2 to start at 20 seconds
+    CHECK(t.GetMinTime() == Approx(20.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 20 * 30);
+
+    clip2.End(35); // Adjust clip2 to end at 35 seconds
+    CHECK(t.GetMinTime() == Approx(20.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 20 * 30);
+
+    t.RemoveClip(&clip1);
+    CHECK(t.GetMinTime() == Approx(20.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 20 * 30);
+
+    // Update Clip's basic properties with JSON Diff
+    std::stringstream json_change1;
+    json_change1 << "[{\"type\":\"update\",\"key\":[\"clips\",{\"id\":\"C2\"}],\"value\":{\"id\":\"C2\",\"layer\":4000000,\"position\":5.0,\"start\":0,\"end\":10},\"partial\":false}]";
+    t.ApplyJsonDiff(json_change1.str());
+
+    CHECK(t.GetMinTime() == Approx(5.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 5 * 30);
+
+    // Insert NEW Clip with JSON Diff
+    std::stringstream json_change2;
+    json_change2 << "[{\"type\":\"insert\",\"key\":[\"clips\"],\"value\":{\"id\":\"C3\",\"layer\":4000000,\"position\":10.0,\"start\":0,\"end\":10,\"reader\":{\"acodec\":\"\",\"audio_bit_rate\":0,\"audio_stream_index\":-1,\"audio_timebase\":{\"den\":1,\"num\":1},\"channel_layout\":4,\"channels\":0,\"display_ratio\":{\"den\":1,\"num\":1},\"duration\":3600.0,\"file_size\":\"160000\",\"fps\":{\"den\":1,\"num\":30},\"has_audio\":false,\"has_single_image\":true,\"has_video\":true,\"height\":200,\"interlaced_frame\":false,\"metadata\":{},\"path\":\"" << path1.str() << "\",\"pixel_format\":-1,\"pixel_ratio\":{\"den\":1,\"num\":1},\"sample_rate\":0,\"top_field_first\":true,\"type\":\"QtImageReader\",\"vcodec\":\"\",\"video_bit_rate\":0,\"video_length\":\"108000\",\"video_stream_index\":-1,\"video_timebase\":{\"den\":30,\"num\":1},\"width\":200}},\"partial\":false}]";
+    t.ApplyJsonDiff(json_change2.str());
+
+    CHECK(t.GetMinTime() == Approx(5.0).margin(0.001));
+    CHECK(t.GetMinFrame() == 5 * 30);
+}
+
 TEST_CASE( "Multi-threaded Timeline GetFrame", "[libopenshot][timeline]" )
 {
 	Timeline *t = new Timeline(1280, 720, Fraction(24, 1), 48000, 2, LAYOUT_STEREO);
