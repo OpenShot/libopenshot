@@ -812,6 +812,7 @@ void Timeline::calculate_max_duration() {
 	// If no clips or effects exist, set min_time to 0
 	if (clips.empty() && effects.empty()) {
 		min_time = 0.0;
+		max_time = 0.0;
 	}
 }
 
@@ -1301,6 +1302,10 @@ void Timeline::SetJsonValue(const Json::Value root) {
 	// Update preview settings
 	preview_width = info.width;
 	preview_height = info.height;
+
+	// Resort (and recalculate min/max duration)
+	sort_clips();
+	sort_effects();
 
 	// Re-open if needed
 	if (was_open)
