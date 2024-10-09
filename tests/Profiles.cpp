@@ -20,6 +20,7 @@ TEST_CASE( "empty constructor", "[libopenshot][profile]" )
     openshot::Profile p1;
 
     // Default values
+    CHECK(p1.info.description.empty());
     CHECK(p1.info.width == 0);
     CHECK(p1.info.height == 0);
     CHECK(p1.info.fps.num == 0);
@@ -40,6 +41,7 @@ TEST_CASE( "constructor with example profiles", "[libopenshot][profile]" )
 	openshot::Profile p1(profile1.str());
 
 	// Default values
+    CHECK(p1.info.description == "HD 720p 24 fps");
 	CHECK(p1.info.width == 1280);
     CHECK(p1.info.height == 720);
     CHECK(p1.info.fps.num == 24);
@@ -50,12 +52,28 @@ TEST_CASE( "constructor with example profiles", "[libopenshot][profile]" )
     CHECK(p1.info.pixel_ratio.den == 1);
     CHECK(p1.info.interlaced_frame == false);
 
+    // Export to JSON
+    openshot::Profile p1_json = openshot::Profile();
+    p1_json.SetJson(p1.Json());
+
+    CHECK(p1_json.info.description == "HD 720p 24 fps");
+    CHECK(p1_json.info.width == 1280);
+    CHECK(p1_json.info.height == 720);
+    CHECK(p1_json.info.fps.num == 24);
+    CHECK(p1_json.info.fps.den == 1);
+    CHECK(p1_json.info.display_ratio.num == 16);
+    CHECK(p1_json.info.display_ratio.den == 9);
+    CHECK(p1_json.info.pixel_ratio.num == 1);
+    CHECK(p1_json.info.pixel_ratio.den == 1);
+    CHECK(p1_json.info.interlaced_frame == false);
+
     std::stringstream profile2;
     profile2 << TEST_MEDIA_PATH << "example_profile2";
 
     openshot::Profile p2(profile2.str());
 
     // Default values
+    CHECK(p2.info.description == "HD 1080i 29.97 fps");
     CHECK(p2.info.width == 1920);
     CHECK(p2.info.height == 1080);
     CHECK(p2.info.fps.num == 30000);
@@ -133,4 +151,33 @@ TEST_CASE( "compare profiles", "[libopenshot][profile]" )
     CHECK(p1 > p3);
     CHECK(p3 < p1);
     CHECK_FALSE(p1 == p3);
+}
+
+TEST_CASE( "save profiles", "[libopenshot][profile]" )
+{
+    // Load profile
+    std::stringstream profile1;
+    profile1 << TEST_MEDIA_PATH << "example_profile1";
+    openshot::Profile p1(profile1.str());
+
+    // Save copy
+    std::stringstream profile1_copy;
+    profile1_copy << TEST_MEDIA_PATH << "example_profile1_copy";
+    std::cout << profile1_copy.str() << std::endl;
+    p1.Save(profile1_copy.str());
+
+    // Load saved copy
+    openshot::Profile p1_load_copy(profile1_copy.str());
+
+    // Default values
+    CHECK(p1_load_copy.info.description == "HD 720p 24 fps");
+    CHECK(p1_load_copy.info.width == 1280);
+    CHECK(p1_load_copy.info.height == 720);
+    CHECK(p1_load_copy.info.fps.num == 24);
+    CHECK(p1_load_copy.info.fps.den == 1);
+    CHECK(p1_load_copy.info.display_ratio.num == 16);
+    CHECK(p1_load_copy.info.display_ratio.den == 9);
+    CHECK(p1_load_copy.info.pixel_ratio.num == 1);
+    CHECK(p1_load_copy.info.pixel_ratio.den == 1);
+    CHECK(p1_load_copy.info.interlaced_frame == false);
 }

@@ -197,6 +197,28 @@ std::string Profile::LongNameWithDesc() {
 	return output.str();
 }
 
+// Save profile to file system
+void Profile::Save(const std::string& file_path) const {
+	std::ofstream file(file_path);
+	if (!file.is_open()) {
+		throw std::ios_base::failure("Failed to save profile.");
+	}
+
+	file << "description=" << info.description << "\n";
+	file << "frame_rate_num=" << info.fps.num << "\n";
+	file << "frame_rate_den=" << info.fps.den << "\n";
+	file << "width=" << info.width << "\n";
+	file << "height=" << info.height << "\n";
+	file << "progressive=" << !info.interlaced_frame << "\n";  // Correct the boolean value for progressive/interlaced
+	file << "sample_aspect_num=" << info.pixel_ratio.num << "\n";
+	file << "sample_aspect_den=" << info.pixel_ratio.den << "\n";
+	file << "display_aspect_num=" << info.display_ratio.num << "\n";
+	file << "display_aspect_den=" << info.display_ratio.den << "\n";
+	file << "pixel_format=" << info.pixel_format;
+
+	file.close();
+}
+
 // Generate JSON string of this object
 std::string Profile::Json() const {
 
@@ -209,6 +231,7 @@ Json::Value Profile::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
+	root["description"] = info.description;
 	root["height"] = info.height;
 	root["width"] = info.width;
 	root["pixel_format"] = info.pixel_format;
@@ -221,7 +244,7 @@ Json::Value Profile::JsonValue() const {
 	root["display_ratio"] = Json::Value(Json::objectValue);
 	root["display_ratio"]["num"] = info.display_ratio.num;
 	root["display_ratio"]["den"] = info.display_ratio.den;
-	root["interlaced_frame"] = info.interlaced_frame;
+	root["progressive"] = !info.interlaced_frame;
 
 	// return JsonValue
 	return root;
@@ -247,6 +270,8 @@ void Profile::SetJson(const std::string value) {
 // Load Json::Value into this object
 void Profile::SetJsonValue(const Json::Value root) {
 
+	if (!root["description"].isNull())
+		info.description = root["description"].asString();
 	if (!root["height"].isNull())
 		info.height = root["height"].asInt();
 	if (!root["width"].isNull())
@@ -260,12 +285,14 @@ void Profile::SetJsonValue(const Json::Value root) {
 	if (!root["pixel_ratio"].isNull()) {
 		info.pixel_ratio.num = root["pixel_ratio"]["num"].asInt();
 		info.pixel_ratio.den = root["pixel_ratio"]["den"].asInt();
+		info.pixel_ratio.Reduce();
 	}
 	if (!root["display_ratio"].isNull()) {
 		info.display_ratio.num = root["display_ratio"]["num"].asInt();
 		info.display_ratio.den = root["display_ratio"]["den"].asInt();
+		info.display_ratio.Reduce();
 	}
-	if (!root["interlaced_frame"].isNull())
-		info.interlaced_frame = root["interlaced_frame"].asBool();
+	if (!root["progressive"].isNull())
+		info.interlaced_frame = !root["progressive"].asBool();
 
 }
