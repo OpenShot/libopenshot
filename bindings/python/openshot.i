@@ -41,6 +41,11 @@
 %shared_ptr(juce::AudioBuffer<float>)
 %shared_ptr(openshot::Frame)
 
+/* Rename operators to avoid wrapping name collisions */
+%rename(__eq__) operator==;
+%rename(__lt__) operator<;
+%rename(__gt__) operator>;
+
 /* Instantiate the required template specializations */
 %template() std::map<std::string, int>;
 %template() std::pair<int, int>;
@@ -247,6 +252,18 @@
                 value = str(self)
             return "{value:{spec}}".format(value=value, spec=format_spec)
     %}
+}
+
+%extend openshot::Profile {
+    bool __eq__(const openshot::Profile& other) const {
+        return (*self == other);
+    }
+    bool __lt__(const openshot::Profile& other) const {
+        return (*self < other);
+    }
+    bool __gt__(const openshot::Profile& other) const {
+        return (*self > other);
+    }
 }
 
 %extend openshot::OpenShotVersion {

@@ -139,8 +139,12 @@ namespace openshot
 		Profile();
 		
 		/// @brief Constructor for Profile.
-		/// @param path 	The folder path / location of a profile file
+		/// @param path 	The file path / location of a profile file
 		Profile(std::string path);
+
+		/// @brief Save profile to a text file (label=value, one per line format)
+		/// @param file_path 	The file path / location of a profile file
+		void Save(const std::string& file_path) const;
 
 		std::string Key(); ///< Return a unique key of this profile with padding (01920x1080i2997_16:09)
 		std::string ShortName(); ///< Return the name of this profile (1920x1080p29.97)
