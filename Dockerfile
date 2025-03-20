@@ -42,11 +42,11 @@ RUN cd libopenshot-audio && \
     cd ../libopenshot && \
     cmake \
         -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS}" \
-        -DDISABLE_BUNDLED_JSONCPP="1" \
-        -DENABLE_TESTS="0" \
-        -DENABLE_COVERAGE="0" \
-        -DCMAKE_BUILD_TYPE="Release" \
-        -DENABLE_LIB_DOCS="0" \
+        -DDISABLE_BUNDLED_JSONCPP=1 \
+        -DENABLE_TESTS=0 \
+        -DENABLE_COVERAGE=0 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_LIB_DOCS=0 \
         -B build -S . && \
     cmake --build build -j$(nproc)
 
