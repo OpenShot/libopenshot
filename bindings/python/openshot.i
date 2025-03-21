@@ -115,6 +115,7 @@
         #include "effects/Tracker.h"
         #include "effects/ObjectDetection.h"
         #include "effects/Outline.h"
+        #include "effects/Shadow.h"
         #include "TrackedObjectBase.h"
         #include "TrackedObjectBBox.h"
     %}
@@ -353,4 +354,5 @@
     %include "effects/Tracker.h"
     %include "effects/ObjectDetection.h"
     %include "effects/Outline.h"
+    %include "effects/Shadow.h"
 #endif

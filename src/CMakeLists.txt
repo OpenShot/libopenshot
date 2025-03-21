@@ -100,6 +100,7 @@ set(OPENSHOT_CV_SOURCES
   effects/Tracker.cpp
   effects/ObjectDetection.cpp
   effects/Outline.cpp
+  effects/Shadow.cpp
   ./sort_filter/sort.cpp
   ./sort_filter/Hungarian.cpp
   ./sort_filter/KalmanTracker.cpp)

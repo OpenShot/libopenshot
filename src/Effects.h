@@ -43,6 +43,7 @@
 
 /* OpenCV Effects */
 #ifdef USE_OPENCV
+#include "effects/Shadow.h"
 #include "effects/Outline.h"
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"

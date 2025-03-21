@@ -100,6 +100,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	#ifdef USE_OPENCV
 	else if (effect_type == "Outline")
 		return new Outline();
+
+	else if (effect_type == "Shadow")
+		return new Shadow();
 	
 	else if(effect_type == "Stabilizer")
 		return new Stabilizer();
@@ -149,6 +152,7 @@ Json::Value EffectInfo::JsonValue() {
 
 	#ifdef USE_OPENCV
 	root.append(Outline().JsonInfo());
+	root.append(Shadow().JsonInfo());
 	root.append(Stabilizer().JsonInfo());	
 	root.append(Tracker().JsonInfo());
 	root.append(ObjectDetection().JsonInfo());
