@@ -915,7 +915,7 @@ std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
 // Frame class has GetImageCV, but it does not include alpha channel
 // so we need a separate methods which preserve alpha channel
 // Idea from: https://stackoverflow.com/a/78480103
-cv::Mat QImage2BGRACvMat(std::shared_ptr<QImage>& qimage) {
+cv::Mat Frame::QImage2BGRACvMat(std::shared_ptr<QImage>& qimage) {
 	cv::Mat cv_img(
 		qimage->height(), qimage->width(),
 		CV_8UC4, (uchar*)qimage->constBits(),
@@ -924,7 +924,7 @@ cv::Mat QImage2BGRACvMat(std::shared_ptr<QImage>& qimage) {
 	return cv_img;
 }
 
-std::shared_ptr<QImage> BGRACvMat2QImage(cv::Mat img) {
+std::shared_ptr<QImage> Frame::BGRACvMat2QImage(cv::Mat img) {
 	cv::Mat final_img;
 	cv::cvtColor(img, final_img, cv::COLOR_BGRA2RGBA);
 	QImage qimage(final_img.data, final_img.cols, final_img.rows, final_img.step, QImage::Format_ARGB32);
