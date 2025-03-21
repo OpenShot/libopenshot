@@ -40,12 +40,9 @@ namespace openshot
 		/// Init effect settings
 		void init_effect_details();
 
-		// Convert QImage to cv::Mat and vice versa
-		// Although Frame class has GetImageCV, but it does not include alpha channel
-		// so we need a separate methods which preserve alpha channel
-		// Idea from: https://stackoverflow.com/a/78480103
-		cv::Mat QImageToBGRACvMat(std::shared_ptr<QImage>& qimage);
-		std::shared_ptr<QImage> BGRACvMatToQImage(cv::Mat img);
+		// Moved to Frame.h
+		// cv::Mat QImageToBGRACvMat(std::shared_ptr<QImage>& qimage);
+		// std::shared_ptr<QImage> BGRACvMatToQImage(cv::Mat img);
 
 	public:
 		Keyframe width;	///< Width of the outline

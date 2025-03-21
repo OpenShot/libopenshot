@@ -279,6 +279,18 @@ namespace openshot
 
 		/// Set pointer to OpenCV image object
 		void SetImageCV(cv::Mat _image);
+
+		/// Convert QImage to OpenCV Mat (alpha channel included)
+		cv::Mat QImage2BGRACvMat(std::shared_ptr<QImage>& qimage);
+
+		/// Convert OpenCV Mat to QImage (alpha channel included)
+		std::shared_ptr<QImage> BGRACvMat2QImage(cv::Mat img);
+		
+		/// Get pointer to OpenCV Mat image object (with alpha channel)
+		cv::Mat GetBGRACvMat();
+
+		/// Set pointer to OpenCV image object (with alpha channel)
+		void SetBGRACvMat(cv::Mat _image);
 #endif
 	};
 
