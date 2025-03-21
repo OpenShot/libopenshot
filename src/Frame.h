@@ -108,6 +108,7 @@ namespace openshot
 
 #ifdef USE_OPENCV
 		cv::Mat imagecv; ///< OpenCV image. It will always be in BGR format
+		cv::Mat brga_image_cv; ///< OpenCV image. It will always be in BGR format
 #endif
 
 		/// Constrain a color value from 0 to 255

@@ -936,12 +936,12 @@ cv::Mat Frame::GetBGRACvMat() {
 	if (!image)
 		// Fill with black
 		AddColor(width, height, color);
-	imagecv = QImage2BGRACvMat(image);
-	return imagecv;
+	brga_image_cv = QImage2BGRACvMat(image);
+	return brga_image_cv;
 }
 
 void Frame::SetBGRACvMat(cv::Mat _image) {
-	imagecv = _image;
+	brga_image_cv = _image;
 	image = BGRACvMat2QImage(_image);
 }
 #endif
