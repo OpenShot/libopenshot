@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for Frame class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */

@@ -1,7 +1,8 @@
 /**
  * @file
  * @brief Header file for Outline effect class
- * @author Jonathan Thomas <jonathan@openshot.org>, HaiVQ <me@haivq.com>
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -33,6 +34,7 @@ namespace openshot
 	 * with openshot::Keyframe curves over time.
 	 *
 	 * Outlines can be added around any image or text, and animated over time.
+	 * Idea from: https://stackoverflow.com/a/78480103
 	 */
 	class Outline : public EffectBase
 	{

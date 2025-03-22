@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for Frame class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -914,7 +915,6 @@ std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
 // Convert QImage to cv::Mat and vice versa
 // Frame class has GetImageCV, but it does not include alpha channel
 // so we need a separate methods which preserve alpha channel
-// Idea from: https://stackoverflow.com/a/78480103
 cv::Mat Frame::QImage2BGRACvMat(std::shared_ptr<QImage>& qimage) {
 	cv::Mat cv_img(
 		qimage->height(), qimage->width(),
@@ -924,6 +924,7 @@ cv::Mat Frame::QImage2BGRACvMat(std::shared_ptr<QImage>& qimage) {
 	return cv_img;
 }
 
+// Convert cv::Mat back to QImage
 std::shared_ptr<QImage> Frame::BGRACvMat2QImage(cv::Mat img) {
 	cv::Mat final_img;
 	cv::cvtColor(img, final_img, cv::COLOR_BGRA2RGBA);
@@ -932,6 +933,7 @@ std::shared_ptr<QImage> Frame::BGRACvMat2QImage(cv::Mat img) {
 	return imgIn;
 }
 
+// Get BGRA
 cv::Mat Frame::GetBGRACvMat() {
 	if (!image)
 		// Fill with black
