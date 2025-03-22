@@ -20,7 +20,7 @@ using namespace openshot;
 Shadow::Shadow() : x_offset(10), y_offset(10), blur_radius(10.0) {
 	// Init effect properties
 	color = Color("#000000");
-	color.alpha = 200;
+	color.alpha = 128; // alpha = 0.5
 	init_effect_details();
 }
 
@@ -83,17 +83,26 @@ std::shared_ptr<openshot::Frame> Shadow::GetFrame(std::shared_ptr<openshot::Fram
 
 	// Padding the shadow color matrix and shadow mask to use ROI later
 	cv::Mat shadow_color_mat(cv::Size(paddedWidth, paddedHeight), CV_8UC4, cv::Scalar(redValue, greenValue, blueValue, alphaValue));
-	cv::copyMakeBorder(shadow_mask, shadow_mask, abs_y_offset, abs_y_offset, abs_x_offset, abs_x_offset, cv::BorderTypes::BORDER_REFLECT);
 
-	// Create ROI to crop from the shadow color matrix and shadow mask above
-	cv::Rect roi(abs_x_offset - x_offsetValue, abs_y_offset - y_offsetValue, cv_image.cols, cv_image.rows);
+	// only shifting image if shadow is not directly under the image
+	if (abs_x_offset && abs_y_offset) {
+		cv::copyMakeBorder(shadow_mask, shadow_mask, abs_y_offset, abs_y_offset, abs_x_offset, abs_x_offset, cv::BorderTypes::BORDER_REFLECT);
+		// Create ROI to crop from the shadow color matrix and shadow mask above,
+		// shift the shadow color and shadow mask
+		cv::Rect roi(abs_x_offset - x_offsetValue, abs_y_offset - y_offsetValue, cv_image.cols, cv_image.rows);
 
-	// Draw cropped (by ROI) shadow color mat into final image
-	shadow_color_mat(roi).copyTo(final_image, shadow_mask(roi));
+		// Draw cropped (by ROI) shadow color mat into final image
+		shadow_color_mat(roi).copyTo(final_image, shadow_mask(roi));
+	} else {
+		// Draw shadow color mat into final image
+		shadow_color_mat.copyTo(final_image, shadow_mask);
+	}
 
-	// Blur the final image to simulate shadow blur
+	// Blur the final image to simulate shadow blur. Ignore if blur_radius is 0
 	// FIXME: Not physically correct
-	cv::GaussianBlur(final_image, final_image, cv::Size(0, 0), blur_radiusValue, blur_radiusValue, cv::BorderTypes::BORDER_DEFAULT);
+	if (blur_radiusValue > 0.0) {
+		cv::GaussianBlur(final_image, final_image, cv::Size(0, 0), blur_radiusValue, blur_radiusValue, cv::BorderTypes::BORDER_DEFAULT);
+	}
 
 	// Draw the original image on top of the shadow
 	cv_image.copyTo(final_image, channels[3]);
