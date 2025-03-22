@@ -2,6 +2,7 @@
  * @file
  * @brief Unit tests for OpenCV Outline effect
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -23,6 +24,7 @@ using namespace openshot;
 
 TEST_CASE( "Shadow_Tests", "[libopenshot][opencv][shadow]" )
 {
+    // FIXME: This is a stub test case, does not check the effect correctly.
     // Create a video clip
     std::stringstream path;
     path << TEST_MEDIA_PATH << "1F0CF.svg";
@@ -34,6 +36,7 @@ TEST_CASE( "Shadow_Tests", "[libopenshot][opencv][shadow]" )
 
     // Create effect constructor (default values)
     openshot::Shadow e1{};
+    e1.info.apply_before_clip = false;
 
     // Get frame from effect
     auto f1 = e1.GetFrame(f, 1);
@@ -45,7 +48,17 @@ TEST_CASE( "Shadow_Tests", "[libopenshot][opencv][shadow]" )
     CHECK(pix1 == compare1);
 
     // Test another effect constructor
-    // How to check color blending on shadow???
+    openshot::Shadow e2(Keyframe(15), Keyframe(5), Keyframe(15), Color(255, 0, 0, 128));
+    e1.info.apply_before_clip = false;
+
+    // Get frame from effect
+    auto f2 = e2.GetFrame(f,1);
+    std::shared_ptr<QImage> i2 = f2->GetImage();
+
+    // Check effect colors
+    QColor pix2 = i2->pixelColor(11, 35);
+    QColor compare2{255, 0, 0, 128};
+    CHECK(pix2 == compare2);
 
     // Close clip
     c.Close();
