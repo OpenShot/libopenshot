@@ -114,6 +114,7 @@ Frame::~Frame() {
 	audio.reset();
 	#ifdef USE_OPENCV
 	imagecv.release();
+	brga_image_cv.release();
 	#endif
 }
 
