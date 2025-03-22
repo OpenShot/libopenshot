@@ -59,15 +59,29 @@ std::shared_ptr<openshot::Frame> Shadow::GetFrame(std::shared_ptr<openshot::Fram
 	int redValue = color.red.GetValue(frame_number);
 	int alphaValue = color.alpha.GetValue(frame_number);
 	
-	if (((x_offsetValue == 0.0) && (y_offsetValue == 0) && (blur_radiusValue == 0.0)) || (alphaValue <= 0)) {
-		// The shadow drop directly under the image or completely transparent.
-		// No need to do anything here, return the original frame
+	// The shadow drop directly under the image or completely transparent.
+	// No need to do anything here, return the original frame
+	if (
+		((x_offsetValue == 0.0) && (y_offsetValue == 0) && (blur_radiusValue == 0.0)) // shadow is directly under the image
+		||
+		(alphaValue <= 0) // shadow is completely transparent
+	) {
 		return frame;
 	}
 
 	// Get the frame's image
 	cv::Mat cv_image = frame->GetBGRACvMat();
 	
+	// The shadow is completely out of the frame
+	if ((x_offsetValue + blur_radiusValue > cv_image.cols) || (y_offsetValue + blur_radiusValue > cv_image.rows)) {
+		return frame;
+	}
+
+	int abs_x_offset = abs(x_offsetValue);
+	int abs_y_offset = abs(y_offsetValue);
+	int paddedWidth = cv_image.cols + 2 * abs_x_offset;
+	int paddedHeight = cv_image.rows + 2 * abs_y_offset;
+
 	std::vector<cv::Mat> channels(4);
 	cv::split(cv_image, channels);
 
@@ -75,11 +89,6 @@ std::shared_ptr<openshot::Frame> Shadow::GetFrame(std::shared_ptr<openshot::Fram
 	cv::Mat shadow_mask = channels[3].clone();
 
 	cv::Mat final_image;
-
-	int abs_x_offset = abs(x_offsetValue);
-	int abs_y_offset = abs(y_offsetValue);
-	int paddedWidth = cv_image.cols + 2 * abs_x_offset;
-	int paddedHeight = cv_image.rows + 2 * abs_y_offset;
 
 	// Padding the shadow color matrix and shadow mask to use ROI later
 	cv::Mat shadow_color_mat(cv::Size(paddedWidth, paddedHeight), CV_8UC4, cv::Scalar(redValue, greenValue, blueValue, alphaValue));
