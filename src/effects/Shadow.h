@@ -39,6 +39,9 @@ namespace openshot
 	/**
 	 * @brief This class drops shadow of image with transparent background and can be animated
 	 * with openshot::Keyframe curves over time.
+	 * 
+	 * Shadows can be added under any image or text. All coordination,
+	 * blur radius and color can be animated with openshot::Keyframe curves.
 	 */
 	class Shadow : public EffectBase
 	{
