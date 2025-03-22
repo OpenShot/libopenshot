@@ -1,7 +1,8 @@
 /**
  * @file
  * @brief Source file for Outline effect class
- * @author Jonathan Thomas <jonathan@openshot.org>, HaiVQ <me@haivq.com>
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */

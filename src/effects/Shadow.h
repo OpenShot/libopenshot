@@ -1,7 +1,8 @@
 /**
  * @file
  * @brief Header file for Shadow effect class
- * @author Jonathan Thomas <jonathan@openshot.org>, HaiVQ <me@haivq.com>
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
