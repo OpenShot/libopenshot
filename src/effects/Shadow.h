@@ -14,13 +14,6 @@
 #ifndef OPENSHOT_SHADOW_EFFECT_H
 #define OPENSHOT_SHADOW_EFFECT_H
 
-#include <QtWidgets/QGraphicsDropShadowEffect>
-#include <QtWidgets/QGraphicsScene>
-#include <QtWidgets/QGraphicsPixmapItem>
-#include <QtGui/QPixmap>
-#include <QtCore/QRectF>
-#include <QtGui/QPainter>
-
 #include <Color.h>
 
 #include "../EffectBase.h"
@@ -58,7 +51,7 @@ namespace openshot
 		/// Blank constructor, useful when using Json to load the effect properties
 		Shadow();
 
-		/// Default constructor, which require width, red, green, blue, alpha
+		/// Default constructor, which require x_offset, y_offset, blur_radius and color keyframe
 		///
 		/// @param x_offset The horizontal offset of the shadow (between -1000 and 1000, rounded to int)
 		/// @param y_offset The vertical offset of the shadow (between -1000 and 1000, rounded to int)
