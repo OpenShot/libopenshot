@@ -3,6 +3,7 @@
  * @brief Unit tests for openshot::Frame
  * @author Jonathan Thomas <jonathan@openshot.org>
  * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -180,6 +181,6 @@ TEST_CASE( "Convert_Image_Alpha", "[libopenshot][opencv][frame]" )
 	CHECK(f1->number == 1);
 	CHECK(f1->GetWidth() == cvimage.cols);
 	CHECK(f1->GetHeight() == cvimage.rows);
-	CHECK(cvimage.channels() == 3);
+	CHECK(cvimage.channels() == 4);
 }
 #endif
