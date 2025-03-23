@@ -72,15 +72,15 @@ std::shared_ptr<openshot::Frame> Shadow::GetFrame(std::shared_ptr<openshot::Fram
 	// Get the frame's image
 	cv::Mat cv_image = frame->GetBGRACvMat();
 	
-	// The shadow is completely out of the frame
-	if ((x_offsetValue + blur_radiusValue > cv_image.cols) || (y_offsetValue + blur_radiusValue > cv_image.rows)) {
-		return frame;
-	}
-
 	int abs_x_offset = abs(x_offsetValue);
 	int abs_y_offset = abs(y_offsetValue);
 	int paddedWidth = cv_image.cols + 2 * abs_x_offset;
 	int paddedHeight = cv_image.rows + 2 * abs_y_offset;
+
+	// The shadow is completely out of the frame
+	if ((abs_x_offset + blur_radiusValue > cv_image.cols) || (abs_y_offset + blur_radiusValue > cv_image.rows)) {
+		return frame;
+	}
 
 	std::vector<cv::Mat> channels(4);
 	cv::split(cv_image, channels);
