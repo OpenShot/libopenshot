@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Unit tests for OpenCV Outline effect
+ * @brief Unit tests for OpenCV Shadow effect
  * @author Jonathan Thomas <jonathan@openshot.org>
  * @author HaiVQ <me@haivq.com>
  *

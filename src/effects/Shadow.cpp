@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Outline effect class
+ * @brief Source file for Shadow effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  * @author HaiVQ <me@haivq.com>
  *
