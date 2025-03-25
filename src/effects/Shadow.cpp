@@ -52,7 +52,7 @@ std::shared_ptr<openshot::Frame> Shadow::GetFrame(std::shared_ptr<openshot::Fram
 {
 	int x_offsetValue = x_offset.GetValue(frame_number);
 	int y_offsetValue = y_offset.GetValue(frame_number);
-	float blur_radiusValue = blur_radius.GetValue(frame_number);
+	int blur_radiusValue = blur_radius.GetValue(frame_number);
 
 	int blueValue = color.blue.GetValue(frame_number);
 	int greenValue = color.green.GetValue(frame_number);
@@ -186,7 +186,7 @@ std::string Shadow::PropertiesJSON(int64_t requested_frame) const {
 	// Keyframes
 	root["x_offset"] = add_property_json("X Offset", x_offset.GetValue(requested_frame), "int", "", &x_offset, -1000, 1000, false, requested_frame);
 	root["y_offset"] = add_property_json("Y Offset", y_offset.GetValue(requested_frame), "int", "", &y_offset, -1000, 1000, false, requested_frame);
-	root["blur_radius"] = add_property_json("Blur Radius", blur_radius.GetValue(requested_frame), "float", "", &blur_radius, 0, 1000, false, requested_frame);
+	root["blur_radius"] = add_property_json("Blur Radius", blur_radius.GetValue(requested_frame), "int", "", &blur_radius, 0, 1000, false, requested_frame);
 	root["color"] = add_property_json("Key Color", 0.0, "color", "", &color.red, 0, 255, false, requested_frame);
 	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", &color.red, 0, 255, false, requested_frame);
 	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
