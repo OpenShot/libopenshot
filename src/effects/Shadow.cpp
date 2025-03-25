@@ -184,14 +184,14 @@ std::string Shadow::PropertiesJSON(int64_t requested_frame) const {
 	Json::Value root = BasePropertiesJSON(requested_frame);
 
 	// Keyframes
-	root["x_offset"] = add_property_json("X Offset", x_offset.GetValue(requested_frame), "int", "", &x_offset, -1000, 1000, false, requested_frame);
-	root["y_offset"] = add_property_json("Y Offset", y_offset.GetValue(requested_frame), "int", "", &y_offset, -1000, 1000, false, requested_frame);
+	root["x_offset"] = add_property_json("X Offset", x_offset.GetValue(requested_frame), "int", "", &x_offset, -4000, 4000, false, requested_frame);
+	root["y_offset"] = add_property_json("Y Offset", y_offset.GetValue(requested_frame), "int", "", &y_offset, -4000, 4000, false, requested_frame);
 	root["blur_radius"] = add_property_json("Blur Radius", blur_radius.GetValue(requested_frame), "int", "", &blur_radius, 0, 100, false, requested_frame);
 	root["color"] = add_property_json("Key Color", 0.0, "color", "", &color.red, 0, 255, false, requested_frame);
-	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", &color.red, 0, 255, false, requested_frame);
-	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
-	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", &color.blue, 0, 255, false, requested_frame);
-	root["color"]["alpha"] = add_property_json("Alpha", color.alpha.GetValue(requested_frame), "float", "", &color.alpha, 0, 255, false, requested_frame);
+	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "int", "", &color.red, 0, 255, false, requested_frame);
+	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "int", "", &color.green, 0, 255, false, requested_frame);
+	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "int", "", &color.blue, 0, 255, false, requested_frame);
+	root["color"]["alpha"] = add_property_json("Alpha", color.alpha.GetValue(requested_frame), "int", "", &color.alpha, 0, 255, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
