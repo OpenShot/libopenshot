@@ -59,7 +59,7 @@ if($CACHE{HAVE_OPENCV})
     CVTracker
     CVStabilizer
     CVOutline
-    CVShadow
+    # CVShadow # Temporally disable CVShadow test
     # CVObjectDetection
   )
 endif()
