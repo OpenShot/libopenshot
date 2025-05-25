@@ -40,10 +40,13 @@ set(OPENSHOT_TESTS
   QtImageReader
   ReaderBase
   Settings
+  SphericalMetadata
   Timeline
   # Effects
   ChromaKey
   Crop
+  Sharpen
+  SphericalEffect
 )
 
 # ImageMagick related test files

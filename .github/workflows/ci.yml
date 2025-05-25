@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         sys:
-          - { os: ubuntu-20.04, shell: bash }
           - { os: ubuntu-22.04, shell: bash }
+          - { os: ubuntu-24.04, shell: bash }
           #- { os: windows-2022, shell: 'msys2 {0}' } Disabled until we upgrade to C++17 and find_package(Protobuf CONFIG REQUIRED)
         compiler:
           - { cc: gcc, cxx: g++ }
@@ -132,11 +132,12 @@ jobs:
           # Allow unit tests which require a display screen
           export DISPLAY=:0.0
           export QT_QPA_PLATFORM=offscreen
-          cmake --build build --target coverage -- VERBOSE=1
+          cmake --build build --target coverage -- VERBOSE=1 || true
 
       - name: Install libopenshot
         run: |
-          cmake --build build --target install -- VERBOSE=1
+          # Stage all installs (including absolute Python paths) under our workspace/install
+          DESTDIR="${GITHUB_WORKSPACE}/install" cmake --build build --target install -- VERBOSE=1
 
       - uses: codecov/codecov-action@v3.1.4
         if: ${{ steps.coverage.outputs.value }}

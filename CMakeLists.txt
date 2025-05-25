@@ -258,7 +258,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
   )
   setup_target_for_coverage_lcov(
     NAME coverage
-    LCOV_ARGS "--no-external"
+    LCOV_ARGS ""
     EXECUTABLE ctest
     EXECUTABLE_ARGS ${CTEST_OPTIONS}
     DEPENDENCIES openshot ${UNIT_TEST_TARGETS}
@@ -267,7 +267,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
   foreach(_t IN LISTS UNIT_TEST_NAMES)
     setup_target_for_coverage_lcov(
       NAME "${_t}_coverage"
-      LCOV_ARGS "--no-external"
+      LCOV_ARGS ""
       EXECUTABLE ctest
       EXECUTABLE_ARGS ${CTEST_OPTIONS} -L "^${_t}$"
       DEPENDENCIES openshot openshot-${_t}-test

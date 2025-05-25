@@ -30,6 +30,7 @@ TEST_CASE( "empty constructor", "[libopenshot][profile]" )
     CHECK(p1.info.pixel_ratio.num == 0);
     CHECK(p1.info.pixel_ratio.den == 0);
     CHECK(p1.info.interlaced_frame == false);
+    CHECK(p1.info.spherical == false);
 
 }
 
@@ -51,6 +52,7 @@ TEST_CASE( "constructor with example profiles", "[libopenshot][profile]" )
     CHECK(p1.info.pixel_ratio.num == 1);
     CHECK(p1.info.pixel_ratio.den == 1);
     CHECK(p1.info.interlaced_frame == false);
+    CHECK(p1.info.spherical == false);
 
     // Export to JSON
     openshot::Profile p1_json = openshot::Profile();
@@ -66,6 +68,7 @@ TEST_CASE( "constructor with example profiles", "[libopenshot][profile]" )
     CHECK(p1_json.info.pixel_ratio.num == 1);
     CHECK(p1_json.info.pixel_ratio.den == 1);
     CHECK(p1_json.info.interlaced_frame == false);
+    CHECK(p1_json.info.spherical == false);
 
     std::stringstream profile2;
     profile2 << TEST_MEDIA_PATH << "example_profile2";
@@ -83,6 +86,7 @@ TEST_CASE( "constructor with example profiles", "[libopenshot][profile]" )
     CHECK(p2.info.pixel_ratio.num == 1);
     CHECK(p2.info.pixel_ratio.den == 1);
     CHECK(p2.info.interlaced_frame == true);
+    CHECK(p2.info.spherical == false);
 }
 
 TEST_CASE( "24 fps names", "[libopenshot][profile]" )
@@ -163,7 +167,6 @@ TEST_CASE( "save profiles", "[libopenshot][profile]" )
     // Save copy
     std::stringstream profile1_copy;
     profile1_copy << TEST_MEDIA_PATH << "example_profile1_copy";
-    std::cout << profile1_copy.str() << std::endl;
     p1.Save(profile1_copy.str());
 
     // Load saved copy
@@ -180,4 +183,52 @@ TEST_CASE( "save profiles", "[libopenshot][profile]" )
     CHECK(p1_load_copy.info.pixel_ratio.num == 1);
     CHECK(p1_load_copy.info.pixel_ratio.den == 1);
     CHECK(p1_load_copy.info.interlaced_frame == false);
+    CHECK(p1_load_copy.info.spherical == false);
+}
+
+TEST_CASE( "spherical profiles", "[libopenshot][profile]" )
+{
+    // Create a new profile with spherical=true
+    openshot::Profile p;
+    p.info.description = "360° Test Profile";
+    p.info.width = 3840;
+    p.info.height = 1920;
+    p.info.fps.num = 30;
+    p.info.fps.den = 1;
+    p.info.display_ratio.num = 2;
+    p.info.display_ratio.den = 1;
+    p.info.pixel_ratio.num = 1;
+    p.info.pixel_ratio.den = 1;
+    p.info.interlaced_frame = false;
+    p.info.spherical = true;
+
+    // Test the name methods for spherical content
+    CHECK(p.Key() == "03840x1920p0030_02-01_360");
+    CHECK(p.ShortName() == "3840x1920p30 360°");
+    CHECK(p.LongName() == "3840x1920p @ 30 fps (2:1) 360°");
+    CHECK(p.LongNameWithDesc() == "3840x1920p @ 30 fps (2:1) 360° 360° Test Profile");
+
+    // Test JSON serialization and deserialization
+    std::string json = p.Json();
+    openshot::Profile p_json;
+    p_json.SetJson(json);
+
+    CHECK(p_json.info.spherical == true);
+    CHECK(p_json.ShortName() == "3840x1920p30 360°");
+
+    // Save and reload to test file I/O
+    std::stringstream profile_path;
+    profile_path << TEST_MEDIA_PATH << "example_profile_360";
+    p.Save(profile_path.str());
+
+    // Load the saved profile
+    openshot::Profile p_loaded(profile_path.str());
+    CHECK(p_loaded.info.spherical == true);
+    CHECK(p_loaded.ShortName() == "3840x1920p30 360°");
+
+    // Test comparison operators
+    openshot::Profile p_non_spherical = p;
+    p_non_spherical.info.spherical = false;
+
+    CHECK_FALSE(p == p_non_spherical);
 }

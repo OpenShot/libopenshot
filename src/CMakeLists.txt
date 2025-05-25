@@ -119,7 +119,9 @@ set(EFFECTS_SOURCES
   effects/Negate.cpp
   effects/Pixelate.cpp
   effects/Saturation.cpp
+  effects/Sharpen.cpp
   effects/Shift.cpp
+  effects/SphericalProjection.cpp
   effects/Wave.cpp
   audio_effects/STFT.cpp
   audio_effects/Noise.cpp
