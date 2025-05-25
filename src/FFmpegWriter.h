@@ -318,6 +318,13 @@ namespace openshot {
 		/// by the Close() method if this method has not yet been called.
 		void WriteTrailer();
 
+		/// @brief Add spherical (360°) video metadata to the video stream
+		/// @param projection The projection type (e.g., "equirectangular", "cubemap")
+		/// @param yaw_deg The yaw angle in degrees (horizontal orientation, default 0)
+		/// @param pitch_deg The pitch angle in degrees (vertical orientation, default 0)
+		/// @param roll_deg The roll angle in degrees (tilt orientation, default 0)
+		void AddSphericalMetadata(const std::string& projection="equirectangular", float yaw_deg=0.0f, float pitch_deg=0.0f, float roll_deg=0.0f);
+
 	};
 
 }

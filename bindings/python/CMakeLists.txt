@@ -115,12 +115,15 @@ if (NOT DEFINED PYTHON_MODULE_PATH)
       "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
 
     if (NOT EXISTS "${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
-      ### Calculate the python module path (using distutils)
-      execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
-from distutils.sysconfig import get_python_lib; \
-print( get_python_lib( plat_specific=True, prefix='' ) )"
-        OUTPUT_VARIABLE PYTHON_MODULE_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE )
+      ### Calculate the python module path (prefer sysconfig, fallback to distutils for compatibility)
+      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "\
+try:
+  import sysconfig; print(sysconfig.get_path('platlib'))
+except ImportError:
+  from distutils.sysconfig import get_python_lib; \
+  print(get_python_lib(plat_specific=True, prefix=''))"
+              OUTPUT_VARIABLE PYTHON_MODULE_PATH
+              OUTPUT_STRIP_TRAILING_WHITESPACE)
     endif()
   endif()
 endif()

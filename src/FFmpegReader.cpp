@@ -554,28 +554,49 @@ void FFmpegReader::Open() {
 			info.metadata[str_key.toStdString()] = str_value.trimmed().toStdString();
 		}
 
-		// If "rotate" isn't already set, extract it from the video stream's side data.
-		// TODO: nb_side_data is depreciated, and I'm not sure the preferred way to do this
-		if (info.metadata.find("rotate") == info.metadata.end()) {
-			for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++) {
-				if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-					for (int j = 0; j < pFormatCtx->streams[i]->nb_side_data; j++) {
-						// Get the j-th side data element.
-						AVPacketSideData *sd = &pFormatCtx->streams[i]->side_data[j];
-#pragma GCC diagnostic pop
-						if (sd->type == AV_PKT_DATA_DISPLAYMATRIX && sd->size >= 9 * sizeof(int32_t)) {
-							double rotation = -av_display_rotation_get(reinterpret_cast<int32_t *>(sd->data));
-							if (isnan(rotation))
-								rotation = 0;
-							QString str_value = QString::number(rotation, 'g', 6);
-							info.metadata["rotate"] = str_value.trimmed().toStdString();
-							break;
-						}
+		// Process video stream side data (rotation, spherical metadata, etc)
+		for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++) {
+			AVStream* st = pFormatCtx->streams[i];
+			if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+				// Only inspect the first video stream
+				for (int j = 0; j < st->nb_side_data; j++) {
+					AVPacketSideData *sd = &st->side_data[j];
+
+					// Handle rotation metadata (unchanged)
+					if (sd->type == AV_PKT_DATA_DISPLAYMATRIX &&
+						sd->size >= 9 * sizeof(int32_t) &&
+						!info.metadata.count("rotate"))
+					{
+						double rotation = -av_display_rotation_get(
+							reinterpret_cast<int32_t *>(sd->data));
+						if (std::isnan(rotation)) rotation = 0;
+						info.metadata["rotate"] = std::to_string(rotation);
 					}
-					break;  // Only process the first video stream.
+					// Handle spherical video metadata
+					else if (sd->type == AV_PKT_DATA_SPHERICAL) {
+						// Always mark as spherical
+						info.metadata["spherical"] = "1";
+
+						// Cast the raw bytes to an AVSphericalMapping
+						const AVSphericalMapping* map =
+							reinterpret_cast<const AVSphericalMapping*>(sd->data);
+
+						// Projection enum → string
+						const char* proj_name = av_spherical_projection_name(map->projection);
+						info.metadata["spherical_projection"] = proj_name
+							? proj_name
+							: "unknown";
+
+						// Convert 16.16 fixed-point to float degrees
+						auto to_deg = [](int32_t v){
+							return (double)v / 65536.0;
+						};
+						info.metadata["spherical_yaw"]   = std::to_string(to_deg(map->yaw));
+						info.metadata["spherical_pitch"] = std::to_string(to_deg(map->pitch));
+						info.metadata["spherical_roll"]  = std::to_string(to_deg(map->roll));
+					}
 				}
+				break;
 			}
 		}
 
@@ -1307,7 +1328,10 @@ bool FFmpegReader::GetAVFrame() {
 			frameFinished = 1;
 			packet_status.video_decoded++;
 
-			av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
+			// Allocate image (align 32 for simd)
+			if (AV_ALLOCATE_IMAGE(pFrame, (AVPixelFormat)(pStream->codecpar->format), info.width, info.height) <= 0) {
+				throw OutOfMemory("Failed to allocate image buffer", path);
+			}
 			av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
 										(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
 

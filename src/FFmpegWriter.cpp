@@ -2349,3 +2349,48 @@ void FFmpegWriter::RemoveScalers() {
 	// Clear vector
 	image_rescalers.clear();
 }
+
+// In FFmpegWriter.cpp
+void FFmpegWriter::AddSphericalMetadata(const std::string& projection,
+										float yaw_deg,
+										float pitch_deg,
+										float roll_deg)
+{
+	if (!oc) return;
+	if (!info.has_video || !video_st) return;
+
+	// Allow movenc.c to write out the sv3d atom
+	oc->strict_std_compliance = FF_COMPLIANCE_UNOFFICIAL;
+
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 0, 0)
+	// Map the projection name to the enum (defaults to equirectangular)
+	int proj = av_spherical_from_name(projection.c_str());
+	if (proj < 0)
+		proj = AV_SPHERICAL_EQUIRECTANGULAR;
+
+	// Allocate the side‐data structure
+	size_t sd_size = 0;
+	AVSphericalMapping* map = av_spherical_alloc(&sd_size);
+	if (!map) {
+		// Allocation failed; skip metadata
+		return;
+	}
+
+	// Populate it
+	map->projection = static_cast<AVSphericalProjection>(proj);
+	// yaw/pitch/roll are 16.16 fixed point
+	map->yaw   = static_cast<int32_t>(yaw_deg   * (1 << 16));
+	map->pitch = static_cast<int32_t>(pitch_deg * (1 << 16));
+	map->roll  = static_cast<int32_t>(roll_deg  * (1 << 16));
+
+	// Attach to the video stream so movenc will emit an sv3d atom
+	av_stream_add_side_data(
+		video_st,
+		AV_PKT_DATA_SPHERICAL,
+		reinterpret_cast<uint8_t*>(map),
+		sd_size
+	);
+#else
+	// FFmpeg build too old: spherical side-data not supported
+#endif
+}

@@ -30,6 +30,7 @@ Profile::Profile() {
 	info.display_ratio.num = 0;
 	info.display_ratio.den = 0;
 	info.interlaced_frame = false;
+	info.spherical = false; // Default to non-spherical (regular) video
 }
 
 // @brief Constructor for Profile.
@@ -38,8 +39,19 @@ Profile::Profile(std::string path) {
 
 	bool read_file = false;
 
-	// Call default constructor
-	Profile();
+	// Initialize all values to defaults (same as default constructor)
+	info.description = "";
+	info.height = 0;
+	info.width = 0;
+	info.pixel_format = 0;
+	info.fps.num = 0;
+	info.fps.den = 0;
+	info.pixel_ratio.num = 0;
+	info.pixel_ratio.den = 0;
+	info.display_ratio.num = 0;
+	info.display_ratio.den = 0;
+	info.interlaced_frame = false;
+	info.spherical = false;  // Default to non-spherical (regular) video
 
 	try
 	{
@@ -104,6 +116,10 @@ Profile::Profile(std::string path) {
 					std::stringstream(value) >> value_int;
 					info.pixel_format = value_int;
 				}
+				else if (setting == "spherical") {
+					std::stringstream(value) >> value_int;
+					info.spherical = (bool)value_int;
+				}
 			}
 			read_file = true;
 			inputFile.close();
@@ -156,6 +172,12 @@ std::string Profile::Key() {
 	output << std::setfill('0') << std::setw(4) << fps_string << std::setfill('\0') << "_";
 	output << std::setfill('0') << std::setw(2) << info.display_ratio.num << std::setfill('\0') << "-";
 	output << std::setfill('0') << std::setw(2) << info.display_ratio.den << std::setfill('\0');
+
+	// Add spherical indicator
+	if (info.spherical) {
+		output << "_360";
+	}
+
 	return output.str();
 }
 
@@ -168,6 +190,12 @@ std::string Profile::ShortName() {
 	}
 	std::string fps_string = formattedFPS(true);
 	output << info.width << "x" << info.height << progressive_str << fps_string;
+
+	// Add 360° indicator for spherical videos
+	if (info.spherical) {
+		output << " 360°";
+	}
+
 	return output.str();
 }
 
@@ -181,6 +209,12 @@ std::string Profile::LongName() {
 	std::string fps_string = formattedFPS(true);
 	output << info.width << "x" << info.height << progressive_str << " @ " << fps_string
 		   << " fps (" << info.display_ratio.num << ":" << info.display_ratio.den << ")";
+
+	// Add 360° indicator for spherical videos
+	if (info.spherical) {
+		output << " 360°";
+	}
+
 	return output.str();
 }
 
@@ -193,7 +227,14 @@ std::string Profile::LongNameWithDesc() {
 	}
 	std::string fps_string = formattedFPS(true);
 	output << info.width << "x" << info.height << progressive_str << " @ " << fps_string
-		   << " fps (" << info.display_ratio.num << ":" << info.display_ratio.den << ") " << info.description;
+		   << " fps (" << info.display_ratio.num << ":" << info.display_ratio.den << ")";
+
+	// Add 360° indicator for spherical videos
+	if (info.spherical) {
+		output << " 360°";
+	}
+
+	output << " " << info.description;
 	return output.str();
 }
 
@@ -214,7 +255,8 @@ void Profile::Save(const std::string& file_path) const {
 	file << "sample_aspect_den=" << info.pixel_ratio.den << "\n";
 	file << "display_aspect_num=" << info.display_ratio.num << "\n";
 	file << "display_aspect_den=" << info.display_ratio.den << "\n";
-	file << "pixel_format=" << info.pixel_format;
+	file << "pixel_format=" << info.pixel_format << "\n";
+	file << "spherical=" << info.spherical;
 
 	file.close();
 }
@@ -245,6 +287,7 @@ Json::Value Profile::JsonValue() const {
 	root["display_ratio"]["num"] = info.display_ratio.num;
 	root["display_ratio"]["den"] = info.display_ratio.den;
 	root["progressive"] = !info.interlaced_frame;
+	root["spherical"] = info.spherical;
 
 	// return JsonValue
 	return root;
@@ -294,5 +337,7 @@ void Profile::SetJsonValue(const Json::Value root) {
 	}
 	if (!root["progressive"].isNull())
 		info.interlaced_frame = !root["progressive"].asBool();
+	if (!root["spherical"].isNull())
+		info.spherical = root["spherical"].asBool();
 
 }

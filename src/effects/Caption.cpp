@@ -185,14 +185,30 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	double fade_out_percentage = 0.0;
 	double line_height = metrics_line_spacing * line_spacing_value;
 
+	// Helper: pad fraction to 3 digits, then convert to seconds
+	auto fracToSeconds = [&](const QString &f){
+		QString ms = f.leftJustified(3, QChar('0'));  // "5"→"500", "05"→"050", ""→"000"
+		return ms.toInt() / 1000.0;
+	};
+
 	// Loop through matches and find text to display (if any)
 	for (auto match = matchedCaptions.begin(); match != matchedCaptions.end(); match++) {
 
-		// Build timestamp (00:00:04.000 --> 00:00:06.500)
-		int64_t start_frame = ((match->captured(1).toFloat() * 60.0 * 60.0 ) + (match->captured(2).toFloat() * 60.0 ) +
-							   match->captured(3).toFloat() + (match->captured(4).toFloat() / 1000.0)) * fps.ToFloat();
-		int64_t end_frame = ((match->captured(5).toFloat() * 60.0 * 60.0 ) + (match->captured(6).toFloat() * 60.0 ) +
-							 match->captured(7).toFloat() + (match->captured(8).toFloat() / 1000.0)) * fps.ToFloat();
+		// Compute start and end in seconds
+		double startSeconds =
+			match->captured(1).toFloat() * 3600.0 +
+			match->captured(2).toFloat() *   60.0 +
+			match->captured(3).toFloat() +
+			fracToSeconds(match->captured(4));
+
+		double endSeconds =
+			match->captured(5).toFloat() * 3600.0 +
+			match->captured(6).toFloat() *   60.0 +
+			match->captured(7).toFloat() +
+			fracToSeconds(match->captured(8));
+
+		auto start_frame = int64_t(startSeconds * fps.ToFloat()) + 1;
+		auto end_frame = int64_t(endSeconds * fps.ToFloat());
 
 		// Split multiple lines into separate paths
 		QStringList lines = match->captured(9).split("\n");
