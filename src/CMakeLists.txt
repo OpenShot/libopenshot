@@ -111,6 +111,7 @@ set(EFFECTS_SOURCES
   effects/Brightness.cpp
   effects/Caption.cpp
   effects/ChromaKey.cpp
+  effects/ColorMap.cpp
   effects/ColorShift.cpp
   effects/Crop.cpp
   effects/Deinterlace.cpp

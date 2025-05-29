@@ -19,6 +19,7 @@
 #include "effects/Brightness.h"
 #include "effects/Caption.h"
 #include "effects/ChromaKey.h"
+#include "effects/ColorMap.h"
 #include "effects/ColorShift.h"
 #include "effects/Crop.h"
 #include "effects/Deinterlace.h"

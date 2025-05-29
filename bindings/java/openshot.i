@@ -166,6 +166,7 @@
 %include "effects/Brightness.h"
 %include "effects/Caption.h"
 %include "effects/ChromaKey.h"
+%include "effects/ColorMap.h"
 %include "effects/ColorShift.h"
 %include "effects/Crop.h"
 %include "effects/Deinterlace.h"
@@ -174,7 +175,13 @@
 %include "effects/Negate.h"
 %include "effects/Pixelate.h"
 %include "effects/Saturation.h"
+%include "effects/Sharpen.h"
 %include "effects/Shift.h"
+%include "effects/SphericalProjection.cpp"
 %include "effects/Wave.h"
-
-
+#ifdef USE_OPENCV
+    %include "effects/Stabilizer.h"
+    %include "effects/Tracker.h"
+    %include "effects/ObjectDetection.h"
+    %include "effects/Outline.h"
+#endif
