@@ -43,6 +43,7 @@ set(OPENSHOT_TESTS
   SphericalMetadata
   Timeline
   # Effects
+  ColorMap
   ChromaKey
   Crop
   Sharpen

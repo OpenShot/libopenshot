@@ -40,6 +40,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "ChromaKey")
 		return new ChromaKey();
 
+	else if (effect_type == "ColorMap")
+		return new ColorMap();
+
 	else if (effect_type == "ColorShift")
 		return new ColorShift();
 
@@ -135,6 +138,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Brightness().JsonInfo());
 	root.append(Caption().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
+	root.append(ColorMap().JsonInfo());
 	root.append(ColorShift().JsonInfo());
 	root.append(Crop().JsonInfo());
 	root.append(Deinterlace().JsonInfo());
