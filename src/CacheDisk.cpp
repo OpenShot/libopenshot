@@ -94,7 +94,7 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 	// Freshen frame if it already exists
 	if (frames.count(frame_number))
 		// Move frame to front of queue
-		MoveToFront(frame_number);
+		Touch(frame_number);
 
 	else
 	{
@@ -334,7 +334,7 @@ void CacheDisk::Remove(int64_t start_frame_number, int64_t end_frame_number)
 }
 
 // Move frame to front of queue (so it lasts longer)
-void CacheDisk::MoveToFront(int64_t frame_number)
+void CacheDisk::Touch(int64_t frame_number)
 {
 	// Does frame exists in cache?
 	if (frames.count(frame_number))

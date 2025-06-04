@@ -14,3 +14,15 @@ License: CC-BY-3.0
 Files: thirdparty/jsoncpp/*
 Copyright: Copyright (c) 2007-2010 by Baptiste Lepilleur and The JsonCpp Authors
 License: CC0-1.0 or MIT
+
+Files: external/godot-cpp/*
+Copyright: 2017-present Godot Engine contributors
+License: MIT
+
+Files: bindings/godot/libopenshot_godot.gdextension
+Copyright: OpenShot Studios, LLC
+License: LGPL-3.0-or-later
+
+Files: .gitmodules
+Copyright: OpenShot Studios, LLC
+License: LGPL-3.0-or-later

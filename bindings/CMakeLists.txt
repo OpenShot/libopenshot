@@ -20,6 +20,10 @@ IF(NOT DEFINED ENABLE_JAVA)
     SET(ENABLE_JAVA 0)
 ENDIF()
 
+IF(NOT DEFINED ENABLE_GODOT)
+    SET(ENABLE_GODOT 0)
+ENDIF()
+
 ############### INCLUDE EACH LANGUAGE BINDING ################
 IF (ENABLE_PYTHON)
     add_subdirectory(python)
@@ -32,3 +36,7 @@ ENDIF (ENABLE_RUBY)
 IF (ENABLE_JAVA)
     add_subdirectory(java)
 ENDIF (ENABLE_JAVA)
+
+IF (ENABLE_GODOT)
+    add_subdirectory(godot)
+ENDIF (ENABLE_GODOT)

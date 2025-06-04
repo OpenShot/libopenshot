@@ -13,7 +13,6 @@
 
 #include <thread>	// for std::this_thread::sleep_for
 #include <chrono>	// for std::chrono::milliseconds
-#include <sstream>
 #include <iomanip>
 
 #include "Frame.h"

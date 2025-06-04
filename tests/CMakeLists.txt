@@ -42,10 +42,12 @@ set(OPENSHOT_TESTS
   Settings
   SphericalMetadata
   Timeline
+  VideoCacheThread
   # Effects
   ColorMap
   ChromaKey
   Crop
+  LensFlare
   Sharpen
   SphericalEffect
 )

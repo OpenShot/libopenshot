@@ -12,7 +12,6 @@
 
 #include <iostream>
 #include <iomanip>
-#include <sstream>
 
 #include "ReaderBase.h"
 #include "ClipBase.h"
@@ -112,9 +111,7 @@ Json::Value ReaderBase::JsonValue() const {
 	root["has_audio"] = info.has_audio;
 	root["has_single_image"] = info.has_single_image;
 	root["duration"] = info.duration;
-	std::stringstream filesize_stream;
-	filesize_stream << info.file_size;
-	root["file_size"] = filesize_stream.str();
+	root["file_size"] = static_cast<Json::Value::Int64>(info.file_size);  // direct 64-bit int
 	root["height"] = info.height;
 	root["width"] = info.width;
 	root["pixel_format"] = info.pixel_format;
@@ -129,9 +126,7 @@ Json::Value ReaderBase::JsonValue() const {
 	root["display_ratio"]["num"] = info.display_ratio.num;
 	root["display_ratio"]["den"] = info.display_ratio.den;
 	root["vcodec"] = info.vcodec;
-	std::stringstream video_length_stream;
-	video_length_stream << info.video_length;
-	root["video_length"] = video_length_stream.str();
+	root["video_length"] = static_cast<Json::Value::Int64>(info.video_length);
 	root["video_stream_index"] = info.video_stream_index;
 	root["video_timebase"] = Json::Value(Json::objectValue);
 	root["video_timebase"]["num"] = info.video_timebase.num;
