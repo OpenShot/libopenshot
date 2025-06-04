@@ -52,7 +52,7 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 	// Freshen frame if it already exists
 	if (frames.count(frame_number))
 		// Move frame to front of queue
-		MoveToFront(frame_number);
+		Touch(frame_number);
 
 	else
 	{
@@ -192,7 +192,7 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 }
 
 // Move frame to front of queue (so it lasts longer)
-void CacheMemory::MoveToFront(int64_t frame_number)
+void CacheMemory::Touch(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);

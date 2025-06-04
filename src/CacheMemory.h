@@ -74,7 +74,7 @@ namespace openshot {
 
 		/// @brief Move frame to front of queue (so it lasts longer)
 		/// @param frame_number The frame number of the cached frame
-		void MoveToFront(int64_t frame_number);
+		void Touch(int64_t frame_number);
 
 		/// @brief Remove a specific frame
 		/// @param frame_number The frame number of the cached frame

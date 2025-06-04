@@ -93,6 +93,10 @@ namespace openshot {
 		/// @param end_frame_number The ending frame number of the cached frame
 		virtual void Remove(int64_t start_frame_number, int64_t end_frame_number) = 0;
 
+		/// @brief Move frame to front of queue (so it lasts longer)
+		/// @param frame_number The frame number of the cached frame
+		virtual void Touch(int64_t frame_number) = 0;
+
 		/// Gets the maximum bytes value
 		int64_t GetMaxBytes() { return max_bytes; };
 

@@ -55,6 +55,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "Hue")
 		return new Hue();
 
+	else if (effect_type == "LensFlare")
+		return new LensFlare();
+
 	else if (effect_type == "Mask")
 		return new Mask();
 
@@ -140,6 +143,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Crop().JsonInfo());
 	root.append(Deinterlace().JsonInfo());
 	root.append(Hue().JsonInfo());
+	root.append(LensFlare().JsonInfo());
 	root.append(Mask().JsonInfo());
 	root.append(Negate().JsonInfo());
 	root.append(Pixelate().JsonInfo());

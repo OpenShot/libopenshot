@@ -10,8 +10,6 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-#include <sstream>
-
 #include "CacheBase.h"
 
 using namespace std;
@@ -103,9 +101,7 @@ Json::Value CacheBase::JsonValue() {
 
 	// Create root json object
 	Json::Value root;
-	std::stringstream max_bytes_stream;
-	max_bytes_stream << max_bytes;
-	root["max_bytes"] = max_bytes_stream.str();
+	root["max_bytes"] = std::to_string(max_bytes);
 
 	// return JsonValue
 	return root;

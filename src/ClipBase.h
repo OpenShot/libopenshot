@@ -14,7 +14,6 @@
 #define OPENSHOT_CLIPBASE_H
 
 #include <memory>
-#include <sstream>
 #include "CacheMemory.h"
 #include "Frame.h"
 #include "Point.h"

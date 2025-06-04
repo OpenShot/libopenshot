@@ -15,7 +15,6 @@
 
 #include <iostream>
 #include <string>
-#include <sstream>
 #include <math.h>
 #include <fstream>
 #include <QtCore/QString>

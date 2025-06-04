@@ -24,8 +24,6 @@
 
 #include <memory>
 #include <mutex>
-#include <sstream>
-#include <queue>
 
 #include "ChannelLayouts.h"
 #include "Fraction.h"

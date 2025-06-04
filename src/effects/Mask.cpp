@@ -18,6 +18,7 @@
 #include "ChunkReader.h"
 #include "FFmpegReader.h"
 #include "QtImageReader.h"
+#include <omp.h>
 
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
@@ -88,52 +89,61 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 		}
 	}
 
-	// Refresh no longer needed
+	// Once we've done the necessary resizing, we no longer need to refresh again
 	needs_refresh = false;
 
-	// Get pixel arrays
-	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	unsigned char *mask_pixels = (unsigned char *) original_mask->bits();
+	// Grab raw pointers and dimensions one time
+	unsigned char* pixels      = reinterpret_cast<unsigned char*>(frame_image->bits());
+	unsigned char* mask_pixels = reinterpret_cast<unsigned char*>(original_mask->bits());
+	int width                   = original_mask->width();
+	int height                  = original_mask->height();
+	int num_pixels              = width * height;  // total pixel count
 
-	double contrast_value = (contrast.GetValue(frame_number));
-	double brightness_value = (brightness.GetValue(frame_number));
+	// Evaluate brightness and contrast keyframes just once
+	double contrast_value   = contrast.GetValue(frame_number);
+	double brightness_value = brightness.GetValue(frame_number);
 
-	// Loop through mask pixels, and apply average gray value to frame alpha channel
-	for (int pixel = 0, byte_index=0; pixel < original_mask->width() * original_mask->height(); pixel++, byte_index+=4)
+	int brightness_adj = static_cast<int>(255 * brightness_value);
+	float contrast_factor = 20.0f / std::max(0.00001f, 20.0f - static_cast<float>(contrast_value));
+
+	// Iterate over every pixel in parallel
+#pragma omp parallel for schedule(static)
+	for (int i = 0; i < num_pixels; ++i)
 	{
-		// Get the RGB values from the pixel
-		int R = mask_pixels[byte_index];
-		int G = mask_pixels[byte_index + 1];
-		int B = mask_pixels[byte_index + 2];
-		int A = mask_pixels[byte_index + 3];
+		int idx = i * 4;
 
-		// Get the average luminosity
-		int gray_value = qGray(R, G, B);
+		int R = mask_pixels[idx + 0];
+		int G = mask_pixels[idx + 1];
+		int B = mask_pixels[idx + 2];
+		int A = mask_pixels[idx + 3];
 
-		// Adjust the brightness
-		gray_value += (255 * brightness_value);
+		// Compute base gray, then apply brightness + contrast
+		int gray = qGray(R, G, B);
+		gray += brightness_adj;
+		gray = static_cast<int>(contrast_factor * (gray - 128) + 128);
 
-		// Adjust the contrast
-		float factor = (20 / std::fmax(0.00001, 20.0 - contrast_value));
-		gray_value = (factor * (gray_value - 128) + 128);
+		// Clamp (A - gray) into [0, 255]
+		int diff = A - gray;
+		if (diff < 0) diff = 0;
+		else if (diff > 255) diff = 255;
 
 		// Calculate the % change in alpha
-		float alpha_percent = float(constrain(A - gray_value)) / 255.0;
+		float alpha_percent = static_cast<float>(diff) / 255.0f;
 
 		// Set the alpha channel to the gray value
 		if (replace_image) {
 			// Replace frame pixels with gray value (including alpha channel)
-			pixels[byte_index + 0] = constrain(255 * alpha_percent);
-			pixels[byte_index + 1] = constrain(255 * alpha_percent);
-			pixels[byte_index + 2] = constrain(255 * alpha_percent);
-			pixels[byte_index + 3] = constrain(255 * alpha_percent);
+			auto new_val = static_cast<unsigned char>(diff);
+			pixels[idx + 0] = new_val;
+			pixels[idx + 1] = new_val;
+			pixels[idx + 2] = new_val;
+			pixels[idx + 3] = new_val;
 		} else {
-			// Multiply new alpha value with all the colors (since we are using a premultiplied
-			// alpha format)
-			pixels[byte_index + 0] *= alpha_percent;
-			pixels[byte_index + 1] *= alpha_percent;
-			pixels[byte_index + 2] *= alpha_percent;
-			pixels[byte_index + 3] *= alpha_percent;
+			// Premultiplied RGBA → multiply each channel by alpha_percent
+			pixels[idx + 0] = static_cast<unsigned char>(pixels[idx + 0] * alpha_percent);
+			pixels[idx + 1] = static_cast<unsigned char>(pixels[idx + 1] * alpha_percent);
+			pixels[idx + 2] = static_cast<unsigned char>(pixels[idx + 2] * alpha_percent);
+			pixels[idx + 3] = static_cast<unsigned char>(pixels[idx + 3] * alpha_percent);
 		}
 
 	}

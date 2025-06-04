@@ -35,7 +35,7 @@
 #cmakedefine01 FFMPEG_USE_SWRESAMPLE
 #cmakedefine01 APPIMAGE_BUILD
 
-#include <sstream>
+#include <string>
 
 namespace openshot
 {
@@ -47,10 +47,8 @@ namespace openshot
 		static const int So = OPENSHOT_VERSION_SO; /// Shared Object Number (incremented when API or ABI changes)
 
 		/// Get a string version of the version (i.e. "Major.Minor.Build")
-		inline static const std::string ToString() {
-			std::stringstream version_string;
-			version_string << Major << "." << Minor << "." << Build;
-			return version_string.str();
+		inline static std::string ToString() {
+			return std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Build);
 		}
 	};
 

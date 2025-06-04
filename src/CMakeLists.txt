@@ -116,6 +116,7 @@ set(EFFECTS_SOURCES
   effects/Crop.cpp
   effects/Deinterlace.cpp
   effects/Hue.cpp
+  effects/LensFlare.cpp
   effects/Mask.cpp
   effects/Negate.cpp
   effects/Pixelate.cpp
