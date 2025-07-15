@@ -4,7 +4,7 @@
  * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  */
 
-// Copyright (c) 2008-2020 OpenShot Studios, LLC
+// Copyright (c) 2008-2025 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -14,6 +14,7 @@
 #include <iostream>
 #include <Qt>
 #include <QTextStream>
+#include <cstdlib>
 
 // Fix Qt::endl for older Qt versions
 // From: https://bugreports.qt.io/browse/QTBUG-82680
@@ -26,14 +27,25 @@ namespace Qt {
 
 
 namespace openshot {
+
+    // Cross-platform aligned free function
+    inline void aligned_free(void* ptr)
+    {
+#if defined(_WIN32)
+        _aligned_free(ptr);
+#else
+        free(ptr);
+#endif
+    }
+
     // Clean up buffer after QImage is deleted
     static inline void cleanUpBuffer(void *info)
     {
         if (!info)
             return;
-        // Remove buffer since QImage tells us to
-        uint8_t *qbuffer = reinterpret_cast<uint8_t *>(info);
-        delete[] qbuffer;
+
+        // Free the aligned memory buffer
+        aligned_free(info);
     }
 }  // namespace
 

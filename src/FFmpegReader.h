@@ -31,6 +31,7 @@
 #include "Clip.h"
 #include "OpenMPUtilities.h"
 #include "Settings.h"
+#include <cstdlib>
 
 
 namespace openshot {
@@ -147,6 +148,11 @@ namespace openshot {
 		double video_pts_seconds;
 		int64_t NO_PTS_OFFSET;
 		PacketStatus packet_status;
+
+		// Cached conversion contexts and frames for performance
+		SwsContext *img_convert_ctx = nullptr;        ///< Cached video scaler context
+		SWRCONTEXT *avr_ctx = nullptr;                ///< Cached audio resample context
+		AVFrame *pFrameRGB_cached = nullptr;          ///< Temporary frame used for video conversion
 
 		int hw_de_supported = 0;	// Is set by FFmpegReader
 #if USE_HW_ACCEL

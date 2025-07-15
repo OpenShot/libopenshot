@@ -40,11 +40,11 @@ namespace openshot
         /// @return True if at least min_frames_ahead frames have been cached.
         bool isReady();
 
-        /// Set is_playing = true, so run() will begin caching/playback.
-        void Play();
+        /// Play method is unimplemented
+        void Play() {};
 
-        /// Set is_playing = false, effectively pausing playback (caching still runs).
-        void Stop();
+        /// Stop method is unimplemented
+        void Stop() {};
 
         /**
          * @brief Set playback speed/direction. Positive = forward, negative = rewind, zero = pause.
@@ -67,6 +67,12 @@ namespace openshot
          * @param start_preroll If true, forces cache to rebuild around new_position.
          */
         void Seek(int64_t new_position, bool start_preroll);
+
+        /// Start the cache thread at high priority. Returns true if it’s actually running.
+        bool StartThread();
+
+        /// Stop the cache thread (wait up to timeoutMs ms). Returns true if it stopped.
+        bool StopThread(int timeoutMs = 0);
 
         /**
          * @brief Attach a ReaderBase (e.g. Timeline, FFmpegReader) and begin caching.
@@ -156,8 +162,6 @@ namespace openshot
         int speed;            ///< Current playback speed (0=paused, >0 forward, <0 backward).
         int last_speed;       ///< Last non-zero speed (for tracking).
         int last_dir;         ///< Last direction sign (+1 forward, –1 backward).
-
-        bool is_playing;      ///< True if playback is “running” (affects thread loop, not caching).
         bool userSeeked;      ///< True if Seek(..., true) was called (forces a cache reset).
 
         int64_t requested_display_frame; ///< Frame index the user requested.
@@ -165,7 +169,6 @@ namespace openshot
         int64_t cached_frame_count;      ///< Count of frames currently added to cache.
 
         int64_t min_frames_ahead;        ///< Minimum number of frames considered “ready” (pre-roll).
-        int64_t max_frames_ahead;        ///< Maximum frames to attempt to cache (mem capped).
         int64_t timeline_max_frame;      ///< Highest valid frame index in the timeline.
 
         ReaderBase* reader;              ///< The source reader (e.g., Timeline, FFmpegReader).

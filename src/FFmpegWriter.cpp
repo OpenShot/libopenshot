@@ -9,7 +9,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2024 OpenShot Studios, LLC, Fabrice Bellard
+// Copyright (c) 2008-2025 OpenShot Studios, LLC, Fabrice Bellard
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -75,8 +75,8 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 FFmpegWriter::FFmpegWriter(const std::string& path) :
 		path(path), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), img_convert_ctx(NULL), num_of_rescalers(1),
-		rescaler_position(0), video_codec_ctx(NULL), audio_codec_ctx(NULL), is_writing(false), video_timestamp(0), audio_timestamp(0),
+		initial_audio_input_frame_size(0), img_convert_ctx(NULL),
+		video_codec_ctx(NULL), audio_codec_ctx(NULL), is_writing(false), video_timestamp(0), audio_timestamp(0),
 		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
 		write_header(false), write_trailer(false), audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
 
@@ -414,8 +414,6 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 
 		else if (name == "cqp") {
 			// encode quality and special settings like lossless
-			// This might be better in an extra methods as more options
-			// and way to set quality are possible
 #if USE_HW_ACCEL
 			if (hw_en_on) {
 				av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
@@ -464,8 +462,6 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			}
 		} else if (name == "crf") {
 			// encode quality and special settings like lossless
-			// This might be better in an extra methods as more options
-			// and way to set quality are possible
 #if USE_HW_ACCEL
 			if (hw_en_on) {
 				double mbs = 15000000.0;
@@ -539,8 +535,6 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			}
 		} else if (name == "qp") {
 			// encode quality and special settings like lossless
-			// This might be better in an extra methods as more options
-			// and way to set quality are possible
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
 	// FFmpeg 4.0+
 				switch (c->codec_id) {
@@ -605,10 +599,7 @@ bool FFmpegWriter::IsValidCodec(std::string codec_name) {
 	AV_REGISTER_ALL
 
 	// Find the codec (if any)
-	if (avcodec_find_encoder_by_name(codec_name.c_str()) == NULL)
-		return false;
-	else
-		return true;
+	return avcodec_find_encoder_by_name(codec_name.c_str()) != NULL;
 }
 
 // Prepare & initialize streams and open codecs
@@ -972,9 +963,9 @@ void FFmpegWriter::Close() {
 	if (audio_st)
 		close_audio(oc, audio_st);
 
-	// Deallocate image scalers
-	if (image_rescalers.size() > 0)
-		RemoveScalers();
+	// Remove single software scaler
+	if (img_convert_ctx)
+		sws_freeContext(img_convert_ctx);
 
 	if (!(oc->oformat->flags & AVFMT_NOFILE)) {
 		/* close the output file */
@@ -1025,7 +1016,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	// Create a new audio stream
 	AVStream* st = avformat_new_stream(oc, codec);
 	if (!st)
-		throw OutOfMemory("Could not allocate memory for the video stream.", path);
+		throw OutOfMemory("Could not allocate memory for the audio stream.", path);
 
 	// Allocate a new codec context for the stream
 	ALLOC_CODEC_CTX(audio_codec_ctx, codec, st)
@@ -1058,7 +1049,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		// Set sample rate
 		c->sample_rate = info.sample_rate;
 
-uint64_t channel_layout = info.channel_layout;
+	uint64_t channel_layout = info.channel_layout;
 #if HAVE_CH_LAYOUT
 	// Set a valid number of channels (or throw error)
 	AVChannelLayout ch_layout;
@@ -1117,9 +1108,9 @@ uint64_t channel_layout = info.channel_layout;
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 
-int nb_channels;
-const char* nb_channels_label;
-const char* channel_layout_label;
+	int nb_channels;
+	const char* nb_channels_label;
+	const char* channel_layout_label;
 
 #if HAVE_CH_LAYOUT
     nb_channels = c->ch_layout.nb_channels;
@@ -1343,8 +1334,8 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 	const AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec_ctx)
 
-	// Set number of threads equal to number of processors (not to exceed 16)
-	audio_codec_ctx->thread_count = std::min(FF_NUM_PROCESSORS, 16);
+	// Audio encoding does not typically use more than 2 threads (most codecs use 1 thread)
+	audio_codec_ctx->thread_count = std::min(FF_AUDIO_NUM_PROCESSORS, 2);
 
 	// Find the audio encoder
 	codec = avcodec_find_encoder_by_name(info.acodec.c_str());
@@ -1418,8 +1409,8 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	const AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, video_codec_ctx)
 
-	// Set number of threads equal to number of processors (not to exceed 16)
-	video_codec_ctx->thread_count = std::min(FF_NUM_PROCESSORS, 16);
+	// Set number of threads equal to number of processors (not to exceed 16, FFmpeg doesn't recommend more than 16)
+	video_codec_ctx->thread_count = std::min(FF_VIDEO_NUM_PROCESSORS, 16);
 
 #if USE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
@@ -1559,7 +1550,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	av_dict_free(&opts);
 
 	// Add video metadata (if any)
-	for (std::map<std::string, std::string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter) {
+	for (auto iter = info.metadata.begin(); iter != info.metadata.end(); ++iter) {
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
@@ -2059,69 +2050,128 @@ AVFrame *FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 
 // process video frame
 void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
-	// Determine the height & width of the source image
-	int source_image_width = frame->GetWidth();
-	int source_image_height = frame->GetHeight();
+	// Source dimensions (RGBA)
+	int src_w = frame->GetWidth();
+	int src_h = frame->GetHeight();
 
-	// Do nothing if size is 1x1 (i.e. no image in this frame)
-	if (source_image_height == 1 && source_image_width == 1)
+	// Skip empty frames (1×1)
+	if (src_w == 1 && src_h == 1)
 		return;
 
-	// Init rescalers (if not initialized yet)
-	if (image_rescalers.size() == 0)
-		InitScalers(source_image_width, source_image_height);
+	// Point persistent_src_frame->data to RGBA pixels
+	const uchar* pixels = frame->GetPixels();
+	if (!persistent_src_frame) {
+		persistent_src_frame = av_frame_alloc();
+		if (!persistent_src_frame)
+			throw OutOfMemory("Could not allocate persistent_src_frame", path);
+		persistent_src_frame->format      = AV_PIX_FMT_RGBA;
+		persistent_src_frame->width       = src_w;
+		persistent_src_frame->height      = src_h;
+		persistent_src_frame->linesize[0] = src_w * 4;
+	}
+	persistent_src_frame->data[0] = const_cast<uint8_t*>(
+		reinterpret_cast<const uint8_t*>(pixels)
+	);
 
-	// Get a unique rescaler (for this thread)
-	SwsContext *scaler = image_rescalers[rescaler_position];
-	rescaler_position++;
-	if (rescaler_position == num_of_rescalers)
-		rescaler_position = 0;
+	// Prepare persistent_dst_frame + buffer on first use
+	if (!persistent_dst_frame) {
+		persistent_dst_frame = av_frame_alloc();
+		if (!persistent_dst_frame)
+			throw OutOfMemory("Could not allocate persistent_dst_frame", path);
 
-	// Allocate an RGB frame & final output frame
-	int bytes_source = 0;
-	int bytes_final = 0;
-	AVFrame *frame_source = NULL;
-	const uchar *pixels = NULL;
-
-	// Get a list of pixels from source image
-	pixels = frame->GetPixels();
-
-	// Init AVFrame for source image & final (converted image)
-	frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t *) pixels);
-#if IS_FFMPEG_3_2
-	AVFrame *frame_final;
+		// Decide destination pixel format: NV12 if HW accel is on, else encoder’s pix_fmt
+		AVPixelFormat dst_fmt = video_codec_ctx->pix_fmt;
 #if USE_HW_ACCEL
-	if (hw_en_on && hw_en_supported) {
-		frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
-	} else
-#endif // USE_HW_ACCEL
-	{
-		frame_final = allocate_avframe(
-			(AVPixelFormat)(video_st->codecpar->format),
-			info.width, info.height, &bytes_final, NULL
+		if (hw_en_on && hw_en_supported) {
+			dst_fmt = AV_PIX_FMT_NV12;
+		}
+#endif
+		persistent_dst_frame->format = dst_fmt;
+		persistent_dst_frame->width  = info.width;
+		persistent_dst_frame->height = info.height;
+
+		persistent_dst_size = av_image_get_buffer_size(
+			dst_fmt, info.width, info.height, 1
+		);
+		if (persistent_dst_size < 0)
+			throw ErrorEncodingVideo("Invalid destination image size", -1);
+
+		persistent_dst_buffer = static_cast<uint8_t*>(
+			av_malloc(persistent_dst_size)
+		);
+		if (!persistent_dst_buffer)
+			throw OutOfMemory("Could not allocate persistent_dst_buffer", path);
+
+		av_image_fill_arrays(
+			persistent_dst_frame->data,
+			persistent_dst_frame->linesize,
+			persistent_dst_buffer,
+			dst_fmt,
+			info.width,
+			info.height,
+			1
 		);
 	}
-#else
-	AVFrame *frame_final = allocate_avframe(video_codec_ctx->pix_fmt, info.width, info.height, &bytes_final, NULL);
-#endif // IS_FFMPEG_3_2
 
-	// Fill with data
-	AV_COPY_PICTURE_DATA(frame_source, (uint8_t *) pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
-	ZmqLogger::Instance()->AppendDebugMethod(
-		"FFmpegWriter::process_video_packet",
-		"frame->number", frame->number,
-		"bytes_source", bytes_source,
-		"bytes_final", bytes_final);
+	// Initialize SwsContext (RGBA → dst_fmt) on first use
+	if (!img_convert_ctx) {
+		int flags = SWS_FAST_BILINEAR;
+		if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
+			flags = SWS_BICUBIC;
+		}
+		AVPixelFormat dst_fmt = video_codec_ctx->pix_fmt;
+#if USE_HW_ACCEL
+		if (hw_en_on && hw_en_supported) {
+			dst_fmt = AV_PIX_FMT_NV12;
+		}
+#endif
+		img_convert_ctx = sws_getContext(
+			src_w, src_h, AV_PIX_FMT_RGBA,
+			info.width, info.height, dst_fmt,
+			flags, NULL, NULL, NULL
+		);
+		if (!img_convert_ctx)
+			throw ErrorEncodingVideo("Could not initialize sws context", -1);
+	}
 
-	// Resize & convert pixel format
-	sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
-			  source_image_height, frame_final->data, frame_final->linesize);
+	// Scale RGBA → dst_fmt into persistent_dst_buffer
+	sws_scale(
+		img_convert_ctx,
+		persistent_src_frame->data,
+		persistent_src_frame->linesize,
+		0, src_h,
+		persistent_dst_frame->data,
+		persistent_dst_frame->linesize
+	);
 
-	// Add resized AVFrame to av_frames map
-	add_avframe(frame, frame_final);
+	// Allocate a new AVFrame + buffer, then copy scaled data into it
+	int bytes_final = 0;
+	AVPixelFormat dst_fmt = video_codec_ctx->pix_fmt;
+#if USE_HW_ACCEL
+	if (hw_en_on && hw_en_supported) {
+		dst_fmt = AV_PIX_FMT_NV12;
+	}
+#endif
 
-	// Deallocate memory
-	AV_FREE_FRAME(&frame_source);
+	AVFrame* new_frame = allocate_avframe(
+		dst_fmt,
+		info.width,
+		info.height,
+		&bytes_final,
+		nullptr
+	);
+	if (!new_frame)
+		throw OutOfMemory("Could not allocate new_frame via allocate_avframe", path);
+
+	// Copy persistent_dst_buffer → new_frame buffer
+	memcpy(
+		new_frame->data[0],
+		persistent_dst_buffer,
+		static_cast<size_t>(bytes_final)
+	);
+
+	// Queue the deep‐copied frame for encoding
+	add_avframe(frame, new_frame);
 }
 
 // write video frame
@@ -2307,55 +2357,14 @@ void FFmpegWriter::OutputStreamInfo() {
 	av_dump_format(oc, 0, path.c_str(), 1);
 }
 
-// Init a collection of software rescalers (thread safe)
-void FFmpegWriter::InitScalers(int source_width, int source_height) {
-	int scale_mode = SWS_FAST_BILINEAR;
-	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-		scale_mode = SWS_BICUBIC;
-	}
-
-	// Init software rescalers vector (many of them, one for each thread)
-	for (int x = 0; x < num_of_rescalers; x++) {
-		// Init the software scaler from FFMpeg
-#if USE_HW_ACCEL
-		if (hw_en_on && hw_en_supported) {
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA,
-				info.width, info.height, AV_PIX_FMT_NV12, scale_mode, NULL, NULL, NULL);
-		} else
-#endif // USE_HW_ACCEL
-		{
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA,
-				info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec),
-				scale_mode, NULL, NULL, NULL);
-		}
-
-		// Add rescaler to vector
-		image_rescalers.push_back(img_convert_ctx);
-	}
-}
-
 // Set audio resample options
 void FFmpegWriter::ResampleAudio(int sample_rate, int channels) {
 	original_sample_rate = sample_rate;
 	original_channels = channels;
 }
 
-// Remove & deallocate all software scalers
-void FFmpegWriter::RemoveScalers() {
-	// Close all rescalers
-	for (int x = 0; x < num_of_rescalers; x++)
-		sws_freeContext(image_rescalers[x]);
-
-	// Clear vector
-	image_rescalers.clear();
-}
-
 // In FFmpegWriter.cpp
-void FFmpegWriter::AddSphericalMetadata(const std::string& projection,
-										float yaw_deg,
-										float pitch_deg,
-										float roll_deg)
-{
+void FFmpegWriter::AddSphericalMetadata(const std::string& projection, float yaw_deg, float pitch_deg, float roll_deg) {
 	if (!oc) return;
 	if (!info.has_video || !video_st) return;
 
@@ -2371,10 +2380,7 @@ void FFmpegWriter::AddSphericalMetadata(const std::string& projection,
 	// Allocate the side‐data structure
 	size_t sd_size = 0;
 	AVSphericalMapping* map = av_spherical_alloc(&sd_size);
-	if (!map) {
-		// Allocation failed; skip metadata
-		return;
-	}
+	if (!map) return;
 
 	// Populate it
 	map->projection = static_cast<AVSphericalProjection>(proj);
@@ -2383,14 +2389,6 @@ void FFmpegWriter::AddSphericalMetadata(const std::string& projection,
 	map->pitch = static_cast<int32_t>(pitch_deg * (1 << 16));
 	map->roll  = static_cast<int32_t>(roll_deg  * (1 << 16));
 
-	// Attach to the video stream so movenc will emit an sv3d atom
-	av_stream_add_side_data(
-		video_st,
-		AV_PKT_DATA_SPHERICAL,
-		reinterpret_cast<uint8_t*>(map),
-		sd_size
-	);
-#else
-	// FFmpeg build too old: spherical side-data not supported
+	av_stream_add_side_data(video_st, AV_PKT_DATA_SPHERICAL, reinterpret_cast<uint8_t*>(map), sd_size);
 #endif
 }

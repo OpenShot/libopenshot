@@ -65,10 +65,10 @@ namespace openshot {
 		bool HIGH_QUALITY_SCALING = false;
 
 		/// Number of threads of OpenMP
-		int OMP_THREADS = 12;
+		int OMP_THREADS = 16;
 
 		/// Number of threads that ffmpeg uses
-		int FF_THREADS = 8;
+		int FF_THREADS = 16;
 
 		/// Maximum rows that hardware decode can handle
 		int DE_LIMIT_HEIGHT_MAX = 1100;
