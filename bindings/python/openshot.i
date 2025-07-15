@@ -96,9 +96,13 @@
 #include "Settings.h"
 #include "TimelineBase.h"
 #include "Timeline.h"
+#include "Qt/VideoCacheThread.h"
 #include "ZmqLogger.h"
 
 %}
+
+// Prevent SWIG from ever generating a wrapper for juce::Thread’s constructor (or run())
+%ignore juce::Thread::Thread;
 
 #ifdef USE_IMAGEMAGICK
     %{
@@ -317,6 +321,7 @@
 %include "RendererBase.h"
 %include "Settings.h"
 %include "TimelineBase.h"
+%include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
 %include "ZmqLogger.h"
 

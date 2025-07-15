@@ -298,5 +298,23 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec)
 #endif
 
+// Aligned memory allocation helpers (cross-platform)
+#if defined(_WIN32)
+#include <malloc.h>
+#endif
+
+inline static void* aligned_malloc(size_t size, size_t alignment = 32)
+{
+#if defined(_WIN32)
+    return _aligned_malloc(size, alignment);
+#elif defined(__APPLE__) || defined(__linux__)
+    void* ptr = nullptr;
+    if (posix_memalign(&ptr, alignment, size) != 0)
+        return nullptr;
+    return ptr;
+#else
+#error "aligned_malloc not implemented on this platform"
+#endif
+}
 
 #endif  // OPENSHOT_FFMPEG_UTILITIES_H
