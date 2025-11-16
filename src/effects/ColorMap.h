@@ -35,8 +35,9 @@ namespace openshot
     {
     private:
         std::string lut_path;             ///< Filesystem path to .cube LUT file
-        int lut_size;                     ///< Dimension N of the cube (LUT_3D_SIZE)
-        std::vector<float> lut_data;      ///< Flat array [N³ × 3] RGB lookup table
+        int lut_size;                     ///< LUT_1D_SIZE or LUT_3D_SIZE.
+        bool lut_is_3d;                   ///< When false, we have a 1D LUT.
+        std::vector<float> lut_data;      ///< Flat array [N³ × 3] RGB lookup table in case of 3D.
         bool needs_refresh;               ///< Reload LUT on next frame
 
         /// Populate info fields (class_name, name, description)
@@ -44,6 +45,16 @@ namespace openshot
 
         /// Parse the .cube file into lut_size & lut_data
         void load_cube_file();
+
+        /// Apply effect to an existing frame using 1D LUT
+        std::shared_ptr<openshot::Frame>
+        GetFrame1D(std::shared_ptr<openshot::Frame> frame,
+                   int64_t frame_number);
+
+        /// Apply effect to an existing frame using 3D LUT
+        std::shared_ptr<openshot::Frame>
+        GetFrame3D(std::shared_ptr<openshot::Frame> frame,
+                   int64_t frame_number);
 
     public:
         Keyframe intensity;               ///< Overall intensity 0–1 (affects all channels)

@@ -26,7 +26,11 @@ void ColorMap::load_cube_file()
         return;
     }
 
-    int parsed_size = 0;
+    // .cube files can have 1D lookups or 3D lookups.
+    // Depending what type of LUT we have, one of these will be set to non-zero.
+    int parsed_size_3d = 0;
+    int parsed_size_1d = 0;
+
     std::vector<float> parsed_data;
 
     #pragma omp critical(load_lut)
@@ -45,15 +49,22 @@ void ColorMap::load_cube_file()
                 if (line.startsWith("LUT_3D_SIZE")) {
                     auto parts = line.split(ws_re);
                     if (parts.size() >= 2) {
-                        parsed_size = parts[1].toInt();
+                        parsed_size_3d = parts[1].toInt();
+                    }
+                    break;
+                }
+                if (line.startsWith("LUT_1D_SIZE")) {
+                    auto parts = line.split(ws_re);
+                    if (parts.size() >= 2) {
+                        parsed_size_1d = parts[1].toInt();
                     }
                     break;
                 }
             }
 
-            // 2) Read N³ lines of R G B floats
-            if (parsed_size > 0) {
-                int total = parsed_size * parsed_size * parsed_size;
+            // 2) Read N³ lines of R G B floats if we have a 3D LUT.
+            if (parsed_size_3d > 0) {
+                int total = parsed_size_3d * parsed_size_3d * parsed_size_3d;
                 parsed_data.reserve(size_t(total * 3));
                 while (!in.atEnd() && int(parsed_data.size()) < total * 3) {
                     line = in.readLine().trimmed();
@@ -74,14 +85,48 @@ void ColorMap::load_cube_file()
                 }
                 if (int(parsed_data.size()) != total * 3) {
                     parsed_data.clear();
-                    parsed_size = 0;
+                    parsed_size_3d = 0;
+                    fprintf(stderr, "Unexpected sample count in the .cube file. Discarding 3D LUT.\n");
+                }
+            }
+
+            // 3) Read N lines of R G B floats if we have a 1D LUT.
+            if (parsed_size_1d > 0) {
+                int total = parsed_size_1d;
+                parsed_data.reserve(size_t(total * 3));
+                while (!in.atEnd() && int(parsed_data.size()) < total * 3) {
+                    line = in.readLine().trimmed();
+                    if (line.isEmpty() ||
+                        line.startsWith("#") ||
+                        line.startsWith("TITLE") ||
+                        line.startsWith("DOMAIN"))
+                    {
+                        continue;
+                    }
+                    auto vals = line.split(ws_re);
+                    if (vals.size() >= 3) {
+                        // .cube file is R G B
+                        parsed_data.push_back(vals[0].toFloat());
+                        parsed_data.push_back(vals[1].toFloat());
+                        parsed_data.push_back(vals[2].toFloat());
+                    }
+                }
+                if (int(parsed_data.size()) != total * 3) {
+                    parsed_data.clear();
+                    parsed_size_3d = 0;
+                    fprintf(stderr, "Unexpected sample count in the .cube file. Discarding 1D LUT.\n");
                 }
             }
         }
     }
 
-    if (parsed_size > 0) {
-        lut_size = parsed_size;
+    if (parsed_size_3d > 0) {
+        lut_is_3d = true;
+        lut_size = parsed_size_3d;
+        lut_data.swap(parsed_data);
+    } else if (parsed_size_1d > 0) {
+        lut_is_3d = false;
+        lut_size = parsed_size_1d;
         lut_data.swap(parsed_data);
     } else {
         lut_data.clear();
@@ -115,6 +160,7 @@ ColorMap::ColorMap(const std::string &path,
                    const Keyframe &iB)
     : lut_path(path),
       lut_size(0),
+      lut_is_3d(false),
       needs_refresh(true),
       intensity(i),
       intensity_r(iR),
@@ -137,55 +183,65 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
     if (lut_data.empty())
         return frame;
 
+    // Depending whether we have 1D or 3D LUT, we do different lookups.
+    if (lut_is_3d)
+        return GetFrame3D(frame, frame_number);
+    else
+        return GetFrame1D(frame, frame_number);
+}
+
+std::shared_ptr<openshot::Frame>
+ColorMap::GetFrame3D(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+{
     auto image = frame->GetImage();
-    int w = image->width(), h = image->height();
+    const int w = image->width(), h = image->height();
     unsigned char *pixels = image->bits();
 
-    float overall = float(intensity.GetValue(frame_number));
-    float tR = float(intensity_r.GetValue(frame_number)) * overall;
-    float tG = float(intensity_g.GetValue(frame_number)) * overall;
-    float tB = float(intensity_b.GetValue(frame_number)) * overall;
+    const float overall = float(intensity.GetValue(frame_number));
+    const float tR = float(intensity_r.GetValue(frame_number)) * overall;
+    const float tG = float(intensity_g.GetValue(frame_number)) * overall;
+    const float tB = float(intensity_b.GetValue(frame_number)) * overall;
 
-    int pixel_count = w * h;
+    const int pixel_count = w * h;
     #pragma omp parallel for
     for (int i = 0; i < pixel_count; ++i) {
-        int idx = i * 4;
-        int A = pixels[idx + 3];
-        float alpha = A / 255.0f;
+        const int idx = i * 4;
+        const int A = pixels[idx + 3];
+        const float alpha = A / 255.0f;
         if (alpha == 0.0f) continue;
 
         // demultiply premultiplied RGBA
-        float R = pixels[idx + 0] / alpha;
-        float G = pixels[idx + 1] / alpha;
-        float B = pixels[idx + 2] / alpha;
+        const float R = pixels[idx + 0] / alpha;
+        const float G = pixels[idx + 1] / alpha;
+        const float B = pixels[idx + 2] / alpha;
 
         // normalize to [0,1]
-        float Rn = R * (1.0f / 255.0f);
-        float Gn = G * (1.0f / 255.0f);
-        float Bn = B * (1.0f / 255.0f);
+        const float Rn = R * (1.0f / 255.0f);
+        const float Gn = G * (1.0f / 255.0f);
+        const float Bn = B * (1.0f / 255.0f);
 
         // map into LUT space [0 .. size-1]
-        float rf = Rn * (lut_size - 1);
-        float gf = Gn * (lut_size - 1);
-        float bf = Bn * (lut_size - 1);
+        const float rf = Rn * (lut_size - 1);
+        const float gf = Gn * (lut_size - 1);
+        const float bf = Bn * (lut_size - 1);
 
-        int r0 = int(floor(rf)), r1 = std::min(r0 + 1, lut_size - 1);
-        int g0 = int(floor(gf)), g1 = std::min(g0 + 1, lut_size - 1);
-        int b0 = int(floor(bf)), b1 = std::min(b0 + 1, lut_size - 1);
+        const int r0 = int(floor(rf)), r1 = std::min(r0 + 1, lut_size - 1);
+        const int g0 = int(floor(gf)), g1 = std::min(g0 + 1, lut_size - 1);
+        const int b0 = int(floor(bf)), b1 = std::min(b0 + 1, lut_size - 1);
 
-        float dr = rf - r0;
-        float dg = gf - g0;
-        float db = bf - b0;
+        const float dr = rf - r0;
+        const float dg = gf - g0;
+        const float db = bf - b0;
 
         // compute base offsets with red fastest, then green, then blue
-        int base000 = ((b0 * lut_size + g0) * lut_size + r0) * 3;
-        int base100 = ((b0 * lut_size + g0) * lut_size + r1) * 3;
-        int base010 = ((b0 * lut_size + g1) * lut_size + r0) * 3;
-        int base110 = ((b0 * lut_size + g1) * lut_size + r1) * 3;
-        int base001 = ((b1 * lut_size + g0) * lut_size + r0) * 3;
-        int base101 = ((b1 * lut_size + g0) * lut_size + r1) * 3;
-        int base011 = ((b1 * lut_size + g1) * lut_size + r0) * 3;
-        int base111 = ((b1 * lut_size + g1) * lut_size + r1) * 3;
+        const int base000 = ((b0 * lut_size + g0) * lut_size + r0) * 3;
+        const int base100 = ((b0 * lut_size + g0) * lut_size + r1) * 3;
+        const int base010 = ((b0 * lut_size + g1) * lut_size + r0) * 3;
+        const int base110 = ((b0 * lut_size + g1) * lut_size + r1) * 3;
+        const int base001 = ((b1 * lut_size + g0) * lut_size + r0) * 3;
+        const int base101 = ((b1 * lut_size + g0) * lut_size + r1) * 3;
+        const int base011 = ((b1 * lut_size + g1) * lut_size + r0) * 3;
+        const int base111 = ((b1 * lut_size + g1) * lut_size + r1) * 3;
 
         // trilinear interpolation
         // red
@@ -195,7 +251,7 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
         float c11 = lut_data[base011 + 0] * (1 - dr) + lut_data[base111 + 0] * dr;
         float c0  = c00 * (1 - dg) + c10 * dg;
         float c1  = c01 * (1 - dg) + c11 * dg;
-        float lr = c0 * (1 - db) + c1 * db;
+        const float lr = c0 * (1 - db) + c1 * db;
 
         // green
         c00 = lut_data[base000 + 1] * (1 - dr) + lut_data[base100 + 1] * dr;
@@ -204,7 +260,7 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
         c11 = lut_data[base011 + 1] * (1 - dr) + lut_data[base111 + 1] * dr;
         c0  = c00 * (1 - dg) + c10 * dg;
         c1  = c01 * (1 - dg) + c11 * dg;
-        float lg = c0 * (1 - db) + c1 * db;
+        const float lg = c0 * (1 - db) + c1 * db;
 
         // blue
         c00 = lut_data[base000 + 2] * (1 - dr) + lut_data[base100 + 2] * dr;
@@ -213,12 +269,12 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
         c11 = lut_data[base011 + 2] * (1 - dr) + lut_data[base111 + 2] * dr;
         c0  = c00 * (1 - dg) + c10 * dg;
         c1  = c01 * (1 - dg) + c11 * dg;
-        float lb = c0 * (1 - db) + c1 * db;
+        const float lb = c0 * (1 - db) + c1 * db;
 
         // blend per-channel, re-premultiply alpha
-        float outR = (lr * tR + Rn * (1 - tR)) * alpha;
-        float outG = (lg * tG + Gn * (1 - tG)) * alpha;
-        float outB = (lb * tB + Bn * (1 - tB)) * alpha;
+        const float outR = (lr * tR + Rn * (1 - tR)) * alpha;
+        const float outG = (lg * tG + Gn * (1 - tG)) * alpha;
+        const float outB = (lb * tB + Bn * (1 - tB)) * alpha;
 
         pixels[idx + 0] = constrain(outR * 255.0f);
         pixels[idx + 1] = constrain(outG * 255.0f);
@@ -229,6 +285,76 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
     return frame;
 }
 
+std::shared_ptr<openshot::Frame>
+ColorMap::GetFrame1D(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+{
+    auto image = frame->GetImage();
+    const int w = image->width(), h = image->height();
+    unsigned char *pixels = image->bits();
+
+    const float overall = float(intensity.GetValue(frame_number));
+    const float tR = float(intensity_r.GetValue(frame_number)) * overall;
+    const float tG = float(intensity_g.GetValue(frame_number)) * overall;
+    const float tB = float(intensity_b.GetValue(frame_number)) * overall;
+
+    const int pixel_count = w * h;
+    #pragma omp parallel for
+    for (int i = 0; i < pixel_count; ++i) {
+        const int idx = i * 4;
+        const int A = pixels[idx + 3];
+        const float alpha = A / 255.0f;
+        if (alpha == 0.0f) continue;
+
+        // demultiply premultiplied RGBA
+        const float R = pixels[idx + 0] / alpha;
+        const float G = pixels[idx + 1] / alpha;
+        const float B = pixels[idx + 2] / alpha;
+
+        // normalize to [0,1]
+        const float Rn = R * (1.0f / 255.0f);
+        const float Gn = G * (1.0f / 255.0f);
+        const float Bn = B * (1.0f / 255.0f);
+
+        // map into LUT space [0 .. size-1]
+        const float rf = Rn * (lut_size - 1);
+        const float gf = Gn * (lut_size - 1);
+        const float bf = Bn * (lut_size - 1);
+
+        const int r0 = int(floor(rf)), r1 = std::min(r0 + 1, lut_size - 1);
+        const int g0 = int(floor(gf)), g1 = std::min(g0 + 1, lut_size - 1);
+        const int b0 = int(floor(bf)), b1 = std::min(b0 + 1, lut_size - 1);
+
+        const float dr = rf - r0;
+        const float dg = gf - g0;
+        const float db = bf - b0;
+
+        const int base_r_0 = r0 * 3;
+        const int base_r_1 = r1 * 3;
+        const int base_g_0 = g0 * 3;
+        const int base_g_1 = g1 * 3;
+        const int base_b_0 = b0 * 3;
+        const int base_b_1 = b1 * 3;
+
+        // linear interpolation for red.
+        const float lr = lut_data[base_r_0 + 0] * (1 - dr) + lut_data[base_r_1 + 0] * dr;
+        // linear interpolation for grn.
+        const float lg = lut_data[base_g_0 + 1] * (1 - dg) + lut_data[base_g_1 + 1] * dg;
+        // linear interpolation for blu.
+        const float lb = lut_data[base_b_0 + 2] * (1 - db) + lut_data[base_b_1 + 2] * db;
+
+        // blend per-channel, re-premultiply alpha
+        const float outR = (lr * tR + Rn * (1 - tR)) * alpha;
+        const float outG = (lg * tG + Gn * (1 - tG)) * alpha;
+        const float outB = (lb * tB + Bn * (1 - tB)) * alpha;
+
+        pixels[idx + 0] = constrain(outR * 255.0f);
+        pixels[idx + 1] = constrain(outG * 255.0f);
+        pixels[idx + 2] = constrain(outB * 255.0f);
+        // alpha left unchanged
+    }
+
+    return frame;
+}
 
 std::string ColorMap::Json() const
 {
