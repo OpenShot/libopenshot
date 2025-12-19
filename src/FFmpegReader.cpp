@@ -567,8 +567,13 @@ void FFmpegReader::Open() {
 			AVStream* st = pFormatCtx->streams[i];
 			if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
 				// Only inspect the first video stream
+#if (LIBAVFORMAT_VERSION_MAJOR < 62)
 				for (int j = 0; j < st->nb_side_data; j++) {
 					AVPacketSideData *sd = &st->side_data[j];
+#else
+				for (int j = 0; j < st->codecpar->nb_coded_side_data; j++) {
+					AVPacketSideData *sd = &st->codecpar->coded_side_data[j];
+#endif
 
 					// Handle rotation metadata (unchanged)
 					if (sd->type == AV_PKT_DATA_DISPLAYMATRIX &&
