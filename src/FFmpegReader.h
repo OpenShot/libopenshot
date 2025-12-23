@@ -17,6 +17,7 @@
 #define OPENSHOT_FFMPEG_READER_H
 
 #include "ReaderBase.h"
+#include "Enums.h"
 
 // Include FFmpeg headers and macros
 #include "FFmpegUtilities.h"
@@ -116,7 +117,7 @@ namespace openshot {
 		bool is_duration_known;
 		bool check_interlace;
 		bool check_fps;
-		int max_concurrent_frames;
+		DurationStrategy duration_strategy;
 
 		CacheMemory working_cache;
 		AudioLocation previous_packet_location;
@@ -148,6 +149,12 @@ namespace openshot {
 		double video_pts_seconds;
 		int64_t NO_PTS_OFFSET;
 		PacketStatus packet_status;
+
+		// Duration bookkeeping
+		double video_stream_duration_seconds = 0.0;
+		double audio_stream_duration_seconds = 0.0;
+		double format_duration_seconds = 0.0;
+		double inferred_duration_seconds = 0.0;
 
 		// Cached conversion contexts and frames for performance
 		SwsContext *img_convert_ctx = nullptr;        ///< Cached video scaler context
@@ -197,6 +204,12 @@ namespace openshot {
 		/// Check if there's an album art
 		bool HasAlbumArt();
 
+		/// Decide which duration to use based on the configured strategy
+		double PickDurationSeconds() const;
+
+		/// Apply the chosen duration to info.duration and info.video_length
+		void ApplyDurationStrategy();
+
 		/// Remove partial frames due to seek
 		bool IsPartialFrame(int64_t requested_frame);
 
@@ -244,6 +257,12 @@ namespace openshot {
 		/// @param path  The filesystem location to load
 		/// @param inspect_reader  if true (the default), automatically open the media file and loads frame 1.
 		FFmpegReader(const std::string& path, bool inspect_reader=true);
+		/// @brief Constructor for FFmpegReader with duration strategy.
+		///
+		/// @param path  The filesystem location to load
+		/// @param duration_strategy  Which duration source to prioritize
+		/// @param inspect_reader  if true (the default), automatically open the media file and loads frame 1.
+		FFmpegReader(const std::string& path, DurationStrategy duration_strategy, bool inspect_reader=true);
 
 		/// Destructor
 		virtual ~FFmpegReader();

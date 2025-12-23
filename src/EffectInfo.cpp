@@ -12,6 +12,7 @@
 
 #include "EffectInfo.h"
 #include "Effects.h"
+#include "effects/AnalogTape.h"
 
 using namespace openshot;
 
@@ -25,6 +26,9 @@ std::string EffectInfo::Json() {
 // Create a new effect instance
 EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	// Init the matching effect object
+	if (effect_type == "AnalogTape")
+		return new AnalogTape();
+
 	if (effect_type == "Bars")
 		return new Bars();
 
@@ -133,6 +137,7 @@ Json::Value EffectInfo::JsonValue() {
 	Json::Value root;
 
 	// Append info JSON from each supported effect
+	root.append(AnalogTape().JsonInfo());
 	root.append(Bars().JsonInfo());
 	root.append(Blur().JsonInfo());
 	root.append(Brightness().JsonInfo());

@@ -13,6 +13,7 @@
 #include "openshot_catch.h"
 
 #include <QGuiApplication>
+#include <sstream>
 
 #include "QtImageReader.h"
 #include "Clip.h"
@@ -83,4 +84,21 @@ TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )
     // Close reader
     t1.Close();
     r.Close();
+}
+
+TEST_CASE( "Duration_And_Length_QtImageReader", "[libopenshot][qtimagereader]" )
+{
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "front.png";
+	QtImageReader r(path.str());
+	r.Open();
+
+	// Duration and frame count should be aligned to fps (1 hour at 30 fps)
+	CHECK(r.info.fps.num == 30);
+	CHECK(r.info.fps.den == 1);
+	CHECK(r.info.video_length == 108000);
+	CHECK(r.info.duration == Approx(3600.0f).margin(0.001f));
+
+	r.Close();
 }

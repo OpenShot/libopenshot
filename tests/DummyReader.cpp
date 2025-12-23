@@ -19,6 +19,7 @@
 #include "CacheMemory.h"
 #include "Fraction.h"
 #include "Frame.h"
+#include <sstream>
 
 TEST_CASE( "Default constructor", "[libopenshot][dummyreader]" ) {
 	openshot::DummyReader r;

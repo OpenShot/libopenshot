@@ -103,7 +103,7 @@ namespace openshot
 		int sample_rate;
 		std::string color;
 		int64_t max_audio_sample; ///< The max audio sample count added to this frame
-		bool audio_reversed; ///< Keep track of audio reversal (i.e. time keyframe)
+		bool audio_is_increasing; ///< Keep track of audio direction (i.e. related to time keyframe)
 
 #ifdef USE_OPENCV
 		cv::Mat imagecv; ///< OpenCV image. It will always be in BGR format
@@ -246,9 +246,8 @@ namespace openshot
 		/// Set the original sample rate of this frame's audio data
 		void SampleRate(int orig_sample_rate) { sample_rate = orig_sample_rate; };
 
-		/// Reverse the audio buffer of this frame (will only reverse a single time, regardless of how many times
-		/// you invoke this method)
-		void ReverseAudio();
+		/// Set the direction of the audio buffer of this frame
+		void SetAudioDirection(bool is_increasing);
 
 		/// Save the frame image to the specified path.  The image format can be BMP, JPG, JPEG, PNG, PPM, XBM, XPM
 		void Save(std::string path, float scale, std::string format="PNG", int quality=100);

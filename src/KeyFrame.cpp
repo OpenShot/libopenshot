@@ -399,7 +399,7 @@ void Keyframe::SetJsonValue(const Json::Value root) {
 double Keyframe::GetDelta(int64_t index) const {
 	if (index < 1) return 0.0;
 	if (index == 1 && !Points.empty()) return Points[0].co.Y;
-	if (index >= GetLength()) return 0.0;
+	if (index > GetLength()) return 1.0;
 	return GetValue(index) - GetValue(index - 1);
 }
 

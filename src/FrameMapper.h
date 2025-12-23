@@ -204,6 +204,13 @@ namespace openshot
 		int64_t previous_frame; // Used during resampling, to determine when a large gap is detected
 		SWRCONTEXT *avr;	// Audio resampling context object
 
+		// Time curve / direction
+		std::recursive_mutex directionMutex;
+		bool have_hint = false;
+		bool hint_increasing = true;
+		bool last_is_increasing = true;
+		bool last_dir_initialized = false;
+
 		// Audio resampler (if resampling audio)
 		openshot::AudioResampler *resampler;
 
@@ -272,6 +279,9 @@ namespace openshot
 
 		/// Open the internal reader
 		void Open() override;
+
+		/// Set time-curve informed direction hint (from Clip class) for the next call to GetFrame
+		void SetDirectionHint(const bool increasing);
 
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping(std::ostream* out=&std::cout);

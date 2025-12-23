@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <fstream>
+#include <sstream>
 
 #include "ChunkReader.h"
 #include "Exceptions.h"

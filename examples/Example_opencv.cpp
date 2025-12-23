@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include "CVTracker.h"
 #include "CVStabilization.h"
 #include "CVObjectDetection.h"

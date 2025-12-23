@@ -14,6 +14,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <algorithm>
 
 #include "effects/Tracker.h"
 #include "Exceptions.h"
@@ -32,38 +33,25 @@ using namespace std;
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Tracker::Tracker(std::string clipTrackerDataPath)
-{
-	// Init effect properties
-	init_effect_details();
-	// Instantiate a TrackedObjectBBox object and point to it
-	TrackedObjectBBox trackedDataObject;
-	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
-	// Tries to load the tracked object's data from protobuf file
-	trackedData->LoadBoxData(clipTrackerDataPath);
-	ClipBase* parentClip = this->ParentClip();
-	trackedData->ParentClip(parentClip);
-	trackedData->Id(std::to_string(0));
-	// Insert TrackedObject with index 0 to the trackedObjects map
-	trackedObjects.insert({0, trackedData});
-}
 
 // Default constructor
 Tracker::Tracker()
 {
-	// Init effect properties
+	// Initialize effect metadata
 	init_effect_details();
-	// Instantiate a TrackedObjectBBox object and point to it
-	TrackedObjectBBox trackedDataObject;
-	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
-	ClipBase* parentClip = this->ParentClip();
-	trackedData->ParentClip(parentClip);
-	trackedData->Id(std::to_string(0));
-	// Insert TrackedObject with index 0 to the trackedObjects map
-	trackedObjects.insert({0, trackedData});
-}
 
+	// Create a placeholder object so we always have index 0 available
+	trackedData = std::make_shared<TrackedObjectBBox>();
+	trackedData->ParentClip(this->ParentClip());
+
+	// Seed our map with a single entry at index 0
+	trackedObjects.clear();
+	trackedObjects.emplace(0, trackedData);
+
+	// Assign ID to the placeholder object
+	if (trackedData)
+	trackedData->Id(Id() + "-0");
+}
 
 // Init effect settings
 void Tracker::init_effect_details()
@@ -84,73 +72,80 @@ void Tracker::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) {
-    // Get the frame's QImage
-    std::shared_ptr<QImage> frame_image = frame->GetImage();
+std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+{
+	// Sanity‐check
+	if (!frame) return frame;
+	auto frame_image = frame->GetImage();
+	if (!frame_image || frame_image->isNull()) return frame;
+	if (!trackedData) return frame;
 
-    // Check if frame isn't NULL
-    if(frame_image && !frame_image->isNull() &&
-       trackedData->Contains(frame_number) &&
-       trackedData->visible.GetValue(frame_number) == 1) {
-        QPainter painter(frame_image.get());
+	// 2) Only proceed if we actually have a box and it's visible
+	if (!trackedData->Contains(frame_number) ||
+		trackedData->visible.GetValue(frame_number) != 1)
+		return frame;
 
-        // Get the bounding-box of the given frame
-        BBox fd = trackedData->GetBox(frame_number);
+	QPainter painter(frame_image.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 
-        // Create a QRectF for the bounding box
-        QRectF boxRect((fd.cx - fd.width / 2) * frame_image->width(),
-                       (fd.cy - fd.height / 2) * frame_image->height(),
-                       fd.width * frame_image->width(),
-                       fd.height * frame_image->height());
+	// Draw the box
+	BBox fd = trackedData->GetBox(frame_number);
+	QRectF boxRect(
+		(fd.cx - fd.width/2) * frame_image->width(),
+		(fd.cy - fd.height/2) * frame_image->height(),
+		fd.width * frame_image->width(),
+		fd.height * frame_image->height()
+	);
 
-        // Check if track data exists for the requested frame
-        if (trackedData->draw_box.GetValue(frame_number) == 1) {
-            painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+	if (trackedData->draw_box.GetValue(frame_number) == 1)
+	{
+		auto stroke_rgba   = trackedData->stroke.GetColorRGBA(frame_number);
+		int  stroke_width  = trackedData->stroke_width.GetValue(frame_number);
+		float stroke_alpha = trackedData->stroke_alpha.GetValue(frame_number);
+		auto bg_rgba       = trackedData->background.GetColorRGBA(frame_number);
+		float bg_alpha     = trackedData->background_alpha.GetValue(frame_number);
+		float bg_corner    = trackedData->background_corner.GetValue(frame_number);
 
-            // Get trackedObjectBox keyframes
-            std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
-            int stroke_width = trackedData->stroke_width.GetValue(frame_number);
-            float stroke_alpha = trackedData->stroke_alpha.GetValue(frame_number);
-            std::vector<int> bg_rgba = trackedData->background.GetColorRGBA(frame_number);
-            float bg_alpha = trackedData->background_alpha.GetValue(frame_number);
-            float bg_corner = trackedData->background_corner.GetValue(frame_number);
+		QPen pen(QColor(
+			stroke_rgba[0], stroke_rgba[1], stroke_rgba[2],
+			int(255 * stroke_alpha)
+		));
+		pen.setWidth(stroke_width);
+		painter.setPen(pen);
 
-            // Set the pen for the border
-            QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
-            pen.setWidth(stroke_width);
-            painter.setPen(pen);
+		QBrush brush(QColor(
+			bg_rgba[0], bg_rgba[1], bg_rgba[2],
+			int(255 * bg_alpha)
+		));
+		painter.setBrush(brush);
 
-            // Set the brush for the background
-            QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
-            painter.setBrush(brush);
+		painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
+	}
 
-            // Draw the rounded rectangle
-            painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
-        }
-
-        painter.end();
-    }
-
-    // No need to set the image back to the frame, as we directly modified the frame's QImage
-    return frame;
+	painter.end();
+	return frame;
 }
 
 // Get the indexes and IDs of all visible objects in the given frame
-std::string Tracker::GetVisibleObjects(int64_t frame_number) const{
-
-	// Initialize the JSON objects
+std::string Tracker::GetVisibleObjects(int64_t frame_number) const
+{
 	Json::Value root;
 	root["visible_objects_index"] = Json::Value(Json::arrayValue);
-	root["visible_objects_id"] = Json::Value(Json::arrayValue);
+	root["visible_objects_id"]    = Json::Value(Json::arrayValue);
 
-	// Iterate through the tracked objects
-	for (const auto& trackedObject : trackedObjects){
-		// Get the tracked object JSON properties for this frame
-		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(frame_number);
-		if (trackedObjectJSON["visible"]["value"].asBool()){
-			// Save the object's index and ID if it's visible in this frame
-			root["visible_objects_index"].append(trackedObject.first);
-			root["visible_objects_id"].append(trackedObject.second->Id());
+	if (trackedObjects.empty())
+		return root.toStyledString();
+
+	for (auto const& kv : trackedObjects) {
+		auto ptr = kv.second;
+		if (!ptr) continue;
+
+		// Directly get the Json::Value for this object's properties
+		Json::Value propsJson = ptr->PropertiesJSON(frame_number);
+
+		if (propsJson["visible"]["value"].asBool()) {
+			root["visible_objects_index"].append(kv.first);
+			root["visible_objects_id"].append(ptr->Id());
 		}
 	}
 
@@ -214,51 +209,82 @@ void Tracker::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	EffectBase::SetJsonValue(root);
 
-	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
-	{
+	if (!root["BaseFPS"].isNull()) {
 		if (!root["BaseFPS"]["num"].isNull())
-		{
-			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
-		}
+			BaseFPS.num = root["BaseFPS"]["num"].asInt();
 		if (!root["BaseFPS"]["den"].isNull())
-		{
-			BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
-		}
+			BaseFPS.den = root["BaseFPS"]["den"].asInt();
 	}
 
-	if (!root["TimeScale"].isNull())
-		TimeScale = (double) root["TimeScale"].asDouble();
-
-	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull() && protobuf_data_path.size() <= 1)
-	{
-		protobuf_data_path = root["protobuf_data_path"].asString();
-		if(!trackedData->LoadBoxData(protobuf_data_path))
-		{
-			std::clog << "Invalid protobuf data path " << protobuf_data_path << '\n';
-			protobuf_data_path = "";
-		}
+	if (!root["TimeScale"].isNull()) {
+		TimeScale = root["TimeScale"].asDouble();
 	}
 
-	if (!root["objects"].isNull()){
-		for (auto const& trackedObject : trackedObjects){
-			std::string obj_id = std::to_string(trackedObject.first);
-			if(!root["objects"][obj_id].isNull()){
-				trackedObject.second->SetJsonValue(root["objects"][obj_id]);
+	if (!root["protobuf_data_path"].isNull()) {
+		std::string new_path = root["protobuf_data_path"].asString();
+		if (protobuf_data_path != new_path || trackedData->GetLength() == 0) {
+			protobuf_data_path = new_path;
+			if (!trackedData->LoadBoxData(protobuf_data_path)) {
+				std::clog << "Invalid protobuf data path " << protobuf_data_path << '\n';
+				protobuf_data_path.clear();
+			}
+			else {
+				// prefix "<effectUUID>-<index>" for each entry
+				for (auto& kv : trackedObjects) {
+					auto idx = kv.first;
+					auto ptr = kv.second;
+					if (ptr) {
+						std::string prefix = this->Id();
+						if (!prefix.empty())
+							prefix += "-";
+						ptr->Id(prefix + std::to_string(idx));
+					}
+				}
 			}
 		}
 	}
 
-	// Set the tracked object's ids
-	if (!root["objects_id"].isNull()){
-		for (auto const& trackedObject : trackedObjects){
-			Json::Value trackedObjectJSON;
-			trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
-			trackedObject.second->SetJsonValue(trackedObjectJSON);
+	// then any per-object JSON overrides...
+	if (!root["objects"].isNull()) {
+		// Iterate over the supplied objects (indexed by id or position)
+		const auto memberNames = root["objects"].getMemberNames();
+		for (const auto& name : memberNames)
+		{
+			// Determine the numeric index of this object
+			int index = -1;
+			bool numeric_key = std::all_of(name.begin(), name.end(), ::isdigit);
+			if (numeric_key) {
+				index = std::stoi(name);
+			}
+			else
+			{
+				size_t pos = name.find_last_of('-');
+				if (pos != std::string::npos) {
+					try {
+						index = std::stoi(name.substr(pos + 1));
+					} catch (...) {
+						index = -1;
+					}
+				}
+			}
+
+			auto obj_it = trackedObjects.find(index);
+			if (obj_it != trackedObjects.end() && obj_it->second) {
+				// Update object id if provided as a non-numeric key
+				if (!numeric_key)
+					obj_it->second->Id(name);
+				obj_it->second->SetJsonValue(root["objects"][name]);
+			}
 		}
 	}
 
-	return;
+	// Set the tracked object's ids (legacy format)
+	if (!root["objects_id"].isNull()) {
+		for (auto& kv : trackedObjects) {
+			if (!root["objects_id"][kv.first].isNull())
+				kv.second->Id(root["objects_id"][kv.first].asString());
+		}
+	}
 }
 
 // Get all properties for a specific frame

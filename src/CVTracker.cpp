@@ -14,6 +14,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <cmath>
+#include <algorithm>
 
 #include <google/protobuf/util/time_util.h>
 
@@ -25,12 +27,22 @@
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
 
+// Clamp a rectangle to image bounds and ensure a minimal size
+static inline void clampRect(cv::Rect2d &r, int width, int height)
+{
+    r.x = std::clamp(r.x, 0.0, double(width  - 1));
+    r.y = std::clamp(r.y, 0.0, double(height - 1));
+    r.width  = std::clamp(r.width,  1.0, double(width  - r.x));
+    r.height = std::clamp(r.height, 1.0, double(height - r.y));
+}
+
 // Constructor
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), json_interval(false){
     SetJson(processInfoJson);
     start = 1;
     end = 1;
+    lostCount = 0;
 }
 
 // Set desirable tracker method
@@ -54,152 +66,250 @@ cv::Ptr<OPENCV_TRACKER_TYPE> CVTracker::selectTracker(std::string trackerType){
     return nullptr;
 }
 
-// Track object in the hole clip or in a given interval
-void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
-
+// Track object in the whole clip or in a given interval
+void CVTracker::trackClip(openshot::Clip& video,
+                          size_t _start,
+                          size_t _end,
+                          bool process_interval)
+{
     video.Open();
-    if(!json_interval){
+    if (!json_interval) {
         start = _start; end = _end;
-
-        if(!process_interval || end <= 1 || end-start == 0){
-            // Get total number of frames in video
-            start = (int)(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
-            end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
+        if (!process_interval || end <= 1 || end - start == 0) {
+            start = int(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+            end   = int(video.End()   * video.Reader()->info.fps.ToFloat()) + 1;
         }
+    } else {
+        start = int(start + video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+        end   = int(video.End()   * video.Reader()->info.fps.ToFloat()) + 1;
     }
-    else{
-        start = (int)(start + video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
-        end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
-    }
-
-    if(error){
-        return;
-    }
-
+    if (error) return;
     processingController->SetError(false, "");
+
     bool trackerInit = false;
+    lostCount = 0;  // reset lost counter once at the start
 
-    size_t frame;
-    // Loop through video
-    for (frame = start; frame <= end; frame++)
-    {
+    for (size_t frame = start; frame <= end; ++frame) {
+        if (processingController->ShouldStop()) return;
 
-        // Stop the feature tracker process
-        if(processingController->ShouldStop()){
-            return;
+        auto f      = video.GetFrame(frame);
+        cv::Mat img = f->GetImageCV();
+
+        if (frame == start) {
+            bbox = cv::Rect2d(
+                int(bbox.x      * img.cols),
+                int(bbox.y      * img.rows),
+                int(bbox.width  * img.cols),
+                int(bbox.height * img.rows)
+            );
         }
 
-        size_t frame_number = frame;
-        // Get current frame
-        std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
-
-        // Grab OpenCV Mat image
-        cv::Mat cvimage = f->GetImageCV();
-
-        if(frame == start){
-            // Take the normalized inital bounding box and multiply to the current video shape
-            bbox = cv::Rect2d(int(bbox.x*cvimage.cols), int(bbox.y*cvimage.rows),
-                              int(bbox.width*cvimage.cols), int(bbox.height*cvimage.rows));
-        }
-
-        // Pass the first frame to initialize the tracker
-        if(!trackerInit){
-
-            // Initialize the tracker
-            initTracker(cvimage, frame_number);
-
+        if (!trackerInit) {
+            initTracker(img, frame);
             trackerInit = true;
+            lostCount    = 0;
         }
-        else{
-            // Update the object tracker according to frame
-            trackerInit = trackFrame(cvimage, frame_number);
+        else {
+            // trackFrame now manages lostCount and will re-init internally
+            trackFrame(img, frame);
 
-            // Draw box on image
-            FrameData fd = GetTrackedData(frame_number);
-
+            // record whatever bbox we have now
+            FrameData fd = GetTrackedData(frame);
         }
-        // Update progress
-        processingController->SetProgress(uint(100*(frame_number-start)/(end-start)));
+
+        processingController->SetProgress(
+            uint(100 * (frame - start) / (end - start))
+        );
     }
 }
 
 // Initialize the tracker
-bool CVTracker::initTracker(cv::Mat &frame, size_t frameId){
-
+bool CVTracker::initTracker(cv::Mat &frame, size_t frameId)
+{
     // Create new tracker object
     tracker = selectTracker(trackerType);
 
-    // Correct if bounding box contains negative proportions (width and/or height < 0)
-    if(bbox.width < 0){
-        bbox.x = bbox.x - abs(bbox.width);
-        bbox.width = abs(bbox.width);
+    // Correct negative width/height
+    if (bbox.width < 0) {
+        bbox.x    -= bbox.width;
+        bbox.width = -bbox.width;
     }
-    if(bbox.height < 0){
-        bbox.y = bbox.y - abs(bbox.height);
-        bbox.height = abs(bbox.height);
+    if (bbox.height < 0) {
+        bbox.y     -= bbox.height;
+        bbox.height = -bbox.height;
     }
+
+    // Clamp to frame bounds
+    clampRect(bbox, frame.cols, frame.rows);
 
     // Initialize tracker
     tracker->init(frame, bbox);
 
-    float fw = frame.size().width;
-    float fh = frame.size().height;
+    float fw = float(frame.cols), fh = float(frame.rows);
+
+    // record original pixel size
+    origWidth  = bbox.width;
+    origHeight = bbox.height;
+
+    // initialize sub-pixel smoother at true center
+    smoothC_x = bbox.x + bbox.width  * 0.5;
+    smoothC_y = bbox.y + bbox.height * 0.5;
 
     // Add new frame data
-    trackedDataById[frameId] = FrameData(frameId, 0, (bbox.x)/fw,
-                                                     (bbox.y)/fh,
-                                                     (bbox.x+bbox.width)/fw,
-                                                     (bbox.y+bbox.height)/fh);
+    trackedDataById[frameId] = FrameData(
+        frameId, 0,
+        bbox.x           / fw,
+        bbox.y           / fh,
+        (bbox.x + bbox.width)  / fw,
+        (bbox.y + bbox.height) / fh
+    );
 
     return true;
 }
 
 // Update the object tracker according to frame
-bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
-    // Update the tracking result
-    bool ok = tracker->update(frame, bbox);
+// returns true if KLT succeeded, false otherwise
+bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId)
+{
+    const int W = frame.cols, H = frame.rows;
+    const auto& prev = trackedDataById[frameId - 1];
 
-    // Add frame number and box coords if tracker finds the object
-    // Otherwise add only frame number
-    if (ok)
+    // Reconstruct last-known box in pixel coords
+    cv::Rect2d lastBox(
+        prev.x1 * W, prev.y1 * H,
+        (prev.x2 - prev.x1) * W,
+        (prev.y2 - prev.y1) * H
+    );
+
+    // Convert to grayscale
+    cv::Mat gray;
+    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+
+    cv::Rect2d cand;
+    bool didKLT = false;
+
+    // Try KLT-based drift
+    if (!prevGray.empty() && !prevPts.empty()) {
+        std::vector<cv::Point2f> currPts;
+        std::vector<uchar> status;
+        std::vector<float> err;
+        cv::calcOpticalFlowPyrLK(
+            prevGray, gray,
+            prevPts, currPts,
+            status, err,
+            cv::Size(21,21), 3,
+            cv::TermCriteria{cv::TermCriteria::COUNT|cv::TermCriteria::EPS,30,0.01},
+            cv::OPTFLOW_LK_GET_MIN_EIGENVALS, 1e-4
+        );
+
+        // collect per-point displacements
+        std::vector<double> dx, dy;
+        for (size_t i = 0; i < status.size(); ++i) {
+            if (status[i] && err[i] < 12.0) {
+                dx.push_back(currPts[i].x - prevPts[i].x);
+                dy.push_back(currPts[i].y - prevPts[i].y);
+            }
+        }
+
+        if ((int)dx.size() >= minKltPts) {
+            auto median = [&](auto &v){
+                std::nth_element(v.begin(), v.begin()+v.size()/2, v.end());
+                return v[v.size()/2];
+            };
+            double mdx = median(dx), mdy = median(dy);
+
+            cand = lastBox;
+            cand.x += mdx;
+            cand.y += mdy;
+            cand.width  = origWidth;
+            cand.height = origHeight;
+
+            lostCount = 0;
+            didKLT    = true;
+        }
+    }
+
+    // Fallback to whole-frame flow if KLT failed
+    if (!didKLT) {
+        ++lostCount;
+        cand = lastBox;
+        if (!fullPrevGray.empty()) {
+            cv::Mat flow;
+            cv::calcOpticalFlowFarneback(
+                fullPrevGray, gray, flow,
+                0.5,3,15,3,5,1.2,0
+            );
+            cv::Scalar avg = cv::mean(flow);
+            cand.x += avg[0];
+            cand.y += avg[1];
+        }
+        cand.width  = origWidth;
+        cand.height = origHeight;
+
+        if (lostCount >= 10) {
+            initTracker(frame, frameId);
+            cand      = bbox;
+            lostCount = 0;
+        }
+    }
+
+    // Dead-zone sub-pixel smoothing
     {
-        float fw = frame.size().width;
-        float fh = frame.size().height;
+        constexpr double JITTER_THRESH = 1.0;
+        double measCx = cand.x + cand.width  * 0.5;
+        double measCy = cand.y + cand.height * 0.5;
+        double dx    = measCx - smoothC_x;
+        double dy    = measCy - smoothC_y;
 
-        cv::Rect2d filtered_box = filter_box_jitter(frameId);
-        // Add new frame data
-        trackedDataById[frameId] = FrameData(frameId, 0, (filtered_box.x)/fw,
-                                                         (filtered_box.y)/fh,
-                                                         (filtered_box.x+filtered_box.width)/fw,
-                                                         (filtered_box.y+filtered_box.height)/fh);
+        if (std::abs(dx) > JITTER_THRESH || std::abs(dy) > JITTER_THRESH) {
+            smoothC_x = measCx;
+            smoothC_y = measCy;
+        }
+
+        cand.x = smoothC_x - cand.width  * 0.5;
+        cand.y = smoothC_y - cand.height * 0.5;
     }
-    else
+
+
+    // Candidate box may now lie outside frame; ROI for KLT is clamped below
+    // Re-seed KLT features
     {
-        // Copy the last frame data if the tracker get lost
-        trackedDataById[frameId] = trackedDataById[frameId-1];
+        // Clamp ROI to frame bounds and avoid negative width/height
+        int roiX = int(std::clamp(cand.x, 0.0, double(W - 1)));
+        int roiY = int(std::clamp(cand.y, 0.0, double(H - 1)));
+        int roiW = int(std::min(cand.width,  double(W - roiX)));
+        int roiH = int(std::min(cand.height, double(H - roiY)));
+        roiW = std::max(0, roiW);
+        roiH = std::max(0, roiH);
+
+        if (roiW > 0 && roiH > 0) {
+            cv::Rect roi(roiX, roiY, roiW, roiH);
+            cv::goodFeaturesToTrack(
+                gray(roi), prevPts,
+                kltMaxCorners, kltQualityLevel,
+                kltMinDist, cv::Mat(), kltBlockSize
+            );
+            for (auto &pt : prevPts)
+                pt += cv::Point2f(float(roi.x), float(roi.y));
+        } else {
+            prevPts.clear();
+        }
     }
 
-    return ok;
-}
+    // Commit state
+    fullPrevGray = gray.clone();
+    prevGray     = gray.clone();
+    bbox         = cand;
+    float fw = float(W), fh = float(H);
+    trackedDataById[frameId] = FrameData(
+        frameId, 0,
+        cand.x              / fw,
+        cand.y              / fh,
+        (cand.x + cand.width)  / fw,
+        (cand.y + cand.height) / fh
+    );
 
-cv::Rect2d CVTracker::filter_box_jitter(size_t frameId){
-    // get tracked data for the previous frame
-    float last_box_width = trackedDataById[frameId-1].x2 - trackedDataById[frameId-1].x1;
-    float last_box_height = trackedDataById[frameId-1].y2 - trackedDataById[frameId-1].y1;
-
-    float curr_box_width  = bbox.width;
-    float curr_box_height  = bbox.height;
-    // keep the last width and height if the difference is less than 1%
-    float threshold = 0.01;
-
-    cv::Rect2d filtered_box = bbox;
-    if(std::abs(1-(curr_box_width/last_box_width)) <= threshold){
-        filtered_box.width = last_box_width;
-    }
-    if(std::abs(1-(curr_box_height/last_box_height)) <= threshold){
-        filtered_box.height = last_box_height;
-    }
-    return filtered_box;
+    return didKLT;
 }
 
 bool CVTracker::SaveTrackedData(){

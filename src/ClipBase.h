@@ -16,8 +16,8 @@
 #include <memory>
 #include "CacheMemory.h"
 #include "Frame.h"
-#include "Point.h"
 #include "KeyFrame.h"
+#include "IdGenerator.h"
 #include "Json.h"
 #include "TimelineBase.h"
 
@@ -48,6 +48,7 @@ namespace openshot {
 	public:
 		/// Constructor for the base clip
 		ClipBase() :
+			id(IdGenerator::Generate()),
 			position(0.0),
 			layer(0),
 			start(0.0),

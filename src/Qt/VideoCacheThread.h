@@ -166,7 +166,7 @@ namespace openshot
 
         int64_t requested_display_frame; ///< Frame index the user requested.
         int64_t current_display_frame;   ///< Currently displayed frame (unused here, reserved).
-        int64_t cached_frame_count;      ///< Count of frames currently added to cache.
+        int64_t cached_frame_count;      ///< Estimated count of frames currently stored in cache.
 
         int64_t min_frames_ahead;        ///< Minimum number of frames considered “ready” (pre-roll).
         int64_t timeline_max_frame;      ///< Highest valid frame index in the timeline.

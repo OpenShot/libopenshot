@@ -107,6 +107,43 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     CHECK(height == Approx(166).margin(2));
 }
 
+TEST_CASE( "Track_BoundingBoxClipping", "[libopenshot][opencv][tracker]" )
+{
+    // Create a video clip
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "test.avi";
+
+    // Open clip
+    openshot::Clip c1(path.str());
+    c1.Open();
+
+    std::string json_data = R"proto(
+    {
+        "tracker-type": "KCF",
+        "region": {
+            "normalized_x": -0.2,
+            "normalized_y": -0.2,
+        "normalized_width": 1.5,
+        "normalized_height": 1.5,
+        "first-frame": 1
+        }
+    } )proto";
+
+    ProcessingController tracker_pc;
+    CVTracker tracker(json_data, tracker_pc);
+    tracker_pc.SetError(false, "");
+
+    // Grab first frame and run tracker directly
+    std::shared_ptr<openshot::Frame> f = c1.GetFrame(1);
+    cv::Mat image = f->GetImageCV();
+
+    tracker.initTracker(image, 1);
+    tracker.trackFrame(image, 2);
+
+    INFO(tracker_pc.GetErrorMessage());
+    CHECK(tracker_pc.GetError() == false);
+}
+
 
 TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
 {

@@ -16,6 +16,11 @@ endif()
 # Test media path, used by unit tests for input data
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 
+# Benchmark executable
+add_executable(openshot-benchmark Benchmark.cpp)
+target_compile_definitions(openshot-benchmark PRIVATE -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}")
+target_link_libraries(openshot-benchmark openshot)
+
 ###
 ###  TEST SOURCE FILES
 ###
@@ -48,8 +53,10 @@ set(OPENSHOT_TESTS
   ChromaKey
   Crop
   LensFlare
+  AnalogTape
   Sharpen
   SphericalEffect
+  WaveEffect
 )
 
 # ImageMagick related test files

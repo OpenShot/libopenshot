@@ -21,23 +21,29 @@
 #include <QTextStream>
 #include <vector>
 #include <string>
+#include <array>
 
 namespace openshot
 {
 
     /**
-     * @brief Applies a 3D LUT (.cube) color transform to each frame.
+     * @brief Applies a 1D or 3D LUT (.cube) color transform to each frame.
      *
-     * Loads a .cube file (LUT_3D_SIZE N × N × N) into memory, then for each pixel
-     * uses nearest‐neighbor lookup and blends the result by keyframable per‐channel intensities.
+     * Loads a .cube file (supporting LUT_1D_SIZE and LUT_3D_SIZE) into memory, then for each pixel
+     * interpolates the lookup value and blends the result by keyframable per‐channel intensities.
      */
     class ColorMap : public EffectBase
     {
     private:
+        enum class LUTType { None, LUT1D, LUT3D };
+
         std::string lut_path;             ///< Filesystem path to .cube LUT file
-        int lut_size;                     ///< Dimension N of the cube (LUT_3D_SIZE)
-        std::vector<float> lut_data;      ///< Flat array [N³ × 3] RGB lookup table
+        int lut_size;                     ///< Dimension of LUT (entries for 1D, cube edge for 3D)
+        std::vector<float> lut_data;      ///< Flat array containing LUT entries
+        LUTType lut_type;                 ///< Indicates if LUT is 1D or 3D
         bool needs_refresh;               ///< Reload LUT on next frame
+        std::array<float, 3> lut_domain_min; ///< Input domain minimum per channel
+        std::array<float, 3> lut_domain_max; ///< Input domain maximum per channel
 
         /// Populate info fields (class_name, name, description)
         void init_effect_details();

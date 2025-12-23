@@ -17,6 +17,7 @@
 #include <iostream>
 #include <cmath>
 #include <ctime>
+#include <sstream>
 #include <unistd.h>
 
 #include "FFmpegUtilities.h"
@@ -126,17 +127,18 @@ void FFmpegWriter::auto_detect_format() {
 	// Determine what format to use when encoding this output filename
 	oc->oformat = av_guess_format(NULL, path.c_str(), NULL);
 	if (oc->oformat == nullptr) {
-		throw InvalidFormat(
-			"Could not deduce output format from file extension.", path);
+		throw InvalidFormat("Could not deduce output format from file extension.", path);
 	}
 
-	// Update video codec name
-	if (oc->oformat->video_codec != AV_CODEC_ID_NONE && info.has_video)
-		info.vcodec = avcodec_find_encoder(oc->oformat->video_codec)->name;
-
-	// Update audio codec name
-	if (oc->oformat->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
-		info.acodec = avcodec_find_encoder(oc->oformat->audio_codec)->name;
+	// Update video & audio codec name
+	if (oc->oformat->video_codec != AV_CODEC_ID_NONE && info.has_video) {
+		const AVCodec *vcodec = avcodec_find_encoder(oc->oformat->video_codec);
+		info.vcodec = vcodec ? vcodec->name : std::string();
+	}
+	if (oc->oformat->audio_codec != AV_CODEC_ID_NONE && info.has_audio) {
+		const AVCodec *acodec = avcodec_find_encoder(oc->oformat->audio_codec);
+		info.acodec = acodec ? acodec->name : std::string();
+	}
 }
 
 // initialize streams

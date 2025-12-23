@@ -12,6 +12,7 @@
 
 
 #include <vector>
+#include <sstream>
 #include "openshot_catch.h"
 #include <QApplication>
 #include <QFontDatabase>

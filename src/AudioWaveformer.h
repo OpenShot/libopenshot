@@ -15,7 +15,11 @@
 
 #include "ReaderBase.h"
 #include "Frame.h"
+#include "KeyFrame.h"
+#include "Fraction.h"
+#include <memory>
 #include <vector>
+#include <string>
 
 
 namespace openshot {
@@ -79,19 +83,51 @@ namespace openshot {
     class AudioWaveformer {
     private:
         ReaderBase* reader;
+        std::unique_ptr<ReaderBase> detached_reader; ///< Optional detached reader clone for waveform extraction
+        ReaderBase* resolved_reader = nullptr;       ///< Cached pointer to the reader used for extraction
+        bool source_initialized = false;
 
     public:
         /// Default constructor
         AudioWaveformer(ReaderBase* reader);
 
-        /// @brief Extract audio samples from any ReaderBase class
+        /// @brief Extract audio samples from any ReaderBase class (legacy overload, now delegates to audio-only path)
         /// @param channel Which audio channel should we extract data from (-1 == all channels)
         /// @param num_per_second How many samples per second to return
         /// @param normalize Should we scale the data range so the largest value is 1.0
         AudioWaveformData ExtractSamples(int channel, int num_per_second, bool normalize);
 
+        /// @brief Extract audio samples from a media file path (audio-only fast path)
+        AudioWaveformData ExtractSamples(const std::string& path, int channel, int num_per_second, bool normalize);
+
+        /// @brief Apply time and volume keyframes to an existing waveform data set
+        AudioWaveformData ApplyKeyframes(const AudioWaveformData& base,
+                                         const openshot::Keyframe* time_keyframe,
+                                         const openshot::Keyframe* volume_keyframe,
+                                         const openshot::Fraction& project_fps,
+                                         const openshot::Fraction& source_fps,
+                                         int source_channels,
+                                         int num_per_second,
+                                         int channel,
+                                         bool normalize);
+
+        /// @brief Convenience: extract then apply keyframes in one step from a file path
+        AudioWaveformData ExtractSamples(const std::string& path,
+                                         const openshot::Keyframe* time_keyframe,
+                                         const openshot::Keyframe* volume_keyframe,
+                                         const openshot::Fraction& project_fps,
+                                         int channel,
+                                         int num_per_second,
+                                         bool normalize);
+
         /// Destructor
         ~AudioWaveformer();
+
+    private:
+        AudioWaveformData ExtractSamplesFromReader(openshot::ReaderBase* source_reader, int channel, int num_per_second, bool normalize);
+        openshot::ReaderBase* ResolveSourceReader(openshot::ReaderBase* source_reader);
+        openshot::Fraction ResolveSourceFPS(openshot::ReaderBase* source_reader);
+        openshot::ReaderBase* ResolveWaveformReader();
     };
 
 }

@@ -22,6 +22,10 @@
 #include "Timeline.h"
 #include "ZmqLogger.h"
 
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+
 #ifdef USE_IMAGEMAGICK
 	#include "MagickUtilities.h"
 	#include "ImageReader.h"
@@ -31,6 +35,34 @@
 #include <Qt>
 
 using namespace openshot;
+
+namespace {
+	struct CompositeChoice { const char* name; CompositeType value; };
+	const CompositeChoice composite_choices[] = {
+		{"Normal",      COMPOSITE_SOURCE_OVER},
+
+		// Darken group
+		{"Darken",      COMPOSITE_DARKEN},
+		{"Multiply",    COMPOSITE_MULTIPLY},
+		{"Color Burn",  COMPOSITE_COLOR_BURN},
+
+		// Lighten group
+		{"Lighten",     COMPOSITE_LIGHTEN},
+		{"Screen",      COMPOSITE_SCREEN},
+		{"Color Dodge", COMPOSITE_COLOR_DODGE},
+		{"Add",         COMPOSITE_PLUS},
+
+		// Contrast group
+		{"Overlay",     COMPOSITE_OVERLAY},
+		{"Soft Light",  COMPOSITE_SOFT_LIGHT},
+		{"Hard Light",  COMPOSITE_HARD_LIGHT},
+
+		// Compare
+		{"Difference",  COMPOSITE_DIFFERENCE},
+		{"Exclusion",   COMPOSITE_EXCLUSION},
+	};
+	const int composite_choices_count = sizeof(composite_choices)/sizeof(CompositeChoice);
+}
 
 // Init default settings for a clip
 void Clip::init_settings()
@@ -45,6 +77,7 @@ void Clip::init_settings()
 	anchor = ANCHOR_CANVAS;
 	display = FRAME_DISPLAY_NONE;
 	mixing = VOLUME_MIX_NONE;
+	composite = COMPOSITE_SOURCE_OVER;
 	waveform = false;
 	previous_properties = "";
 	parentObjectId = "";
@@ -112,36 +145,51 @@ void Clip::init_reader_settings() {
 }
 
 void Clip::init_reader_rotation() {
-	// Don't init rotation if clip already has keyframes.
-	if (rotation.GetCount() > 0)
+	// Only apply metadata rotation if clip rotation has not been explicitly set.
+	if (rotation.GetCount() > 0 || !reader)
 		return;
 
-	// Get rotation from metadata (if any)
-	float rotate_angle = 0.0f;
-	if (reader && reader->info.metadata.count("rotate") > 0) {
-		try {
-			rotate_angle = strtof(reader->info.metadata["rotate"].c_str(), nullptr);
-		} catch (const std::exception& e) {
-			// Leave rotate_angle at default 0.0f
-		}
+	const auto rotate_meta = reader->info.metadata.find("rotate");
+	if (rotate_meta == reader->info.metadata.end()) {
+		// Ensure rotation keyframes always start with a default 0° point.
+		rotation = Keyframe(0.0f);
+		return;
 	}
+
+	float rotate_angle = 0.0f;
+	try {
+		rotate_angle = strtof(rotate_meta->second.c_str(), nullptr);
+	} catch (const std::exception& e) {
+		return; // ignore invalid metadata
+	}
+
 	rotation = Keyframe(rotate_angle);
 
-	// Compute uniform scale factors for rotated video.
-	// Assume reader->info.width and reader->info.height are the clip's natural dimensions.
+	// Do not overwrite user-authored scale curves.
+	auto has_default_scale = [](const Keyframe& kf) {
+		return kf.GetCount() == 1 && fabs(kf.GetPoint(0).co.Y - 1.0) < 0.00001;
+	};
+	if (!has_default_scale(scale_x) || !has_default_scale(scale_y))
+		return;
+
+	// No need to adjust scaling when the metadata rotation is effectively zero.
+	if (fabs(rotate_angle) < 0.0001f)
+		return;
+
 	float w = static_cast<float>(reader->info.width);
 	float h = static_cast<float>(reader->info.height);
-	float rad = rotate_angle * M_PI / 180.0f;
+	if (w <= 0.0f || h <= 0.0f)
+		return;
 
-	// Calculate the dimensions of the bounding box for the rotated clip.
+	float rad = rotate_angle * static_cast<float>(M_PI) / 180.0f;
+
 	float new_width  = fabs(w * cos(rad)) + fabs(h * sin(rad));
 	float new_height = fabs(w * sin(rad)) + fabs(h * cos(rad));
+	if (new_width <= 0.0f || new_height <= 0.0f)
+		return;
 
-	// To have the rotated clip appear the same size as the unrotated clip,
-	// compute a uniform scale factor S that brings the bounding box back to (w, h).
 	float uniform_scale = std::min(w / new_width, h / new_height);
 
-	// Set scale keyframes uniformly.
 	scale_x = Keyframe(uniform_scale);
 	scale_y = Keyframe(uniform_scale);
 }
@@ -515,8 +563,13 @@ std::shared_ptr<openshot::TrackedObjectBase> Clip::GetParentTrackedObject() {
 // Get file extension
 std::string Clip::get_file_extension(std::string path)
 {
-	// return last part of path
-	return path.substr(path.find_last_of(".") + 1);
+	// Return last part of path safely (handle filenames without a dot)
+	const auto dot_pos = path.find_last_of('.');
+	if (dot_pos == std::string::npos || dot_pos + 1 >= path.size()) {
+		return std::string();
+	}
+
+	return path.substr(dot_pos + 1);
 }
 
 // Adjust the audio and image of a time mapped frame
@@ -540,7 +593,8 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 
 		// Get delta (difference from this frame to the next time mapped frame: Y value)
 		double delta = time.GetDelta(clip_frame_number + 1);
-		bool is_increasing = time.IsIncreasing(clip_frame_number + 1);
+		const bool prev_is_increasing = time.IsIncreasing(clip_frame_number);
+		const bool is_increasing = time.IsIncreasing(clip_frame_number + 1);
 
 		// Determine length of source audio (in samples)
 		// A delta of 1.0 == normal expected samples
@@ -553,7 +607,7 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 
 		// Determine starting audio location
 		AudioLocation location;
-		if (previous_location.frame == 0 || abs(new_frame_number - previous_location.frame) > 2) {
+		if (previous_location.frame == 0 || abs(new_frame_number - previous_location.frame) > 2 || prev_is_increasing != is_increasing) {
 			// No previous location OR gap detected
 			location.frame = new_frame_number;
 			location.sample_start = 0;
@@ -562,6 +616,7 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 			// We don't want to interpolate between unrelated audio data
 			if (resampler) {
 				delete resampler;
+				resampler = nullptr;
 			}
 			// Init resampler with # channels from Reader (should match the timeline)
 			resampler = new AudioResampler(Reader()->info.channels);
@@ -594,6 +649,12 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 		while (remaining_samples > 0) {
 			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false);
 			int frame_sample_count = source_frame->GetAudioSamplesCount() - location.sample_start;
+
+            // Inform FrameMapper of the direction for THIS mapper frame
+            if (auto *fm = dynamic_cast<FrameMapper*>(reader)) {
+                fm->SetDirectionHint(is_increasing);
+            }
+            source_frame->SetAudioDirection(is_increasing);
 
 			if (frame_sample_count == 0) {
 				// No samples found in source frame (fill with silence)
@@ -681,10 +742,17 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 	try {
 		// Init to requested frame
 		int64_t clip_frame_number = adjust_frame_number_minimum(number);
+		bool is_increasing = true;
 
 		// Adjust for time-mapping (if any)
 		if (enable_time && time.GetLength() > 1) {
-			clip_frame_number = adjust_frame_number_minimum(time.GetLong(clip_frame_number));
+			is_increasing = time.IsIncreasing(clip_frame_number + 1);
+			const int64_t time_frame_number = adjust_frame_number_minimum(time.GetLong(clip_frame_number));
+			if (auto *fm = dynamic_cast<FrameMapper*>(reader)) {
+				// Inform FrameMapper which direction this mapper frame is being requested
+				fm->SetDirectionHint(is_increasing);
+			}
+			clip_frame_number = time_frame_number;
 		}
 
 		// Debug output
@@ -694,10 +762,12 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		auto reader_frame = reader->GetFrame(clip_frame_number);
-		reader_frame->number = number; // Override frame # (due to time-mapping might change it)
-
-		// Return real frame
 		if (reader_frame) {
+			// Override frame # (due to time-mapping might change it)
+			reader_frame->number = number;
+			reader_frame->SetAudioDirection(is_increasing);
+
+			// Return real frame
 			// Create a new copy of reader frame
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
@@ -760,6 +830,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["scale"] = add_property_json("Scale", scale, "int", "", NULL, 0, 3, false, requested_frame);
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
+	root["composite"] = add_property_json("Composite", composite, "int", "", NULL, 0, composite_choices_count - 1, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 	root["parentObjectId"] = add_property_json("Parent", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
 
@@ -790,6 +861,10 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["mixing"]["choices"].append(add_property_choice_json("None", VOLUME_MIX_NONE, mixing));
 	root["mixing"]["choices"].append(add_property_choice_json("Average", VOLUME_MIX_AVERAGE, mixing));
 	root["mixing"]["choices"].append(add_property_choice_json("Reduce", VOLUME_MIX_REDUCE, mixing));
+
+	// Add composite choices (dropdown style)
+	for (int i = 0; i < composite_choices_count; ++i)
+		root["composite"]["choices"].append(add_property_choice_json(composite_choices[i].name, composite_choices[i].value, composite));
 
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
@@ -873,6 +948,7 @@ Json::Value Clip::JsonValue() const {
 	root["anchor"] = anchor;
 	root["display"] = display;
 	root["mixing"] = mixing;
+	root["composite"] = composite;
 	root["waveform"] = waveform;
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
@@ -961,6 +1037,8 @@ void Clip::SetJsonValue(const Json::Value root) {
 		display = (FrameDisplayType) root["display"].asInt();
 	if (!root["mixing"].isNull())
 		mixing = (VolumeMixType) root["mixing"].asInt();
+	if (!root["composite"].isNull())
+		composite = (CompositeType) root["composite"].asInt();
 	if (!root["waveform"].isNull())
 		waveform = root["waveform"].asBool();
 	if (!root["scale_x"].isNull())
@@ -1189,10 +1267,9 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame, std::shared_
 	// Add background canvas
 	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
 	QPainter painter(background_canvas.get());
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
 	// Composite a new layer onto the image
-	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.setCompositionMode(static_cast<QPainter::CompositionMode>(composite));
 	painter.drawImage(0, 0, *frame->GetImage());
 	painter.end();
 
@@ -1247,14 +1324,26 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(background_canvas.get());
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
-
+	painter.setRenderHint(QPainter::TextAntialiasing, true);
+	if (!transform.isIdentity()) {
+		painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+	}
 	// Apply transform (translate, rotate, scale)
 	painter.setTransform(transform);
 
 	// Composite a new layer onto the image
-	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-	painter.drawImage(0, 0, *source_image);
+	painter.setCompositionMode(static_cast<QPainter::CompositionMode>(composite));
+
+	// Apply opacity via painter instead of per-pixel alpha manipulation
+	const float alpha_value = alpha.GetValue(frame->number);
+	if (alpha_value != 1.0f) {
+		painter.setOpacity(alpha_value);
+		painter.drawImage(0, 0, *source_image);
+		// Reset so any subsequent drawing (e.g., overlays) isn’t faded
+		painter.setOpacity(1.0);
+	} else {
+		painter.drawImage(0, 0, *source_image);
+	}
 
 	if (timeline) {
 		Timeline *t = static_cast<Timeline *>(timeline);
@@ -1346,31 +1435,6 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 {
 	// Get image from clip
 	std::shared_ptr<QImage> source_image = frame->GetImage();
-
-	/* ALPHA & OPACITY */
-	if (alpha.GetValue(frame->number) != 1.0)
-	{
-		float alpha_value = alpha.GetValue(frame->number);
-
-		// Get source image's pixels
-		unsigned char *pixels = source_image->bits();
-
-		// Loop through pixels
-		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
-		{
-			// Apply alpha to pixel values (since we use a premultiplied value, we must
-			// multiply the alpha with all colors).
-			pixels[byte_index + 0] *= alpha_value;
-			pixels[byte_index + 1] *= alpha_value;
-			pixels[byte_index + 2] *= alpha_value;
-			pixels[byte_index + 3] *= alpha_value;
-		}
-
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Set Alpha & Opacity)",
-			"alpha_value", alpha_value,
-			"frame->number", frame->number);
-	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = scale_size(source_image->size(), scale, width, height);

@@ -7,7 +7,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2021 OpenShot Studios, LLC
+// Copyright (c) 2008-2025 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -16,7 +16,9 @@
 #include "openshot_catch.h"
 
 #include "Frame.h"
+#include "Clip.h"
 #include "effects/Crop.h"
+#include "effects/CropHelpers.h"
 
 #include <QColor>
 #include <QImage>
@@ -143,4 +145,30 @@ TEST_CASE( "x/y offsets", "[libopenshot][effect][crop]" )
     // The x-offset moves it outside of the source image area,
     // so it becomes a transparent pixel
     CHECK(i->pixelColor(900, 360) == trans);
+}
+
+TEST_CASE( "crop resize scaling helper", "[libopenshot][effect][crop][scaling]" )
+{
+    // Build a clip with a resizing crop effect
+    auto clip = std::make_unique<openshot::Clip>();
+    auto crop = new openshot::Crop(openshot::Keyframe(0.0), openshot::Keyframe(0.0),
+                                   openshot::Keyframe(0.0), openshot::Keyframe(0.75));
+    crop->resize = true;
+    clip->AddEffect(crop);
+
+    int max_width = 900;
+    int max_height = 500;
+
+    // 25% of the height is visible, so request 4x height (capped at source size)
+    openshot::ApplyCropResizeScale(clip.get(), 3840, 2160, max_width, max_height);
+    CHECK(max_width == 900);
+    CHECK(max_height == 2000);
+
+    // If scaling would exceed source, it should clamp at source dimensions
+    crop->bottom = openshot::Keyframe(0.9); // visible height = 10%
+    max_width = 900;
+    max_height = 500;
+    openshot::ApplyCropResizeScale(clip.get(), 1920, 1080, max_width, max_height);
+    CHECK(max_width == 900);   // width unchanged (no horizontal crop)
+    CHECK(max_height == 1080); // scaled height would be 5000, so it clamps
 }

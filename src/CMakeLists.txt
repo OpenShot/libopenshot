@@ -72,6 +72,7 @@ set(OPENSHOT_SOURCES
   Fraction.cpp
   Frame.cpp
   FrameMapper.cpp
+  MemoryTrim.cpp
   Json.cpp
   KeyFrame.cpp
   OpenShotVersion.cpp
@@ -114,9 +115,11 @@ set(EFFECTS_SOURCES
   effects/ColorMap.cpp
   effects/ColorShift.cpp
   effects/Crop.cpp
+  effects/CropHelpers.cpp
   effects/Deinterlace.cpp
   effects/Hue.cpp
   effects/LensFlare.cpp
+  effects/AnalogTape.cpp
   effects/Mask.cpp
   effects/Negate.cpp
   effects/Pixelate.cpp

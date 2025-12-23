@@ -54,8 +54,6 @@ namespace openshot
         /// Default constructor
         Tracker();
 
-        Tracker(std::string clipTrackerDataPath);
-
         /// @brief Apply this effect to an openshot::Frame
         ///
         /// @returns The modified openshot::Frame object
