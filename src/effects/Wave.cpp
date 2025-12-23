@@ -51,9 +51,10 @@ std::shared_ptr<openshot::Frame> Wave::GetFrame(std::shared_ptr<openshot::Frame>
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
-	// Get original pixels for frame image, and also make a copy for editing
-	const unsigned char *original_pixels = (unsigned char *) frame_image->constBits();
-	unsigned char *pixels = (unsigned char *) frame_image->bits();
+	// Copy original pixels for reference, and get a writable pointer for editing
+	QImage original = frame_image->copy();
+	const unsigned char *original_pixels = original.constBits();
+	unsigned char *pixels = frame_image->bits();
 	int pixel_count = frame_image->width() * frame_image->height();
 
 	// Get current keyframe values
@@ -77,7 +78,7 @@ std::shared_ptr<openshot::Frame> Wave::GetFrame(std::shared_ptr<openshot::Frame>
 		float waveformVal = sin((Y * wavelength_value) + (time * speed_y_value));  // Waveform algorithm on y-axis
 		float waveVal = (waveformVal + shift_x_value) * noiseAmp;  // Shifts pixels on the x-axis
 
-		long unsigned int source_px = round(pixel + waveVal);
+		int source_px = lround(pixel + waveVal);
 		if (source_px < 0)
 			source_px = 0;
 		if (source_px >= pixel_count)

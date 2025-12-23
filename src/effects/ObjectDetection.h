@@ -82,8 +82,6 @@ namespace openshot
         /// Index of the Tracked Object that was selected to modify it's properties
         int selectedObjectIndex;
 
-        ObjectDetection(std::string clipTrackerDataPath);
-
         /// Default constructor
         ObjectDetection();
 

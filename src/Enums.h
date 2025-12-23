@@ -56,6 +56,13 @@ enum FrameDisplayType
 	FRAME_DISPLAY_BOTH      ///< Display both the clip's and timeline's frame number
 };
 
+/// This enumeration determines which duration source to favor.
+enum class DurationStrategy {
+	LongestStream,   ///< Use the longest value from video, audio, or container
+	VideoPreferred,  ///< Prefer the video stream's duration, fallback to audio then container
+	AudioPreferred,  ///< Prefer the audio stream's duration, fallback to video then container
+};
+
 /// This enumeration determines the strategy when mixing audio with other clips.
 enum VolumeMixType
 {
@@ -64,6 +71,37 @@ enum VolumeMixType
 	VOLUME_MIX_REDUCE 	///< Reduce volume by about %25, and then mix (louder, but could cause pops if the sum exceeds 100%)
 };
 
+/// This enumeration determines how clips are composited onto lower layers.
+enum CompositeType {
+	COMPOSITE_SOURCE_OVER,
+	COMPOSITE_DESTINATION_OVER,
+	COMPOSITE_CLEAR,
+	COMPOSITE_SOURCE,
+	COMPOSITE_DESTINATION,
+	COMPOSITE_SOURCE_IN,
+	COMPOSITE_DESTINATION_IN,
+	COMPOSITE_SOURCE_OUT,
+	COMPOSITE_DESTINATION_OUT,
+	COMPOSITE_SOURCE_ATOP,
+	COMPOSITE_DESTINATION_ATOP,
+	COMPOSITE_XOR,
+
+	// svg 1.2 blend modes
+	COMPOSITE_PLUS,
+	COMPOSITE_MULTIPLY,
+	COMPOSITE_SCREEN,
+	COMPOSITE_OVERLAY,
+	COMPOSITE_DARKEN,
+	COMPOSITE_LIGHTEN,
+	COMPOSITE_COLOR_DODGE,
+	COMPOSITE_COLOR_BURN,
+	COMPOSITE_HARD_LIGHT,
+	COMPOSITE_SOFT_LIGHT,
+	COMPOSITE_DIFFERENCE,
+	COMPOSITE_EXCLUSION,
+
+	COMPOSITE_LAST = COMPOSITE_EXCLUSION
+};
 
 /// This enumeration determines the distortion type of Distortion Effect.
 enum DistortionType

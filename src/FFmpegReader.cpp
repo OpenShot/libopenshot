@@ -15,12 +15,17 @@
 
 #include <thread>	// for std::this_thread::sleep_for
 #include <chrono>	// for std::chrono::milliseconds
+#include <algorithm>
+#include <cmath>
+#include <sstream>
 #include <unistd.h>
 
 #include "FFmpegUtilities.h"
+#include "effects/CropHelpers.h"
 
 #include "FFmpegReader.h"
 #include "Exceptions.h"
+#include "MemoryTrim.h"
 #include "Timeline.h"
 #include "ZmqLogger.h"
 
@@ -69,11 +74,14 @@ int hw_de_on = 0;
 #endif
 
 FFmpegReader::FFmpegReader(const std::string &path, bool inspect_reader)
+		: FFmpegReader(path, DurationStrategy::VideoPreferred, inspect_reader) {}
+
+FFmpegReader::FFmpegReader(const std::string &path, DurationStrategy duration_strategy, bool inspect_reader)
 		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0), NO_PTS_OFFSET(-99999),
 		  path(path), is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true), is_open(false),
 		  seek_audio_frame_found(0), seek_video_frame_found(0),is_duration_known(false), largest_frame_processed(0),
-		  current_video_frame(0), packet(NULL), max_concurrent_frames(OPEN_MP_NUM_PROCESSORS), audio_pts(0),
-		  video_pts(0), pFormatCtx(NULL), videoStream(-1), audioStream(-1), pCodecCtx(NULL), aCodecCtx(NULL),
+		  current_video_frame(0), packet(NULL), duration_strategy(duration_strategy),
+		  audio_pts(0), video_pts(0), pFormatCtx(NULL), videoStream(-1), audioStream(-1), pCodecCtx(NULL), aCodecCtx(NULL),
 		pStream(NULL), aStream(NULL), pFrame(NULL), previous_packet_location{-1,0},
 		hold_packet(false) {
 
@@ -87,8 +95,8 @@ FFmpegReader::FFmpegReader(const std::string &path, bool inspect_reader)
 	audio_pts_seconds = NO_PTS_OFFSET;
 
 	// Init cache
-	working_cache.SetMaxBytesFromInfo(max_concurrent_frames * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-	final_cache.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
+	working_cache.SetMaxBytesFromInfo(info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(24, info.width, info.height, info.sample_rate, info.channels);
 
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -605,8 +613,8 @@ void FFmpegReader::Open() {
 		previous_packet_location.sample_start = 0;
 
 		// Adjust cache size based on size of frame and audio
-		working_cache.SetMaxBytesFromInfo(max_concurrent_frames * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-		final_cache.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
+		working_cache.SetMaxBytesFromInfo(info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
+		final_cache.SetMaxBytesFromInfo(24, info.width, info.height, info.sample_rate, info.channels);
 
 		// Scan PTS for any offsets (i.e. non-zero starting streams). At least 1 stream must start at zero timestamp.
 		// This method allows us to shift timestamps to ensure at least 1 stream is starting at zero.
@@ -708,6 +716,9 @@ void FFmpegReader::Close() {
 		avformat_close_input(&pFormatCtx);
 		av_freep(&pFormatCtx);
 
+		// Release free’d arenas back to OS after heavy teardown
+		TrimMemoryToOS(true);
+
 		// Reset some variables
 		last_frame = 0;
 		hold_packet = false;
@@ -727,6 +738,74 @@ bool FFmpegReader::HasAlbumArt() {
 		&& (pFormatCtx->streams[videoStream]->disposition & AV_DISPOSITION_ATTACHED_PIC);
 }
 
+double FFmpegReader::PickDurationSeconds() const {
+	auto has_value = [](double value) { return value > 0.0; };
+
+	switch (duration_strategy) {
+		case DurationStrategy::VideoPreferred:
+			if (has_value(video_stream_duration_seconds))
+				return video_stream_duration_seconds;
+			if (has_value(audio_stream_duration_seconds))
+				return audio_stream_duration_seconds;
+			if (has_value(format_duration_seconds))
+				return format_duration_seconds;
+			break;
+		case DurationStrategy::AudioPreferred:
+			if (has_value(audio_stream_duration_seconds))
+				return audio_stream_duration_seconds;
+			if (has_value(video_stream_duration_seconds))
+				return video_stream_duration_seconds;
+			if (has_value(format_duration_seconds))
+				return format_duration_seconds;
+			break;
+		case DurationStrategy::LongestStream:
+		default:
+			{
+				double longest = 0.0;
+				if (has_value(video_stream_duration_seconds))
+					longest = std::max(longest, video_stream_duration_seconds);
+				if (has_value(audio_stream_duration_seconds))
+					longest = std::max(longest, audio_stream_duration_seconds);
+				if (has_value(format_duration_seconds))
+					longest = std::max(longest, format_duration_seconds);
+				if (has_value(longest))
+					return longest;
+			}
+			break;
+	}
+
+	if (has_value(format_duration_seconds))
+		return format_duration_seconds;
+	if (has_value(inferred_duration_seconds))
+		return inferred_duration_seconds;
+
+	return 0.0;
+}
+
+void FFmpegReader::ApplyDurationStrategy() {
+	const double fps_value = info.fps.ToDouble();
+	const double chosen_seconds = PickDurationSeconds();
+
+	if (chosen_seconds <= 0.0 || fps_value <= 0.0) {
+		info.duration = 0.0f;
+		info.video_length = 0;
+		is_duration_known = false;
+		return;
+	}
+
+	const int64_t frames = static_cast<int64_t>(std::llround(chosen_seconds * fps_value));
+	if (frames <= 0) {
+		info.duration = 0.0f;
+		info.video_length = 0;
+		is_duration_known = false;
+		return;
+	}
+
+	info.video_length = frames;
+	info.duration = static_cast<float>(static_cast<double>(frames) / fps_value);
+	is_duration_known = true;
+}
+
 void FFmpegReader::UpdateAudioInfo() {
 	// Set default audio channel layout (if needed)
 #if HAVE_CH_LAYOUT
@@ -741,6 +820,11 @@ void FFmpegReader::UpdateAudioInfo() {
 		// Skip init - if info struct already populated
 		return;
 	}
+
+	auto record_duration = [](double &target, double seconds) {
+		if (seconds > 0.0)
+			target = std::max(target, seconds);
+	};
 
 	// Set values of FileInfo struct
 	info.has_audio = true;
@@ -775,34 +859,27 @@ void FFmpegReader::UpdateAudioInfo() {
 	info.audio_timebase.den = aStream->time_base.den;
 
 	// Get timebase of audio stream (if valid) and greater than the current duration
-	if (aStream->duration > 0 && aStream->duration > info.duration) {
-		// Get duration from audio stream
-		info.duration = aStream->duration * info.audio_timebase.ToDouble();
-	} else if (pFormatCtx->duration > 0 && info.duration <= 0.0f) {
-		// Use the format's duration
-		info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+	if (aStream->duration > 0) {
+		record_duration(audio_stream_duration_seconds, aStream->duration * info.audio_timebase.ToDouble());
+	}
+	if (pFormatCtx->duration > 0) {
+		// Use the format's duration when stream duration is missing or shorter
+		record_duration(format_duration_seconds, static_cast<double>(pFormatCtx->duration) / AV_TIME_BASE);
 	}
 
 	// Calculate duration from filesize and bitrate (if any)
 	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0) {
 		// Estimate from bitrate, total bytes, and framerate
-		info.duration = float(info.file_size) / info.video_bit_rate;
-	}
-
-	// Check for an invalid video length
-	if (info.has_video && info.video_length <= 0) {
-		// Calculate the video length from the audio duration
-		info.video_length = info.duration * info.fps.ToDouble();
+		record_duration(inferred_duration_seconds, static_cast<double>(info.file_size) / info.video_bit_rate);
 	}
 
 	// Set video timebase (if no video stream was found)
 	if (!info.has_video) {
 		// Set a few important default video settings (so audio can be divided into frames)
-		info.fps.num = 24;
+		info.fps.num = 30;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
-		info.video_timebase.den = 24;
-		info.video_length = info.duration * info.fps.ToDouble();
+		info.video_timebase.den = 30;
 		info.width = 720;
 		info.height = 480;
 
@@ -817,10 +894,7 @@ void FFmpegReader::UpdateAudioInfo() {
 		}
 	}
 
-	// Fix invalid video lengths for certain types of files (MP3 for example)
-	if (info.has_video && ((info.duration * info.fps.ToDouble()) - info.video_length > 60)) {
-		info.video_length = info.duration * info.fps.ToDouble();
-	}
+	ApplyDurationStrategy();
 
 	// Add audio metadata (if any found)
 	AVDictionaryEntry *tag = NULL;
@@ -836,6 +910,11 @@ void FFmpegReader::UpdateVideoInfo() {
 		// Skip init - if info struct already populated
 		return;
 	}
+
+	auto record_duration = [](double &target, double seconds) {
+		if (seconds > 0.0)
+			target = std::max(target, seconds);
+	};
 
 	// Set values of FileInfo struct
 	info.has_video = true;
@@ -912,63 +991,35 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.video_timebase.den = pStream->time_base.den;
 
 	// Set the duration in seconds, and video length (# of frames)
-	info.duration = pStream->duration * info.video_timebase.ToDouble();
+	record_duration(video_stream_duration_seconds, pStream->duration * info.video_timebase.ToDouble());
 
 	// Check for valid duration (if found)
-	if (info.duration <= 0.0f && pFormatCtx->duration >= 0) {
-		// Use the format's duration
-		info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+	if (pFormatCtx->duration >= 0) {
+		// Use the format's duration as another candidate
+		record_duration(format_duration_seconds, static_cast<double>(pFormatCtx->duration) / AV_TIME_BASE);
 	}
 
 	// Calculate duration from filesize and bitrate (if any)
-	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0) {
+	if (info.video_bit_rate > 0 && info.file_size > 0) {
 		// Estimate from bitrate, total bytes, and framerate
-		info.duration = float(info.file_size) / info.video_bit_rate;
+		record_duration(inferred_duration_seconds, static_cast<double>(info.file_size) / info.video_bit_rate);
 	}
 
 	// Certain "image" formats do not have a valid duration
-	if (info.duration <= 0.0f && pStream->duration == AV_NOPTS_VALUE && pFormatCtx->duration == AV_NOPTS_VALUE) {
+	if (video_stream_duration_seconds <= 0.0 && format_duration_seconds <= 0.0 &&
+			pStream->duration == AV_NOPTS_VALUE && pFormatCtx->duration == AV_NOPTS_VALUE) {
 		// Force an "image" duration
-		info.duration = 60 * 60 * 1;  // 1 hour duration
-		info.video_length = 1;
+		record_duration(video_stream_duration_seconds, 60 * 60 * 1);  // 1 hour duration
+		info.has_single_image = true;
+	}
+	// Static GIFs can have no usable duration; fall back to a small default
+	if (video_stream_duration_seconds <= 0.0 && format_duration_seconds <= 0.0 &&
+			pFormatCtx && pFormatCtx->iformat && strcmp(pFormatCtx->iformat->name, "gif") == 0) {
+		record_duration(video_stream_duration_seconds, 60 * 60 * 1);  // 1 hour duration
 		info.has_single_image = true;
 	}
 
-	// Get the # of video frames (if found in stream)
-	// Only set this 1 time (this method can be called multiple times)
-	if (pStream->nb_frames > 0 && info.video_length <= 0)
-	{
-		info.video_length = pStream->nb_frames;
-
-		// If the file format is animated GIF, override the video_length to be (duration * fps) rounded.
-		if (pFormatCtx && pFormatCtx->iformat && strcmp(pFormatCtx->iformat->name, "gif") == 0)
-		{
-			if (pStream->nb_frames > 1) {
-				// Animated gif (nb_frames does not take into delays and gaps)
-				info.video_length = round(info.duration * info.fps.ToDouble());
-			} else {
-				// Static non-animated gif (set a default duration)
-				info.duration = 10.0;
-			}
-		}
-	}
-
-	// No duration found in stream of file
-	if (info.duration <= 0.0f) {
-		// No duration is found in the video stream
-		info.duration = -1;
-		info.video_length = -1;
-		is_duration_known = false;
-	} else {
-		// Yes, a duration was found
-		is_duration_known = true;
-
-		// Calculate number of frames (if not already found in metadata)
-		// Only set this 1 time (this method can be called multiple times)
-		if (info.video_length <= 0) {
-			info.video_length = round(info.duration * info.fps.ToDouble());
-		}
-	}
+	ApplyDurationStrategy();
 
 	// Add video metadata (if any)
 	AVDictionaryEntry *tag = NULL;
@@ -1056,7 +1107,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 	int packet_error = -1;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "max_concurrent_frames", max_concurrent_frames);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame);
 
 	// Loop through the stream until the correct frame is found
 	while (true) {
@@ -1545,6 +1596,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			max_width = info.width * max_scale_x * preview_ratio;
 			max_height = info.height * max_scale_y * preview_ratio;
 		}
+
+		// If a crop effect is resizing the image, request enough pixels to preserve detail
+		ApplyCropResizeScale(parent, info.width, info.height, max_width, max_height);
 	}
 
 	// Determine if image needs to be scaled (for performance reasons)
@@ -1894,7 +1948,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = std::max(max_concurrent_frames, 8);
+	int buffer_amount = 12;
 	if (requested_frame - buffer_amount < 20) {
 		// prevent Open() from seeking again
 		is_seeking = true;
@@ -2463,6 +2517,18 @@ Json::Value FFmpegReader::JsonValue() const {
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "FFmpegReader";
 	root["path"] = path;
+	switch (duration_strategy) {
+		case DurationStrategy::VideoPreferred:
+			root["duration_strategy"] = "VideoPreferred";
+			break;
+		case DurationStrategy::AudioPreferred:
+			root["duration_strategy"] = "AudioPreferred";
+			break;
+		case DurationStrategy::LongestStream:
+		default:
+			root["duration_strategy"] = "LongestStream";
+			break;
+	}
 
 	// return JsonValue
 	return root;
@@ -2492,6 +2558,16 @@ void FFmpegReader::SetJsonValue(const Json::Value root) {
 	// Set data from Json (if key is found)
 	if (!root["path"].isNull())
 		path = root["path"].asString();
+	if (!root["duration_strategy"].isNull()) {
+		const std::string strategy = root["duration_strategy"].asString();
+		if (strategy == "VideoPreferred") {
+			duration_strategy = DurationStrategy::VideoPreferred;
+		} else if (strategy == "AudioPreferred") {
+			duration_strategy = DurationStrategy::AudioPreferred;
+		} else {
+			duration_strategy = DurationStrategy::LongestStream;
+		}
+	}
 
 	// Re-Open path, and re-init everything (if needed)
 	if (is_open) {

@@ -48,6 +48,14 @@ namespace openshot
     // Is cache ready for playback (pre-roll)
     bool VideoCacheThread::isReady()
     {
+        if (!reader) {
+            return false;
+        }
+
+        if (min_frames_ahead < 0) {
+            return true;
+        }
+
         return (cached_frame_count > min_frames_ahead);
     }
 
@@ -96,11 +104,18 @@ namespace openshot
         if (start_preroll) {
             userSeeked = true;
 
-            if (!reader->GetCache()->Contains(new_position))
+            CacheBase* cache = reader ? reader->GetCache() : nullptr;
+
+            if (cache && !cache->Contains(new_position))
             {
                 // If user initiated seek, and current frame not found (
                 Timeline* timeline = static_cast<Timeline*>(reader);
                 timeline->ClearAllCache();
+                cached_frame_count = 0;
+            }
+            else if (cache)
+            {
+                cached_frame_count = cache->Count();
             }
         }
         requested_display_frame = new_position;
@@ -131,6 +146,7 @@ namespace openshot
             // If paused and playhead not in cache, clear everything
             Timeline* timeline = static_cast<Timeline*>(reader);
             timeline->ClearAllCache();
+            cached_frame_count = 0;
             return true;
         }
         return false;
@@ -184,7 +200,7 @@ namespace openshot
                 try {
                     auto framePtr = reader->GetFrame(next_frame);
                     cache->Add(framePtr);
-                    ++cached_frame_count;
+                    cached_frame_count = cache->Count();
                 }
                 catch (const OutOfBoundsFrame&) {
                     break;
@@ -211,8 +227,10 @@ namespace openshot
             Settings* settings = Settings::Instance();
             CacheBase* cache   = reader ? reader->GetCache() : nullptr;
 
-            // If caching disabled or no reader, sleep briefly
+            // If caching disabled or no reader, mark cache as ready and sleep briefly
             if (!settings->ENABLE_PLAYBACK_CACHING || !cache) {
+                cached_frame_count = (cache ? cache->Count() : 0);
+                min_frames_ahead   = -1;
                 std::this_thread::sleep_for(double_micro_sec(50000));
                 continue;
             }
@@ -224,6 +242,8 @@ namespace openshot
             int64_t  timeline_end = timeline->GetMaxFrame();
             int64_t  playhead     = requested_display_frame;
             bool     paused       = (speed == 0);
+
+            cached_frame_count = cache->Count();
 
             // Compute effective direction (±1)
             int dir = computeDirection();
@@ -282,6 +302,16 @@ namespace openshot
             }
             int64_t ahead_count = static_cast<int64_t>(capacity *
                                            settings->VIDEO_CACHE_PERCENT_AHEAD);
+            int64_t window_size = ahead_count + 1;
+            if (window_size < 1) {
+                window_size = 1;
+            }
+            int64_t ready_target = window_size - 1;
+            if (ready_target < 0) {
+                ready_target = 0;
+            }
+            int64_t configured_min = settings->VIDEO_CACHE_MIN_PREROLL_FRAMES;
+            min_frames_ahead = std::min<int64_t>(configured_min, ready_target);
 
             // If paused and playhead is no longer in cache, clear everything
             bool did_clear = clearCacheIfPaused(playhead, paused, cache);

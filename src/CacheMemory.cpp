@@ -13,12 +13,13 @@
 #include "CacheMemory.h"
 #include "Exceptions.h"
 #include "Frame.h"
+#include "MemoryTrim.h"
 
 using namespace std;
 using namespace openshot;
 
 // Default constructor, no max bytes
-CacheMemory::CacheMemory() : CacheBase(0) {
+CacheMemory::CacheMemory() : CacheBase(0), bytes_freed_since_trim(0) {
 	// Set cache type name
 	cache_type = "CacheMemory";
 	range_version = 0;
@@ -26,7 +27,7 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 }
 
 // Constructor that sets the max bytes to cache
-CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
+CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes), bytes_freed_since_trim(0) {
 	// Set cache type name
 	cache_type = "CacheMemory";
 	range_version = 0;
@@ -161,6 +162,7 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
+	int64_t removed_bytes = 0;
 
 	// Loop through frame numbers
 	std::deque<int64_t>::iterator itr;
@@ -180,11 +182,26 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 	{
 		if (*itr_ordered >= start_frame_number && *itr_ordered <= end_frame_number)
 		{
+			// Count bytes freed before erasing the frame
+			if (frames.count(*itr_ordered))
+				removed_bytes += frames[*itr_ordered]->GetBytes();
+
 			// erase frame number
 			frames.erase(*itr_ordered);
 			itr_ordered = ordered_frame_numbers.erase(itr_ordered);
 		}else
 			itr_ordered++;
+	}
+
+	if (removed_bytes > 0)
+	{
+		bytes_freed_since_trim += removed_bytes;
+		if (bytes_freed_since_trim >= TRIM_THRESHOLD_BYTES)
+		{
+			// Periodically return freed arenas to the OS
+			if (TrimMemoryToOS())
+				bytes_freed_since_trim = 0;
+		}
 	}
 
 	// Needs range processing (since cache has changed)
@@ -229,6 +246,10 @@ void CacheMemory::Clear()
 	ordered_frame_numbers.clear();
 	ordered_frame_numbers.shrink_to_fit();
 	needs_range_processing = true;
+	bytes_freed_since_trim = 0;
+
+	// Trim freed arenas back to OS after large clears
+	TrimMemoryToOS(true);
 }
 
 // Count the frames in the queue

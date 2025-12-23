@@ -12,6 +12,7 @@
 
 #include <sstream>
 #include <memory>
+#include <set>
 
 #include "openshot_catch.h"
 
@@ -56,7 +57,7 @@ TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 
 	// Check audio properties
 	CHECK(f->GetAudioChannelsCount() == 2);
-	CHECK(f->GetAudioSamplesCount() == 332);
+	CHECK(f->GetAudioSamplesCount() == 266);
 
 	// Check actual sample values (to be sure the waveform is correct)
 	CHECK(samples[0] == Approx(0.0f).margin(0.00001));
@@ -64,7 +65,7 @@ TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 	CHECK(samples[100] == Approx(0.0f).margin(0.00001));
 	CHECK(samples[200] == Approx(0.0f).margin(0.00001));
 	CHECK(samples[230] == Approx(0.16406f).margin(0.00001));
-	CHECK(samples[300] == Approx(-0.06250f).margin(0.00001));
+	CHECK(samples[265] == Approx(-0.06250f).margin(0.00001));
 
 	// Close reader
 	r.Close();
@@ -189,6 +190,128 @@ TEST_CASE( "Frame_Rate", "[libopenshot][ffmpegreader]" )
 	r.Close();
 }
 
+TEST_CASE( "Duration_And_Length", "[libopenshot][ffmpegreader]" )
+{
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	// Duration and frame count should match (length derived from default Video_Preferred duration strategy)
+	CHECK(r.info.video_length == 1253);
+	CHECK(r.info.duration == Approx(52.208333f).margin(0.0005f));
+
+	r.Close();
+}
+
+TEST_CASE( "Duration_Strategy_Video_Preferred", "[libopenshot][ffmpegreader]" )
+{
+	// Create a reader preferring video duration (then falling back to audio/format)
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str(), DurationStrategy::VideoPreferred);
+	r.Open();
+
+	// Video stream duration should win, but still fall back to others if missing
+	CHECK(r.info.video_length == 1253);
+	CHECK(r.info.duration == Approx(52.208333).margin(0.0005f));
+
+	r.Close();
+
+	// Audio-only file should fallback to its audio duration
+	std::stringstream audio_path;
+	audio_path << TEST_MEDIA_PATH << "piano.wav";
+	FFmpegReader audio_reader(audio_path.str(), DurationStrategy::VideoPreferred);
+	audio_reader.Open();
+
+	CHECK(audio_reader.info.video_length == 132);
+	CHECK(audio_reader.info.duration == Approx(4.4f).margin(0.001f));
+
+	audio_reader.Close();
+}
+
+TEST_CASE( "Duration_Strategy_Longest_Stream", "[libopenshot][ffmpegreader]" )
+{
+	// Create a reader preferring the longest duration among streams/format
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str(), DurationStrategy::LongestStream);
+	r.Open();
+
+	CHECK(r.info.video_length == 1253);
+	CHECK(r.info.duration == Approx(52.208333).margin(0.0005f));
+
+	r.Close();
+
+	// Audio-only file should resolve to the audio duration
+	std::stringstream audio_path;
+	audio_path << TEST_MEDIA_PATH << "piano.wav";
+	FFmpegReader audio_reader(audio_path.str(), DurationStrategy::LongestStream);
+	audio_reader.Open();
+
+	CHECK(audio_reader.info.video_length == 132);
+	CHECK(audio_reader.info.duration == Approx(4.4f).margin(0.001f));
+
+	audio_reader.Close();
+}
+
+
+TEST_CASE( "Duration_Strategy_Audio_Preferred", "[libopenshot][ffmpegreader]" )
+{
+	// Create a reader preferring audio duration (then falling back to audio/format)
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str(), DurationStrategy::AudioPreferred);
+	r.Open();
+
+	// Audio stream duration should win, but still fall back to others if missing
+	CHECK(r.info.video_length == 1247);
+	CHECK(r.info.duration == Approx(51.958333).margin(0.0005f));
+
+	r.Close();
+
+	// Audio-only file should still resolve to the audio duration
+	std::stringstream audio_path;
+	audio_path << TEST_MEDIA_PATH << "piano.wav";
+	FFmpegReader audio_reader(audio_path.str(), DurationStrategy::AudioPreferred);
+	audio_reader.Open();
+
+	CHECK(audio_reader.info.video_length == 132);
+	CHECK(audio_reader.info.duration == Approx(4.4f).margin(0.001f));
+
+	audio_reader.Close();
+}
+
+TEST_CASE( "GIF_TimeBase", "[libopenshot][ffmpegreader]" )
+{
+        // Create a reader
+        std::stringstream path;
+        path << TEST_MEDIA_PATH << "animation.gif";
+        FFmpegReader r(path.str());
+        r.Open();
+
+        // Verify basic info
+        CHECK(r.info.fps.num == 5);
+        CHECK(r.info.fps.den == 1);
+        CHECK(r.info.video_length == 20);
+        CHECK(r.info.duration == Approx(4.0f).margin(0.01));
+
+        auto frame_color = [](std::shared_ptr<Frame> f) {
+                const unsigned char* row = f->GetPixels(25);
+                return row[25 * 4];
+        };
+        auto expected_color = [](int frame) {
+                return (frame - 1) * 10;
+        };
+
+        for (int i = 1; i <= r.info.video_length; ++i) {
+                CHECK(frame_color(r.GetFrame(i)) == expected_color(i));
+        }
+
+        r.Close();
+}
+
 TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
@@ -272,7 +395,7 @@ TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )
 --> Has Video: true
 --> Has Audio: true
 --> Has Single Image: false
---> Duration: 51.95 Seconds
+--> Duration: 52.21 Seconds
 --> File Size: 7.26 MB
 ----------------------------
 ----- Video Attributes -----

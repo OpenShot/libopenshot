@@ -15,6 +15,7 @@
 #include "Frame.h"
 #include "QtUtilities.h"
 
+#include <sstream>
 #include <Qt>
 #include <QString>
 #include <QTextStream>

@@ -61,10 +61,11 @@ void ImageReader::Open()
 		info.width = image->size().width();
 		info.height = image->size().height();
 		info.pixel_ratio = openshot::Fraction(1, 1);
-		info.duration = 60 * 60 * 1;  // 1 hour duration
 		info.fps = openshot::Fraction(30, 1);
 		info.video_timebase = info.fps.Reciprocal();
-		info.video_length = std::round(info.duration * info.fps.ToDouble());
+		// Default still-image duration: 1 hour, aligned to fps
+		info.video_length = 60 * 60 * info.fps.num; // 3600 seconds * 30 fps
+		info.duration = static_cast<float>(info.video_length / info.fps.ToDouble());
 
 		// Calculate the DAR (display aspect ratio)
 		Fraction dar(

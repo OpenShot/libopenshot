@@ -39,11 +39,43 @@ static std::shared_ptr<Frame> makeTestFrame()
     return frame;
 }
 
+// Frame that keeps the example pixel in the bright range used by the domain tests
+static std::shared_ptr<Frame> makeBrightTestFrame()
+{
+    QImage img(2, 2, QImage::Format_ARGB32);
+    img.fill(QColor(50,100,150,255));
+    img.setPixelColor(0,0, QColor(230,230,230,255));
+    auto frame = std::make_shared<Frame>();
+    *frame->GetImage() = img;
+    return frame;
+}
+
 // Helper to construct the LUT-path from TEST_MEDIA_PATH
 static std::string lutPath()
 {
     std::stringstream path;
     path << TEST_MEDIA_PATH << "example-lut.cube";
+    return path.str();
+}
+
+static std::string lut1dPath()
+{
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "example-1d-lut.cube";
+    return path.str();
+}
+
+static std::string lutDomain1dPath()
+{
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "domain-1d-lut.cube";
+    return path.str();
+}
+
+static std::string lutDomain3dPath()
+{
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "domain-3d-lut.cube";
     return path.str();
 }
 
@@ -183,6 +215,56 @@ TEST_CASE("Half-intensity LUT changes pixel values less than full-intensity", "[
                   + std::abs(f.blue() - before.blue());
 
     CHECK(diff_half < diff_full);
+}
+
+TEST_CASE("1D LUT files alter pixel values", "[effect][colormap][lut][1d]")
+{
+    ColorMap effect(
+        lut1dPath(),
+        Keyframe(1.0),
+        Keyframe(1.0),
+        Keyframe(1.0),
+        Keyframe(1.0)
+    );
+
+    auto in = makeTestFrame();
+    QColor before = in->GetImage()->pixelColor(0,0);
+    auto out = effect.GetFrame(in, 4);
+    QColor after = out->GetImage()->pixelColor(0,0);
+
+    CHECK(after != before);
+}
+
+TEST_CASE("1D LUT obeys DOMAIN_MIN and DOMAIN_MAX", "[effect][colormap][lut][domain]")
+{
+    ColorMap effect(
+        lutDomain1dPath(),
+        Keyframe(1.0),
+        Keyframe(1.0),
+        Keyframe(1.0),
+        Keyframe(1.0)
+    );
+
+    auto out = effect.GetFrame(makeBrightTestFrame(), 0);
+    QColor after = out->GetImage()->pixelColor(0,0);
+
+    CHECK(after == QColor(255,0,0,255));
+}
+
+TEST_CASE("3D LUT obeys DOMAIN_MIN and DOMAIN_MAX", "[effect][colormap][lut][domain]")
+{
+    ColorMap effect(
+        lutDomain3dPath(),
+        Keyframe(1.0),
+        Keyframe(1.0),
+        Keyframe(1.0),
+        Keyframe(1.0)
+    );
+
+    auto out = effect.GetFrame(makeBrightTestFrame(), 0);
+    QColor after = out->GetImage()->pixelColor(0,0);
+
+    CHECK(after == QColor(255,0,0,255));
 }
 
 TEST_CASE("Disabling red channel produces different result than full-intensity", "[effect][colormap][lut]")

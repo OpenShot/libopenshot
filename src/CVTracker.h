@@ -94,11 +94,25 @@ namespace openshot
 
 			bool error = false;
 
-			// Initialize the tracker
-			bool initTracker(cv::Mat &frame, size_t frameId);
+			// count of consecutive “missed” frames
+			int lostCount{0};
 
-			// Update the object tracker according to frame
-			bool trackFrame(cv::Mat &frame, size_t frameId);
+			// KLT parameters and state
+			cv::Mat prevGray;                          // last frame in gray
+			std::vector<cv::Point2f> prevPts;          // tracked feature points
+			const int kltMaxCorners = 100;             // max features to keep
+			const double kltQualityLevel = 0.01;       // goodFeatures threshold
+			const double kltMinDist = 5.0;             // min separation
+			const int   kltBlockSize = 3;              // window for feature detect
+			const int   minKltPts = 10;                // below this, we assume occluded
+			double smoothC_x = 0, smoothC_y = 0;   ///< running, sub-pixel center
+			const double smoothAlpha = 0.8;            ///< [0..1], higher → tighter but more jitter
+
+			// full-frame fall-back
+			cv::Mat fullPrevGray;
+
+			// last known good box size
+			double origWidth{0}, origHeight{0};
 
 		public:
 
@@ -113,8 +127,11 @@ namespace openshot
 			/// If start, end and process_interval are passed as argument, clip will be processed in [start,end)
 			void trackClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
 
-			/// Filter current bounding box jitter
-			cv::Rect2d filter_box_jitter(size_t frameId);
+			// Update the object tracker according to frame
+			bool trackFrame(cv::Mat &frame, size_t frameId);
+
+			// Initialize the tracker
+			bool initTracker(cv::Mat &frame, size_t frameId);
 
 			/// Get tracked data for a given frame
 			FrameData GetTrackedData(size_t frameId);

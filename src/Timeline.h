@@ -46,12 +46,18 @@ namespace openshot {
 	/// Comparison method for sorting clip pointers (by Layer and then Position). Clips are sorted
 	/// from lowest layer to top layer (since that is the sequence they need to be combined), and then
 	/// by position (left to right).
-	struct CompareClips{
-		bool operator()( openshot::Clip* lhs, openshot::Clip* rhs){
-			if( lhs->Layer() < rhs->Layer() ) return true;
-			if( lhs->Layer() == rhs->Layer() && lhs->Position() <= rhs->Position() ) return true;
-			return false;
-	}};
+	struct CompareClips {
+		bool operator()(openshot::Clip* lhs, openshot::Clip* rhs) const {
+			// Strict-weak ordering (no <=) to keep sort well-defined
+			if (lhs == rhs) return false; // irreflexive
+			if (lhs->Layer() != rhs->Layer())
+				return lhs->Layer() < rhs->Layer();
+			if (lhs->Position() != rhs->Position())
+				return lhs->Position() < rhs->Position();
+			// Stable tie-breaker on address to avoid equivalence when layer/position match
+			return std::less<openshot::Clip*>()(lhs, rhs);
+		}
+	};
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -159,7 +165,6 @@ namespace openshot {
 		std::set<openshot::FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
-		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 		double max_time; ///> The max duration (in seconds) of the timeline, based on the furthest clip (right edge)
 		double min_time; ///> The min duration (in seconds) of the timeline, based on the position of the first clip (left edge)
 

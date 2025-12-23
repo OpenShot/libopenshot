@@ -15,23 +15,26 @@ using namespace cv;
 void KalmanTracker::init_kf(
 	StateType stateMat)
 {
-	int stateNum = 7;
+	int stateNum = 8;
 	int measureNum = 4;
 	kf = KalmanFilter(stateNum, measureNum, 0);
 
 	measurement = Mat::zeros(measureNum, 1, CV_32F);
 
-	kf.transitionMatrix = (Mat_<float>(7, 7) << 1, 0, 0, 0, 1, 0, 0,
+	kf.transitionMatrix = (Mat_<float>(8, 8) << 1, 0, 0, 0, 1, 0, 0, 0,
 
-						   0, 1, 0, 0, 0, 1, 0,
-						   0, 0, 1, 0, 0, 0, 1,
-						   0, 0, 0, 1, 0, 0, 0,
-						   0, 0, 0, 0, 1, 0, 0,
-						   0, 0, 0, 0, 0, 1, 0,
-						   0, 0, 0, 0, 0, 0, 1);
+						   0, 1, 0, 0, 0, 1, 0, 0,
+						   0, 0, 1, 0, 0, 0, 1, 0,
+						   0, 0, 0, 1, 0, 0, 0, 1,
+						   0, 0, 0, 0, 1, 0, 0, 0,
+						   0, 0, 0, 0, 0, 1, 0, 0,
+						   0, 0, 0, 0, 0, 0, 1, 0,
+						   0, 0, 0, 0, 0, 0, 0, 1);
 
 	setIdentity(kf.measurementMatrix);
 	setIdentity(kf.processNoiseCov, Scalar::all(1e-1));
+	kf.processNoiseCov.at<float>(2, 2) = 1e0; // higher noise for area (s) to adapt to size changes
+	kf.processNoiseCov.at<float>(3, 3) = 1e0; // higher noise for aspect ratio (r)
 	setIdentity(kf.measurementNoiseCov, Scalar::all(1e-4));
 	setIdentity(kf.errorCovPost, Scalar::all(1e-2));
 
@@ -40,6 +43,10 @@ void KalmanTracker::init_kf(
 	kf.statePost.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
 	kf.statePost.at<float>(2, 0) = stateMat.area();
 	kf.statePost.at<float>(3, 0) = stateMat.width / stateMat.height;
+	kf.statePost.at<float>(4, 0) = 0.0f;
+	kf.statePost.at<float>(5, 0) = 0.0f;
+	kf.statePost.at<float>(6, 0) = 0.0f;
+	kf.statePost.at<float>(7, 0) = 0.0f;
 }
 
 // Predict the estimated bounding box.

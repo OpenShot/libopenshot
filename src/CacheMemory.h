@@ -28,8 +28,10 @@ namespace openshot {
 	 */
 	class CacheMemory : public CacheBase {
 	private:
+		static constexpr int64_t TRIM_THRESHOLD_BYTES = 1024LL * 1024 * 1024; ///< Release memory after freeing this much memory
 		std::map<int64_t, std::shared_ptr<openshot::Frame> > frames;	///< This map holds the frame number and Frame objects
 		std::deque<int64_t> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
+		int64_t bytes_freed_since_trim;	///< Tracks bytes freed to trigger a heap trim
 
 		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();

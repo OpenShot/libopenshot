@@ -151,6 +151,15 @@ namespace openshot {
 		/// Get a frame object or create a blank one
 		std::shared_ptr<openshot::Frame> GetOrCreateFrame(int64_t number, bool enable_time=true);
 
+		/// Determine the frames-per-second context used for timeline playback
+		double resolve_timeline_fps() const;
+
+		/// Determine the number of frames implied by time-mapping curves
+		int64_t curve_extent_frames() const;
+
+		/// Determine the number of frames implied by the clip's trim range
+		int64_t trim_extent_frames(double fps_value) const;
+
 		/// Adjust the audio and image of a time mapped frame
 		void apply_timemapping(std::shared_ptr<openshot::Frame> frame);
 
@@ -169,6 +178,7 @@ namespace openshot {
 		openshot::AnchorType anchor;	 ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
+		openshot::CompositeType composite; ///< How this clip is composited onto lower layers
 
 		#ifdef USE_OPENCV
 			bool COMPILED_WITH_CV = true;

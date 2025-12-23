@@ -14,6 +14,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 /* Effects */
+#include "effects/AnalogTape.h"
 #include "effects/Bars.h"
 #include "effects/Blur.h"
 #include "effects/Brightness.h"

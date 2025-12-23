@@ -49,7 +49,7 @@ Frame::Frame(int64_t number, int width, int height, std::string color, int sampl
 	  channels(channels), channel_layout(LAYOUT_STEREO),
 	  sample_rate(44100),
 	  has_audio_data(false), has_image_data(false),
-	  max_audio_sample(0)
+	  max_audio_sample(0), audio_is_increasing(true)
 {
 	// zero (fill with silence) the audio buffer
 	audio->clear();
@@ -97,6 +97,7 @@ void Frame::DeepCopy(const Frame& other)
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	color = other.color;
 	max_audio_sample = other.max_audio_sample;
+	audio_is_increasing = other.audio_is_increasing;
 
 	if (other.image)
 		image = std::make_shared<QImage>(*(other.image));
@@ -803,14 +804,16 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 	max_audio_sample = length;
 }
 
-// Reverse the audio buffer of this frame (will only reverse a single time, regardless of how many times
-// you invoke this method)
-void Frame::ReverseAudio() {
-	if (audio && !audio_reversed) {
+/// Set the direction of the audio buffer of this frame
+void Frame::SetAudioDirection(bool is_increasing) {
+	if (audio && !audio_is_increasing && is_increasing) {
+		// Forward audio buffer
+		audio->reverse(0, audio->getNumSamples());
+	} else if (audio && audio_is_increasing && !is_increasing) {
 		// Reverse audio buffer
 		audio->reverse(0, audio->getNumSamples());
-		audio_reversed = true;
 	}
+	audio_is_increasing = is_increasing;
 }
 
 // Add audio samples to a specific channel
@@ -840,8 +843,8 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 	if (new_length > max_audio_sample)
 		max_audio_sample = new_length;
 
-	// Reset audio reverse flag
-	audio_reversed = false;
+	// Reset audio direction
+	audio_is_increasing = true;
 }
 
 // Apply gain ramp (i.e. fading volume)
@@ -1032,6 +1035,6 @@ void Frame::AddAudioSilence(int numSamples)
 	// Calculate max audio sample added
 	max_audio_sample = numSamples;
 
-	// Reset audio reverse flag
-	audio_reversed = false;
+	// Reset audio direction
+	audio_is_increasing = true;
 }

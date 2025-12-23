@@ -14,6 +14,8 @@
 #include "Exceptions.h"
 #include "Frame.h"
 
+#include <sstream>
+
 using namespace openshot;
 
 ChunkWriter::ChunkWriter(std::string path, ReaderBase *reader) :

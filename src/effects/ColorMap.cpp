@@ -12,6 +12,7 @@
 
 #include "ColorMap.h"
 #include "Exceptions.h"
+#include <algorithm>
 #include <omp.h>
 #include <QRegularExpression>
 
@@ -22,12 +23,16 @@ void ColorMap::load_cube_file()
     if (lut_path.empty()) {
         lut_data.clear();
         lut_size = 0;
+        lut_type = LUTType::None;
         needs_refresh = false;
         return;
     }
 
     int parsed_size = 0;
     std::vector<float> parsed_data;
+    bool parsed_is_3d = false;
+    std::array<float, 3> parsed_domain_min{0.0f, 0.0f, 0.0f};
+    std::array<float, 3> parsed_domain_max{1.0f, 1.0f, 1.0f};
 
     #pragma omp critical(load_lut)
     {
@@ -36,46 +41,81 @@ void ColorMap::load_cube_file()
             // leave parsed_size == 0
         } else {
             QTextStream in(&file);
-            QString line;
             QRegularExpression ws_re("\\s+");
+            auto parse_domain_line = [&](const QString &line) {
+                if (!line.startsWith("DOMAIN_MIN") && !line.startsWith("DOMAIN_MAX"))
+                    return;
+                auto parts = line.split(ws_re);
+                if (parts.size() < 4)
+                    return;
+                auto assign_values = [&](std::array<float, 3> &target) {
+                    target[0] = parts[1].toFloat();
+                    target[1] = parts[2].toFloat();
+                    target[2] = parts[3].toFloat();
+                };
+                if (line.startsWith("DOMAIN_MIN"))
+                    assign_values(parsed_domain_min);
+                else
+                    assign_values(parsed_domain_max);
+            };
 
-            // 1) Find LUT_3D_SIZE
-            while (!in.atEnd()) {
-                line = in.readLine().trimmed();
-                if (line.startsWith("LUT_3D_SIZE")) {
-                    auto parts = line.split(ws_re);
-                    if (parts.size() >= 2) {
-                        parsed_size = parts[1].toInt();
+            auto try_parse = [&](const QString &keyword, bool want3d) -> bool {
+                if (!file.seek(0) || !in.seek(0))
+                    return false;
+
+                QString line;
+                int detected_size = 0;
+                while (!in.atEnd()) {
+                    line = in.readLine().trimmed();
+                    parse_domain_line(line);
+                    if (line.startsWith(keyword)) {
+                        auto parts = line.split(ws_re);
+                        if (parts.size() >= 2) {
+                            detected_size = parts[1].toInt();
+                        }
+                        break;
                     }
-                    break;
                 }
-            }
+                if (detected_size <= 0)
+                    return false;
 
-            // 2) Read N³ lines of R G B floats
-            if (parsed_size > 0) {
-                int total = parsed_size * parsed_size * parsed_size;
-                parsed_data.reserve(size_t(total * 3));
-                while (!in.atEnd() && int(parsed_data.size()) < total * 3) {
+                const int total_entries = want3d
+                    ? detected_size * detected_size * detected_size
+                    : detected_size;
+                std::vector<float> data;
+                data.reserve(size_t(total_entries * 3));
+                while (!in.atEnd() && int(data.size()) < total_entries * 3) {
                     line = in.readLine().trimmed();
                     if (line.isEmpty() ||
                         line.startsWith("#") ||
-                        line.startsWith("TITLE") ||
-                        line.startsWith("DOMAIN"))
+                        line.startsWith("TITLE"))
                     {
+                        continue;
+                    }
+                    if (line.startsWith("DOMAIN_MIN") ||
+                        line.startsWith("DOMAIN_MAX"))
+                    {
+                        parse_domain_line(line);
                         continue;
                     }
                     auto vals = line.split(ws_re);
                     if (vals.size() >= 3) {
-                        // .cube file is R G B
-                        parsed_data.push_back(vals[0].toFloat());
-                        parsed_data.push_back(vals[1].toFloat());
-                        parsed_data.push_back(vals[2].toFloat());
+                        data.push_back(vals[0].toFloat());
+                        data.push_back(vals[1].toFloat());
+                        data.push_back(vals[2].toFloat());
                     }
                 }
-                if (int(parsed_data.size()) != total * 3) {
-                    parsed_data.clear();
-                    parsed_size = 0;
-                }
+                if (int(data.size()) != total_entries * 3)
+                    return false;
+
+                parsed_size = detected_size;
+                parsed_is_3d = want3d;
+                parsed_data.swap(data);
+                return true;
+            };
+
+            if (!try_parse("LUT_3D_SIZE", true)) {
+                try_parse("LUT_1D_SIZE", false);
             }
         }
     }
@@ -83,9 +123,15 @@ void ColorMap::load_cube_file()
     if (parsed_size > 0) {
         lut_size = parsed_size;
         lut_data.swap(parsed_data);
+        lut_type = parsed_is_3d ? LUTType::LUT3D : LUTType::LUT1D;
+        lut_domain_min = parsed_domain_min;
+        lut_domain_max = parsed_domain_max;
     } else {
         lut_data.clear();
         lut_size = 0;
+        lut_type = LUTType::None;
+        lut_domain_min = std::array<float, 3>{0.0f, 0.0f, 0.0f};
+        lut_domain_max = std::array<float, 3>{1.0f, 1.0f, 1.0f};
     }
     needs_refresh = false;
 }
@@ -101,7 +147,8 @@ void ColorMap::init_effect_details()
 }
 
 ColorMap::ColorMap()
-    : lut_path(""), lut_size(0), needs_refresh(true),
+    : lut_path(""), lut_size(0), lut_type(LUTType::None), needs_refresh(true),
+      lut_domain_min{0.0f, 0.0f, 0.0f}, lut_domain_max{1.0f, 1.0f, 1.0f},
       intensity(1.0), intensity_r(1.0), intensity_g(1.0), intensity_b(1.0)
 {
     init_effect_details();
@@ -115,7 +162,9 @@ ColorMap::ColorMap(const std::string &path,
                    const Keyframe &iB)
     : lut_path(path),
       lut_size(0),
+      lut_type(LUTType::None),
       needs_refresh(true),
+      lut_domain_min{0.0f, 0.0f, 0.0f}, lut_domain_max{1.0f, 1.0f, 1.0f},
       intensity(i),
       intensity_r(iR),
       intensity_g(iG),
@@ -134,7 +183,7 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
         needs_refresh = false;
     }
 
-    if (lut_data.empty())
+    if (lut_data.empty() || lut_size <= 0 || lut_type == LUTType::None)
         return frame;
 
     auto image = frame->GetImage();
@@ -145,6 +194,28 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
     float tR = float(intensity_r.GetValue(frame_number)) * overall;
     float tG = float(intensity_g.GetValue(frame_number)) * overall;
     float tB = float(intensity_b.GetValue(frame_number)) * overall;
+
+    const bool use3d = (lut_type == LUTType::LUT3D);
+    const bool use1d = (lut_type == LUTType::LUT1D);
+    const int lut_dim = lut_size;
+    const std::vector<float> &table = lut_data;
+    const int data_count = int(table.size());
+
+    auto sample1d = [&](float value, int channel) -> float {
+        if (lut_dim <= 1) {
+            int base = std::min(channel, data_count - 1);
+            return table[base];
+        }
+        float scaled = value * float(lut_dim - 1);
+        int i0 = int(floor(scaled));
+        int i1 = std::min(i0 + 1, lut_dim - 1);
+        float t = scaled - i0;
+        int base0 = std::max(0, std::min(i0 * 3 + channel, data_count - 1));
+        int base1 = std::max(0, std::min(i1 * 3 + channel, data_count - 1));
+        float v0 = table[base0];
+        float v1 = table[base1];
+        return v0 * (1.0f - t) + v1 * t;
+    };
 
     int pixel_count = w * h;
     #pragma omp parallel for
@@ -164,56 +235,73 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
         float Gn = G * (1.0f / 255.0f);
         float Bn = B * (1.0f / 255.0f);
 
-        // map into LUT space [0 .. size-1]
-        float rf = Rn * (lut_size - 1);
-        float gf = Gn * (lut_size - 1);
-        float bf = Bn * (lut_size - 1);
+        auto normalize_to_domain = [&](float value, int channel) -> float {
+            float min_val = lut_domain_min[channel];
+            float max_val = lut_domain_max[channel];
+            float range = max_val - min_val;
+            if (range <= 0.0f)
+                return std::clamp(value, 0.0f, 1.0f);
+            float normalized = (value - min_val) / range;
+            return std::clamp(normalized, 0.0f, 1.0f);
+        };
+        float Rdn = normalize_to_domain(Rn, 0);
+        float Gdn = normalize_to_domain(Gn, 1);
+        float Bdn = normalize_to_domain(Bn, 2);
 
-        int r0 = int(floor(rf)), r1 = std::min(r0 + 1, lut_size - 1);
-        int g0 = int(floor(gf)), g1 = std::min(g0 + 1, lut_size - 1);
-        int b0 = int(floor(bf)), b1 = std::min(b0 + 1, lut_size - 1);
+        float lr = Rn;
+        float lg = Gn;
+        float lb = Bn;
 
-        float dr = rf - r0;
-        float dg = gf - g0;
-        float db = bf - b0;
+        if (use3d) {
+            float rf = Rdn * (lut_dim - 1);
+            float gf = Gdn * (lut_dim - 1);
+            float bf = Bdn * (lut_dim - 1);
 
-        // compute base offsets with red fastest, then green, then blue
-        int base000 = ((b0 * lut_size + g0) * lut_size + r0) * 3;
-        int base100 = ((b0 * lut_size + g0) * lut_size + r1) * 3;
-        int base010 = ((b0 * lut_size + g1) * lut_size + r0) * 3;
-        int base110 = ((b0 * lut_size + g1) * lut_size + r1) * 3;
-        int base001 = ((b1 * lut_size + g0) * lut_size + r0) * 3;
-        int base101 = ((b1 * lut_size + g0) * lut_size + r1) * 3;
-        int base011 = ((b1 * lut_size + g1) * lut_size + r0) * 3;
-        int base111 = ((b1 * lut_size + g1) * lut_size + r1) * 3;
+            int r0 = int(floor(rf)), r1 = std::min(r0 + 1, lut_dim - 1);
+            int g0 = int(floor(gf)), g1 = std::min(g0 + 1, lut_dim - 1);
+            int b0 = int(floor(bf)), b1 = std::min(b0 + 1, lut_dim - 1);
 
-        // trilinear interpolation
-        // red
-        float c00 = lut_data[base000 + 0] * (1 - dr) + lut_data[base100 + 0] * dr;
-        float c01 = lut_data[base001 + 0] * (1 - dr) + lut_data[base101 + 0] * dr;
-        float c10 = lut_data[base010 + 0] * (1 - dr) + lut_data[base110 + 0] * dr;
-        float c11 = lut_data[base011 + 0] * (1 - dr) + lut_data[base111 + 0] * dr;
-        float c0  = c00 * (1 - dg) + c10 * dg;
-        float c1  = c01 * (1 - dg) + c11 * dg;
-        float lr = c0 * (1 - db) + c1 * db;
+            float dr = rf - r0;
+            float dg = gf - g0;
+            float db = bf - b0;
 
-        // green
-        c00 = lut_data[base000 + 1] * (1 - dr) + lut_data[base100 + 1] * dr;
-        c01 = lut_data[base001 + 1] * (1 - dr) + lut_data[base101 + 1] * dr;
-        c10 = lut_data[base010 + 1] * (1 - dr) + lut_data[base110 + 1] * dr;
-        c11 = lut_data[base011 + 1] * (1 - dr) + lut_data[base111 + 1] * dr;
-        c0  = c00 * (1 - dg) + c10 * dg;
-        c1  = c01 * (1 - dg) + c11 * dg;
-        float lg = c0 * (1 - db) + c1 * db;
+            int base000 = ((b0 * lut_dim + g0) * lut_dim + r0) * 3;
+            int base100 = ((b0 * lut_dim + g0) * lut_dim + r1) * 3;
+            int base010 = ((b0 * lut_dim + g1) * lut_dim + r0) * 3;
+            int base110 = ((b0 * lut_dim + g1) * lut_dim + r1) * 3;
+            int base001 = ((b1 * lut_dim + g0) * lut_dim + r0) * 3;
+            int base101 = ((b1 * lut_dim + g0) * lut_dim + r1) * 3;
+            int base011 = ((b1 * lut_dim + g1) * lut_dim + r0) * 3;
+            int base111 = ((b1 * lut_dim + g1) * lut_dim + r1) * 3;
 
-        // blue
-        c00 = lut_data[base000 + 2] * (1 - dr) + lut_data[base100 + 2] * dr;
-        c01 = lut_data[base001 + 2] * (1 - dr) + lut_data[base101 + 2] * dr;
-        c10 = lut_data[base010 + 2] * (1 - dr) + lut_data[base110 + 2] * dr;
-        c11 = lut_data[base011 + 2] * (1 - dr) + lut_data[base111 + 2] * dr;
-        c0  = c00 * (1 - dg) + c10 * dg;
-        c1  = c01 * (1 - dg) + c11 * dg;
-        float lb = c0 * (1 - db) + c1 * db;
+            float c00 = table[base000 + 0] * (1 - dr) + table[base100 + 0] * dr;
+            float c01 = table[base001 + 0] * (1 - dr) + table[base101 + 0] * dr;
+            float c10 = table[base010 + 0] * (1 - dr) + table[base110 + 0] * dr;
+            float c11 = table[base011 + 0] * (1 - dr) + table[base111 + 0] * dr;
+            float c0  = c00 * (1 - dg) + c10 * dg;
+            float c1  = c01 * (1 - dg) + c11 * dg;
+            lr = c0 * (1 - db) + c1 * db;
+
+            c00 = table[base000 + 1] * (1 - dr) + table[base100 + 1] * dr;
+            c01 = table[base001 + 1] * (1 - dr) + table[base101 + 1] * dr;
+            c10 = table[base010 + 1] * (1 - dr) + table[base110 + 1] * dr;
+            c11 = table[base011 + 1] * (1 - dr) + table[base111 + 1] * dr;
+            c0  = c00 * (1 - dg) + c10 * dg;
+            c1  = c01 * (1 - dg) + c11 * dg;
+            lg = c0 * (1 - db) + c1 * db;
+
+            c00 = table[base000 + 2] * (1 - dr) + table[base100 + 2] * dr;
+            c01 = table[base001 + 2] * (1 - dr) + table[base101 + 2] * dr;
+            c10 = table[base010 + 2] * (1 - dr) + table[base110 + 2] * dr;
+            c11 = table[base011 + 2] * (1 - dr) + table[base111 + 2] * dr;
+            c0  = c00 * (1 - dg) + c10 * dg;
+            c1  = c01 * (1 - dg) + c11 * dg;
+            lb = c0 * (1 - db) + c1 * db;
+        } else if (use1d) {
+            lr = sample1d(Rdn, 0);
+            lg = sample1d(Gdn, 1);
+            lb = sample1d(Bdn, 2);
+        }
 
         // blend per-channel, re-premultiply alpha
         float outR = (lr * tR + Rn * (1 - tR)) * alpha;

@@ -16,7 +16,9 @@
 #include "CacheMemory.h"
 #include "Exceptions.h"
 #include "Timeline.h"
+#include "effects/CropHelpers.h"
 
+#include <algorithm>
 #include <QString>
 #include <QImage>
 #include <QPainter>
@@ -100,12 +102,13 @@ void QtImageReader::Open()
         }
         info.pixel_ratio.num = 1;
         info.pixel_ratio.den = 1;
-        info.duration = 60 * 60 * 1;  // 1 hour duration
         info.fps.num = 30;
         info.fps.den = 1;
         info.video_timebase.num = 1;
         info.video_timebase.den = 30;
-        info.video_length = round(info.duration * info.fps.ToDouble());
+        // Default still-image duration: 1 hour, aligned to fps
+        info.video_length = 60 * 60 * info.fps.num; // 3600 seconds * 30 fps
+        info.duration = static_cast<float>(info.video_length / info.fps.ToDouble());
 
         // Calculate the DAR (display aspect ratio)
         Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
@@ -243,6 +246,9 @@ QSize QtImageReader::calculate_max_size() {
             max_width = info.width * max_scale_x * preview_ratio;
             max_height = info.height * max_scale_y * preview_ratio;
         }
+
+        // If a crop effect is resizing the image, request enough pixels to preserve detail
+        ApplyCropResizeScale(parent, info.width, info.height, max_width, max_height);
     }
 
     // Return new QSize of the current max size

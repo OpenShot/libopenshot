@@ -17,6 +17,7 @@
 #include "FrameMapper.h"
 #include "Exceptions.h"
 #include "Clip.h"
+#include "MemoryTrim.h"
 #include "ZmqLogger.h"
 
 using namespace std;
@@ -440,6 +441,34 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	// Find parent properties (if any)
 	Clip *parent = static_cast<Clip *>(ParentClip());
 	bool is_increasing = true;
+	bool direction_flipped = false;
+
+	{
+		const std::lock_guard<std::recursive_mutex> lock(directionMutex);
+
+		// One-shot: if a hint exists, consume it for THIS call, regardless of frame number.
+		if (have_hint) {
+			is_increasing = hint_increasing;
+			have_hint = false;
+		} else if (previous_frame > 0 && std::llabs(requested_frame - previous_frame) == 1) {
+			// Infer from request order when adjacent
+			is_increasing = (requested_frame > previous_frame);
+		} else if (last_dir_initialized) {
+			// Reuse last known direction if non-adjacent and no hint
+			is_increasing = last_is_increasing;
+		} else {
+			is_increasing = true; // default on first call
+		}
+
+		// Detect flips so we can reset SR context
+		if (!last_dir_initialized) {
+			last_is_increasing = is_increasing;
+			last_dir_initialized = true;
+		} else if (last_is_increasing != is_increasing) {
+			direction_flipped = true;
+			last_is_increasing = is_increasing;
+		}
+	}
 	if (parent) {
 		float position = parent->Position();
 		float start = parent->Start();
@@ -448,10 +477,6 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			// since this heavily affects frame #s and audio mappings
 			is_dirty = true;
 		}
-
-		// Determine direction of parent clip at this frame (forward or reverse direction)
-		// This is important for reversing audio in our resampler, for smooth reversed audio.
-		is_increasing = parent->time.IsIncreasing(requested_frame);
 	}
 
 	// Check if mappings are dirty (and need to be recalculated)
@@ -548,13 +573,13 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 		if (need_resampling)
 		{
-			// Check for non-adjacent frame requests - so the resampler can be reset
-			if (abs(frame->number - previous_frame) > 1) {
+			// Reset resampler when non-adjacent request OR playback direction flips
+			if (direction_flipped || (previous_frame > 0 && std::llabs(requested_frame - previous_frame) > 1)) {
 				if (avr) {
 					// Delete resampler (if exists)
 					SWR_CLOSE(avr);
 					SWR_FREE(&avr);
-					avr = NULL;
+					avr = nullptr;
 				}
 			}
 
@@ -630,9 +655,8 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			starting_frame++;
 		}
 
-		// Reverse audio (if needed)
-		if (!is_increasing)
-			frame->ReverseAudio();
+		// Set audio direction
+		frame->SetAudioDirection(is_increasing);
 
 		// Resample audio on frame (if needed)
 		if (need_resampling)
@@ -722,6 +746,9 @@ void FrameMapper::Close()
 		SWR_FREE(&avr);
 		avr = NULL;
 	}
+
+	// Release free’d arenas back to OS after heavy teardown
+	TrimMemoryToOS(true);
 }
 
 
@@ -818,7 +845,7 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	final_cache.Clear();
 
 	// Adjust cache size based on size of frame and audio
-	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(24, info.width, info.height, info.sample_rate, info.channels);
 
 	// Deallocate resample buffer
 	if (avr) {
@@ -1038,4 +1065,12 @@ int64_t FrameMapper::AdjustFrameNumber(int64_t clip_frame_number) {
 	int64_t frame_number = clip_frame_number + clip_start_position - clip_start_frame;
 
 	return frame_number;
+}
+
+// Set direction hint for the next call to GetFrame
+void FrameMapper::SetDirectionHint(const bool increasing)
+{
+	const std::lock_guard<std::recursive_mutex> lock(directionMutex);
+	hint_increasing = increasing;
+	have_hint = true;
 }
