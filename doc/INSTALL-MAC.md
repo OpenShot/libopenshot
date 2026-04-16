@@ -4,224 +4,253 @@
 SPDX-License-Identifier: LGPL-3.0-or-later
 -->
 
-# Building libopenshot for MacOS
+# Building libopenshot for macOS
 
-## Getting Started
+These instructions describe how to build `libopenshot` (and its dependency
+`libopenshot-audio`) from source on a modern macOS system, producing a
+working `libopenshot.dylib` and Python 3 bindings (`_openshot.so`,
+`openshot.py`) that can be imported by `openshot-qt`.
 
-The best way to get started with libopenshot, is to learn about our build system, obtain all the source code, 
-install a development IDE and tools, and better understand our dependencies. So, please read through the 
-following sections, and follow the instructions. And keep in mind, that your computer is likely different 
-than the one used when writing these instructions. Your file paths and versions of applications might be 
-slightly different, so keep an eye out for subtle file path differences in the commands you type.
+They have been verified on macOS 15 (Apple Silicon, `arm64`) with
+AppleClang 17 and CMake 4.0.3. The same steps apply to Intel Macs; the
+only difference is that Homebrew lives at `/usr/local` on Intel and at
+`/opt/homebrew` on Apple Silicon. Every path used below is derived via
+`brew --prefix`, so the commands are architecture-neutral.
 
-## Build Tools
+## Supported platforms
 
-CMake is the backbone of our build system.  It is a cross-platform build system, which checks for 
-dependencies, locates header files and libraries, generates makefiles, and supports the cross-platform 
-compiling of libopenshot and libopenshot-audio.  CMake uses an out-of-source build concept, where 
-all temporary build files, such as makefiles, object files, and even the final binaries, are created 
-outside of the source code folder, inside a /build/ sub-folder.  This prevents the build process 
-from cluttering up the source code.  These instructions have only been tested with the GNU compiler 
-(including MSYS2/MinGW for Windows).
+* macOS 11 (Big Sur) or newer.
+* Both Apple Silicon (`arm64`) and Intel (`x86_64`) are supported.
+* Earlier macOS versions are not tested; in particular, macOS 10.14 or
+  newer is required because AppleClang on older SDKs lacked pieces needed
+  by Qt 5 / modern C++17.
+
+## Build tools
+
+Install Xcode's Command Line Tools (this is enough, the full Xcode IDE is
+not required):
+
+```sh
+xcode-select --install
+```
+
+Install Homebrew from <https://brew.sh> if you do not already have it.
+After installation, confirm that `brew` is on your `PATH`:
+
+```sh
+brew --version
+brew --prefix        # prints /opt/homebrew on Apple Silicon, /usr/local on Intel
+```
 
 ## Dependencies
 
-The following libraries are required to build libopenshot.  Instructions on how to install these 
-dependencies vary for each operating system.  Libraries and Executables have been labeled in the 
-list below to help distinguish between them.
+The following libraries and tools are required. All of them are available
+as Homebrew formulae.
 
-### FFmpeg (libavformat, libavcodec, libavutil, libavdevice, libavresample, libswscale)
-  * http://www.ffmpeg.org/ `(Library)`
-  * This library is used to decode and encode video, audio, and image files.  It is also used to obtain information about media files, such as frame rate, sample rate, aspect ratio, and other common attributes.
+* `cmake` (build system)
+* `swig` (generates the Python bindings)
+* `qt@5` (GUI/image building blocks used by the library; keg-only, so it
+  must be referenced via `CMAKE_PREFIX_PATH`)
+* `ffmpeg@7` (recommended today; the default `ffmpeg` formula is already
+  at FFmpeg 8, which is not yet supported on the `develop` branch)
+* `libopenshot-audio` (built from source, see below)
+* `libomp` (OpenMP runtime for AppleClang, which does not ship OpenMP
+  out of the box)
+* `zeromq` (IPC/logging)
+* `cppzmq` (C++ header-only wrappers for ZeroMQ; used by `ZmqLogger`)
+* `pkgconf` (used by FFmpeg detection)
 
-### ImageMagick++ (libMagick++, libMagickWand, libMagickCore)
-  * http://www.imagemagick.org/script/magick++.php `(Library)`
-  * This library is **optional**, and used to decode and encode images.
+Optional but recommended for a more complete build:
 
-### OpenShot Audio Library (libopenshot-audio)
-  * https://github.com/OpenShot/libopenshot-audio/ `(Library)`
-  * This library is used to mix, resample, host plug-ins, and play audio. It is based on the JUCE project, which is an outstanding audio library used by many different applications
+* `imagemagick` (adds extra image decode/encode paths)
+* `resvg` or `librsvg` (SVG rendering)
+* `babl` (colorspace conversions used by some effects)
+* `unittest-cpp` and/or `catch2` (required only to build and run the unit tests)
 
-### Qt 5 (libqt5)
-  * http://www.qt.io/qt5/ `(Library)`
-  * Qt5 is used to display video, store image data, composite images, apply image effects, and many other utility functions, such as file system manipulation, high resolution timers, etc...
+## Install dependencies
 
-### CMake (cmake)
-  * http://www.cmake.org/ `(Executable)`
-  * This executable is used to automate the generation of Makefiles, check for dependencies, and is the backbone of libopenshot’s cross-platform build process.
+```sh
+brew install \
+    cmake swig qt@5 ffmpeg@7 libomp zeromq cppzmq pkgconf
 
-### SWIG (swig)
-  * http://www.swig.org/ `(Executable)`
-  * This executable is used to generate the Python and Ruby bindings for libopenshot. It is a simple and powerful wrapper for C++ libraries, and supports many languages.
-
-### Python 3 (libpython)
-  * http://www.python.org/ `(Executable and Library)`
-  * This library is used by swig to create the Python (version 3+) bindings for libopenshot. This is also the official language used by OpenShot Video Editor (a graphical interface to libopenshot).
-
-### Doxygen (doxygen)
-  * http://www.stack.nl/~dimitri/doxygen/ `(Executable)`
-  * This executable is used to auto-generate the documentation used by libopenshot.
-
-### UnitTest++ (libunittest++)
-  * https://github.com/unittest-cpp/ `(Library)`
-  * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
-
-### ZeroMQ (libzmq)
-  * http://zeromq.org/ `(Library)`
-  * This library is used to communicate between libopenshot and other applications (publisher / subscriber). Primarily used to send debug data from libopenshot.
-
-### OpenMP (-fopenmp)
-  * http://openmp.org/wp/ `(Compiler Flag)`
-  * If your compiler supports this flag (GCC, Clang, and most other compilers), it provides libopenshot with easy methods of using parallel programming techniques to improve performance and take advantage of multi-core processors.
-
-## CMake Flags (Optional)
-There are many different build flags that can be passed to cmake to adjust how libopenshot is compiled. 
-Some of these flags might be required when compiling on certain OSes, just depending on how your build 
-environment is setup. To add a build flag, follow this general syntax: 
-`cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ../`
-
-* MAGICKCORE_HDRI_ENABLE (default 0)
-* MAGICKCORE_QUANTUM_DEPTH (default 0)
-* OPENSHOT_IMAGEMAGICK_COMPATIBILITY (default 0)
-* DISABLE_TESTS (default 0)
-* CMAKE_PREFIX_PATH (`/location/to/missing/library/`)
-* PYTHON_INCLUDE_DIR (`/location/to/python/include/`)
-* PYTHON_LIBRARY (`/location/to/python/lib.a`)
-* PYTHON_FRAMEWORKS (`/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/`)
-* CMAKE_CXX_COMPILER (`/location/to/mingw/g++`)
-* CMAKE_C_COMPILER (`/location/to/mingw/gcc`)
-
-## Obtaining Source Code
-
-The first step in installing libopenshot is to obtain the most recent source code. The source code 
-is available on [GitHub](https://github.com/OpenShot/libopenshot). Use the following command to 
-obtain the latest libopenshot source code.
-
+# Optional but recommended:
+brew install imagemagick resvg babl unittest-cpp catch2
 ```
-git clone https://github.com/OpenShot/libopenshot.git
+
+`qt@5`, `ffmpeg@7`, and `libomp` are keg-only on Homebrew and are
+therefore not symlinked into the default prefix. That is expected, and the
+`cmake` commands below locate them explicitly.
+
+## Obtain the source
+
+`libopenshot` and `libopenshot-audio` are separate repositories. Clone
+them as siblings of each other:
+
+```sh
 git clone https://github.com/OpenShot/libopenshot-audio.git
+git clone https://github.com/OpenShot/libopenshot.git
 ```
 
-## Folder Structure (libopenshot)
+The build commands below assume both repositories sit in the same parent
+directory.
 
-The source code is divided up into the following folders.
+## Build libopenshot-audio
 
-### build/
-   * This folder needs to be manually created, and is used by cmake to store the temporary build files, such as makefiles, as well as the final binaries (library and test executables).
+`libopenshot-audio` provides the audio engine, based on JUCE. `libopenshot`
+will not configure without it.
 
-### cmake/
-   * This folder contains custom modules not included by default in cmake, used to find dependency libraries and headers and determine if these libraries are installed.
-
-### doc/
-   * This folder contains documentation and related files, such as logos and images required by the doxygen auto-generated documentation.
-
-### include/
-   * This folder contains all headers (*.h) used by libopenshot.
-
-### src/
-   * This folder contains all source code (*.cpp) used by libopenshot.
-
-### tests/
-   * This folder contains all unit test code.  Each class has it’s own test file (*.cpp), and uses UnitTest++ macros to keep the test code simple and manageable.
-
-### thirdparty/
-   * This folder contains code not written by the OpenShot team. For example, jsoncpp, an open-source JSON parser.
-
-## Install Dependencies
-
-In order to actually compile libopenshot and libopenshot-audio, we need to install some dependencies on 
-your system. Most packages needed by libopenshot can be installed easily with Homebrew. However, first 
-install Xcode with the following options ("UNIX Development", "System Tools", "Command Line Tools", or 
-"Command Line Support"). Be sure to refresh your list of Homebrew packages with the “brew update” command.
-
-**NOTE:** Homebrew seems to work much better for most users (compared to MacPorts), so I am going to 
-focus on brew for this guide.
-
-Install the following packages using the Homebrew package installer (http://brew.sh/). Pay close attention 
-to any warnings or errors during these brew installs. NOTE: You might have some conflicting libraries in 
-your /usr/local/ folders, so follow the directions from brew if these are detected.
-
-```
-brew install gcc48 --enable-all-languages
-brew install ffmpeg
-brew install librsvg
-brew install swig
-brew install doxygen
-brew install unittest-cpp --cc=gcc-4.8. You must specify the c++ compiler with the --cc flag to be 4.7 or 4.8.
-brew install qt5
-brew install cmake
-brew install zeromq
-brew install babl
+```sh
+cd libopenshot-audio
+cmake -B build -S .
+cmake --build build -j
 ```
 
-## Mac Build Instructions (libopenshot-audio)
-Since libopenshot-audio is not available in a Homebrew or MacPorts package, we need to go through a 
-few additional steps to manually build and install it. Launch a terminal and enter:
+A successful build produces `build/libopenshot-audio.<version>.dylib` and
+`build/src/openshot-audio-demo`. You do not need to run
+`cmake --install build`; the next step points `libopenshot` directly at
+the `build/` directory via `OpenShotAudio_ROOT`.
 
-```
-cd [libopenshot-audio repo folder]
-mkdir build
-cd build
-cmake -d -G "Unix Makefiles" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang ../   (CLang must be used due to GNU incompatible Objective-C code in some of the Apple frameworks)
-make
-make install
-./src/openshot-audio-test-sound  (This should play a test sound)
-```
+## Build libopenshot
 
-## Mac Build Instructions (libopenshot)
-Run the following commands to build libopenshot:
+From the sibling `libopenshot` directory:
 
-```
-$ cd [libopenshot repo folder]
-$ mkdir build
-$ cd build
-$ cmake -G "Unix Makefiles"  -DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt5/5.4.2/ -DPYTHON_INCLUDE_DIR=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/include/python3.3m/ -DPYTHON_LIBRARY=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/lib/libpython3.3.dylib -DPython_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/ ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"
-```
+```sh
+cd ../libopenshot
 
-The extra arguments on the cmake command make sure the compiler will be gcc4.8 and that cmake 
-knows where to look for the Qt header files and Python library. Double check these file paths, 
-as yours will likely be different.
+QT5_PREFIX="$(brew --prefix qt@5)"
+FFMPEG_PREFIX="$(brew --prefix ffmpeg@7)"
+LIBOMP_PREFIX="$(brew --prefix libomp)"
 
-```
-make
+PKG_CONFIG_PATH="$FFMPEG_PREFIX/lib/pkgconfig" \
+cmake -B build -S . \
+    -DCMAKE_PREFIX_PATH="$QT5_PREFIX;$FFMPEG_PREFIX" \
+    -DOpenShotAudio_ROOT="$PWD/../libopenshot-audio/build" \
+    -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$LIBOMP_PREFIX/include" \
+    -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$LIBOMP_PREFIX/include" \
+    -DOpenMP_C_LIB_NAMES=omp \
+    -DOpenMP_CXX_LIB_NAMES=omp \
+    -DOpenMP_omp_LIBRARY="$LIBOMP_PREFIX/lib/libomp.dylib" \
+    -DENABLE_RUBY=0
+
+cmake --build build -j
 ```
 
-If you are missing any dependencies for libopenshot, you will receive error messages at this point. 
-Just install the missing dependencies, and run the above commands again. Repeat until no error 
-messages are displayed and the build process completes.
+Notes on the arguments above:
 
-Also, if you are having trouble building, please see the CMake Flags section above, as it might 
-provide a solution for finding a missing folder path, missing Python 3 library, etc...
+* `CMAKE_PREFIX_PATH` tells CMake where to find Qt 5 and FFmpeg, both of
+  which are keg-only in Homebrew.
+* `OpenShotAudio_ROOT` points at the uninstalled `libopenshot-audio` build
+  tree.
+* The five `OpenMP_*` flags are required because AppleClang does not ship
+  with OpenMP; they tell CMake to use the Homebrew `libomp` via the
+  `-Xpreprocessor -fopenmp` idiom.
+* `ENABLE_RUBY=0` is required today. Apple's system Ruby headers in
+  `/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/Ruby.framework`
+  still declare APIs with the `register` storage-class specifier, which
+  C++17 has removed, so attempting to build the Ruby bindings fails with
+  `ISO C++17 does not allow 'register' storage class specifier`. The Python
+  bindings are unaffected.
 
-To run all unit tests (and verify everything is working correctly), launch a terminal, and enter:
+A successful build produces:
 
-```
-make test
-```
+* `build/src/libopenshot.<version>.dylib`
+* `build/bindings/python/_openshot.so`
+* `build/bindings/python/openshot.py`
+* `build/src/examples/openshot-example`, `openshot-html-example`,
+  `openshot-player`
 
-To auto-generate the documentation for libopenshot, launch a terminal, and enter:
+## Verify the build
 
-```
-make doc
-```
+Before touching your system Python, confirm the Python bindings import
+directly from the build tree:
 
-This will use doxygen to generate a folder of HTML files, with all classes and methods documented. 
-The folder is located at build/doc/html/. Once libopenshot has been successfully built, we need 
-to install it (i.e. copy it to the correct folder, so other libraries can find it).
-
-```
-make install
-```
-
-This should copy the binary files to /usr/local/lib/, and the header files to /usr/local/include/openshot/... 
-This is where other projects will look for the libopenshot files when building. Python 3 bindings are 
-also installed at this point. let's verify the python bindings work:
-
-```
-python3 (or python)
->>> import openshot
+```sh
+cd build/bindings/python
+python3 -c "import openshot; print(openshot.OPENSHOT_VERSION_FULL)"
 ```
 
-If no errors are displayed, you have successfully compiled and installed libopenshot on your 
-system. Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! 
-Welcome to the OpenShot developer community! We look forward to meeting you!
+This should print the libopenshot version (for example, `0.7.0`). If it
+does, the build is healthy.
+
+## Install (optional)
+
+To install into Homebrew's prefix so that `openshot-qt` can find the
+bindings without manual `PYTHONPATH` tweaks:
+
+```sh
+cd /path/to/libopenshot
+cmake --install build
+```
+
+The default `CMAKE_INSTALL_PREFIX` comes from CMake, which on macOS is
+`/usr/local` regardless of the host architecture. You can override it
+to match your Homebrew prefix:
+
+```sh
+cmake -B build -S . \
+    -DCMAKE_INSTALL_PREFIX="$(brew --prefix)" \
+    ...   # plus the other flags listed above
+cmake --install build
+```
+
+## Running the tests (optional)
+
+Unit tests use Catch2 (preferred) or UnitTest++.
+
+```sh
+brew install catch2      # or: brew install unittest-cpp
+cmake -B build -S . -DENABLE_TESTS=1 ...    # plus the flags above
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+```
+
+## Troubleshooting
+
+### `ld: framework 'AGL' not found` when building libopenshot-audio
+
+`AGL` was removed from the macOS SDK in macOS 10.14 (Mojave, 2018). This
+reference was removed from `libopenshot-audio` in its 0.6.x series; if
+you see this error, update to the latest `develop` branch of
+`libopenshot-audio`.
+
+### `zmq.hpp file not found`
+
+`libopenshot` includes `<zmq.hpp>` (provided by the `cppzmq` Homebrew
+formula) unconditionally, even though CMake currently marks `cppzmq` as
+"optional". Install it:
+
+```sh
+brew install cppzmq
+```
+
+### `Could NOT find OpenMP_C` during configure
+
+AppleClang does not ship an OpenMP runtime. Install `libomp` and pass the
+five `OpenMP_*` hint flags shown in the build command above.
+
+### `ISO C++17 does not allow 'register' storage class specifier` in Ruby wrappers
+
+Apple's system Ruby headers have not yet been updated for C++17. Pass
+`-DENABLE_RUBY=0` to disable the Ruby bindings. Python bindings are not
+affected.
+
+### `Could not find a package configuration file provided by "OpenShotAudio"`
+
+`libopenshot`'s CMake cannot find `libopenshot-audio`. Either build it as
+described above and pass `-DOpenShotAudio_ROOT=/path/to/libopenshot-audio/build`,
+or install it into a directory listed in `CMAKE_PREFIX_PATH`.
+
+### FFmpeg version mismatches
+
+The current `develop` branch of `libopenshot` targets FFmpeg 7. Homebrew's
+default `ffmpeg` formula has moved on to FFmpeg 8, which is not yet
+supported. Install the pinned `ffmpeg@7` formula as shown above.
+
+## Next steps
+
+Once `libopenshot` builds and `import openshot` works, the graphical
+editor `openshot-qt` can be run against this build. See
+<https://github.com/OpenShot/openshot-qt> for the Qt/Python frontend.
+
+To contribute patches, please read
+<https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer>.
