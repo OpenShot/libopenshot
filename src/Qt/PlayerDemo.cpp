@@ -43,7 +43,7 @@ PlayerDemo::PlayerDemo(QWidget *parent)
     vbox->addWidget(menu, 0);
     vbox->addWidget(video, 1);
 
-    vbox->setMargin(0);
+    vbox->setContentsMargins(0, 0, 0, 0);
     vbox->setSpacing(0);
     resize(600, 480);
 

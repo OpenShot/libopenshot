@@ -49,8 +49,9 @@ as Homebrew formulae.
 
 * `cmake` (build system)
 * `swig` (generates the Python bindings)
-* `qt@5` (GUI/image building blocks used by the library; keg-only, so it
-  must be referenced via `CMAKE_PREFIX_PATH`)
+* `qt@5` or `qt` (Qt 6). Both are supported; CMake auto-detects the
+  version via `-DUSE_QT6=AUTO` (the default). Qt formulae are keg-only,
+  so they must be referenced via `CMAKE_PREFIX_PATH`.
 * `ffmpeg@7` (recommended today; the default `ffmpeg` formula is already
   at FFmpeg 8, which is not yet supported on the `develop` branch)
 * `libopenshot-audio` (built from source, see below)
@@ -70,8 +71,13 @@ Optional but recommended for a more complete build:
 ## Install dependencies
 
 ```sh
+# Qt 5 (tested):
 brew install \
     cmake swig qt@5 ffmpeg@7 libomp zeromq cppzmq pkgconf
+
+# Or Qt 6 (also supported; use `qt` instead of `qt@5`):
+# brew install \
+#     cmake swig qt ffmpeg@7 libomp zeromq cppzmq pkgconf
 
 # Optional but recommended:
 brew install imagemagick resvg babl unittest-cpp catch2
@@ -117,13 +123,14 @@ From the sibling `libopenshot` directory:
 ```sh
 cd ../libopenshot
 
-QT5_PREFIX="$(brew --prefix qt@5)"
+# Use qt@5 or qt (Qt 6), matching what you installed above.
+QT_PREFIX="$(brew --prefix qt@5)"   # or: $(brew --prefix qt)
 FFMPEG_PREFIX="$(brew --prefix ffmpeg@7)"
 LIBOMP_PREFIX="$(brew --prefix libomp)"
 
 PKG_CONFIG_PATH="$FFMPEG_PREFIX/lib/pkgconfig" \
 cmake -B build -S . \
-    -DCMAKE_PREFIX_PATH="$QT5_PREFIX;$FFMPEG_PREFIX" \
+    -DCMAKE_PREFIX_PATH="$QT_PREFIX;$FFMPEG_PREFIX" \
     -DOpenShotAudio_ROOT="$PWD/../libopenshot-audio/build" \
     -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$LIBOMP_PREFIX/include" \
     -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$LIBOMP_PREFIX/include" \
@@ -137,8 +144,9 @@ cmake --build build -j
 
 Notes on the arguments above:
 
-* `CMAKE_PREFIX_PATH` tells CMake where to find Qt 5 and FFmpeg, both of
-  which are keg-only in Homebrew.
+* `CMAKE_PREFIX_PATH` tells CMake where to find Qt and FFmpeg, both of
+  which are keg-only in Homebrew. CMake auto-detects Qt 5 vs Qt 6 by
+  default (`-DUSE_QT6=AUTO`).
 * `OpenShotAudio_ROOT` points at the uninstalled `libopenshot-audio` build
   tree.
 * The five `OpenMP_*` flags are required because AppleClang does not ship

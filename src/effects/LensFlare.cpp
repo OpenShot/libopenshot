@@ -107,14 +107,19 @@ static QColor shifted_hsv(const QColor &base, float h_shift,
                           float s_scale, float v_scale,
                           float a_scale = 1.0f)
 {
+    // Qt6 switched getHsvF/setHsvF to float; keep compatibility with Qt5 (qreal)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    float h, s, v, a;
+#else
     qreal h, s, v, a;
+#endif
     base.getHsvF(&h, &s, &v, &a);
     if (s == 0.0)
         h = 0.0;
-    h = std::fmod(h + h_shift + 1.0, 1.0);
-    s = std::clamp(s * s_scale, 0.0, 1.0);
-    v = std::clamp(v * v_scale, 0.0, 1.0);
-    a = std::clamp(a * a_scale, 0.0, 1.0);
+    h = static_cast<decltype(h)>(std::fmod(static_cast<double>(h + h_shift + 1.0), 1.0));
+    s = std::clamp(s * s_scale, static_cast<decltype(s)>(0.0), static_cast<decltype(s)>(1.0));
+    v = std::clamp(v * v_scale, static_cast<decltype(v)>(0.0), static_cast<decltype(v)>(1.0));
+    a = std::clamp(a * a_scale, static_cast<decltype(a)>(0.0), static_cast<decltype(a)>(1.0));
 
     QColor out;
     out.setHsvF(h, s, v, a);

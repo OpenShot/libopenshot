@@ -44,7 +44,8 @@ list below to help distinguish between them.
 
 ### Qt 5 (libqt5)
   * http://www.qt.io/qt5/ `(Library)`
-  * Qt5 is used to display video, store image data, composite images, apply image effects, and many other utility functions, such as file system manipulation, high resolution timers, etc...
+  * Qt5/Qt6 is used to display video, store image data, composite images, apply image effects, and many other utility functions, such as file system manipulation, high resolution timers, etc...
+  * Use the CMake option `-DUSE_QT6=ON|OFF|AUTO` (default AUTO) to pick a Qt major version; Qt6 builds require CMake 3.16+.
 
 ### CMake (cmake)
   * http://www.cmake.org/ `(Executable)`
@@ -163,8 +164,18 @@ software packages available to download and install.
                         python3-dev \
                         qtbase5-dev \
                         qtmultimedia5-dev \
-                        swig
+                        swig \
+                        python3-zmq \
+                        python3-pyqt5.qtwebengine
+                        
 ```
+
+If you want to build against Qt6 on Ubuntu 24.04 or newer, install the Qt6 dev stack instead and configure with the default `USE_QT6=AUTO` (prefers Qt6 when available) or `-DUSE_QT6=ON` to force it:
+
+```
+sudo apt install qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-svg-dev
+```
+
 
 ## Linux Build Instructions (libopenshot-audio)
 To compile libopenshot-audio, we need to go through a few additional steps to manually build and 

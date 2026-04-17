@@ -1711,10 +1711,14 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		if (!avr) {
 			avr = SWR_ALLOC();
 #if HAVE_CH_LAYOUT
-			AVChannelLayout in_chlayout;
-			AVChannelLayout out_chlayout;
-			av_channel_layout_from_mask(&in_chlayout, channel_layout_in_frame);
-			av_channel_layout_from_mask(&out_chlayout, info.channel_layout);
+			AVChannelLayout in_chlayout = ffmpeg_default_channel_layout(channels_in_frame);
+			AVChannelLayout out_chlayout = ffmpeg_default_channel_layout(info.channels);
+			if (channel_layout_in_frame > 0) {
+				av_channel_layout_from_mask(&in_chlayout, channel_layout_in_frame);
+			}
+			if (info.channel_layout > 0) {
+				av_channel_layout_from_mask(&out_chlayout, info.channel_layout);
+			}
 			av_opt_set_chlayout(avr, "in_chlayout", &in_chlayout, 0);
 			av_opt_set_chlayout(avr, "out_chlayout", &out_chlayout, 0);
 #else
@@ -1823,8 +1827,10 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			if (!avr_planar) {
 				avr_planar = SWR_ALLOC();
 #if HAVE_CH_LAYOUT
-				AVChannelLayout layout;
-				av_channel_layout_from_mask(&layout, info.channel_layout);
+				AVChannelLayout layout = ffmpeg_default_channel_layout(info.channels);
+				if (info.channel_layout > 0) {
+					av_channel_layout_from_mask(&layout, info.channel_layout);
+				}
 				av_opt_set_chlayout(avr_planar, "in_chlayout", &layout, 0);
 				av_opt_set_chlayout(avr_planar, "out_chlayout", &layout, 0);
 #else

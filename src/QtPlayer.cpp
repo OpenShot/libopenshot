@@ -216,15 +216,22 @@ namespace openshot
     	return reader;
     }
 
-    // Set the QWidget pointer to display the video on (as a LONG pointer id)
-    void QtPlayer::SetQWidget(int64_t qwidget_address) {
+    // Set the QWidget pointer to display the video on (as a pointer-sized unsigned id)
+    void QtPlayer::SetQWidget(uintptr_t qwidget_address) {
     	// Update override QWidget address on the video renderer
     	p->renderer->OverrideWidget(qwidget_address);
     }
 
-    // Get the Renderer pointer address (for Python to cast back into a QObject)
-    int64_t QtPlayer::GetRendererQObject() {
-    	return (int64_t)(VideoRenderer*)p->renderer;
+    // Set the QWidget pointer to display the video on (using a real QWidget pointer)
+    void QtPlayer::SetQWidget(QWidget *widget) {
+    	SetQWidget(reinterpret_cast<uintptr_t>(widget));
+    }
+
+    // Get the Renderer pointer address (for Python to cast back into a VideoRenderer)
+	uintptr_t QtPlayer::GetRendererQObject() {
+    	auto* vr = static_cast<VideoRenderer*>(p->renderer);
+        uintptr_t addr = reinterpret_cast<uintptr_t>(vr);
+    	return addr;
     }
 
     // Get the Playback speed
@@ -252,3 +259,9 @@ namespace openshot
     	volume = new_volume;
     }
 }
+#ifdef __ANDROID__
+#include <android/log.h>
+#ifndef ANDROID_LOG_WARN
+#define ANDROID_LOG_WARN 5
+#endif
+#endif

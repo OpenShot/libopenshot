@@ -24,6 +24,7 @@
 #include "effects/ColorShift.h"
 #include "effects/Crop.h"
 #include "effects/Deinterlace.h"
+#include "effects/Displace.h"
 #include "effects/Hue.h"
 #include "effects/LensFlare.h"
 #include "effects/Mask.h"

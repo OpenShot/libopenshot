@@ -50,7 +50,7 @@ Libraries and executables have been labeled in the list below to help distinguis
 #### Qt 5 (libqt5)
 *   <http://www.qt.io/qt5/> **(Library)**
 
-*   Qt5 is used to display video, store image data, composite images,
+*   Qt5/Qt6 is used to display video, store image data, composite images,
     apply image effects, and many other utility functions,
     such as file system manipulation, high resolution timers, etc.
 
@@ -201,6 +201,7 @@ Following are some of the flags you might need to set when generating your build
 *   `-DCMAKE_PREFIX_PATH=/extra/path/to/search/for/libraries/`
 *   `-DUSE_SYSTEM_JSONCPP=0` (default: auto if discovered)
 *   `-DENABLE_MAGICK=0` (default: auto if discovered)
+*   `-DUSE_QT6=AUTO|ON|OFF` (default: `AUTO`; prefers Qt6 when available and CMake ≥3.16, `ON` forces Qt6, `OFF` forces Qt5)
 
 #### Options to compile bindings for a specific Python installation
 *   `-DPYTHON_INCLUDE_DIR=/location/of/python/includes/`

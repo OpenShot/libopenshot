@@ -63,7 +63,9 @@ TEST_CASE("caption effect", "[libopenshot][caption]") {
 
     int argc = 1;
     char* argv[1] = {(char*)""};
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
     QApplication app(argc, argv);
 
     QApplication::processEvents();

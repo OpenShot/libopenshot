@@ -24,6 +24,9 @@
 #include <QPainter>
 #include <QIcon>
 #include <QImageReader>
+#if USE_RESVG != 1
+#include <QSvgRenderer>
+#endif
 
 using namespace openshot;
 
@@ -318,9 +321,26 @@ QSize QtImageReader::load_svg_path(QString) {
                 QSize svg_size = image->size().scaled(
                                  current_max_size, Qt::KeepAspectRatio);
                 if (QCoreApplication::instance()) {
-                    // Requires QApplication to be running (for QPixmap support)
-                    // Re-rasterize SVG image to max size
-                    image = std::make_shared<QImage>(QIcon(path).pixmap(svg_size).toImage());
+#if USE_RESVG != 1
+                    // Re-rasterize SVG directly into a QImage at the target size,
+                    // instead of routing through QIcon/QPixmap which can apply
+                    // device-pixel-ratio behavior we do not want in timeline frames.
+                    QSvgRenderer renderer(path);
+                    if (renderer.isValid()) {
+                        image = std::make_shared<QImage>(
+                            svg_size, QImage::Format_RGBA8888_Premultiplied);
+                        image->fill(Qt::transparent);
+                        QPainter p(image.get());
+                        renderer.render(&p);
+                        p.end();
+                    } else {
+                        image = std::make_shared<QImage>(image->scaled(
+                                svg_size, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                    }
+#else
+                    image = std::make_shared<QImage>(image->scaled(
+                            svg_size, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+#endif
                 } else {
                     // Scale image without re-rasterizing it (due to lack of QApplication)
                     image = std::make_shared<QImage>(image->scaled(

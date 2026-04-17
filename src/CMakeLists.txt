@@ -117,6 +117,7 @@ set(EFFECTS_SOURCES
   effects/Crop.cpp
   effects/CropHelpers.cpp
   effects/Deinterlace.cpp
+  effects/Displace.cpp
   effects/Hue.cpp
   effects/LensFlare.cpp
   effects/AnalogTape.cpp
@@ -314,6 +315,9 @@ endif()
 ### Qt Toolkit
 ###
 
+set(USE_QT6 "AUTO" CACHE STRING "Select Qt major version (AUTO, ON=Qt6, OFF=Qt5)")
+set_property(CACHE USE_QT6 PROPERTY STRINGS AUTO ON OFF)
+
 set(_qt_components Core Gui Widgets)
 
 # We also need QtSvg unless we have Resvg insetead.
@@ -321,16 +325,57 @@ if(NOT HAVE_RESVG)
   list(APPEND _qt_components Svg)
 endif()
 
-find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
+# Qt6 packages require newer CMake; gate support so older systems still build Qt5.
+set(_qt6_allowed TRUE)
+if(CMAKE_VERSION VERSION_LESS "3.16")
+  set(_qt6_allowed FALSE)
+  if(USE_QT6 STREQUAL "ON")
+    message(FATAL_ERROR "USE_QT6=ON requires CMake 3.16 or newer")
+  endif()
+endif()
+if(USE_QT6 STREQUAL "OFF")
+  set(_qt6_allowed FALSE)
+endif()
+
+set(_qt_selection "")
+if(USE_QT6 STREQUAL "ON")
+  if(NOT _qt6_allowed)
+    message(FATAL_ERROR "Qt6 support disabled by CMake version; set USE_QT6=OFF or upgrade CMake")
+  endif()
+  set(_qt_selection "Qt6")
+elseif(USE_QT6 STREQUAL "OFF")
+  set(_qt_selection "Qt5")
+else()
+  if(_qt6_allowed)
+    find_package(Qt6 COMPONENTS Core QUIET)
+    if(Qt6_FOUND)
+      set(_qt_selection "Qt6")
+    endif()
+  endif()
+  if(NOT _qt_selection)
+    set(_qt_selection "Qt5")
+  endif()
+endif()
+
+if(_qt_selection STREQUAL "Qt6")
+  set(QT_VERSION_MAJOR 6)
+else()
+  set(QT_VERSION_MAJOR 5)
+endif()
+
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
-  if(TARGET Qt5::${_qt_comp})
-    target_link_libraries(openshot PUBLIC Qt5::${_qt_comp})
+  if(TARGET Qt${QT_VERSION_MAJOR}::${_qt_comp})
+    target_link_libraries(openshot PUBLIC Qt${QT_VERSION_MAJOR}::${_qt_comp})
   endif()
 endforeach()
 
+string(REPLACE ";" ", " _qt_comp_list "${_qt_components}")
+message(STATUS "Found Qt${QT_VERSION_MAJOR} ${Qt${QT_VERSION_MAJOR}Core_VERSION_STRING} (components: ${_qt_comp_list})")
+
 # Keep track of Qt version, to embed in our version header
-set(QT_VERSION_STR ${Qt5Core_VERSION_STRING} CACHE STRING "Qt version linked with" FORCE)
+set(QT_VERSION_STR ${Qt${QT_VERSION_MAJOR}Core_VERSION_STRING} CACHE STRING "Qt version linked with" FORCE)
 mark_as_advanced(QT_VERSION_STR)
 
 ################### FFMPEG #####################

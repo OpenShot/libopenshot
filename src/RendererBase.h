@@ -14,6 +14,7 @@
 #define OPENSHOT_RENDERER_BASE_H
 
 #include "Frame.h"
+#include <cstdint>
 #include <cstdlib> // for realloc
 #include <memory>
 
@@ -35,7 +36,7 @@ namespace openshot
 	void paint(const std::shared_ptr<openshot::Frame> & frame);
 
 	/// Allow manual override of the QWidget that is used to display
-	virtual void OverrideWidget(int64_t qwidget_address) = 0;
+	virtual void OverrideWidget(uintptr_t qwidget_address) = 0;
 
     protected:
 	RendererBase();

@@ -42,6 +42,7 @@ set(OPENSHOT_TESTS
   KeyFrame
   Point
   Profiles
+  QtPlayer
   QtImageReader
   ReaderBase
   Settings
@@ -52,6 +53,7 @@ set(OPENSHOT_TESTS
   ColorMap
   ChromaKey
   Crop
+  Displace
   LensFlare
   AnalogTape
   BenchmarkArgs

@@ -56,6 +56,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "Deinterlace")
 		return new Deinterlace();
 
+	else if (effect_type == "Displace")
+		return new Displace();
+
 	else if (effect_type == "Hue")
 		return new Hue();
 
@@ -147,6 +150,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(ColorShift().JsonInfo());
 	root.append(Crop().JsonInfo());
 	root.append(Deinterlace().JsonInfo());
+	root.append(Displace().JsonInfo());
 	root.append(Hue().JsonInfo());
 	root.append(LensFlare().JsonInfo());
 	root.append(Mask().JsonInfo());

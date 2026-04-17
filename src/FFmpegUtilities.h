@@ -237,7 +237,6 @@ inline static int ffmpeg_stream_add_side_data(
     return result;
 #endif
 }
-
 // FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
 // definition in ruby/config.h, so we move it to FF_RSHIFT
 #ifdef RSHIFT

@@ -14,12 +14,15 @@
 #define OPENSHOT_VIDEO_RENDERER_H
 
 #include "../RendererBase.h"
+#include <cstdint>
+#include <QtCore/QMetaObject>
 #include <QtCore/QObject>
 #include <QtGui/QImage>
 #include <memory>
 
 
 class QPainter;
+class QWidget;
 
 class VideoRenderer : public QObject, public openshot::RendererBase
 {
@@ -30,10 +33,10 @@ public:
     ~VideoRenderer();
 
     /// Override QWidget which needs to be painted
-    void OverrideWidget(int64_t qwidget_address);
+    void OverrideWidget(uintptr_t qwidget_address);
 
 signals:
-	void present(const QImage &image);
+    void present(const QImage &image);
 
 protected:
     //void render(openshot::OSPixelFormat format, int width, int height, int bytesPerLine, unsigned char *data);
@@ -42,7 +45,8 @@ protected:
 private slots:
 
 private:
-	QWidget* override_widget;
+    QWidget* override_widget;
+    QMetaObject::Connection override_present_connection;
 };
 
 #endif //OPENSHOT_VIDEO_RENDERER_H

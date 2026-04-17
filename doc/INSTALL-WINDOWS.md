@@ -46,7 +46,8 @@ have been labeled in the list below to help distinguish between them.
 
 ### Qt 5 (libqt5)
   * http://www.qt.io/qt5/ `(Library)`
-  * Qt5 is used to display video, store image data, composite images, apply image effects, and many other utility functions, such as file system manipulation, high resolution timers, etc...
+  * Qt5/Qt6 is used to display video, store image data, composite images, apply image effects, and many other utility functions, such as file system manipulation, high resolution timers, etc...
+  * Use the CMake option `-DUSE_QT6=ON|OFF|AUTO` (default AUTO) to pick a Qt major version; Qt6 builds require CMake 3.16+.
 
 ### CMake (cmake)
   * http://www.cmake.org/ `(Executable)`

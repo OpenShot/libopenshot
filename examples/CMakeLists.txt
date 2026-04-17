@@ -11,8 +11,45 @@
 
 include(GNUInstallDirs)
 
-# Dependencies
-find_package(Qt5 COMPONENTS Gui REQUIRED)
+# Qt selection matches the main library (USE_QT6 option, CMake 3.16+ needed for Qt6)
+set(_qt6_allowed TRUE)
+if(CMAKE_VERSION VERSION_LESS "3.16")
+  set(_qt6_allowed FALSE)
+  if(USE_QT6 STREQUAL "ON")
+    message(FATAL_ERROR "USE_QT6=ON requires CMake 3.16 or newer")
+  endif()
+endif()
+if(USE_QT6 STREQUAL "OFF")
+  set(_qt6_allowed FALSE)
+endif()
+
+set(_qt_selection "")
+if(USE_QT6 STREQUAL "ON")
+  if(NOT _qt6_allowed)
+    message(FATAL_ERROR "Qt6 support disabled by CMake version; set USE_QT6=OFF or upgrade CMake")
+  endif()
+  set(_qt_selection "Qt6")
+elseif(USE_QT6 STREQUAL "OFF")
+  set(_qt_selection "Qt5")
+else()
+  if(_qt6_allowed)
+    find_package(Qt6 COMPONENTS Core QUIET)
+    if(Qt6_FOUND)
+      set(_qt_selection "Qt6")
+    endif()
+  endif()
+  if(NOT _qt_selection)
+    set(_qt_selection "Qt5")
+  endif()
+endif()
+
+if(_qt_selection STREQUAL "Qt6")
+  set(QT_VERSION_MAJOR 6)
+else()
+  set(QT_VERSION_MAJOR 5)
+endif()
+
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Gui REQUIRED)
 
 ############### CLI EXECUTABLES ################
 # Create test executable
@@ -27,7 +64,7 @@ target_compile_definitions(openshot-example PRIVATE
 target_link_libraries(openshot-example openshot)
 
 add_executable(openshot-html-example ExampleHtml.cpp)
-target_link_libraries(openshot-html-example openshot Qt5::Gui)
+target_link_libraries(openshot-html-example openshot Qt${QT_VERSION_MAJOR}::Gui)
 
 if(ENABLE_VULKAN_BENCHMARK)
   find_package(Vulkan QUIET)

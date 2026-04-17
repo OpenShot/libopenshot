@@ -2221,15 +2221,15 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 		int in_layout_err = av_opt_set_chlayout(avr, "in_chlayout", &input_layout, 0);
 		int out_layout_err = av_opt_set_chlayout(avr, "out_chlayout", &output_layout, 0);
 #else
-	av_opt_set_int(avr, "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
-	av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
-	av_opt_set_int(avr, "in_channels", info.channels, 0);
-	av_opt_set_int(avr, "out_channels", info.channels, 0);
+		av_opt_set_int(avr, "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
+		av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
+		av_opt_set_int(avr, "in_channels", info.channels, 0);
+		av_opt_set_int(avr, "out_channels", info.channels, 0);
 #endif
-	av_opt_set_int(avr, "in_sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
-	av_opt_set_int(avr, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
-	av_opt_set_int(avr, "in_sample_rate", info.sample_rate, 0);
-	av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
+		av_opt_set_int(avr, "in_sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
+		av_opt_set_int(avr, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
+		av_opt_set_int(avr, "in_sample_rate", info.sample_rate, 0);
+		av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
 		int swr_init_err = SWR_INIT(avr);
 #if HAVE_CH_LAYOUT
 		av_channel_layout_uninit(&input_layout);
