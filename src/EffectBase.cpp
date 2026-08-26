@@ -548,6 +548,12 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 }
 
 std::shared_ptr<QImage> EffectBase::TrackedObjectMask(std::shared_ptr<QImage> target_image, int64_t frame_number) const {
+#ifndef USE_OPENCV
+	// Tracked-object bounding boxes are only produced by OpenCV-based
+	// trackers; without OpenCV there is nothing to draw a mask for.
+	(void)frame_number;
+	return {};
+#else
 	if (!target_image || target_image->isNull() || trackedObjects.empty())
 		return {};
 
@@ -595,6 +601,7 @@ std::shared_ptr<QImage> EffectBase::TrackedObjectMask(std::shared_ptr<QImage> ta
 	if (!drew_any_box)
 		return {};
 	return mask_image;
+#endif
 }
 
 void EffectBase::BlendWithMask(std::shared_ptr<QImage> original_image, std::shared_ptr<QImage> effected_image,

@@ -69,7 +69,6 @@ set(OPENSHOT_TESTS
   LensFlare
   AnalogTape
   BenchmarkArgs
-  EffectMask
   Mask
   Pixelate
   Saturation
@@ -96,6 +95,7 @@ if($CACHE{HAVE_OPENCV})
     CVStabilizer
     CVOutline
     ObjectMask
+    EffectMask
     # CVObjectDetection
   )
 endif()
