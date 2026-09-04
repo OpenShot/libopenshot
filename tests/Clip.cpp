@@ -1241,7 +1241,7 @@ TEST_CASE("all_composite_modes_simple_colors", "[libopenshot][clip][composite]")
 	}
 }
 
-TEST_CASE("clip_location_minus_one_plus_one_places_scaled_clip_offscreen", "[libopenshot][clip][transform]")
+TEST_CASE("crop_location_minus_one_plus_one_places_scaled_clip_offscreen", "[libopenshot][clip][transform]")
 {
 	const int canvas_w = 160;
 	const int canvas_h = 90;
@@ -1251,18 +1251,9 @@ TEST_CASE("clip_location_minus_one_plus_one_places_scaled_clip_offscreen", "[lib
 	};
 
 	const std::vector<ClipTransformCase> cases = {
-		{openshot::SCALE_FIT, 1.0, 1.0},
 		{openshot::SCALE_CROP, 1.0, 1.0},
-		{openshot::SCALE_STRETCH, 1.0, 1.0},
-		{openshot::SCALE_NONE, 1.0, 1.0},
-		{openshot::SCALE_FIT, 0.5, 0.75},
 		{openshot::SCALE_CROP, 0.5, 0.75},
-		{openshot::SCALE_STRETCH, 0.5, 0.75},
-		{openshot::SCALE_NONE, 0.5, 0.75},
-		{openshot::SCALE_FIT, 1.25, 0.6},
 		{openshot::SCALE_CROP, 1.25, 0.6},
-		{openshot::SCALE_STRETCH, 1.25, 0.6},
-		{openshot::SCALE_NONE, 1.25, 0.6},
 	};
 
 	for (const auto& source_size : source_sizes) {
@@ -1291,6 +1282,79 @@ TEST_CASE("clip_location_minus_one_plus_one_places_scaled_clip_offscreen", "[lib
 	}
 }
 
+TEST_CASE("non_crop_location_remains_canvas_relative", "[libopenshot][clip][transform][regression]")
+{
+	const int source_w = 40;
+	const int source_h = 30;
+	const int canvas_w = 160;
+	const int canvas_h = 90;
+
+	openshot::CacheMemory cache;
+	auto src = std::make_shared<openshot::Frame>(1, source_w, source_h, "#00000000", 0, 2);
+	src->AddColor(QColor(Qt::red));
+	cache.Add(src);
+
+	openshot::DummyReader dummy(openshot::Fraction(30, 1), source_w, source_h, 44100, 2, 1.0, &cache);
+	dummy.Open();
+
+	openshot::Clip clip;
+	clip.Reader(&dummy);
+	clip.Open();
+	clip.display = openshot::FRAME_DISPLAY_NONE;
+	clip.gravity = openshot::GRAVITY_CENTER;
+	clip.scale_x = openshot::Keyframe(0.5);
+	clip.scale_y = openshot::Keyframe(0.5);
+	clip.location_x = openshot::Keyframe(-0.25);
+	clip.location_y = openshot::Keyframe(0.25);
+
+	for (auto scale : {openshot::SCALE_FIT, openshot::SCALE_STRETCH, openshot::SCALE_NONE}) {
+		INFO("scale=" << scale);
+		clip.scale = scale;
+		QSize base = expected_scaled_size(QSize(source_w, source_h), scale, canvas_w, canvas_h);
+		const double expected_w = base.width() * 0.5;
+		const double expected_h = base.height() * 0.5;
+		const double expected_x = ((canvas_w - expected_w) / 2.0) - (canvas_w * 0.25);
+		const double expected_y = ((canvas_h - expected_h) / 2.0) + (canvas_h * 0.25);
+
+		QRect bounds = render_clip_bounds(clip, canvas_w, canvas_h);
+		REQUIRE_FALSE(bounds.isNull());
+		CHECK(bounds.left() == Approx(expected_x).margin(2.0));
+		CHECK(bounds.top() == Approx(expected_y).margin(2.0));
+		CHECK(bounds.width() == Approx(expected_w).margin(2.0));
+		CHECK(bounds.height() == Approx(expected_h).margin(2.0));
+	}
+}
+
+TEST_CASE("fit_location_preserves_legacy_project_position", "[libopenshot][clip][transform][regression]")
+{
+	const int canvas_size = 720;
+	openshot::CacheMemory cache;
+	auto src = std::make_shared<openshot::Frame>(1, 266, 178, "#00000000", 0, 2);
+	src->AddColor(QColor(Qt::red));
+	cache.Add(src);
+
+	openshot::DummyReader dummy(openshot::Fraction(30, 1), 266, 178, 44100, 2, 1.0, &cache);
+	dummy.Open();
+
+	openshot::Clip clip;
+	clip.Reader(&dummy);
+	clip.Open();
+	clip.display = openshot::FRAME_DISPLAY_NONE;
+	clip.scale = openshot::SCALE_FIT;
+	clip.gravity = openshot::GRAVITY_CENTER;
+	clip.scale_x = openshot::Keyframe(1.0 / 9.0);
+	clip.scale_y = openshot::Keyframe(1.0 / 9.0);
+	clip.location_x = openshot::Keyframe(-5.0 / 12.0);
+	clip.location_y = openshot::Keyframe(-31.0 / 72.0);
+
+	QRect bounds = render_clip_bounds(clip, canvas_size, canvas_size);
+	REQUIRE_FALSE(bounds.isNull());
+	CHECK(bounds.left() == Approx(20).margin(1.0));
+	CHECK(bounds.top() == Approx(23).margin(1.0));
+	CHECK(bounds.width() == Approx(80).margin(1.0));
+	CHECK(bounds.height() == Approx(54).margin(1.0));
+}
+
 TEST_CASE("clip_location_endpoints_offscreen_for_qt_square_image_reader", "[libopenshot][clip][transform]")
 {
 	const int canvas_w = 160;
@@ -1313,7 +1377,6 @@ TEST_CASE("clip_location_endpoints_offscreen_for_qt_square_image_reader", "[libo
 	clip.ParentTimeline(&timeline);
 
 	const std::vector<openshot::ScaleType> scales = {
-		openshot::SCALE_FIT,
 		openshot::SCALE_CROP,
 	};
 
@@ -1355,7 +1418,6 @@ TEST_CASE("timeline_location_y_endpoints_offscreen_for_qt_square_image_reader", 
 	timeline.Open();
 
 	const std::vector<openshot::ScaleType> scales = {
-		openshot::SCALE_FIT,
 		openshot::SCALE_CROP,
 	};
 

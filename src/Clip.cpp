@@ -1692,8 +1692,16 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		}
 		return location * (canvas_size - anchored_position);
 	};
-	x += location_offset(location_x_value, x - layout_x, layout_width, scaled_source_width);
-	y += location_offset(location_y_value, y - layout_y, layout_height, scaled_source_height);
+	if (scale == SCALE_CROP) {
+		x += location_offset(location_x_value, x - layout_x, layout_width, scaled_source_width);
+		y += location_offset(location_y_value, y - layout_y, layout_height, scaled_source_height);
+	} else {
+		// Preserve the historical canvas-relative meaning of location_x/y for
+		// non-cropped clips. Existing projects store these values as a fraction
+		// of the canvas dimensions, not of the scaled clip geometry.
+		x += width * location_x_value;
+		y += height * location_y_value;
+	}
 	float shear_x_value = shear_x.GetValue(frame->number) + parentObject_shear_x;
 	float shear_y_value = shear_y.GetValue(frame->number) + parentObject_shear_y;
 	float origin_x_value = origin_x.GetValue(frame->number);
