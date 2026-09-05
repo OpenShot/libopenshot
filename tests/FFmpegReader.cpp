@@ -34,6 +34,26 @@ using namespace openshot;
 
 namespace {
 
+#if defined(__linux__) && USE_HW_ACCEL
+bool VaapiDeviceAvailableForTest()
+{
+	// These tests select HW_DE_DEVICE_SET=0. A render node can exist on an
+	// NVIDIA machine (or be inaccessible) without providing a usable VAAPI
+	// device. Probe with the same FFmpeg library and adapter as the reader.
+	AVBufferRef* device = nullptr;
+	const int result = av_hwdevice_ctx_create(
+		&device, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", nullptr, 0);
+	av_buffer_unref(&device);
+	if (result < 0) {
+		char error[AV_ERROR_MAX_STRING_SIZE] = {};
+		av_strerror(result, error, sizeof(error));
+		WARN("Skipping VAAPI test: cannot initialize /dev/dri/renderD128: " << error);
+		return false;
+	}
+	return true;
+}
+#endif
+
 double SampleAverageLuma(const std::shared_ptr<Frame>& frame, int sample_grid = 4) {
 	const int width = frame->GetWidth();
 	const int height = frame->GetHeight();
@@ -667,19 +687,14 @@ TEST_CASE( "HardwareDecodeSuccessful_IsFalse_WhenHardwareDecodeIsDisabled", "[li
 TEST_CASE( "VAAPI_H264_420_Reports_HardwareDecodeSuccess", "[libopenshot][ffmpegreader][hardware]" )
 {
 #if !defined(__linux__) || !USE_HW_ACCEL
-	WARN("Skipping hardware decode success test: requires Linux build with hardware decode support");
+	WARN("Skipping VAAPI test: requires Linux build with hardware decode support");
 	return;
 #else
 	if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
-		WARN("Skipping hardware decode success test: ffmpeg executable not available");
+		WARN("Skipping VAAPI test: ffmpeg executable not available");
 		return;
 	}
-	if (std::system("ffmpeg -hide_banner -hwaccels 2>/dev/null | grep -q '\\<vaapi\\>'") != 0) {
-		WARN("Skipping hardware decode success test: ffmpeg does not report VAAPI support");
-		return;
-	}
-	if (std::system("sh -c 'test -e /dev/dri/renderD128 -o -e /dev/dri/renderD129 -o -e /dev/dri/renderD130' >/dev/null 2>&1") != 0) {
-		WARN("Skipping hardware decode success test: no render node available under /dev/dri");
+	if (!VaapiDeviceAvailableForTest()) {
 		return;
 	}
 
@@ -718,19 +733,14 @@ TEST_CASE( "VAAPI_H264_420_Reports_HardwareDecodeSuccess", "[libopenshot][ffmpeg
 TEST_CASE( "VAAPI_H264_422_Does_Not_Return_Black_Frames", "[libopenshot][ffmpegreader][hardware]" )
 {
 #if !defined(__linux__) || !USE_HW_ACCEL
-	WARN("Skipping VAAPI regression test: requires Linux build with hardware decode support");
+	WARN("Skipping VAAPI test: requires Linux build with hardware decode support");
 	return;
 #else
 	if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
-		WARN("Skipping VAAPI regression test: ffmpeg executable not available");
+		WARN("Skipping VAAPI test: ffmpeg executable not available");
 		return;
 	}
-	if (std::system("ffmpeg -hide_banner -hwaccels 2>/dev/null | grep -q '\\<vaapi\\>'") != 0) {
-		WARN("Skipping VAAPI regression test: ffmpeg does not report VAAPI support");
-		return;
-	}
-	if (std::system("sh -c 'test -e /dev/dri/renderD128 -o -e /dev/dri/renderD129 -o -e /dev/dri/renderD130' >/dev/null 2>&1") != 0) {
-		WARN("Skipping VAAPI regression test: no render node available under /dev/dri");
+	if (!VaapiDeviceAvailableForTest()) {
 		return;
 	}
 
