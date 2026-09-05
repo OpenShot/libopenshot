@@ -151,6 +151,13 @@ foreach(tname ${OPENSHOT_TESTS})
   set(test_properties
     LABELS ${tname}
   )
+  if(tname STREQUAL "FFmpegReader")
+    # Catch2 v2 has no native SKIP assertion. Report unavailable VAAPI
+    # prerequisites as skipped in CTest rather than as a passing decode test.
+    list(APPEND test_properties
+      SKIP_REGULAR_EXPRESSION "Skipping VAAPI test:"
+    )
+  endif()
   if(tname STREQUAL "Caption" OR tname STREQUAL "Timer")
     list(APPEND test_properties
       ENVIRONMENT "QT_QPA_PLATFORM=minimal"

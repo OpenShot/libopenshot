@@ -760,23 +760,10 @@ void FFmpegReader::Close() {
 		// Keep track of most recent packet
 		AVPacket *recent_packet = packet;
 
-		// Drain any packets from the decoder
+		// Discard pending decoder output on close. Draining would allocate and
+		// cache frames that are immediately discarded, and can throw before
+		// resources are released (especially when closing under memory pressure).
 		packet = NULL;
-		int attempts = 0;
-		int max_attempts = 128;
-		while (packet_status.packets_decoded() < packet_status.packets_read() && attempts < max_attempts) {
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Drain decoder loop)",
-													 "packets_read", packet_status.packets_read(),
-													 "packets_decoded", packet_status.packets_decoded(),
-													 "attempts", attempts);
-			if (packet_status.video_decoded < packet_status.video_read) {
-				ProcessVideoPacket(info.video_length);
-			}
-			if (packet_status.audio_decoded < packet_status.audio_read) {
-				ProcessAudioPacket(info.video_length);
-			}
-			attempts++;
-		}
 
 		// Remove packet
 		if (recent_packet) {

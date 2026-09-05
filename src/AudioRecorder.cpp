@@ -210,6 +210,9 @@ void AudioRecorder::Open()
 	}
 
 	if (!settings.device_type.empty()) {
+		// Device types are created lazily. Selecting a type before the scan is
+		// a no-op, which can send a DirectSound input name to WASAPI on Windows.
+		device_manager.getAvailableDeviceTypes();
 		device_manager.setCurrentAudioDeviceType(settings.device_type, true);
 	}
 
