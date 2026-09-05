@@ -433,6 +433,24 @@ TEST_CASE( "GIF_TimeBase", "[libopenshot][ffmpegreader]" )
         r.Close();
 }
 
+TEST_CASE("Close discards buffered decoder output", "[libopenshot][ffmpegreader]")
+{
+	FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	reader.Open();
+	reader.GetFrame(1);
+	const auto decoded = reader.packet_status.packets_decoded();
+	REQUIRE(reader.packet_status.packets_read() > decoded);
+	CHECK_NOTHROW(reader.Close());
+	CHECK(reader.packet_status.packets_decoded() == decoded);
+	CHECK(reader.pFormatCtx == nullptr);
+	CHECK(reader.pCodecCtx == nullptr);
+	CHECK(reader.aCodecCtx == nullptr);
+	CHECK_NOTHROW(reader.Close());
+	reader.Open();
+	CHECK(reader.GetFrame(1)->number == 1);
+	reader.Close();
+}
+
 TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
