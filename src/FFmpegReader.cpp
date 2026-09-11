@@ -2078,6 +2078,26 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		return;
 	}
 
+	// Determine the source and destination color ranges
+	int srcRange = (pFrame->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+	int dstRange = 0; // Output as limited range (e.g., 8-bit broadcast range)
+
+	// Get the source and destination color coefficients
+	const int *srcCoeff = sws_getCoefficients(pFrame->colorspace);
+	const int *dstCoeff = sws_getCoefficients(AVCOL_SPC_BT709); // Assume output is BT.709
+
+	// Set the color space details in the SwsContext
+	sws_setColorspaceDetails(
+		img_convert_ctx,
+		srcCoeff,
+		srcRange,
+		dstCoeff,
+		dstRange,
+		0,        // brightness adjustment (default: 0)
+		1 << 16,  // contrast adjustment (default: 1.0 in 16.16 fixed-point)
+		1 << 16   // saturation adjustment (default: 1.0 in 16.16 fixed-point)
+	);
+
 	// Resize / Convert to RGB
 	const int scaled_lines = sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0,
 			  original_height, pFrameRGB->data, pFrameRGB->linesize);
