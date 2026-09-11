@@ -143,3 +143,77 @@ jobs:
         if: ${{ steps.coverage.outputs.value }}
         with:
           file: build/coverage.info
+
+  # Supplemental native Arm64 presubmit. Its output is never a release
+  # artifact; GitLab remains the production artifact chain.
+  build-arm64-presubmit:
+    runs-on: windows-11-arm
+    continue-on-error: true
+    steps:
+      - name: Preserve repository line endings
+        run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v4
+
+      - name: Checkout OpenShotAudio
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.owner.login || github.repository_owner }}/libopenshot-audio
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          path: audio
+
+      - name: Checkout Catch2
+        uses: actions/checkout@v4
+        with:
+          repository: catchorg/Catch2
+          ref: v3.8.1
+          path: Catch2
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+
+      - name: Install exact CLANGARM64 package versions
+        shell: msys2 {0}
+        run: |
+          mapfile -t packages < <(sed -n '/^[^#[:space:]][^=]*=/s/,[^,]*$//p' ci/windows-arm64-packages.lock)
+          pacman --noconfirm -S --needed -- "${packages[@]}"
+
+      - name: Build (CLANGARM64, presubmit only)
+        shell: msys2 {0}
+        run: |
+          cmake -B Catch2/build -S Catch2 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/catch2-install" \
+            -DCATCH_BUILD_TESTING=OFF \
+            -DCATCH_INSTALL_DOCS=OFF
+          cmake --build Catch2/build
+          cmake --install Catch2/build
+          cmake -B audio/build -S audio -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_INSTALL_PREFIX="$PWD/audio/install-arm64" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_AUDIO_DOCS=OFF
+          cmake --build audio/build
+          cmake --install audio/build
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DUSE_QT6=ON \
+            -DOpenShotAudio_ROOT="$PWD/audio/install-arm64" \
+            -DCatch2_DIR="$PWD/catch2-install/lib/cmake/Catch2" \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install-arm64" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_LIB_DOCS=OFF
+          cmake --build build
+          ctest --test-dir build --output-on-failure -VV
+          cmake --install build
+          python -m unittest discover -s ci -p "test_*.py" -v
+          python ci/validate_arm64_architecture.py \
+            --require-native-arm64 \
+            --package-lock ci/windows-arm64-packages.lock \
+            --payload-root install-arm64 \
+            --require-payload \
+            --json-report build/arm64-presubmit-report.json
