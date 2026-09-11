@@ -64,6 +64,7 @@ mac-builder:
   variables:
     OPENCV_ROOT: /usr/local/openshot/opencv-4.13.0
     OpenCV_DIR: /usr/local/openshot/opencv-4.13.0/lib/cmake/opencv4
+    FFMPEGDIR: /usr/local/openshot/ffmpeg-4.4
   artifacts:
     expire_in: 6 months
     paths:
@@ -75,9 +76,10 @@ mac-builder:
     - fi
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
-    - export DYLD_LIBRARY_PATH=$OPENCV_ROOT/lib:$DYLD_LIBRARY_PATH
+    - export PKG_CONFIG_PATH="$FFMPEGDIR/lib/pkgconfig:$PKG_CONFIG_PATH"
+    - export DYLD_LIBRARY_PATH=$FFMPEGDIR/lib:$OPENCV_ROOT/lib:$DYLD_LIBRARY_PATH
     - mkdir -p build; cd build;
-    - cmake -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"OpenCV_DIR:PATH=$OpenCV_DIR" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.12" -DCMAKE_PREFIX_PATH=/usr/local/qt5.15.X/qt5.15/5.15.0/clang_64/ -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
+    - cmake -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"OpenCV_DIR:PATH=$OpenCV_DIR" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.12" -DCMAKE_PREFIX_PATH=/usr/local/qt5.15.X/qt5.15/5.15.0/clang_64/ -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
     - cmake --build . --parallel $(sysctl -n hw.ncpu)
     - make install
     - find "$CI_PROJECT_DIR/build/install-x64" -type f \( -name "*.dylib" -or -name "*.so" \) -exec sh -c 'for f do if ! otool -l "$f" | grep -q "$OPENCV_ROOT/lib"; then install_name_tool -add_rpath "$OPENCV_ROOT/lib" "$f" || true; fi; done' sh {} +
