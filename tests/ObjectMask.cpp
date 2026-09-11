@@ -27,7 +27,9 @@
 #include <cstring>
 #include <fstream>
 #include <memory>
-#include <unistd.h>
+
+#include <QDir>
+#include <QTemporaryFile>
 
 using namespace openshot;
 
@@ -38,12 +40,13 @@ static std::shared_ptr<Frame> make_object_mask_frame(int64_t number, int width, 
 }
 
 static std::string temp_object_mask_path() {
-	char path[] = "/tmp/libopenshot_object_mask_XXXXXX";
-	int fd = mkstemp(path);
-	REQUIRE(fd != -1);
-	close(fd);
-	std::remove(path);
-	return std::string(path) + ".data";
+	QTemporaryFile file(QDir::tempPath() + "/libopenshot_object_mask_XXXXXX.data");
+	file.setAutoRemove(false);
+	INFO(file.errorString().toStdString());
+	REQUIRE(file.open());
+	const std::string path = file.fileName().toStdString();
+	file.close();
+	return path;
 }
 
 static void append_varint(std::string& output, uint64_t value) {

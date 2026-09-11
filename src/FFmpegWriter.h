@@ -125,6 +125,12 @@ namespace openshot {
 		bool write_header;
 		bool write_trailer;
 		bool allow_b_frames;
+		bool spherical_metadata_pending;
+		bool spherical_metadata_applied;
+		std::string spherical_projection_name;
+		float spherical_yaw_degrees;
+		float spherical_pitch_degrees;
+		float spherical_roll_degrees;
 
 		AVFormatContext* oc;
 		AVStream *audio_st, *video_st;
@@ -181,6 +187,9 @@ namespace openshot {
 
 		/// initialize streams
 		void initialize_streams();
+
+		/// Apply any pending spherical metadata once the video stream exists.
+		void apply_spherical_metadata();
 
 		/// open audio codec
 		void open_audio(AVFormatContext *oc, AVStream *st);
@@ -325,6 +334,11 @@ namespace openshot {
 		/// @param yaw_deg The yaw angle in degrees (horizontal orientation, default 0)
 		/// @param pitch_deg The pitch angle in degrees (vertical orientation, default 0)
 		/// @param roll_deg The roll angle in degrees (tilt orientation, default 0)
+		/// @note This is a no-op (logged, not thrown) if no video stream has been
+		///       configured yet, or if the output header has already been
+		///       written -- matching this method's pre-existing tolerant
+		///       behavior so callers (including SWIG bindings) that already
+		///       depend on it are not broken.
 		void AddSphericalMetadata(const std::string& projection="equirectangular", float yaw_deg=0.0f, float pitch_deg=0.0f, float roll_deg=0.0f);
 
 	};

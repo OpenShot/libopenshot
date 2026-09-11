@@ -291,6 +291,7 @@ if(DEFINED UNIT_TEST_TARGETS AND NOT TARGET coverage)
       DEPENDS openshot openshot-${_t}-test
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Running unit tests for ${_t} class (coverage disabled)"
+      VERBATIM
     )
   endforeach()
 endif()

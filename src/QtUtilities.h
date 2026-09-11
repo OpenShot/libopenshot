@@ -47,6 +47,15 @@ namespace openshot {
         // Free the aligned memory buffer
         aligned_free(info);
     }
+
+    // Clean up a byte buffer allocated with new[].
+    static inline void cleanUpArrayBuffer(void *info)
+    {
+        if (!info)
+            return;
+
+        delete[] static_cast<unsigned char*>(info);
+    }
 }  // namespace
 
 #endif // OPENSHOT_QT_UTILITIES_H
