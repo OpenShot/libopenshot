@@ -24,15 +24,12 @@ openshot::QImage2Magick(std::shared_ptr<QImage> image)
     if (!image || image->isNull())
         return nullptr;
 
-    // Export a straight-alpha RGBA pixel buffer. Many libopenshot frames are
-    // stored in Qt's premultiplied format, which is convenient for compositing
-    // but not what ImageMagick expects when importing raw RGBA bytes.
-    const QImage rgba_image = image->convertToFormat(QImage::Format_RGBA8888);
-    const unsigned char *tmpBits = rgba_image.constBits();
+    // Get the pixels from the frame image
+    const QRgb *tmpBits = (const QRgb*)image->constBits();
 
     // Create new image object, and fill with pixel data
     auto magick_image = std::make_shared<Magick::Image>(
-        rgba_image.width(), rgba_image.height(),
+        image->width(), image->height(),
         "RGBA", Magick::CharPixel, tmpBits);
 
     // Give image a transparent background color
@@ -56,30 +53,19 @@ openshot::Magick2QImage(std::shared_ptr<Magick::Image> image)
 
     auto* qbuffer = new unsigned char[size]();
 
-    MagickCore::ExceptionInfo* exception = MagickCore::AcquireExceptionInfo();
-    if (!exception) {
-        delete[] qbuffer;
-        return nullptr;
-    }
-    const auto export_ok = MagickCore::ExportImagePixels(
+    MagickCore::ExceptionInfo exception;
+    // TODO: Actually do something, if we get an exception here
+    MagickCore::ExportImagePixels(
         image->constImage(), 0, 0,
         image->columns(), image->rows(),
         "RGBA", Magick::CharPixel,
-        qbuffer, exception);
-    const bool export_failed =
-        (export_ok == Magick::MagickFalse) ||
-        (exception->severity != MagickCore::UndefinedException);
-    exception = MagickCore::DestroyExceptionInfo(exception);
-    if (export_failed) {
-        delete[] qbuffer;
-        return nullptr;
-    }
+        qbuffer, &exception);
 
     auto qimage = std::make_shared<QImage>(
         qbuffer, image->columns(), image->rows(),
         image->columns() * BPP,
-        QImage::Format_RGBA8888,
-        (QImageCleanupFunction) &openshot::cleanUpArrayBuffer,
+        QImage::Format_RGBA8888_Premultiplied,
+        (QImageCleanupFunction) &openshot::cleanUpBuffer,
         (void*) qbuffer);
     return qimage;
 }

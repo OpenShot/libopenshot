@@ -708,14 +708,6 @@ void FFmpegReader::Open() {
 					auto to_deg = [](int32_t v) {
 						return static_cast<double>(v) / 65536.0;
 					};
-					// The AV_PKT_DATA_SPHERICAL binary side data is the
-					// authoritative source for orientation whenever the mov/mp4
-					// demuxer surfaces it, even when it legitimately reports a
-					// zero angle. Any pre-existing textual "spherical_yaw" /
-					// "spherical_pitch" / "spherical_roll" container tag (e.g. a
-					// compatibility copy written by FFmpegWriter) is only a
-					// fallback for readers where the binary side data is absent,
-					// so it must not override a present-but-zero side data value.
 					info.metadata["spherical_yaw"] = std::to_string(to_deg(map->yaw));
 					info.metadata["spherical_pitch"] = std::to_string(to_deg(map->pitch));
 					info.metadata["spherical_roll"] = std::to_string(to_deg(map->roll));
@@ -768,23 +760,10 @@ void FFmpegReader::Close() {
 		// Keep track of most recent packet
 		AVPacket *recent_packet = packet;
 
-		// Drain any packets from the decoder
+		// Discard pending decoder output on close. Draining would allocate and
+		// cache frames that are immediately discarded, and can throw before
+		// resources are released (especially when closing under memory pressure).
 		packet = NULL;
-		int attempts = 0;
-		int max_attempts = 128;
-		while (packet_status.packets_decoded() < packet_status.packets_read() && attempts < max_attempts) {
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Drain decoder loop)",
-													 "packets_read", packet_status.packets_read(),
-													 "packets_decoded", packet_status.packets_decoded(),
-													 "attempts", attempts);
-			if (packet_status.video_decoded < packet_status.video_read) {
-				ProcessVideoPacket(info.video_length);
-			}
-			if (packet_status.audio_decoded < packet_status.audio_read) {
-				ProcessAudioPacket(info.video_length);
-			}
-			attempts++;
-		}
 
 		// Remove packet
 		if (recent_packet) {

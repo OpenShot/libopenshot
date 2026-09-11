@@ -14,10 +14,7 @@ if(POLICY CMP0110)
 endif()
 
 # Test media path, used by unit tests for input data
-file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
-if(NOT TEST_MEDIA_PATH MATCHES "/$")
-  string(APPEND TEST_MEDIA_PATH "/")
-endif()
+file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 
 # Benchmark executable
 add_executable(openshot-benchmark Benchmark.cpp BenchmarkOptions.cpp)
@@ -155,6 +152,13 @@ foreach(tname ${OPENSHOT_TESTS})
   set(test_properties
     LABELS ${tname}
   )
+  if(tname STREQUAL "FFmpegReader")
+    # Catch2 v2 has no native SKIP assertion. Report unavailable VAAPI
+    # prerequisites as skipped in CTest rather than as a passing decode test.
+    list(APPEND test_properties
+      SKIP_REGULAR_EXPRESSION "Skipping VAAPI test:"
+    )
+  endif()
   if(tname STREQUAL "Caption" OR tname STREQUAL "Timer")
     list(APPEND test_properties
       ENVIRONMENT "QT_QPA_PLATFORM=minimal"
