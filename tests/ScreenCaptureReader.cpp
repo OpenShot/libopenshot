@@ -13,6 +13,7 @@
 #include "openshot_catch.h"
 
 #include "Exceptions.h"
+#include "CaptureAudioBuffer.h"
 #include "ScreenCaptureReader.h"
 #include "WaylandBufferUtilities.h"
 
@@ -22,6 +23,121 @@
 #include <vector>
 
 using namespace openshot;
+
+TEST_CASE("PulseAudio and WASAPI clocks align to the same recording samples",
+	"[libopenshot][screencapturereader][audio][sync]")
+{
+	for (int ticks_per_second : {1000000, 10000000}) {
+		for (int rate : {44100, 48000}) {
+			CaptureAudioBuffer buffer;
+			buffer.Reset(2, rate * 10);
+			const int64_t epoch = int64_t{123456789} * ticks_per_second;
+			// Device delivers a packet spanning recording start, followed by a
+			// gap and a new sound. Arrival time must not define either position.
+			buffer.PushTimestamp(epoch - ticks_per_second / 10, epoch, {1, ticks_per_second},
+				rate, {std::vector<float>(rate / 5, 1), std::vector<float>(rate / 5, 1)});
+			buffer.PushTimestamp(epoch + ticks_per_second / 5, epoch, {1, ticks_per_second},
+				rate, {std::vector<float>(rate / 10, 2), std::vector<float>(rate / 10, 2)});
+			CHECK(buffer.Read(rate / 10)[0] == std::vector<float>(rate / 10, 1));
+			CHECK(buffer.Read(rate / 10)[0] == std::vector<float>(rate / 10, 0));
+			CHECK(buffer.Read(rate / 10)[0] == std::vector<float>(rate / 10, 2));
+			CHECK(buffer.Read(rate / 10)[0] == std::vector<float>(rate / 10, 0));
+		}
+	}
+}
+
+TEST_CASE("Capture timestamp jitter does not cut or pad adjacent PCM packets",
+	"[libopenshot][screencapturereader][audio][sync]")
+{
+	for (int ticks_per_second : {1000000, 10000000}) {
+		CaptureAudioBuffer buffer;
+		buffer.Reset(1, 480000);
+		const int64_t epoch = int64_t{123456789} * ticks_per_second;
+		for (int packet = 0; packet < 200; ++packet) {
+			std::vector<float> samples(960);
+			for (int i = 0; i < 960; ++i) samples[i] = float(packet * 960 + i + 1);
+			const int jitter = packet == 0 ? 0 : (packet % 13) - 6;
+			const int64_t timestamp = epoch + av_rescale(packet * 960 + jitter, ticks_per_second, 48000);
+			buffer.PushTimestamp(timestamp, epoch, {1, ticks_per_second}, 48000, {samples});
+			// Consume every packet: continuity must survive an empty queue too.
+			CHECK(buffer.Read(960)[0] == samples);
+		}
+		// A genuine 20 ms gap is retained, rather than appended to prior audio.
+		buffer.PushTimestamp(epoch + int64_t{ticks_per_second} * 402 / 100, epoch,
+			{1, ticks_per_second}, 48000, {{7.0f}});
+		CHECK(buffer.Read(960)[0] == std::vector<float>(960, 0.0f));
+		CHECK(buffer.Read(1)[0] == std::vector<float>{7.0f});
+		buffer.Reset(1, 480000);
+		buffer.PushTimestamp(epoch, epoch, {1, ticks_per_second}, 48000, {{9.0f}});
+		CHECK(buffer.Read(1)[0] == std::vector<float>{9.0f});
+	}
+}
+
+TEST_CASE("System audio buffered before recording does not delay the recorded stop",
+	"[libopenshot][screencapturereader][audio][sync]")
+{
+	// 1 kHz makes sample indices milliseconds. The source delivers two seconds
+	// of pre-recording audio followed by a tone at 200-299 ms of the recording.
+	CaptureAudioBuffer buffer;
+	buffer.Reset(2, 10000);
+	std::vector<float> captured(2500, 0.0f);
+	std::fill(captured.begin() + 2200, captured.begin() + 2300, 1.0f);
+	buffer.Push(-2000, {captured, captured});
+	const auto audio = buffer.Read(500);
+	REQUIRE(audio.size() == 2);
+	for (const auto& channel : audio) {
+		CHECK(std::all_of(channel.begin(), channel.begin() + 200, [](float x) { return x == 0.0f; }));
+		CHECK(std::all_of(channel.begin() + 200, channel.begin() + 300, [](float x) { return x == 1.0f; }));
+		CHECK(std::all_of(channel.begin() + 300, channel.end(), [](float x) { return x == 0.0f; }));
+	}
+}
+
+TEST_CASE("Late system audio never shifts samples beyond an already written gap",
+	"[libopenshot][screencapturereader][audio][sync]")
+{
+	CaptureAudioBuffer buffer;
+	buffer.Reset(1, 1000);
+	CHECK_FALSE(buffer.Covers(100));
+	CHECK(buffer.Read(100)[0] == std::vector<float>(100, 0.0f));
+	// First packet arrives after a timeout. Only its unwritten half is usable.
+	std::vector<float> packet(200, 0.0f);
+	packet[150] = 1.0f;
+	buffer.Push(0, {packet});
+	CHECK(buffer.Covers(100));
+	const auto audio = buffer.Read(100);
+	CHECK(audio[0][50] == 1.0f);
+	buffer.Push(0, {std::vector<float>(100, 1.0f)});
+	CHECK(buffer.Read(100)[0] == std::vector<float>(100, 0.0f));
+}
+
+TEST_CASE("System audio gaps and queue overflow preserve sample positions",
+	"[libopenshot][screencapturereader][audio][sync]")
+{
+	CaptureAudioBuffer buffer;
+	buffer.Reset(1, 100);
+	buffer.Push(0, {std::vector<float>(100, 1.0f)});
+	buffer.Push(200, {std::vector<float>(100, 2.0f)});
+	const auto audio = buffer.Read(300);
+	CHECK(std::all_of(audio[0].begin(), audio[0].begin() + 200, [](float x) { return x == 0.0f; }));
+	CHECK(std::all_of(audio[0].begin() + 200, audio[0].end(), [](float x) { return x == 2.0f; }));
+	buffer.Reset(1, 100);
+	CHECK_FALSE(buffer.Covers(1));
+	buffer.Push(-20, {std::vector<float>(10, 1.0f)});
+	buffer.Push(50, {{3.0f}});
+	CHECK(buffer.Read(51)[0][50] == 3.0f);
+}
+
+TEST_CASE("System audio packet delivery boundaries do not alter the timeline",
+	"[libopenshot][screencapturereader][audio][sync]")
+{
+	CaptureAudioBuffer buffer;
+	buffer.Reset(1, 100);
+	buffer.Push(4, {{5, 6, 7, 8}});
+	buffer.Push(0, {{1, 2, 3, 4}});
+	CHECK(buffer.Read(3)[0] == std::vector<float>{1, 2, 3});
+	CHECK(buffer.Read(3)[0] == std::vector<float>{4, 5, 6});
+	CHECK(buffer.Read(3)[0] == std::vector<float>{7, 8, 0});
+}
 
 TEST_CASE("Wayland packed video layout clamps unsafe PipeWire metadata",
 	"[libopenshot][screencapturereader][wayland]")

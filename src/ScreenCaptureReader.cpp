@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "ScreenCaptureReader.h"
+#include "CaptureAudioBuffer.h"
 
 #include <algorithm>
 #include <cctype>
@@ -31,6 +32,7 @@
 extern "C" {
 	#include <libavdevice/avdevice.h>
 	#include <libavutil/imgutils.h>
+	#include <libavutil/time.h>
 }
 
 #if defined(_WIN32)
@@ -107,6 +109,12 @@ public:
 		format_context->interrupt_callback.opaque = &close_requested;
 
 		AVDictionary* options = nullptr;
+		av_dict_set(&options, "wallclock", "1", 0);
+		// Pulse defaults to server-selected buffering, which can deliver large
+		// batches too late for a live video frame. Request 20 ms of default
+		// 16-bit PCM; timestamps still determine placement, not this buffer size.
+		av_dict_set_int(&options, "fragment_size",
+			static_cast<int64_t>(settings.audio_sample_rate) * settings.audio_channels * 2 / 50, 0);
 		av_dict_set(&options, "sample_rate", std::to_string(settings.audio_sample_rate).c_str(), 0);
 		av_dict_set(&options, "channels", std::to_string(settings.audio_channels).c_str(), 0);
 		const std::string device = settings.audio_device.empty() ? "@DEFAULT_MONITOR@" : settings.audio_device;
@@ -130,6 +138,7 @@ public:
 		AVStream* stream = format_context->streams[audio_stream];
 		const AVCodec* codec = avcodec_find_decoder(stream->codecpar->codec_id);
 		codec_context = codec ? ffmpeg_get_codec_context(stream, codec) : nullptr;
+		if (codec_context) codec_context->pkt_timebase = stream->time_base;
 		if (!codec_context || avcodec_open2(codec_context, codec, nullptr) < 0) {
 			throw InvalidCodec("Unable to open system audio capture decoder.", device);
 		}
@@ -140,7 +149,7 @@ public:
 		}
 		settings.audio_sample_rate = codec_context->sample_rate > 0
 			? codec_context->sample_rate : settings.audio_sample_rate;
-		channels.assign(settings.audio_channels, {});
+		Reset();
 		close_requested = false;
 		worker = std::thread(&SystemAudioCapture::CaptureLoop, this);
 	}
@@ -169,39 +178,30 @@ public:
 		if (!frame || sample_count <= 0) return;
 
 		std::unique_lock<std::mutex> lock(queue_mutex);
-		// The capture backend commonly delivers its first buffer later than the
-		// first video frame.  Writing silence after the old 100 ms timeout moved
-		// every subsequently-delivered sample later on the recording timeline.
-		// Allow the first frame to establish the audio epoch before falling back
-		// to the short steady-state wait used for later frames.
+		// Wait for capture delivery, but keep its original sample positions. A
+		// timed-out interval becomes silence; late packets cannot move it forward.
 		const auto wait_time = timeline_started
 			? std::chrono::milliseconds(100)
 			: std::chrono::milliseconds(3000);
 		ready.wait_for(lock, wait_time, [this, sample_count]() {
-			return close_requested || (!channels.empty() && static_cast<int>(channels[0].size()) >= sample_count);
+			return close_requested || audio_buffer.Covers(sample_count);
 		});
-		if (!channels.empty() && static_cast<int>(channels[0].size()) >= sample_count) {
-			timeline_started = true;
-		}
+		timeline_started = true;
+		auto samples = audio_buffer.Read(sample_count);
 		frame->SampleRate(settings.audio_sample_rate);
 		frame->ChannelsLayout(settings.audio_channels == 1 ? LAYOUT_MONO : LAYOUT_STEREO);
 		for (int channel = 0; channel < settings.audio_channels; ++channel) {
-			std::vector<float> samples(sample_count, 0.0f);
-			if (channel < static_cast<int>(channels.size())) {
-				const int available = std::min(sample_count, static_cast<int>(channels[channel].size()));
-				for (int index = 0; index < available; ++index) {
-					samples[index] = channels[channel].front();
-					channels[channel].pop_front();
-				}
-			}
-			frame->AddAudio(true, channel, 0, samples.data(), sample_count, 1.0f);
+			frame->AddAudio(true, channel, 0, samples[channel].data(), sample_count, 1.0f);
 		}
 	}
 
 	void Reset()
 	{
 		std::lock_guard<std::mutex> lock(queue_mutex);
-		for (auto& channel : channels) channel.clear();
+		// PulseAudio wallclock PTS uses av_gettime(), corrected for input latency.
+		// Reset the epoch too, so packets buffered before recording are discarded.
+		epoch_us = av_gettime();
+		audio_buffer.Reset(settings.audio_channels, static_cast<int64_t>(settings.audio_sample_rate) * 10);
 		last_output_frame = 0;
 		timeline_started = false;
 	}
@@ -260,14 +260,25 @@ private:
 			av_packet_unref(packet);
 			if (send_result < 0) continue;
 			while (avcodec_receive_frame(codec_context, decoded_frame) == 0) {
-				std::lock_guard<std::mutex> lock(queue_mutex);
+				const int64_t timestamp = decoded_frame->best_effort_timestamp != AV_NOPTS_VALUE
+					? decoded_frame->best_effort_timestamp : decoded_frame->pts;
+				if (timestamp == AV_NOPTS_VALUE) {
+					// A packet with unknown capture time cannot be aligned safely.
+					av_frame_unref(decoded_frame);
+					continue;
+				}
+				const int64_t timestamp_us = av_rescale_q(timestamp,
+					format_context->streams[audio_stream]->time_base, AVRational{1, AV_TIME_BASE});
+				std::vector<std::vector<float>> samples(settings.audio_channels,
+					std::vector<float>(decoded_frame->nb_samples));
 				for (int channel = 0; channel < settings.audio_channels; ++channel) {
-					const size_t max_samples = static_cast<size_t>(settings.audio_sample_rate) * 10;
 					for (int sample = 0; sample < decoded_frame->nb_samples; ++sample) {
-						if (channels[channel].size() >= max_samples) channels[channel].pop_front();
-						channels[channel].push_back(SampleAt(decoded_frame, channel, sample));
+						samples[channel][sample] = SampleAt(decoded_frame, channel, sample);
 					}
 				}
+				std::lock_guard<std::mutex> lock(queue_mutex);
+				audio_buffer.PushTimestamp(timestamp_us, epoch_us, AVRational{1, AV_TIME_BASE},
+					settings.audio_sample_rate, std::move(samples));
 				av_frame_unref(decoded_frame);
 				ready.notify_all();
 			}
@@ -284,7 +295,8 @@ private:
 	std::thread worker;
 	std::mutex queue_mutex;
 	std::condition_variable ready;
-	std::vector<std::deque<float>> channels;
+	CaptureAudioBuffer audio_buffer;
+	int64_t epoch_us = 0;
 	int64_t last_output_frame = 0;
 	bool timeline_started = false;
 };
@@ -329,35 +341,30 @@ public:
 		last_output_frame = std::max(last_output_frame, number);
 		if (!frame || sample_count <= 0) return;
 		std::unique_lock<std::mutex> lock(queue_mutex);
-		// WASAPI can take longer than one video-frame interval to make its first
-		// loopback packet available. Keep that startup latency out of the encoded
-		// media timeline by waiting for the first complete frame of audio.
 		const auto wait_time = timeline_started
 			? std::chrono::milliseconds(100)
 			: std::chrono::milliseconds(3000);
 		ready.wait_for(lock, wait_time, [this, sample_count]() {
-			return close_requested || (!channels.empty() && static_cast<int>(channels[0].size()) >= sample_count);
+			return close_requested || audio_buffer.Covers(sample_count);
 		});
-		if (!channels.empty() && static_cast<int>(channels[0].size()) >= sample_count) {
-			timeline_started = true;
-		}
+		timeline_started = true;
+		auto samples = audio_buffer.Read(sample_count);
 		frame->SampleRate(sample_rate);
 		frame->ChannelsLayout(channel_count == 1 ? LAYOUT_MONO : LAYOUT_STEREO);
 		for (int channel = 0; channel < channel_count; ++channel) {
-			std::vector<float> samples(sample_count, 0.0f);
-			const int available = std::min(sample_count, static_cast<int>(channels[channel].size()));
-			for (int index = 0; index < available; ++index) {
-				samples[index] = channels[channel].front();
-				channels[channel].pop_front();
-			}
-			frame->AddAudio(true, channel, 0, samples.data(), sample_count, 1.0f);
+			frame->AddAudio(true, channel, 0, samples[channel].data(), sample_count, 1.0f);
 		}
 	}
 
 	void Reset()
 	{
 		std::lock_guard<std::mutex> lock(queue_mutex);
-		for (auto& channel : channels) channel.clear();
+		// WASAPI returns QPC timestamps already converted to 100 ns units.
+		LARGE_INTEGER counter, frequency;
+		QueryPerformanceCounter(&counter);
+		QueryPerformanceFrequency(&frequency);
+		epoch_100ns = av_rescale(counter.QuadPart, 10000000, frequency.QuadPart);
+		audio_buffer.Reset(channel_count, static_cast<int64_t>(sample_rate) * 10);
 		last_output_frame = 0;
 		timeline_started = false;
 	}
@@ -415,7 +422,7 @@ private:
 
 		sample_rate = static_cast<int>(format->nSamplesPerSec);
 		channel_count = std::max(1, std::min(2, static_cast<int>(format->nChannels)));
-		channels.assign(channel_count, {});
+		Reset();
 		bool floating_point = format->wFormatTag == WAVE_FORMAT_IEEE_FLOAT;
 		if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= 22) {
 			const auto* extensible = reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(format);
@@ -437,9 +444,10 @@ private:
 			BYTE* data = nullptr;
 			UINT32 frames = 0;
 			DWORD flags = 0;
-			if (FAILED(capture->GetBuffer(&data, &frames, &flags, nullptr, nullptr))) break;
+			UINT64 timestamp_100ns = 0;
+			if (FAILED(capture->GetBuffer(&data, &frames, &flags, nullptr, &timestamp_100ns))) break;
 			{
-				std::lock_guard<std::mutex> lock(queue_mutex);
+				std::vector<std::vector<float>> samples(channel_count, std::vector<float>(frames));
 				for (UINT32 frame_index = 0; frame_index < frames; ++frame_index) {
 					for (int channel = 0; channel < channel_count; ++channel) {
 						float sample = 0.0f;
@@ -453,10 +461,15 @@ private:
 								sample = static_cast<float>(reinterpret_cast<const int32_t*>(data)[offset] / 2147483648.0);
 							}
 						}
-						const size_t max_samples = static_cast<size_t>(sample_rate) * 10;
-						if (channels[channel].size() >= max_samples) channels[channel].pop_front();
-						channels[channel].push_back(sample);
+						samples[channel][frame_index] = sample;
 					}
+				}
+				// Preserve timestamp gaps (including silence/discontinuities). Never
+				// invent a new epoch from packet arrival time after a delayed read.
+				if (!(flags & AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR)) {
+					std::lock_guard<std::mutex> lock(queue_mutex);
+					audio_buffer.PushTimestamp(static_cast<int64_t>(timestamp_100ns), epoch_100ns,
+						AVRational{1, 10000000}, sample_rate, std::move(samples));
 				}
 			}
 			capture->ReleaseBuffer(frames);
@@ -474,7 +487,8 @@ private:
 	std::thread worker;
 	std::mutex queue_mutex;
 	std::condition_variable ready;
-	std::vector<std::deque<float>> channels;
+	CaptureAudioBuffer audio_buffer;
+	int64_t epoch_100ns = 0;
 	int64_t last_output_frame = 0;
 	bool timeline_started = false;
 	int sample_rate = 48000;
