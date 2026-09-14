@@ -869,22 +869,31 @@ void ScreenCaptureReader::Open()
 		}
 		return;
 	}
+	// Close() may run on the UI thread while a worker is opening the device.
+	// Serialize initialization with frame reads and cleanup to keep FFmpeg's
+	// context alive until avformat_open_input/OpenDecoder have finished.
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 	if (is_open) {
 		return;
 	}
 	manual_system_audio = false;
-	if (system_audio) {
-		system_audio->Open();
-		info.sample_rate = system_audio->SampleRate();
-		info.channels = system_audio->Channels();
-		info.channel_layout = info.channels == 1 ? LAYOUT_MONO : LAYOUT_STEREO;
-	}
 	close_requested = false;
 	try {
+		if (system_audio) {
+			system_audio->Open();
+			info.sample_rate = system_audio->SampleRate();
+			info.channels = system_audio->Channels();
+			info.channel_layout = info.channels == 1 ? LAYOUT_MONO : LAYOUT_STEREO;
+		}
 		OpenDevice();
 		OpenDecoder();
+		if (close_requested) {
+			throw ReaderClosed("Capture initialization was cancelled.");
+		}
 	} catch (...) {
-		if (system_audio) system_audio->Close();
+		// Also release partially initialized device/decoder resources. The
+		// recursive lifecycle lock permits using the normal cleanup path here.
+		Close();
 		throw;
 	}
 	is_open = true;
@@ -1172,8 +1181,8 @@ void ScreenCaptureReader::Close()
 		backend_reader->Close();
 	}
 
-	// GetFrame() owns all decoder and system-audio use under this mutex. Do not
-	// release those resources until an interrupted read has completely exited.
+	// Open() and GetFrame() own FFmpeg and system-audio use under this mutex.
+	// Wait for initialization or an interrupted read before releasing resources.
 	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 	if (system_audio) {
 		system_audio->Close();
