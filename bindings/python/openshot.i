@@ -114,7 +114,7 @@ class QWidget;
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "Qt/VideoCacheThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include <QtWidgets/QWidget>
 
 static void *openshot_swig_pylong_as_ptr(PyObject *obj) {
@@ -523,7 +523,7 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
-%include "ZmqLogger.h"
+%include "Logger.h"
 
 #ifdef USE_OPENCV
     %include "ClipProcessingJobs.h"
@@ -566,3 +566,8 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
     %include "effects/ObjectDetection.h"
     %include "effects/Outline.h"
 #endif
+
+%pythoncode %{
+# Deprecated source compatibility alias (no networking).
+ZmqLogger = Logger
+%}

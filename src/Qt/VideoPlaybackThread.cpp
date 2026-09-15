@@ -12,11 +12,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "VideoPlaybackThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 #include "Frame.h"
 #include "RendererBase.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 namespace openshot
 {
@@ -51,7 +51,7 @@ namespace openshot
 		if (need_render && frame)
 		{
 			// Debug
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"VideoPlaybackThread::run (before render)",
 				"frame->number", frame->number,
 				"need_render", need_render);

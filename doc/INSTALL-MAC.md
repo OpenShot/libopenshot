@@ -67,10 +67,6 @@ list below to help distinguish between them.
   * https://github.com/unittest-cpp/ `(Library)`
   * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
 
-### ZeroMQ (libzmq)
-  * http://zeromq.org/ `(Library)`
-  * This library is used to communicate between libopenshot and other applications (publisher / subscriber). Primarily used to send debug data from libopenshot.
-
 ### OpenMP (-fopenmp)
   * http://openmp.org/wp/ `(Compiler Flag)`
   * If your compiler supports this flag (GCC, Clang, and most other compilers), it provides libopenshot with easy methods of using parallel programming techniques to improve performance and take advantage of multi-core processors.
@@ -151,7 +147,6 @@ brew install doxygen
 brew install unittest-cpp --cc=gcc-4.8. You must specify the c++ compiler with the --cc flag to be 4.7 or 4.8.
 brew install qt5
 brew install cmake
-brew install zeromq
 brew install babl
 ```
 

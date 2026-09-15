@@ -136,7 +136,7 @@ typedef struct OpenShotByteBuffer {
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "Qt/VideoCacheThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 /* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
 #ifdef RSHIFT
@@ -272,7 +272,7 @@ typedef struct OpenShotByteBuffer {
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
-%include "ZmqLogger.h"
+%include "Logger.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"

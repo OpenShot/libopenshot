@@ -138,3 +138,13 @@ install(TARGETS ${_pyopenshot_target}
   DESTINATION ${PYTHON_MODULE_PATH} )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py
   DESTINATION ${PYTHON_MODULE_PATH} )
+
+if(BUILD_TESTING)
+  add_test(NAME Logger:PythonEnvironment
+    COMMAND ${CMAKE_COMMAND} -E env
+      "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
+      "OPENSHOT_TEST_MODULE_DIR=$<TARGET_FILE_DIR:${_pyopenshot_target}>"
+      "OPENSHOT_TEST_DLL_DIR=$<TARGET_FILE_DIR:openshot>"
+      ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test_logger.py")
+  set_tests_properties(Logger:PythonEnvironment PROPERTIES LABELS Logger)
+endif()

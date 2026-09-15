@@ -112,7 +112,7 @@ void CrashHandler::abortHandler( int signum, siginfo_t* si, void* unused )
 void CrashHandler::printStackTrace(FILE *out, unsigned int max_frames)
 {
 	fprintf(out, "---- Unhandled Exception: Stack Trace ----\n");
-	ZmqLogger::Instance()->LogToFile("---- Unhandled Exception: Stack Trace ----\n");
+	Logger::Instance()->LogToFile("---- Unhandled Exception: Stack Trace ----\n");
 	stringstream stack_output;
 
 #ifdef __MINGW32__
@@ -197,7 +197,7 @@ void CrashHandler::printStackTrace(FILE *out, unsigned int max_frames)
 	if ( addrlen == 0 )
 	{
 		fprintf(out, "  No stack trace found (addrlen == 0)\n");
-		ZmqLogger::Instance()->LogToFile("  No stack trace found (addrlen == 0)\n");
+		Logger::Instance()->LogToFile("  No stack trace found (addrlen == 0)\n");
 		return;
 	}
 
@@ -302,8 +302,8 @@ void CrashHandler::printStackTrace(FILE *out, unsigned int max_frames)
 #endif
 
 	// Write stacktrace to file (if log path set)
-	ZmqLogger::Instance()->LogToFile(stack_output.str());
+	Logger::Instance()->LogToFile(stack_output.str());
 
 	fprintf(out, "---- End of Stack Trace ----\n");
-	ZmqLogger::Instance()->LogToFile("---- End of Stack Trace ----\n");
+	Logger::Instance()->LogToFile("---- End of Stack Trace ----\n");
 }

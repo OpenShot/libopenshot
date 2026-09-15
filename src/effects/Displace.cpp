@@ -15,7 +15,7 @@
 #include "Exceptions.h"
 #include "ReaderBase.h"
 #include "Timeline.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 #include <array>
 #include <cmath>
@@ -135,7 +135,7 @@ std::shared_ptr<QImage> Displace::GetMapImage(std::shared_ptr<QImage> target_ima
 					source_map = std::make_shared<QImage>(*source_frame->GetImage());
 			}
 		} catch (const std::exception& e) {
-			ZmqLogger::Instance()->Log(
+			Logger::Instance()->Log(
 				std::string("Displace::GetMapImage unable to read displacement frame: ") + e.what());
 			source_map.reset();
 		}

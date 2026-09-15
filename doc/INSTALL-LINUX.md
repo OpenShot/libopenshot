@@ -72,10 +72,6 @@ list below to help distinguish between them.
   * https://github.com/unittest-cpp/ `(Library)`
   * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
 
-### ZeroMQ (libzmq)
-  * http://zeromq.org/ `(Library)`
-  * This library is used to communicate between libopenshot and other applications (publisher / subscriber). Primarily used to send debug data from libopenshot.
-
 ### OpenMP (-fopenmp)
   * http://openmp.org/wp/ `(Compiler Flag)`
   * If your compiler supports this flag (GCC, Clang, and most other compilers), it provides libopenshot with easy methods of using parallel programming techniques to improve performance and take advantage of multi-core processors.
@@ -166,7 +162,6 @@ software packages available to download and install.
                         libxcursor-dev \
                         libxinerama-dev \
                         libxrandr-dev \
-                        libzmq3-dev \
                         pkg-config \
                         python3-dev \
                         qtbase5-dev \
@@ -174,7 +169,6 @@ software packages available to download and install.
                         swig \
                         xdg-desktop-portal \
                         xdg-desktop-portal-gtk \
-                        python3-zmq \
                         python3-pyqt5.qtwebengine
                         
 ```

@@ -27,7 +27,7 @@
 #include "Frame.h"
 #include "OpenMPUtilities.h"
 #include "Settings.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 using namespace openshot;
 
@@ -143,7 +143,7 @@ void FFmpegWriter::auto_detect_format() {
 
 // initialize streams
 void FFmpegWriter::initialize_streams() {
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::initialize_streams",
 		"oc->oformat->video_codec", oc->oformat->video_codec,
 		"oc->oformat->audio_codec", oc->oformat->audio_codec,
@@ -264,7 +264,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::SetVideoOptions (" + codec + ")",
 		"width", width, "height", height,
 		"size.num", size.num, "size.den", size.den,
@@ -310,7 +310,7 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 	if (original_channels == 0)
 		original_channels = info.channels;
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::SetAudioOptions (" + codec + ")",
 		"sample_rate", sample_rate,
 		"channels", channels,
@@ -579,7 +579,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
 		}
 
-		ZmqLogger::Instance()->AppendDebugMethod(
+		Logger::Instance()->AppendDebugMethod(
 			"FFmpegWriter::SetOption (" + (std::string)name + ")",
 			"stream == VIDEO_STREAM", stream == VIDEO_STREAM);
 
@@ -614,7 +614,7 @@ void FFmpegWriter::PrepareStreams() {
 	if (!info.has_audio && !info.has_video)
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::PrepareStreams [" + path + "]",
 		"info.has_audio", info.has_audio,
 		"info.has_video", info.has_video);
@@ -653,7 +653,7 @@ void FFmpegWriter::WriteHeader() {
 
 	// Write the stream header
 	if (avformat_write_header(oc, &dict) != 0) {
-		ZmqLogger::Instance()->AppendDebugMethod(
+		Logger::Instance()->AppendDebugMethod(
 			"FFmpegWriter::WriteHeader (avformat_write_header)");
 		throw InvalidFile("Could not write header to file.", path);
 	};
@@ -665,7 +665,7 @@ void FFmpegWriter::WriteHeader() {
 	// Mark as 'written'
 	write_header = true;
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteHeader");
+	Logger::Instance()->AppendDebugMethod("FFmpegWriter::WriteHeader");
 }
 
 // Add a frame to the queue waiting to be encoded.
@@ -674,7 +674,7 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame) {
 	if (!is_open)
 		throw WriterClosed("The FFmpegWriter is closed.  Call Open() before calling this method.", path);
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::WriteFrame",
 		"frame->number", frame->number,
 		"is_writing", is_writing);
@@ -695,7 +695,7 @@ void FFmpegWriter::WriteFrameAt(std::shared_ptr<openshot::Frame> frame, int64_t 
 		frame_number = 1;
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::WriteFrameAt",
 		"frame->number", frame->number,
 		"output_frame_number", frame_number,
@@ -762,7 +762,7 @@ void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
 
 // Write a block of frames from a reader
 void FFmpegWriter::WriteFrame(ReaderBase *reader, int64_t start, int64_t length) {
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::WriteFrame (from Reader)",
 		"start", start,
 		"length", length);
@@ -802,7 +802,7 @@ void FFmpegWriter::WriteTrailer() {
 	// Mark as 'written'
 	write_trailer = true;
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteTrailer");
+	Logger::Instance()->AppendDebugMethod("FFmpegWriter::WriteTrailer");
 }
 
 // Flush encoders
@@ -865,7 +865,7 @@ void FFmpegWriter::flush_encoders() {
 #endif // IS_FFMPEG_3_2
 
 			if (error_code < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"FFmpegWriter::flush_encoders ERROR ["
 						+ av_err2string(error_code) + "]",
 					"error_code", error_code);
@@ -884,7 +884,7 @@ void FFmpegWriter::flush_encoders() {
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, pkt);
 			if (error_code < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"FFmpegWriter::flush_encoders ERROR ["
 						+ av_err2string(error_code) + "]",
 					"error_code", error_code);
@@ -915,7 +915,7 @@ void FFmpegWriter::flush_encoders() {
 			}
 			error_code = avcodec_send_frame(audio_codec_ctx, NULL);
 			if (error_code < 0 && error_code != AVERROR_EOF) {
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"FFmpegWriter::flush_encoders ERROR ["
 						+ av_err2string(error_code) + "]",
 					"error_code", error_code);
@@ -927,7 +927,7 @@ void FFmpegWriter::flush_encoders() {
 					break;
 				}
 				if (error_code < 0) {
-					ZmqLogger::Instance()->AppendDebugMethod(
+					Logger::Instance()->AppendDebugMethod(
 						"FFmpegWriter::flush_encoders ERROR ["
 							+ av_err2string(error_code) + "]",
 						"error_code", error_code);
@@ -952,7 +952,7 @@ void FFmpegWriter::flush_encoders() {
 
 				error_code = av_interleaved_write_frame(oc, pkt);
 				if (error_code < 0) {
-					ZmqLogger::Instance()->AppendDebugMethod(
+					Logger::Instance()->AppendDebugMethod(
 						"FFmpegWriter::flush_encoders ERROR ["
 							+ av_err2string(error_code) + "]",
 						"error_code", error_code);
@@ -965,7 +965,7 @@ void FFmpegWriter::flush_encoders() {
 #else
 			error_code = avcodec_encode_audio2(audio_codec_ctx, pkt, NULL, &got_packet);
 			if (error_code < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"FFmpegWriter::flush_encoders ERROR ["
 						+ av_err2string(error_code) + "]",
 					"error_code", error_code);
@@ -991,7 +991,7 @@ void FFmpegWriter::flush_encoders() {
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, pkt);
 			if (error_code < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"FFmpegWriter::flush_encoders ERROR ["
 						+ av_err2string(error_code) + "]",
 					"error_code", error_code);
@@ -1093,7 +1093,7 @@ void FFmpegWriter::Close() {
 	write_header = false;
 	write_trailer = false;
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::Close");
+	Logger::Instance()->AppendDebugMethod("FFmpegWriter::Close");
 }
 
 // Add an AVFrame to the cache
@@ -1233,7 +1233,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
     channel_layout_label = "c->channel_layout";
 #endif
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::add_audio_stream",
 		"c->codec_id", c->codec_id,
 		"c->bit_rate", c->bit_rate,
@@ -1429,7 +1429,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	}
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::add_video_stream ("
 			+ (std::string)oc->oformat->name + " : "
 			+ (std::string)av_get_pix_fmt_name(c->pix_fmt) + ")",
@@ -1508,7 +1508,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::open_audio",
 		"audio_codec_ctx->thread_count", audio_codec_ctx->thread_count,
 		"audio_input_frame_size", audio_input_frame_size,
@@ -1550,19 +1550,19 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 #elif defined(_WIN32) || defined(__APPLE__)
 		if( adapter_ptr != NULL ) {
 #endif
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"Encode Device present using device",
 				"adapter", adapter_num);
 		}
 		else {
 			adapter_ptr = NULL;  // use default
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"Encode Device not present, using default");
 		}
 		if (av_hwdevice_ctx_create(&hw_device_ctx,
 				hw_en_av_device_type, adapter_ptr, NULL, 0) < 0)
 		{
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::open_video ERROR creating hwdevice, Codec name:",
 				info.vcodec.c_str(), -1);
 			throw InvalidCodec("Could not create hwdevice", path);
@@ -1626,7 +1626,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				// tested to work with defaults
 				break;
 			default:
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"No codec-specific options defined for this codec. HW encoding may fail",
 					"codec_id", video_codec_ctx->codec_id);
 				break;
@@ -1636,7 +1636,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		int err;
 		if ((err = set_hwframe_ctx(video_codec_ctx, hw_device_ctx, info.width, info.height)) < 0)
 		{
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::open_video (set_hwframe_ctx) ERROR faled to set hwframe context",
 				"width", info.width,
 				"height", info.height,
@@ -1671,7 +1671,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::open_video",
 		"video_codec_ctx->thread_count", video_codec_ctx->thread_count);
 
@@ -1742,7 +1742,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 	int samples_position = 0;
 
 
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::write_audio_packets",
 		"is_final", is_final,
 		"total_frame_samples", total_frame_samples,
@@ -1764,7 +1764,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		// Fill input frame with sample data
 		int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
 		if (error_code < 0) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_audio_packets ERROR ["
 					+ av_err2string(error_code) + "]",
 				"error_code", error_code);
@@ -1804,7 +1804,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		audio_converted->nb_samples = total_frame_samples / channels_in_frame;
 		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_converted->nb_samples, output_sample_fmt, 0);
 
-		ZmqLogger::Instance()->AppendDebugMethod(
+		Logger::Instance()->AppendDebugMethod(
 			"FFmpegWriter::write_audio_packets (1st resampling)",
 			"in_sample_fmt", AV_SAMPLE_FMT_S16,
 			"out_sample_fmt", output_sample_fmt,
@@ -1873,7 +1873,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		AV_FREE_FRAME(&audio_converted);
 		all_queued_samples = NULL; // this array cleared with above call
 
-		ZmqLogger::Instance()->AppendDebugMethod(
+		Logger::Instance()->AppendDebugMethod(
 			"FFmpegWriter::write_audio_packets (Successfully completed 1st resampling)",
 			"nb_samples", nb_samples,
 			"remaining_frame_samples", remaining_frame_samples);
@@ -1927,7 +1927,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		AV_RESET_FRAME(frame_final);
 		const int frame_nb_samples = audio_input_position / info.channels;
 		if (av_sample_fmt_is_planar(audio_codec_ctx->sample_fmt)) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_audio_packets (2nd resampling for Planar formats)",
 				"in_sample_fmt", output_sample_fmt,
 				"out_sample_fmt", audio_codec_ctx->sample_fmt,
@@ -2018,7 +2018,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			AV_FREE_FRAME(&audio_frame);
 			all_queued_samples = NULL; // this array cleared with above call
 
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_audio_packets (Successfully completed 2nd resampling for Planar formats)",
 				"nb_samples", nb_samples);
 
@@ -2130,7 +2130,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		}
 
 		if (error_code < 0) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_audio_packets ERROR ["
 					+ av_err2string(error_code) + "]",
 				"error_code", error_code);
@@ -2320,7 +2320,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *frame_final) {
 #if (LIBAVFORMAT_VERSION_MAJOR >= 58)
 	// FFmpeg 4.0+
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::write_video_packet",
 		"frame->number", frame->number,
 		"oc->oformat->flags", oc->oformat->flags);
@@ -2330,7 +2330,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 	// TODO: Should we have moved away from oc->oformat->flags / AVFMT_RAWPICTURE
 	// on ffmpeg < 4.0 as well?
 	// Does AV_CODEC_ID_RAWVIDEO not work in ffmpeg 3.x?
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::write_video_packet",
 		"frame->number", frame->number,
 		"oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE);
@@ -2359,7 +2359,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		/* write the compressed frame in the media file */
 		int error_code = av_interleaved_write_frame(oc, pkt);
 		if (error_code < 0) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet ERROR ["
 					+ av_err2string(error_code) + "]",
 				"error_code", error_code);
@@ -2419,7 +2419,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 		error_code = ret;
 		if (ret < 0 ) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet (Frame not sent)");
 			if (ret == AVERROR(EAGAIN) ) {
 				std::clog << "Frame EAGAIN\n";
@@ -2447,13 +2447,13 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Write video packet (older than FFmpeg 3.2)
 		error_code = avcodec_encode_video2(video_codec_ctx, pkt, frame_final, &got_packet_ptr);
 		if (error_code != 0) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet ERROR ["
 					+ av_err2string(error_code) + "]",
 				"error_code", error_code);
 		}
 		if (got_packet_ptr == 0) {
-			ZmqLogger::Instance()->AppendDebugMethod(
+			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet (Frame gotpacket error)");
 		}
 #endif // IS_FFMPEG_3_2
@@ -2470,7 +2470,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			/* write the compressed frame in the media file */
 			int result = av_interleaved_write_frame(oc, pkt);
 			if (result < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod(
+				Logger::Instance()->AppendDebugMethod(
 					"FFmpegWriter::write_video_packet ERROR ["
 						+ av_err2string(result) + "]",
 					"result", result);

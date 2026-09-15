@@ -11,15 +11,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Qt/PlayerDemo.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
     // Enable logging for openshot-player since this is primarily used for
     // profiling and debugging video playback issues.
-    openshot::ZmqLogger::Instance()->Enable(true);
-    openshot::ZmqLogger::Instance()->Path("./player.log");
+    openshot::Logger::Instance()->Enable(true);
+    openshot::Logger::Instance()->Path("./player.log");
 
     QApplication app(argc, argv);
     PlayerDemo demo;

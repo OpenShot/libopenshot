@@ -69,10 +69,6 @@ have been labeled in the list below to help distinguish between them.
   * https://github.com/unittest-cpp/ `(Library)`
   * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
 
-### ZeroMQ (libzmq)
-  * http://zeromq.org/ `(Library)`
-  * This library is used to communicate between libopenshot and other applications (publisher / subscriber). Primarily used to send debug data from libopenshot.
-
 ### OpenMP (-fopenmp)
   * http://openmp.org/wp/ `(Compiler Flag)`
   * If your compiler supports this flag (GCC, Clang, and most other compilers), it provides libopenshot with easy methods of using parallel programming techniques to improve performance and take advantage of multi-core processors.
@@ -116,7 +112,6 @@ check each folder path for accuracy, as your paths will likely be different than
 * QTDIR (`C:\qt5`)
 * SNDFILE_DIR (`C:\Program Files\libsndfile`)
 * UNITTEST_DIR (`C:\UnitTest++`)
-* ZMQDIR (`C:\msys2\usr\local\`)
 * PATH (`The following paths are an example`)
    * `C:\Qt5\bin; C:\Qt5\MinGW\bin\; C:\msys\1.0\local\lib; C:\Program Files\CMake 2.8\bin; C:\UnitTest++\build; C:\libopenshot\build\src; C:\Program Files\doxygen\bin; C:\ffmpeg-git-95f163b-win32-dev\lib; C:\swigwin-2.0.4; C:\Python33; C:\Program Files\Project\lib; C:\msys2\usr\local\`
 
@@ -196,7 +191,7 @@ pacman -S --needed --noconfirm \
 mingw-w64-x86_64-rust base-devel mingw-w64-x86_64-toolchain \
 mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-qt5 mingw-w64-x86_64-python3-pyqt5 \
 mingw-w64-x86_64-swig mingw-w64-x86_64-cmake mingw-w64-x86_64-doxygen \
-mingw-w64-x86_64-python3-pip mingw-w64-i686-zeromq mingw-w64-x86_64-python3-pyzmq \
+mingw-w64-x86_64-python3-pip \
 mingw-w64-x86_64-python3-cx_Freeze mingw-w64-x86_64-ninja mingw-w64-x86_64-catch \
 mingw-w64-x86_64-python3-PyOpenGL mingw-w64-clang-x86_64-python-pyopengl-accelerate \
 mingw-w64-x86_64-python-pyopengl-accelerate mingw-w64-x86_64-python-pywin32 git
@@ -212,7 +207,7 @@ pacman -S --needed --noconfirm \
 mingw-w64-i686-rust mingw-w64-i686-toolchain mingw-w64-i686-ffmpeg \
 mingw-w64-i686-qt5 mingw-w64-i686-python3-pyqt5 mingw-w64-i686-swig \
 mingw-w64-i686-cmake mingw-w64-i686-doxygen mingw-w64-i686-python3-pip \
-mingw-w64-i686-zeromq mingw-w64-i686-python3-pyzmq mingw-w64-i686-python3-cx_Freeze \
+mingw-w64-i686-python3-cx_Freeze \
 mingw-w64-i686-ninja mingw-w64-i686-catch mingw-w64-i686-python-pyopengl \
 mingw-w64-i686-python-pyopengl-accelerate mingw-w64-i686-python-pywin32
 
@@ -288,8 +283,6 @@ mkdir -p /usr/include/resvg/
 cp crates/c-api/*.h /usr/include/resvg/
 ```
 
-11) ZMQ++ Header (This might not be needed anymore)
-  NOTE: Download and copy zmq.hpp into the /c/msys64/mingw64/include/ folder
 
 ## Manual Dependencies
 
@@ -309,12 +302,6 @@ Create an environment variable called DXSDK_DIR and set the value to `C:\Program
    * http://www.mega-nerd.com/libsndfile/#Download
    * Download and Install the Win32 Setup program.
    * Create an environment variable called SNDFILE_DIR and set the value to `C:\Program Files\libsndfile`. This environment variable will be used by CMake to find the binary and header files.
-
-### libzmq
-   * http://zeromq.org/intro:get-the-software
-   * Download source code (zip)
-   * Follow their instructions, and build with mingw
-   * Create an environment variable called ZMQDIR and set the value to `C:\libzmq\build\` (the location of the compiled version). This environment variable will be used by CMake to find the binary and header files.
 
 ## Windows Build Instructions (libopenshot-audio)
 In order to compile libopenshot-audio, launch a command prompt and enter the following commands. This does not require the MSYS2 prompt, but it should work in both the Windows command prompt and the MSYS2 prompt.

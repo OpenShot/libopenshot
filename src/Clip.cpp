@@ -20,7 +20,7 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include "effects/AudioVisualization.h"
 
 #include <algorithm>
@@ -411,7 +411,7 @@ void Clip::Open()
 void Clip::Close()
 {
 	if (is_open && reader) {
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
+		Logger::Instance()->AppendDebugMethod("Clip::Close");
 
 		// Close the reader
 		reader->Close();
@@ -765,7 +765,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 		}
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod(
+		Logger::Instance()->AppendDebugMethod(
 				"Clip::GetOrCreateFrame (from reader)",
 				"number", number, "clip_frame_number", clip_frame_number);
 
@@ -802,7 +802,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 	int estimated_samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"Clip::GetOrCreateFrame (create blank)",
 		"number", number,
 		"estimated_samples_in_frame", estimated_samples_in_frame);
@@ -1477,7 +1477,7 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_waveform (Generate Waveform Image)",
+	Logger::Instance()->AppendDebugMethod("Clip::apply_waveform (Generate Waveform Image)",
 			"frame->number", frame->number,
 			"Waveform()", Waveform(),
 			"width", timeline_size.width(),
@@ -1673,7 +1673,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"Clip::get_transform (Gravity)",
 		"frame->number", frame->number,
 		"source_clip->gravity", gravity,
@@ -1708,7 +1708,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	float origin_y_value = origin_y.GetValue(frame->number);
 
 	// Transform source image (if needed)
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"Clip::get_transform (Build QTransform - if needed)",
 		"frame->number", frame->number,
 		"x", x, "y", y,
