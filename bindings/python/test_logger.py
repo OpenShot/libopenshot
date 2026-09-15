@@ -18,11 +18,17 @@ class NativeLoggerTests(unittest.TestCase):
             module_dir = env.get('OPENSHOT_TEST_MODULE_DIR')
             if module_dir:
                 env['PYTHONPATH'] = module_dir + os.pathsep + env.get('PYTHONPATH', '')
+            if os.name == 'nt':
+                # Older MinGW Python uses PATH and ignores add_dll_directory().
+                dll_dirs = [env[key] for key in (
+                    'OPENSHOT_TEST_DLL_DIR', 'OPENSHOT_TEST_AUDIO_DLL_DIR')
+                    if env.get(key)]
+                env['PATH'] = os.pathsep.join(dll_dirs + [env.get('PATH', '')])
             result = subprocess.run([sys.executable, '-c', '''
 import os
 _dll_handles = []
 if os.name == 'nt' and hasattr(os, 'add_dll_directory'):
-    # Python 3.8+ does not search PATH for extension-module dependencies.
+    # Modern Python does not search PATH for extension-module dependencies.
     # Include the project DLLs and the dependency directories supplied by CI.
     _dll_dirs = [os.environ.get('OPENSHOT_TEST_DLL_DIR', ''),
                  os.environ.get('OPENSHOT_TEST_AUDIO_DLL_DIR', '')]
