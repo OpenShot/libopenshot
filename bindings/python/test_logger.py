@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 """Exercise native logger configuration in fresh processes through SWIG."""
 import os
 from pathlib import Path
