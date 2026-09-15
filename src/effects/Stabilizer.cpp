@@ -21,6 +21,16 @@
 
 #include <google/protobuf/util/time_util.h>
 
+#if CV_VERSION_MAJOR >= 5
+#define int64 opencv_broken_int
+#define uint64 opencv_broken_uint
+#include <opencv2/geometry/2d.hpp>
+#undef uint64
+#undef int64
+#else
+#include <opencv2/imgproc.hpp>
+#endif
+
 using namespace std;
 using namespace openshot;
 using google::protobuf::util::TimeUtil;

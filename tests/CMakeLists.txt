@@ -14,7 +14,10 @@ if(POLICY CMP0110)
 endif()
 
 # Test media path, used by unit tests for input data
-file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
+file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
+if(NOT TEST_MEDIA_PATH MATCHES "/$")
+  string(APPEND TEST_MEDIA_PATH "/")
+endif()
 
 # Benchmark executable
 add_executable(openshot-benchmark Benchmark.cpp BenchmarkOptions.cpp)

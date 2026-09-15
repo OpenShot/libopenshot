@@ -79,7 +79,11 @@ FFmpegWriter::FFmpegWriter(const std::string& path) :
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL),
 		video_codec_ctx(NULL), audio_codec_ctx(NULL), is_writing(false), video_timestamp(0), audio_timestamp(0),
 		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
-		write_header(false), write_trailer(false), allow_b_frames(false), audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
+		write_header(false), write_trailer(false), allow_b_frames(false),
+		spherical_metadata_pending(false), spherical_metadata_applied(false),
+		spherical_projection_name("equirectangular"), spherical_yaw_degrees(0.0f),
+		spherical_pitch_degrees(0.0f), spherical_roll_degrees(0.0f),
+		audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
 
 	// Disable audio & video (so they can be independently enabled)
 	info.has_audio = false;
@@ -95,22 +99,16 @@ FFmpegWriter::FFmpegWriter(const std::string& path) :
 // Open the writer
 void FFmpegWriter::Open() {
 	if (!is_open) {
-		// Open the writer
-		is_open = true;
-
 		// Prepare streams (if needed)
 		if (!prepare_streams)
 			PrepareStreams();
 
-		// Now that all the parameters are set, we can open the audio and video codecs and allocate the necessary encode buffers
-		if (info.has_video && video_st)
-			open_video(oc, video_st);
-		if (info.has_audio && audio_st)
-			open_audio(oc, audio_st);
-
 		// Write header (if needed)
 		if (!write_header)
 			WriteHeader();
+
+		// Open the writer
+		is_open = true;
 	}
 }
 
@@ -152,6 +150,7 @@ void FFmpegWriter::initialize_streams() {
 	// Add the audio and video streams using the default format codecs and initialize the codecs
 	video_st = NULL;
 	audio_st = NULL;
+	spherical_metadata_applied = false;
 	if (oc->oformat->video_codec != AV_CODEC_ID_NONE && info.has_video)
 		// Add video stream
 		video_st = add_video_stream();
@@ -628,8 +627,20 @@ void FFmpegWriter::PrepareStreams() {
 
 // Write the file header (after the options are set)
 void FFmpegWriter::WriteHeader() {
+	if (write_header)
+		return;
 	if (!info.has_audio && !info.has_video)
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
+	if (!prepare_streams)
+		PrepareStreams();
+
+	// The final avcodec_parameters_from_context() copy for FFmpeg 61+ happens
+	// inside open_video/open_audio. Any AVStream side-data that must survive the
+	// output header therefore has to be attached only after these calls.
+	if (info.has_video && video_st)
+		open_video(oc, video_st);
+	if (info.has_audio && audio_st)
+		open_audio(oc, audio_st);
 
 	// Open the output file, if needed
 	if (!(oc->oformat->flags & AVFMT_NOFILE)) {
@@ -644,6 +655,8 @@ void FFmpegWriter::WriteHeader() {
 	for (auto iter = info.metadata.begin(); iter != info.metadata.end(); ++iter) {
 		av_dict_set(&oc->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
+
+	apply_spherical_metadata();
 
 	// Set multiplexing parameters (only for MP4/MOV containers)
 	AVDictionary *dict = NULL;
@@ -1142,15 +1155,29 @@ AVStream *FFmpegWriter::add_audio_stream() {
 #endif
 
 	// Set valid sample rate (or throw error)
-	if (codec->supported_samplerates) {
-		int i;
-		for (i = 0; codec->supported_samplerates[i] != 0; i++)
-			if (info.sample_rate == codec->supported_samplerates[i]) {
+	const int *supported_samplerates = nullptr;
+	int supported_samplerate_count = 0;
+#if LIBAVCODEC_VERSION_MAJOR >= 62
+	const void *supported_samplerates_config = nullptr;
+	avcodec_get_supported_config(c, codec, AV_CODEC_CONFIG_SAMPLE_RATE, 0,
+								 &supported_samplerates_config, &supported_samplerate_count);
+	supported_samplerates = static_cast<const int *>(supported_samplerates_config);
+#else
+	supported_samplerates = codec->supported_samplerates;
+	if (supported_samplerates)
+		while (supported_samplerates[supported_samplerate_count] != 0)
+			++supported_samplerate_count;
+#endif
+	if (supported_samplerates) {
+		bool sample_rate_supported = false;
+		for (int i = 0; i < supported_samplerate_count; ++i)
+			if (info.sample_rate == supported_samplerates[i]) {
 				// Set the valid sample rate
 				c->sample_rate = info.sample_rate;
+				sample_rate_supported = true;
 				break;
 			}
-		if (codec->supported_samplerates[i] == 0)
+		if (!sample_rate_supported)
 			throw InvalidSampleRate("An invalid sample rate was detected for this codec.", path);
 	} else
 		// Set sample rate
@@ -1164,15 +1191,31 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	// Set a valid number of channels (or throw error)
 	AVChannelLayout ch_layout;
 	av_channel_layout_from_mask(&ch_layout, info.channel_layout);
-	if (codec->ch_layouts) {
-		int i;
-		for (i = 0; av_channel_layout_check(&codec->ch_layouts[i]); i++)
-			if (av_channel_layout_compare(&ch_layout, &codec->ch_layouts[i])) {
+	const AVChannelLayout *supported_channel_layouts = nullptr;
+	int supported_channel_layout_count = 0;
+#if LIBAVCODEC_VERSION_MAJOR >= 62
+	const void *supported_channel_layouts_config = nullptr;
+	avcodec_get_supported_config(c, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0,
+								 &supported_channel_layouts_config, &supported_channel_layout_count);
+	supported_channel_layouts =
+		static_cast<const AVChannelLayout *>(supported_channel_layouts_config);
+#else
+	supported_channel_layouts = codec->ch_layouts;
+	if (supported_channel_layouts)
+		while (av_channel_layout_check(
+				&supported_channel_layouts[supported_channel_layout_count]))
+			++supported_channel_layout_count;
+#endif
+	if (supported_channel_layouts) {
+		bool channel_layout_supported = false;
+		for (int i = 0; i < supported_channel_layout_count; ++i)
+			if (av_channel_layout_compare(&ch_layout, &supported_channel_layouts[i]) == 0) {
 				// Set valid channel layout
 				av_channel_layout_copy(&c->ch_layout, &ch_layout);
+				channel_layout_supported = true;
 				break;
 			}
-		if (!av_channel_layout_check(&codec->ch_layouts[i]))
+		if (!channel_layout_supported)
 			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
 	} else
 		// Set valid channel layout
@@ -1195,13 +1238,22 @@ AVStream *FFmpegWriter::add_audio_stream() {
 #endif
 
 	// Choose a valid sample_fmt
-	if (codec->sample_fmts) {
-		for (int i = 0; codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
-			// Set sample format to 1st valid format (and then exit loop)
-			c->sample_fmt = codec->sample_fmts[i];
-			break;
-		}
-	}
+	const AVSampleFormat *supported_sample_formats = nullptr;
+	int supported_sample_format_count = 0;
+#if LIBAVCODEC_VERSION_MAJOR >= 62
+	const void *supported_sample_formats_config = nullptr;
+	avcodec_get_supported_config(c, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0,
+								 &supported_sample_formats_config, &supported_sample_format_count);
+	supported_sample_formats =
+		static_cast<const AVSampleFormat *>(supported_sample_formats_config);
+#else
+	supported_sample_formats = codec->sample_fmts;
+	if (supported_sample_formats)
+		while (supported_sample_formats[supported_sample_format_count] != AV_SAMPLE_FMT_NONE)
+			++supported_sample_format_count;
+#endif
+	if (supported_sample_formats && supported_sample_format_count > 0)
+		c->sample_fmt = supported_sample_formats[0];
 	if (c->sample_fmt == AV_SAMPLE_FMT_NONE) {
 		// Default if no sample formats found
 		c->sample_fmt = AV_SAMPLE_FMT_S16;
@@ -1401,12 +1453,24 @@ AVStream *FFmpegWriter::add_video_stream() {
 #endif
 
 	// Find all supported pixel formats for this codec
-	const PixelFormat *supported_pixel_formats = codec->pix_fmts;
-	while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
+	const PixelFormat *supported_pixel_formats = nullptr;
+	int supported_pixel_format_count = 0;
+#if LIBAVCODEC_VERSION_MAJOR >= 62
+	const void *supported_pixel_formats_config = nullptr;
+	avcodec_get_supported_config(c, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0,
+								 &supported_pixel_formats_config, &supported_pixel_format_count);
+	supported_pixel_formats =
+		static_cast<const PixelFormat *>(supported_pixel_formats_config);
+#else
+	supported_pixel_formats = codec->pix_fmts;
+	if (supported_pixel_formats)
+		while (supported_pixel_formats[supported_pixel_format_count] != PIX_FMT_NONE)
+			++supported_pixel_format_count;
+#endif
+	for (int i = 0; supported_pixel_formats && i < supported_pixel_format_count; ++i) {
 		// Assign the 1st valid pixel format (if one is missing)
 		if (c->pix_fmt == PIX_FMT_NONE)
-			c->pix_fmt = *supported_pixel_formats;
-		++supported_pixel_formats;
+			c->pix_fmt = supported_pixel_formats[i];
 	}
 
 	// Codec doesn't have any pix formats?
@@ -2509,17 +2573,18 @@ void FFmpegWriter::ResampleAudio(int sample_rate, int channels) {
 	original_channels = channels;
 }
 
-// In FFmpegWriter.cpp
-void FFmpegWriter::AddSphericalMetadata(const std::string& projection, float yaw_deg, float pitch_deg, float roll_deg) {
-	if (!oc) return;
-	if (!info.has_video || !video_st) return;
+void FFmpegWriter::apply_spherical_metadata() {
+	if (!spherical_metadata_pending || spherical_metadata_applied)
+		return;
+	if (!oc || !info.has_video || !video_st)
+		return;
 
 	// Allow movenc.c to write out the sv3d atom
 	oc->strict_std_compliance = FF_COMPLIANCE_UNOFFICIAL;
 
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 0, 0)
 	// Map the projection name to the enum (defaults to equirectangular)
-	int proj = av_spherical_from_name(projection.c_str());
+	int proj = av_spherical_from_name(spherical_projection_name.c_str());
 	if (proj < 0)
 		proj = AV_SPHERICAL_EQUIRECTANGULAR;
 
@@ -2531,11 +2596,51 @@ void FFmpegWriter::AddSphericalMetadata(const std::string& projection, float yaw
 	// Populate it
 	map->projection = static_cast<AVSphericalProjection>(proj);
 	// yaw/pitch/roll are 16.16 fixed point
-	map->yaw   = static_cast<int32_t>(yaw_deg   * (1 << 16));
-	map->pitch = static_cast<int32_t>(pitch_deg * (1 << 16));
-	map->roll  = static_cast<int32_t>(roll_deg  * (1 << 16));
+	map->yaw   = static_cast<int32_t>(spherical_yaw_degrees * (1 << 16));
+	map->pitch = static_cast<int32_t>(spherical_pitch_degrees * (1 << 16));
+	map->roll  = static_cast<int32_t>(spherical_roll_degrees * (1 << 16));
 
 	ffmpeg_stream_add_side_data(video_st, AV_PKT_DATA_SPHERICAL,
 		reinterpret_cast<uint8_t*>(map), sd_size);
+	spherical_metadata_applied = true;
 #endif
+}
+
+void FFmpegWriter::AddSphericalMetadata(const std::string& projection, float yaw_deg, float pitch_deg, float roll_deg) {
+	if (!info.has_video) {
+		// Preserve the pre-existing tolerant (no-op) behavior for callers --
+		// including SWIG language bindings -- that invoke this before a video
+		// stream has been configured. Raising here would be a breaking API
+		// change, so just log and return.
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"FFmpegWriter::AddSphericalMetadata (ignored, no video stream configured)",
+			"info.has_video", info.has_video);
+		return;
+	}
+	if (write_header) {
+		// The output header (and any AVStream side-data) has already been
+		// written to the muxer, so there is nothing left to attach the
+		// metadata to. Silently ignore rather than raise, matching the
+		// writer's pre-existing tolerant behavior for out-of-order calls.
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"FFmpegWriter::AddSphericalMetadata (ignored, output header already written)",
+			"write_header", write_header);
+		return;
+	}
+	spherical_projection_name = projection;
+	spherical_yaw_degrees = yaw_deg;
+	spherical_pitch_degrees = pitch_deg;
+	spherical_roll_degrees = roll_deg;
+	spherical_metadata_pending = true;
+	spherical_metadata_applied = false;
+
+	// Persist a textual metadata copy as a compatibility fallback for
+	// demuxers that surface the spherical mapping box but zero the orientation
+	// angles on readback. The binary side-data path above remains authoritative
+	// and is still attached immediately before header write.
+	info.metadata["spherical"] = "1";
+	info.metadata["spherical_projection"] = projection.empty() ? "equirectangular" : projection;
+	info.metadata["spherical_yaw"] = std::to_string(static_cast<double>(yaw_deg));
+	info.metadata["spherical_pitch"] = std::to_string(static_cast<double>(pitch_deg));
+	info.metadata["spherical_roll"] = std::to_string(static_cast<double>(roll_deg));
 }

@@ -708,6 +708,14 @@ void FFmpegReader::Open() {
 					auto to_deg = [](int32_t v) {
 						return static_cast<double>(v) / 65536.0;
 					};
+					// The AV_PKT_DATA_SPHERICAL binary side data is the
+					// authoritative source for orientation whenever the mov/mp4
+					// demuxer surfaces it, even when it legitimately reports a
+					// zero angle. Any pre-existing textual "spherical_yaw" /
+					// "spherical_pitch" / "spherical_roll" container tag (e.g. a
+					// compatibility copy written by FFmpegWriter) is only a
+					// fallback for readers where the binary side data is absent,
+					// so it must not override a present-but-zero side data value.
 					info.metadata["spherical_yaw"] = std::to_string(to_deg(map->yaw));
 					info.metadata["spherical_pitch"] = std::to_string(to_deg(map->pitch));
 					info.metadata["spherical_roll"] = std::to_string(to_deg(map->roll));

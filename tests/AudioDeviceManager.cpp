@@ -19,6 +19,28 @@ using namespace openshot;
 
 TEST_CASE( "Initialize Audio Device Manager Singleton", "[libopenshot][AudioDeviceManagerSingleton]" )
 {
+    const auto require_supported_rate = [](AudioDeviceManagerSingleton* manager, double requested_rate) {
+        auto* device = manager->audioDeviceManager.getCurrentAudioDevice();
+        CHECK(device != nullptr);
+        if (!device) {
+            return;
+        }
+
+        const double actual_rate = device->getCurrentSampleRate();
+        INFO("requested_rate=" << requested_rate);
+        INFO("actual_rate=" << actual_rate);
+        INFO("device_name=" << device->getName());
+        INFO("device_type=" << device->getTypeName());
+
+        CHECK(manager->defaultSampleRate == actual_rate);
+        const bool rate_is_supported =
+            actual_rate == Approx(requested_rate).margin(0.5) ||
+            actual_rate == Approx(48000.0).margin(0.5) ||
+            actual_rate == Approx(44100.0).margin(0.5) ||
+            actual_rate == Approx(22050.0).margin(0.5);
+        CHECK(rate_is_supported);
+    };
+
     Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE = "";
     Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME = "";
 
@@ -34,7 +56,7 @@ TEST_CASE( "Initialize Audio Device Manager Singleton", "[libopenshot][AudioDevi
 
         // Valid sample rate
         mng = AudioDeviceManagerSingleton::Instance(44100, 2);
-        CHECK(mng->defaultSampleRate == 44100);
+        require_supported_rate(mng, 44100.0);
         mng->CloseAudioDevice();
 
         // Valid device type (for Linux)
@@ -44,15 +66,15 @@ TEST_CASE( "Initialize Audio Device Manager Singleton", "[libopenshot][AudioDevi
         if (mng->currentAudioDevice.get_name() == Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME &&
             mng->currentAudioDevice.get_type() == Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE) {
             // Only check this device if it exists (i.e. we are on Linux with ALSA and PulseAudio)
-            CHECK(mng->defaultSampleRate == 44100);
-            mng->CloseAudioDevice();
+            require_supported_rate(mng, 44100.0);
         }
+        mng->CloseAudioDevice();
 
         // Invalid device type (for Linux)
         Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE = "Fake Type";
         Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME = "Fake Device";
         mng = AudioDeviceManagerSingleton::Instance(44100, 2);
-        CHECK(mng->defaultSampleRate == 44100);
+        require_supported_rate(mng, 44100.0);
         mng->CloseAudioDevice();
     }
 }

@@ -42,7 +42,30 @@ TEST_CASE( "conversions", "[libopenshot][imagewriter]" )
 
     auto magick = openshot::QImage2Magick(qimage);
     auto qimage_out = openshot::Magick2QImage(magick);
+    REQUIRE(qimage_out);
     CHECK(qimage->pixelColor(100, 100) == qimage_out->pixelColor(100, 100));
+}
+
+TEST_CASE( "conversion buffer lifetime", "[libopenshot][imagewriter]" )
+{
+    auto magick = std::make_shared<Magick::Image>(Magick::Geometry(2, 1), Magick::Color("transparent"));
+    magick->pixelColor(0, 0, Magick::Color("red"));
+    magick->pixelColor(1, 0, Magick::Color("blue"));
+
+    auto qimage = openshot::Magick2QImage(magick);
+    REQUIRE(qimage);
+    CHECK(qimage->format() == QImage::Format_RGBA8888);
+
+    const auto left = qimage->pixelColor(0, 0);
+    const auto right = qimage->pixelColor(1, 0);
+    magick.reset();
+
+    CHECK(left.red() > 200);
+    CHECK(left.alpha() > 200);
+    CHECK(right.blue() > 200);
+    CHECK(right.alpha() > 200);
+    CHECK(qimage->pixelColor(0, 0) == left);
+    CHECK(qimage->pixelColor(1, 0) == right);
 }
 
 TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
