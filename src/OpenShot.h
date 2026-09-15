@@ -101,6 +101,8 @@
 
 // Include the version number of OpenShot Library
 #include "OpenShotVersion.h"
+#include "Logger.h"
+#include "ZmqLogger.h" // Deprecated source compatibility alias
 
 // Include all other classes
 #include "AudioBufferSource.h"

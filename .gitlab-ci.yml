@@ -106,7 +106,7 @@ windows-builder-x64:
     - Expand-Archive -Path artifacts.zip -DestinationPath .
     - $env:OPENCV_ROOT = "C:\msys64\mingw64\opencv-4.13.0"
     - $env:OpenCV_DIR = "$env:OPENCV_ROOT\lib\cmake\opencv4"
-    - $env:Path = "$env:OPENCV_ROOT\bin;C:\msys64\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
+    - $env:Path = "$env:OPENCV_ROOT\x64\mingw\bin;$env:OPENCV_ROOT\bin;C:\msys64\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
     - $env:MSYSTEM = "MINGW64"
     - ffmpeg -hide_banner -devices | findstr /I "gdigrab"
     - ffmpeg -hide_banner -devices | findstr /I "dshow"

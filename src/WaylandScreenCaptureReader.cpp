@@ -36,7 +36,7 @@
 #include "Exceptions.h"
 #include "Frame.h"
 #include "WaylandBufferUtilities.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 using namespace openshot;
 
@@ -312,7 +312,7 @@ public:
 		SelectPortalSources(session_handle);
 		stream_info = StartPortalSession(session_handle);
 		ApplyPortalStreamInfo();
-		ZmqLogger::Instance()->Log(
+		Logger::Instance()->Log(
 			"Wayland portal stream selected: node_id=" + std::to_string(stream_info.node_id) +
 			" pipewire_serial=" + std::to_string(stream_info.pipewire_serial) +
 			" source_type=" + std::to_string(stream_info.source_type) +
@@ -684,7 +684,7 @@ private:
 			self->info.video_timebase = self->info.fps.Reciprocal();
 		}
 		if (self->stream_width > 0 && self->stream_height > 0) {
-			ZmqLogger::Instance()->Log(
+			Logger::Instance()->Log(
 				"Wayland PipeWire stream format: " +
 				std::to_string(self->stream_width) + "x" + std::to_string(self->stream_height) +
 				" format=" + std::to_string(self->video_format) +
@@ -790,7 +790,7 @@ private:
 			crop_width = std::min(static_cast<int>(crop->region.size.width), stream_width - crop_x);
 			crop_height = std::min(static_cast<int>(crop->region.size.height), stream_height - crop_y);
 			if (!crop_logged) {
-				ZmqLogger::Instance()->Log(
+				Logger::Instance()->Log(
 					"Wayland PipeWire video crop: x=" + std::to_string(crop_x) +
 					" y=" + std::to_string(crop_y) +
 					" width=" + std::to_string(crop_width) +
@@ -915,7 +915,7 @@ private:
 		if (header_drop_log_count >= 5) {
 			return;
 		}
-		ZmqLogger::Instance()->Log(
+		Logger::Instance()->Log(
 			"Wayland PipeWire dropped non-monotonic frame: reason=" + reason +
 			" flags=" + std::to_string(header.flags) +
 			" seq=" + std::to_string(header.seq) +

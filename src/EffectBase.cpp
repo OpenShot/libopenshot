@@ -24,7 +24,7 @@
 #include "ChunkReader.h"
 #include "FFmpegReader.h"
 #include "QtImageReader.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include <omp.h>
 #include <QBrush>
 #include <QColor>
@@ -526,7 +526,7 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 					source_mask = std::make_shared<QImage>(*source_frame->GetImage());
 			}
 		} catch (const std::exception& e) {
-			ZmqLogger::Instance()->Log(
+			Logger::Instance()->Log(
 				std::string("EffectBase::GetMaskImage unable to read mask frame: ") + e.what());
 			source_mask.reset();
 		}

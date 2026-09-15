@@ -13,7 +13,7 @@
 #include "CVObjectMask.h"
 
 #include "Exceptions.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include "objdetectdata.pb.h"
 
 #define int64 int64_t
@@ -861,7 +861,7 @@ void CVObjectMask::SetProcessingDevice()
     if (processingDevice == "CPU") {
         efficientSam.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         efficientSam.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-        ZmqLogger::Instance()->Log("Object Mask EfficientSAM DNN device: requested CPU, selected CPU");
+        Logger::Instance()->Log("Object Mask EfficientSAM DNN device: requested CPU, selected CPU");
         return;
     }
 
@@ -871,7 +871,7 @@ void CVObjectMask::SetProcessingDevice()
             if (std::find(targets.begin(), targets.end(), cv::dnn::DNN_TARGET_CUDA) != targets.end()) {
                 efficientSam.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
                 efficientSam.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
-                ZmqLogger::Instance()->Log("Object Mask EfficientSAM DNN device: requested " + requestedDevice + ", selected CUDA");
+                Logger::Instance()->Log("Object Mask EfficientSAM DNN device: requested " + requestedDevice + ", selected CUDA");
                 return;
             }
         } catch (const cv::Exception&) {
@@ -885,7 +885,7 @@ void CVObjectMask::SetProcessingDevice()
                 cv::ocl::setUseOpenCL(true);
                 efficientSam.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
                 efficientSam.setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL);
-                ZmqLogger::Instance()->Log("Object Mask EfficientSAM DNN device: requested " + requestedDevice + ", selected OpenCL");
+                Logger::Instance()->Log("Object Mask EfficientSAM DNN device: requested " + requestedDevice + ", selected OpenCL");
                 return;
             }
         } catch (const cv::Exception&) {
@@ -895,7 +895,7 @@ void CVObjectMask::SetProcessingDevice()
     processingDevice = "CPU";
     efficientSam.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
     efficientSam.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-    ZmqLogger::Instance()->Log("Object Mask EfficientSAM DNN device: requested " + requestedDevice + ", selected CPU");
+    Logger::Instance()->Log("Object Mask EfficientSAM DNN device: requested " + requestedDevice + ", selected CPU");
 }
 
 void CVObjectMask::maskClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval)
@@ -948,7 +948,7 @@ void CVObjectMask::maskClip(openshot::Clip& video, size_t _start, size_t _end, b
     try {
         cutie.Load(cutieEncodeKeyModelPath, cutieEncodeValueModelPath, cutieMemoryReadoutModelPath, cutieDecodeModelPath);
         const std::string cutieDevice = cutie.SetDevice(processingDevice);
-        ZmqLogger::Instance()->Log("Object Mask Cutie DNN device: requested " + processingDevice + ", selected " + cutieDevice);
+        Logger::Instance()->Log("Object Mask Cutie DNN device: requested " + processingDevice + ", selected " + cutieDevice);
     } catch (const cv::Exception& e) {
         processingController->SetError(true, std::string("Failed to load Cutie ONNX models: ") + e.what());
         error = true;

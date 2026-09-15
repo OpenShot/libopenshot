@@ -75,14 +75,13 @@ jobs:
         if: ${{ runner.os == 'linux' }}
         run: |
           sudo apt update
-          sudo apt remove libzmq5  # See actions/virtual-environments#3317
           sudo apt install \
             cmake swig doxygen graphviz curl lcov \
             libasound2-dev \
             qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
             libfdk-aac-dev libavcodec-dev libavdevice-dev libavformat-dev \
             libavutil-dev libswscale-dev libswresample-dev \
-            libzmq3-dev libbabl-dev \
+            libbabl-dev \
             libopencv-dev libprotobuf-dev protobuf-compiler \
             cargo libomp5 libomp-dev
 

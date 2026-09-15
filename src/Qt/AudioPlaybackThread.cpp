@@ -19,7 +19,7 @@
 #include "../AudioReaderSource.h"
 #include "../AudioDevices.h"
 #include "../Settings.h"
-#include "../ZmqLogger.h"
+#include "../Logger.h"
 
 #include <mutex>
 #include <thread>	// for std::this_thread::sleep_for
@@ -61,7 +61,7 @@ namespace openshot
 			constructor_title << "AudioDeviceManagerSingleton::Instance (default audio device type: " <<
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE << ", default audio device name: " <<
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME << ")";
-			ZmqLogger::Instance()->AppendDebugMethod(constructor_title.str(), "channels", channels, "buffer", Settings::Instance()->PLAYBACK_AUDIO_BUFFER_SIZE);
+			Logger::Instance()->AppendDebugMethod(constructor_title.str(), "channels", channels, "buffer", Settings::Instance()->PLAYBACK_AUDIO_BUFFER_SIZE);
 
 			// Get preferred audio device type and name (if any - these can be blank)
 			openshot::AudioDeviceInfo requested_device = {Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE,
@@ -85,7 +85,7 @@ namespace openshot
 			for (const auto t : mgr->getAvailableDeviceTypes()) {
 				std::stringstream type_debug;
 				type_debug << "AudioDeviceManagerSingleton::Instance (iterate audio device type: " <<  t->getTypeName() << ")";
-				ZmqLogger::Instance()->AppendDebugMethod(type_debug.str(), "rate", rate, "channels", channels);
+				Logger::Instance()->AppendDebugMethod(type_debug.str(), "rate", rate, "channels", channels);
 
 				t->scanForDevices();
 				for (const auto n : t->getDeviceNames()) {
@@ -93,7 +93,7 @@ namespace openshot
 					devices.push_back(device);
 					std::stringstream device_debug;
 					device_debug << "AudioDeviceManagerSingleton::Instance (iterate audio device name: " <<  device.name << ", type: " <<  t->getTypeName() << ")";
-					ZmqLogger::Instance()->AppendDebugMethod(device_debug.str(), "rate", rate, "channels", channels);
+					Logger::Instance()->AppendDebugMethod(device_debug.str(), "rate", rate, "channels", channels);
 				}
 			}
 
@@ -122,7 +122,7 @@ namespace openshot
 				for(int attempt_rate : possible_rates) {
 					std::stringstream title_rate;
 					title_rate << "AudioDeviceManagerSingleton::Instance (attempt audio device name: " <<  attempt_device.name << ")";
-					ZmqLogger::Instance()->AppendDebugMethod(title_rate.str(), "rate", attempt_rate, "channels", channels);
+					Logger::Instance()->AppendDebugMethod(title_rate.str(), "rate", attempt_rate, "channels", channels);
 
 					// Update the audio device setup for the current sample rate
 					m_pInstance->defaultSampleRate = attempt_rate;
@@ -147,7 +147,7 @@ namespace openshot
 						std::stringstream title_error;
 						title_error << "AudioDeviceManagerSingleton::Instance (audio device error: " <<
 						m_pInstance->initialise_error << ")";
-						ZmqLogger::Instance()->AppendDebugMethod(title_error.str(), "rate", attempt_rate, "channels", channels);
+						Logger::Instance()->AppendDebugMethod(title_error.str(), "rate", attempt_rate, "channels", channels);
 					}
 
 					// Determine if audio device was opened successfully, and matches the attempted sample rate
@@ -158,7 +158,7 @@ namespace openshot
 						std::stringstream title_found;
 						title_found << "AudioDeviceManagerSingleton::Instance (successful audio device found: " <<
 						foundAudioIODevice->getTypeName() << ", name: " << foundAudioIODevice->getName() << ")";
-						ZmqLogger::Instance()->AppendDebugMethod(title_found.str(), "rate", attempt_rate, "channels", channels);
+						Logger::Instance()->AppendDebugMethod(title_found.str(), "rate", attempt_rate, "channels", channels);
 						break;
 					}
 				}
@@ -169,7 +169,7 @@ namespace openshot
 				}
 			}
 
-			ZmqLogger::Instance()->AppendDebugMethod("AudioDeviceManagerSingleton::Instance (audio device initialization completed)");
+			Logger::Instance()->AppendDebugMethod("AudioDeviceManagerSingleton::Instance (audio device initialization completed)");
 		}
 		return m_pInstance;
 	}
@@ -220,7 +220,7 @@ namespace openshot
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
-        ZmqLogger::Instance()->AppendDebugMethod("AudioPlaybackThread::Reader", "rate", sampleRate, "channel", numChannels);
+        Logger::Instance()->AppendDebugMethod("AudioPlaybackThread::Reader", "rate", sampleRate, "channel", numChannels);
 
 		// Set video cache thread
 		source->setVideoCache(videoCache);

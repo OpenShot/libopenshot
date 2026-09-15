@@ -92,7 +92,7 @@ set(OPENSHOT_SOURCES
   TimelineBase.cpp
   Timeline.cpp
   TrackedObjectBase.cpp
-  ZmqLogger.cpp
+  Logger.cpp
   )
 
 set(OPENSHOT_WAYLAND_CAPTURE FALSE)
@@ -513,26 +513,6 @@ if(NOT TARGET OpenMP::OpenMP_CXX)
 endif()
 
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
-
-###
-### ZeroMQ
-###
-
-# Find ZeroMQ library (used for socket communication & logging)
-find_package(ZeroMQ REQUIRED) # Creates libzmq target
-
-# Some platforms package the header-only cppzmq C++ bindings separately,
-# others (Ubuntu) bundle them in with libzmq itself
-find_package(cppzmq QUIET) # Creates cppzmq target
-
-# Link ZeroMQ library
-if (TARGET libzmq)
-  target_link_libraries(openshot PUBLIC libzmq)
-endif()
-# Include cppzmq headers, if not bundled into libzmq
-if (TARGET cppzmq)
-  target_link_libraries(openshot PUBLIC cppzmq)
-endif()
 
 ###
 ### Babl

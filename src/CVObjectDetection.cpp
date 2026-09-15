@@ -18,7 +18,7 @@
 
 #include "CVObjectDetection.h"
 #include "Exceptions.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 #define int64 int64_t
 #define uint64 uint64_t
@@ -266,7 +266,7 @@ void CVObjectDetection::setProcessingDevice(){
     if (processingDevice == "CPU") {
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-        ZmqLogger::Instance()->Log("Object Detection DNN device: requested CPU, selected CPU");
+        Logger::Instance()->Log("Object Detection DNN device: requested CPU, selected CPU");
         return;
     }
 
@@ -276,7 +276,7 @@ void CVObjectDetection::setProcessingDevice(){
             if (std::find(targets.begin(), targets.end(), cv::dnn::DNN_TARGET_CUDA) != targets.end()) {
                 net.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
                 net.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
-                ZmqLogger::Instance()->Log("Object Detection DNN device: requested " + requestedDevice + ", selected CUDA");
+                Logger::Instance()->Log("Object Detection DNN device: requested " + requestedDevice + ", selected CUDA");
                 return;
             }
         } catch (const cv::Exception&) {
@@ -290,7 +290,7 @@ void CVObjectDetection::setProcessingDevice(){
                 cv::ocl::setUseOpenCL(true);
                 net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
                 net.setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL);
-                ZmqLogger::Instance()->Log("Object Detection DNN device: requested " + requestedDevice + ", selected OpenCL");
+                Logger::Instance()->Log("Object Detection DNN device: requested " + requestedDevice + ", selected OpenCL");
                 return;
             }
         } catch (const cv::Exception&) {
@@ -300,7 +300,7 @@ void CVObjectDetection::setProcessingDevice(){
     processingDevice = "CPU";
     net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
     net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-    ZmqLogger::Instance()->Log("Object Detection DNN device: requested " + requestedDevice + ", selected CPU");
+    Logger::Instance()->Log("Object Detection DNN device: requested " + requestedDevice + ", selected CPU");
 }
 
 void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, size_t _end, bool process_interval)

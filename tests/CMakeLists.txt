@@ -44,6 +44,7 @@ set(OPENSHOT_TESTS
   FrameScope
   FrameMapper
   KeyFrame
+  Logger
   Point
   Profiles
   QtPlayer

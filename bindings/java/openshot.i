@@ -130,7 +130,7 @@ typedef struct OpenShotByteBuffer {
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "Qt/VideoCacheThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 %}
 
 // Prevent SWIG from ever generating a wrapper for juce::Thread’s constructor (or run())
@@ -235,7 +235,7 @@ typedef struct OpenShotByteBuffer {
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
-%include "ZmqLogger.h"
+%include "Logger.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"

@@ -54,12 +54,6 @@ Libraries and executables have been labeled in the list below to help distinguis
     apply image effects, and many other utility functions,
     such as file system manipulation, high resolution timers, etc.
 
-#### ZeroMQ (libzmq)
-*   <http://zeromq.org/> **(Library)**
-
-*   This library is used to communicate between libopenshot and other applications (publisher / subscriber).
-    Primarily used to send debug data from libopenshot.
-
 #### OpenMP (`-fopenmp`)
 *   <http://openmp.org/wp/> **(Compiler Flag)**
 
