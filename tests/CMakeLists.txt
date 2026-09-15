@@ -50,6 +50,7 @@ set(OPENSHOT_TESTS
   QtPlayer
   QtImageReader
   ReaderBase
+  NativeArm64ProcessOracle
   Settings
   ScreenCaptureReader
   SphericalMetadata
