@@ -21,8 +21,22 @@ class NativeLoggerTests(unittest.TestCase):
             result = subprocess.run([sys.executable, '-c', '''
 import os
 _dll_handles = []
-if os.name == 'nt' and os.environ.get('OPENSHOT_TEST_DLL_DIR'):
-    _dll_handles.append(os.add_dll_directory(os.environ['OPENSHOT_TEST_DLL_DIR']))
+if os.name == 'nt' and hasattr(os, 'add_dll_directory'):
+    # Python 3.8+ does not search PATH for extension-module dependencies.
+    # Include the project DLLs and the dependency directories supplied by CI.
+    _dll_dirs = [os.environ.get('OPENSHOT_TEST_DLL_DIR', ''),
+                 os.environ.get('OPENSHOT_TEST_AUDIO_DLL_DIR', '')]
+    _dll_dirs.extend(os.environ.get('PATH', '').split(os.pathsep))
+    _seen = set()
+    for _directory in _dll_dirs:
+        _directory = _directory.strip('"')
+        if not _directory or not os.path.isdir(_directory):
+            continue
+        _directory = os.path.abspath(_directory)
+        _key = os.path.normcase(_directory)
+        if _key not in _seen:
+            _dll_handles.append(os.add_dll_directory(_directory))
+            _seen.add(_key)
 import openshot
 logger = openshot.Logger.Instance()
 assert openshot.ZmqLogger is openshot.Logger

@@ -9,7 +9,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <ctime>
+#ifdef _WIN32
 #include <filesystem>
+#endif
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -115,7 +117,13 @@ void Logger::Path(std::string path) {
     file_path = path;
     if (path.empty()) return;
     try {
+#ifdef _WIN32
         log_file.open(std::filesystem::u8path(path), std::ios::out | std::ios::app);
+#else
+        // POSIX paths already use UTF-8 bytes. Avoid std::filesystem, which
+        // requires macOS 10.15 even when compiling with C++17 enabled.
+        log_file.open(path, std::ios::out | std::ios::app);
+#endif
     } catch (const std::exception&) {
         std::cerr << "libopenshot: invalid log file path: " << path << '\n';
         return;

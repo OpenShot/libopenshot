@@ -3,23 +3,22 @@
 #include "openshot_catch.h"
 #include "Logger.h"
 #include "ZmqLogger.h"
-#include <filesystem>
-#include <fstream>
+#include <QFile>
+#include <QTemporaryDir>
 #include <iostream>
 #include <sstream>
 #include <thread>
 #include <vector>
-#include <chrono>
 
 using namespace openshot;
 
 TEST_CASE("Independent logging destinations and crash writes", "[logger]") {
     auto* logger = Logger::Instance();
     CHECK(logger == ZmqLogger::Instance());
-    auto path = std::filesystem::temp_directory_path() /
-        std::filesystem::u8path("openshot-logging-\xc3\xa9-" + std::to_string(
-            std::chrono::steady_clock::now().time_since_epoch().count()) + ".log");
-    logger->Path(path.u8string());
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    auto path = directory.filePath(QString::fromUtf8("openshot-logging-\xc3\xa9.log"));
+    logger->Path(path.toUtf8().toStdString());
     logger->SetFileLevel("warning");
     logger->SetConsoleLevel("debug");
     CHECK(logger->ShouldLog(Logger::LevelDebug));
@@ -35,8 +34,9 @@ TEST_CASE("Independent logging destinations and crash writes", "[logger]") {
     logger->LogToFile("---- Unhandled Exception: Stack Trace ----\ncrash-evidence\n---- End of Stack Trace ----\n");
     CHECK_THROWS_AS(logger->SetFileLevel("not-a-level"), std::invalid_argument);
     logger->Close();
-    std::ifstream file(path);
-    std::string content((std::istreambuf_iterator<char>(file)), {});
+    QFile file(path);
+    REQUIRE(file.open(QIODevice::ReadOnly));
+    std::string content = file.readAll().toStdString();
     CHECK(content.find("console-only-debug") == std::string::npos);
     CHECK(console.str().find("console-only-debug") != std::string::npos);
     CHECK(content.find("both-warning") != std::string::npos);
@@ -44,15 +44,14 @@ TEST_CASE("Independent logging destinations and crash writes", "[logger]") {
     CHECK(content.find("crash-evidence") != std::string::npos);
     CHECK(content.find("libopenshot logging:") != std::string::npos);
     file.close();
-    std::filesystem::remove(path);
 }
 
 TEST_CASE("Concurrent records remain complete and path can reopen", "[logger]") {
     auto* logger = Logger::Instance();
-    auto path = std::filesystem::temp_directory_path() /
-        ("openshot-logging-threads-" + std::to_string(
-            std::chrono::steady_clock::now().time_since_epoch().count()) + ".log");
-    logger->Path(path.u8string());
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    auto path = directory.filePath("openshot-logging-threads.log");
+    logger->Path(path.toUtf8().toStdString());
     logger->SetFileLevel("debug");
     logger->SetConsoleLevel("off");
     std::vector<std::thread> workers;
@@ -62,15 +61,17 @@ TEST_CASE("Concurrent records remain complete and path can reopen", "[logger]") 
     });
     for (auto& worker : workers) worker.join();
     logger->Close();
-    logger->Path(path.u8string());
+    logger->Path(path.toUtf8().toStdString());
     logger->Enable(true);
     logger->AppendDebugMethod("reopened", "frame", 42);
     logger->Close();
-    std::ifstream file(path);
+    QFile file(path);
+    REQUIRE(file.open(QIODevice::ReadOnly));
+    std::istringstream content(file.readAll().toStdString());
     std::string line;
     int records = 0;
     bool reopened = false;
-    while (std::getline(file, line)) {
+    while (std::getline(content, line)) {
         if (line.find("record-") != std::string::npos) {
             ++records;
             CHECK(line.find("record-", line.find("record-") + 1) == std::string::npos);
@@ -80,5 +81,4 @@ TEST_CASE("Concurrent records remain complete and path can reopen", "[logger]") 
     CHECK(records == 400);
     CHECK(reopened);
     file.close();
-    std::filesystem::remove(path);
 }

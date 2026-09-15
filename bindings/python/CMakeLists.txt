@@ -145,6 +145,8 @@ if(BUILD_TESTING)
       "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
       "OPENSHOT_TEST_MODULE_DIR=$<TARGET_FILE_DIR:${_pyopenshot_target}>"
       "OPENSHOT_TEST_DLL_DIR=$<TARGET_FILE_DIR:openshot>"
+      # The Windows build copies libopenshot-audio.dll into the tests directory.
+      "OPENSHOT_TEST_AUDIO_DLL_DIR=${PROJECT_BINARY_DIR}/tests"
       ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test_logger.py")
   set_tests_properties(Logger:PythonEnvironment PROPERTIES LABELS Logger)
 endif()
