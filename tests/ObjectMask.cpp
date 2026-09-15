@@ -21,13 +21,12 @@
 #endif
 
 #include <QColor>
+#include <QFile>
 #include <QImage>
+#include <QTemporaryDir>
 
-#include <cstdio>
 #include <cstring>
-#include <fstream>
 #include <memory>
-#include <unistd.h>
 
 using namespace openshot;
 
@@ -35,15 +34,6 @@ static std::shared_ptr<Frame> make_object_mask_frame(int64_t number, int width, 
 	auto frame = std::make_shared<Frame>(number, width, height, "#000000");
 	frame->GetImage()->fill(QColor(64, 64, 64, 255));
 	return frame;
-}
-
-static std::string temp_object_mask_path() {
-	char path[] = "/tmp/libopenshot_object_mask_XXXXXX";
-	int fd = mkstemp(path);
-	REQUIRE(fd != -1);
-	close(fd);
-	std::remove(path);
-	return std::string(path) + ".data";
 }
 
 static void append_varint(std::string& output, uint64_t value) {
@@ -67,9 +57,7 @@ static void append_length_delimited(std::string& output, uint32_t field_number, 
 	output.append(value);
 }
 
-static std::string create_object_mask_data() {
-	const std::string path = temp_object_mask_path();
-
+static void create_object_mask_data(const QString& path) {
 	std::string mask;
 	append_varint(mask, 8);
 	append_varint(mask, 4);
@@ -106,10 +94,10 @@ static std::string create_object_mask_data() {
 	append_length_delimited(data, 1, frame);
 	append_length_delimited(data, 3, "object mask");
 
-	std::ofstream output(path, std::ios::out | std::ios::binary);
-	output.write(data.data(), static_cast<std::streamsize>(data.size()));
-	REQUIRE(output.good());
-	return path;
+	QFile output(path);
+	REQUIRE(output.open(QIODevice::WriteOnly));
+	REQUIRE(output.write(data.data(), static_cast<qint64>(data.size())) == static_cast<qint64>(data.size()));
+	REQUIRE(output.flush());
 }
 
 TEST_CASE("ObjectMask effect is registered", "[effect][object_mask]") {
@@ -121,11 +109,14 @@ TEST_CASE("ObjectMask effect is registered", "[effect][object_mask]") {
 }
 
 TEST_CASE("ObjectMask loads protobuf masks and exposes style controls", "[effect][object_mask]") {
-	const std::string protobuf_path = create_object_mask_data();
+	QTemporaryDir directory;
+	REQUIRE(directory.isValid());
+	const QString protobuf_path = directory.filePath("object_mask.data");
+	create_object_mask_data(protobuf_path);
 
 	ObjectMask effect;
 	Json::Value config;
-	config["protobuf_data_path"] = protobuf_path;
+	config["protobuf_data_path"] = protobuf_path.toUtf8().toStdString();
 	config["mask_alpha"] = Keyframe(0.5).JsonValue();
 	config["stroke_width"] = Keyframe(2.0).JsonValue();
 	effect.SetJsonValue(config);
@@ -151,8 +142,6 @@ TEST_CASE("ObjectMask loads protobuf masks and exposes style controls", "[effect
 	auto output = effect.GetFrame(frame, 1)->GetImage();
 	CHECK(output->pixelColor(0, 0) != QColor(64, 64, 64, 255));
 	CHECK(output->pixelColor(3, 3) == QColor(64, 64, 64, 255));
-
-	std::remove(protobuf_path.c_str());
 }
 
 #ifdef USE_OPENCV
