@@ -1142,15 +1142,15 @@ AVStream *FFmpegWriter::add_audio_stream() {
 #endif
 
 	// Set valid sample rate (or throw error)
-	if (codec->supported_samplerates) {
+	if (const int* supported_rates = ffmpeg_codec_sample_rates(codec)) {
 		int i;
-		for (i = 0; codec->supported_samplerates[i] != 0; i++)
-			if (info.sample_rate == codec->supported_samplerates[i]) {
+		for (i = 0; supported_rates[i] != 0; i++)
+			if (info.sample_rate == supported_rates[i]) {
 				// Set the valid sample rate
 				c->sample_rate = info.sample_rate;
 				break;
 			}
-		if (codec->supported_samplerates[i] == 0)
+		if (supported_rates[i] == 0)
 			throw InvalidSampleRate("An invalid sample rate was detected for this codec.", path);
 	} else
 		// Set sample rate
@@ -1164,41 +1164,30 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	// Set a valid number of channels (or throw error)
 	AVChannelLayout ch_layout;
 	av_channel_layout_from_mask(&ch_layout, info.channel_layout);
-	if (codec->ch_layouts) {
+	if (const AVChannelLayout* codec_layouts = ffmpeg_codec_ch_layouts(codec)) {
 		int i;
-		for (i = 0; av_channel_layout_check(&codec->ch_layouts[i]); i++)
-			if (av_channel_layout_compare(&ch_layout, &codec->ch_layouts[i])) {
+		for (i = 0; av_channel_layout_check(&codec_layouts[i]); i++)
+			if (av_channel_layout_compare(&ch_layout, &codec_layouts[i]) == 0) {
 				// Set valid channel layout
 				av_channel_layout_copy(&c->ch_layout, &ch_layout);
 				break;
 			}
-		if (!av_channel_layout_check(&codec->ch_layouts[i]))
+		if (!av_channel_layout_check(&codec_layouts[i]))
 			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-	} else
+	} else {
 		// Set valid channel layout
 		av_channel_layout_copy(&c->ch_layout, &ch_layout);
+	}
 #else
 	// Set a valid number of channels (or throw error)
-	if (codec->channel_layouts) {
-		int i;
-		for (i = 0; codec->channel_layouts[i] != 0; i++)
-			if (channel_layout == codec->channel_layouts[i]) {
-				// Set valid channel layout
-				c->channel_layout = channel_layout;
-				break;
-			}
-		if (codec->channel_layouts[i] == 0)
-			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-		} else
-			// Set valid channel layout
-			c->channel_layout = channel_layout;
+	c->channel_layout = channel_layout;
 #endif
 
 	// Choose a valid sample_fmt
-	if (codec->sample_fmts) {
-		for (int i = 0; codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
+	if (const AVSampleFormat* codec_fmts = ffmpeg_codec_sample_fmts(codec)) {
+		for (int i = 0; codec_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
 			// Set sample format to 1st valid format (and then exit loop)
-			c->sample_fmt = codec->sample_fmts[i];
+			c->sample_fmt = codec_fmts[i];
 			break;
 		}
 	}
@@ -1401,12 +1390,13 @@ AVStream *FFmpegWriter::add_video_stream() {
 #endif
 
 	// Find all supported pixel formats for this codec
-	const PixelFormat *supported_pixel_formats = codec->pix_fmts;
-	while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
-		// Assign the 1st valid pixel format (if one is missing)
-		if (c->pix_fmt == PIX_FMT_NONE)
-			c->pix_fmt = *supported_pixel_formats;
-		++supported_pixel_formats;
+	if (const PixelFormat* supported_pixel_formats = ffmpeg_codec_pix_fmts(codec)) {
+		while (*supported_pixel_formats != PIX_FMT_NONE) {
+			// Assign the 1st valid pixel format (if one is missing)
+			if (c->pix_fmt == PIX_FMT_NONE)
+				c->pix_fmt = *supported_pixel_formats;
+			++supported_pixel_formats;
+		}
 	}
 
 	// Codec doesn't have any pix formats?
