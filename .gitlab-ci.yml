@@ -125,6 +125,42 @@ windows-builder-x64:
   tags:
     - windows
 
+windows-builder-arm64:
+  stage: build-libopenshot
+  artifacts:
+    expire_in: 6 months
+    paths:
+    - build\install-arm64\*
+    - build\arm64-architecture-report.json
+  script:
+    - try { Invoke-WebRequest -Uri "https://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-arm64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
+    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "https://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-arm64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
+    - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - $env:MSYSTEM = "CLANGARM64"
+    - $env:Path = "C:\msys64\clangarm64\bin;C:\msys64\usr\bin;" + $env:Path;
+    - cmake -B build -S . -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_C_COMPILER=clang" -D"CMAKE_CXX_COMPILER=clang++" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-arm64" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-arm64" -D"PYTHON_MODULE_PATH=python" -D"USE_QT6=ON" -D"OPENSHOT_QT_API=pyqt6" -G Ninja -D"CMAKE_BUILD_TYPE:STRING=Release"
+    - cmake --build build --parallel $([Environment]::ProcessorCount)
+    - ctest --test-dir build --output-on-failure -VV
+    - cmake --install build
+    - python -m unittest discover -s ci -p "test_*.py" -v
+    - python ci\validate_arm64_architecture.py --require-native-arm64 --package-lock ci\windows-arm64-packages.lock --payload-root build\install-arm64 --require-payload --json-report build\arm64-architecture-report.json
+    - $PROJECT_VERSION = (Select-String -Path "CMakeLists.txt" -Pattern '^set\(PROJECT_VERSION_FULL "(.*)\"' | %{$_.Matches.Groups[1].value})
+    - $PROJECT_SO = (Select-String -Path "CMakeLists.txt" -Pattern '^set\(PROJECT_SO_VERSION (.*)\)' | %{$_.Matches.Groups[1].value})
+    - New-Item -path "build/install-arm64/share/" -Name "$CI_PROJECT_NAME.env" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID`nCI_PIPELINE_ID:$CI_PIPELINE_ID`nVERSION:$PROJECT_VERSION`nSO:$PROJECT_SO`nTARGET_TRIPLET:aarch64-w64-mingw32`nPE_MACHINE:0xAA64" -ItemType file -force
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0 '@^')
+    - git log "$PREV_GIT_LABEL..@" --oneline --pretty=format:"- %C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "build/install-arm64/share/$CI_PROJECT_NAME.log"
+  when: always
+  rules:
+    - if: '$ENABLE_WINDOWS_ARM64 == "1" && $CI_COMMIT_TAG == null'
+    - when: never
+  tags:
+    - windows-arm64
+  # Requires PR A's published windows-builder-arm64 artifact/digest and a
+  # native/virtual Windows Arm64 GitLab runner (design-spec.md
+  # release-infrastructure surface). Does not weaken or replace the
+  # existing windows-builder-x64/x86 jobs above.
+  allow_failure: true
+
 windows-builder-x86:
   stage: build-libopenshot
   artifacts:
