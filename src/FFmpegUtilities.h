@@ -406,6 +406,49 @@ inline static int ffmpeg_stream_add_side_data(
 #include <malloc.h>
 #endif
 
+// FFmpeg 7+ (libavcodec 61+): codec capability lists moved from AVCodec struct
+// fields (pix_fmts, supported_samplerates, ch_layouts, sample_fmts) to
+// avcodec_get_supported_config(). Provide unified helpers.
+#if LIBAVCODEC_VERSION_MAJOR >= 61
+inline static const AVPixelFormat* ffmpeg_codec_pix_fmts(const AVCodec* codec) {
+    const void* out = nullptr;
+    if (avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0, &out, nullptr) == 0)
+        return reinterpret_cast<const AVPixelFormat*>(out);
+    return nullptr;
+}
+inline static const int* ffmpeg_codec_sample_rates(const AVCodec* codec) {
+    const void* out = nullptr;
+    if (avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_SAMPLE_RATE, 0, &out, nullptr) == 0)
+        return reinterpret_cast<const int*>(out);
+    return nullptr;
+}
+inline static const AVSampleFormat* ffmpeg_codec_sample_fmts(const AVCodec* codec) {
+    const void* out = nullptr;
+    if (avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, &out, nullptr) == 0)
+        return reinterpret_cast<const AVSampleFormat*>(out);
+    return nullptr;
+}
+inline static const AVChannelLayout* ffmpeg_codec_ch_layouts(const AVCodec* codec) {
+    const void* out = nullptr;
+    if (avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, &out, nullptr) == 0)
+        return reinterpret_cast<const AVChannelLayout*>(out);
+    return nullptr;
+}
+#define OPENSHOT_HAS_NEW_CODEC_CONFIG 1
+#else
+inline static const AVPixelFormat* ffmpeg_codec_pix_fmts(const AVCodec* codec) { return codec->pix_fmts; }
+inline static const int* ffmpeg_codec_sample_rates(const AVCodec* codec) { return codec->supported_samplerates; }
+inline static const AVSampleFormat* ffmpeg_codec_sample_fmts(const AVCodec* codec) { return codec->sample_fmts; }
+inline static const AVChannelLayout* ffmpeg_codec_ch_layouts(const AVCodec* codec) {
+#if HAVE_CH_LAYOUT
+    return codec->ch_layouts;
+#else
+    (void)codec; return nullptr;
+#endif
+}
+#define OPENSHOT_HAS_NEW_CODEC_CONFIG 0
+#endif
+
 inline static void* aligned_malloc(size_t size, size_t alignment = 32)
 {
 #if defined(_WIN32)
