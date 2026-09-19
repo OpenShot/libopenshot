@@ -2337,27 +2337,27 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
 #endif
-		// Raw video case.
-#if IS_FFMPEG_3_2
-		AVPacket* pkt = av_packet_alloc();
-#else
-		AVPacket* pkt;
-		av_init_packet(pkt);
-#endif
-
-	av_packet_from_data(
-			pkt, frame_final->data[0],
-			frame_final->linesize[0] * frame_final->height);
-
-		pkt->flags |= AV_PKT_FLAG_KEY;
-		pkt->stream_index = video_st->index;
-
-		// Set PTS (in frames and scaled to the codec's timebase)
-		pkt->pts = video_timestamp;
-		pkt->duration = av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
-
-		/* write the compressed frame in the media file */
-		int error_code = av_interleaved_write_frame(oc, pkt);
+		// The packet owns a separate, padded buffer. write_frame() still owns
+		// frame_final, so handing its data to av_packet_from_data would free it twice.
+		AVPacket packet = {};
+		const PixelFormat format = static_cast<PixelFormat>(frame_final->format);
+		const int size = AV_GET_IMAGE_SIZE(format, frame_final->width, frame_final->height);
+		int error_code = size < 0 ? size : av_new_packet(&packet, size);
+		if (error_code >= 0) {
+			// Copy every plane, not just the first plane's stride * height.
+			error_code = av_image_copy_to_buffer(packet.data, packet.size,
+				frame_final->data, frame_final->linesize, format,
+				frame_final->width, frame_final->height, 1);
+		}
+		if (error_code >= 0) {
+			packet.flags |= AV_PKT_FLAG_KEY;
+			packet.stream_index = video_st->index;
+			packet.pts = packet.dts = video_timestamp;
+			packet.duration = av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
+			av_packet_rescale_ts(&packet, video_codec_ctx->time_base, video_st->time_base);
+			error_code = av_interleaved_write_frame(oc, &packet);
+		}
+		AV_FREE_PACKET(&packet);
 		if (error_code < 0) {
 			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet ERROR ["
@@ -2365,10 +2365,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 				"error_code", error_code);
 			return false;
 		}
-
-		// Deallocate packet
-		AV_FREE_PACKET(pkt);
-
 	} else
 	{
 

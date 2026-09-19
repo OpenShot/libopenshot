@@ -261,10 +261,10 @@ int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 #endif // USE_HW_ACCEL
 
 void FFmpegReader::Open() {
+	// Check lifecycle state only after any in-flight Open/Close has finished.
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 	// Open reader if not already open
 	if (!is_open) {
-		// Prevent async calls to the following code
-		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Initialize format context
 		pFormatCtx = NULL;
@@ -749,10 +749,10 @@ void FFmpegReader::Open() {
 }
 
 void FFmpegReader::Close() {
+	// A queued close must not clean up contexts released by an earlier caller.
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 	// Close all objects, if reader is 'open'
 	if (is_open) {
-		// Prevent async calls to the following code
-		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Mark as "closed"
 		is_open = false;

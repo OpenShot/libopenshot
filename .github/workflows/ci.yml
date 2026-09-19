@@ -133,6 +133,13 @@ jobs:
           export QT_QPA_PLATFORM=offscreen
           cmake --build build --target coverage -- VERBOSE=1 || true
 
+      - name: Check reader and raw-video stability
+        if: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
+        timeout-minutes: 10
+        run: |
+          sudo apt install -y valgrind
+          bash tests/check-stability.sh build
+
       - name: Install libopenshot
         run: |
           # Stage all installs (including absolute Python paths) under our workspace/install

@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
+#include <future>
+#include <thread>
 
 #include "openshot_catch.h"
 
@@ -106,6 +108,60 @@ struct TemporaryFileGuard {
 	}
 };
 
+}
+
+TEST_CASE("Queued reader lifecycle calls recheck state after locking",
+          "[libopenshot][ffmpegreader][lifecycle]")
+{
+	class LockedReader : public FFmpegReader {
+	public:
+		using FFmpegReader::FFmpegReader;
+		using ReaderBase::getFrameMutex;
+	};
+	LockedReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	const bool initially_open = GENERATE(false, true);
+	const bool closing = GENERATE(false, true);
+	CAPTURE(initially_open, closing);
+	if (initially_open) reader.Open();
+
+	// Hold the lifecycle lock while starting the worker. Exercise
+	// Open/Open, Close/Close, and both mixed call orders.
+	std::unique_lock<std::recursive_mutex> lock(reader.getFrameMutex);
+	std::promise<void> started, finished;
+	auto done = finished.get_future();
+	std::exception_ptr error;
+	std::thread pending([&] {
+		started.set_value();
+		try {
+			if (closing) reader.Close(); else reader.Open();
+		} catch (...) { error = std::current_exception(); }
+		finished.set_value();
+	});
+	started.get_future().wait();
+	// Give the worker time to reach the held mutex. This exercises contention,
+	// but cannot guarantee scheduling on every platform.
+	const bool waited = done.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout;
+	std::exception_ptr foreground_error;
+	try {
+		if (initially_open) reader.Close(); else reader.Open();
+	} catch (...) { foreground_error = std::current_exception(); }
+	AVFormatContext* context = reader.pFormatCtx;
+	lock.unlock();
+	pending.join();
+
+	REQUIRE(waited);
+	REQUIRE(foreground_error == nullptr);
+	REQUIRE(error == nullptr);
+	CHECK(reader.IsOpen() == !closing);
+	// A queued Open must reuse the existing context, not leak it and reopen.
+	if (closing == initially_open) CHECK(reader.pFormatCtx == context);
+	CHECK_NOTHROW(reader.Close());
+	CHECK_NOTHROW(reader.Close());
+	reader.Open();
+	CHECK(reader.GetFrame(1)->GetWidth() > 0);
+	CHECK(reader.GetFrame(30)->GetWidth() > 0);
+	CHECK(reader.GetFrame(1)->GetWidth() > 0);
+	reader.Close();
 }
 
 TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
