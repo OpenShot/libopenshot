@@ -12,6 +12,13 @@
 
 #include "CameraCaptureReader.h"
 
+#if defined(__linux__)
+#include "CameraCaptureV4L2.h"
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#endif
+
 #include <cstdlib>
 #include <string>
 
@@ -215,6 +222,28 @@ AudioDeviceList CameraCaptureReader::GetDeviceNames(CameraCaptureBackend backend
 	}
 	avdevice_free_list_devices(&device_list);
 	return devices;
+}
+
+std::vector<CameraCaptureMode> CameraCaptureReader::GetDeviceModes(
+    const std::string& device, CameraCaptureBackend backend)
+{
+    if (backend == CAMERA_CAPTURE_AUTO) backend = DefaultBackend();
+#if defined(__linux__)
+    if (backend == CAMERA_CAPTURE_V4L2) {
+        const int fd = open(device.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+        if (fd < 0) throw InvalidFile("Unable to open camera for mode discovery.", device);
+        struct DeviceHandle {
+            int fd;
+            ~DeviceHandle() { close(fd); }
+        } handle{fd};
+        return detail::EnumerateCameraModes([fd](unsigned long request, void* value) {
+            return ioctl(fd, request, value);
+        });
+    }
+#else
+    (void) device;
+#endif
+    return {};
 }
 
 void CameraCaptureReader::ValidateSettings() const
