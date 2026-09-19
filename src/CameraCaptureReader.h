@@ -17,6 +17,7 @@
 #include "ScreenCaptureReader.h"
 
 #include <memory>
+#include <vector>
 
 namespace openshot
 {
@@ -26,6 +27,15 @@ namespace openshot
 		CAMERA_CAPTURE_V4L2 = 1,
 		CAMERA_CAPTURE_WINDOWS_DSHOW = 2,
 		CAMERA_CAPTURE_MAC_AVFOUNDATION = 3
+	};
+
+	/// A supported capture combination, with an FFmpeg input format name.
+	struct CameraCaptureMode
+	{
+		int width = 0;
+		int height = 0;
+		openshot::Fraction fps = openshot::Fraction(0, 1);
+		std::string input_format;
 	};
 
 	struct CameraCaptureSettings
@@ -60,6 +70,12 @@ namespace openshot
 		static bool IsBackendSupported(CameraCaptureBackend backend);
 		static CameraCaptureBackend DefaultBackend();
 		static AudioDeviceList GetDeviceNames(CameraCaptureBackend backend = CAMERA_CAPTURE_AUTO);
+
+		/// Query Linux V4L2 modes without starting capture. Discrete modes are exhaustive;
+		/// continuous/stepwise ranges report their endpoints. Unknown formats are omitted.
+		/// Other backends return an empty list. Device access/query errors throw.
+		static std::vector<CameraCaptureMode> GetDeviceModes(
+			const std::string& device, CameraCaptureBackend backend = CAMERA_CAPTURE_AUTO);
 
 	private:
 		void ValidateSettings() const;
