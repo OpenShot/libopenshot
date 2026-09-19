@@ -13,6 +13,7 @@
 #include <sstream>
 #include <memory>
 #include <fstream>
+#include <QTemporaryDir>
 
 #include "openshot_catch.h"
 
@@ -41,6 +42,65 @@ AVStream* first_video_stream(AVFormatContext* format_context)
 	}
 	return nullptr;
 }
+}
+
+TEST_CASE("Raw video export preserves all color planes and frame ownership",
+          "[libopenshot][ffmpegwriter][rawvideo]")
+{
+	QTemporaryDir directory;
+	REQUIRE(directory.isValid());
+	// NUT uses a different stream time base from the codec's frame rate.
+	const auto filename = GENERATE("raw.avi", "raw.nut");
+	const std::string path = directory.filePath(filename).toStdString();
+	// Multiple frames and repeated exports exercise packet/frame cleanup.
+	for (int pass = 0; pass < 2; ++pass) {
+		FFmpegWriter writer(path);
+		writer.SetVideoOptions(true, "rawvideo", Fraction(30, 1), 64, 64,
+		                       Fraction(1, 1), false, false, 1000000);
+		writer.Open();
+		for (int number = 1; number <= 3; ++number) {
+			auto frame = std::make_shared<Frame>(number, 64, 64, number == 2 ? "blue" : "red");
+			writer.WriteFrame(frame);
+		}
+		writer.Close();
+
+		AVFormatContext* input = nullptr;
+		REQUIRE(avformat_open_input(&input, path.c_str(), nullptr, nullptr) == 0);
+		std::unique_ptr<AVFormatContext, void(*)(AVFormatContext*)> input_guard(
+			input, [](AVFormatContext* context) { avformat_close_input(&context); });
+		REQUIRE(avformat_find_stream_info(input, nullptr) >= 0);
+		AVStream* stream = first_video_stream(input);
+		REQUIRE(stream != nullptr);
+		AVPacket packet = {};
+		int packets = 0;
+		while (av_read_frame(input, &packet) >= 0) {
+			if (packet.stream_index == stream->index) {
+				CHECK(packet.size == 64 * 64 * 3 / 2); // Complete YUV420P image
+				CHECK(packet.pts * av_q2d(stream->time_base) == Approx(packets / 30.0).margin(0.00001));
+				++packets;
+			}
+			av_packet_unref(&packet);
+		}
+		CHECK(packets == 3);
+		input_guard.reset();
+
+		// NUT's reported duration omits the final frame interval in this FFmpeg
+		// version; verify its packets above and use AVI for reader round trips.
+		if (std::string(filename) == "raw.nut") continue;
+		FFmpegReader reader(path);
+		reader.Open();
+		CHECK(reader.info.video_length == 3);
+		for (int number = 1; number <= 3; ++number) {
+			auto frame = reader.GetFrame(number);
+			REQUIRE(frame->GetWidth() == 64);
+			REQUIRE(frame->GetHeight() == 64);
+			const QColor color = frame->GetImage()->pixelColor(32, 32);
+			CHECK(color.green() < 10);
+			CHECK(color.red() == Approx(number == 2 ? 0 : 255).margin(10));
+			CHECK(color.blue() == Approx(number == 2 ? 255 : 0).margin(10));
+		}
+		reader.Close();
+	}
 }
 
 TEST_CASE( "Webm", "[libopenshot][ffmpegwriter]" )
