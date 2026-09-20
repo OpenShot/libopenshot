@@ -357,9 +357,9 @@ void Keyframe::SetJson(const std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
-		const Json::Value root = openshot::stringToJson(value);
+		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -369,22 +369,28 @@ void Keyframe::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Keyframe::SetJsonValue(const Json::Value root) {
+void Keyframe::SetJsonValue(Json::Value root) {
 	// Clear existing points
 	Points.clear();
-	Points.shrink_to_fit();
 
 	if (root.isObject() && !root["Points"].isNull()) {
+        // Reuse allocation across edits, and append the usual sorted input directly.
+        const size_t count = root["Points"].size();
+        if (count > Points.capacity())
+            Points.reserve(std::max(count, Points.capacity() * 2));
         // loop through points in JSON Object
-        for (const auto existing_point : root["Points"]) {
+        for (auto& existing_point : root["Points"]) {
             // Create Point
             Point p;
 
             // Load Json into Point
-            p.SetJsonValue(existing_point);
+            p.SetJsonValue(std::move(existing_point));
 
             // Add Point to Keyframe
-            AddPoint(p);
+            if (Points.empty() || Points.back().co.X < p.co.X)
+                Points.push_back(p);
+            else
+                AddPoint(p); // Preserve ordering and last-wins duplicate handling.
         }
     } else if (root.isNumeric()) {
         // Create Point from Numeric value

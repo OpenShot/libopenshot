@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <utility>
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -136,7 +137,7 @@ void EffectBase::SetJson(const std::string value) {
 	{
 		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -146,7 +147,7 @@ void EffectBase::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void EffectBase::SetJsonValue(const Json::Value root) {
+void EffectBase::SetJsonValue(Json::Value root) {
 	const std::string original_id = this->Id();
 	const std::string original_parent_effect_id = this->info.parent_effect_id;
 
@@ -159,7 +160,7 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 		root["id"].asString() == original_parent_effect_id &&
 		root["id"].asString() != original_id;
 	if (applying_parent_payload) {
-		my_root = root;
+		my_root = std::move(root);
 		my_root["id"] = original_id;
 		my_root["parent_effect_id"] = original_parent_effect_id;
 	} else if (parentEffect){
@@ -167,7 +168,7 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 		my_root["id"] = this->Id();
 		my_root["parent_effect_id"] = this->info.parent_effect_id;
 	} else {
-		my_root = root;
+		my_root = std::move(root);
 	}
 
 	// Legacy compatibility: older shared-mask JSON stored source trim
@@ -178,7 +179,7 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 		my_root["end"] = my_root["mask_end"];
 
 	// Set parent data
-	ClipBase::SetJsonValue(my_root);
+	SetBaseJsonValue(my_root);
 
 	// Set data from Json (if key is found)
 	if (!my_root["order"].isNull())

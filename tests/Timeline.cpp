@@ -2183,3 +2183,53 @@ TEST_CASE("GetMaxFrame ignores tiny float overshoot at clip end", "[libopenshot]
 	REQUIRE(t.GetMaxTime() * t.info.fps.ToDouble() < 505.0001);
 	CHECK(t.GetMaxFrame() == 505);
 }
+
+TEST_CASE("JSON transform edits preserve other properties and multiple actions", "[libopenshot][timeline][json]")
+{
+    DummyReader reader;
+    Clip clip(&reader);
+    clip.Id("transform-json");
+    clip.End(300);
+    clip.Layer(5);
+    clip.alpha = Keyframe(0.75);
+    Timeline timeline(1280, 720, Fraction(24, 1), 44100, 2, LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    Json::Value change;
+    change["type"] = "update";
+    change["key"].append("clips");
+    Json::Value id;
+    id["id"] = clip.Id();
+    change["key"].append(id);
+    Keyframe x, y;
+    for (int frame = 1; frame <= 1000; ++frame) {
+        x.AddPoint(frame, frame * 0.001, LINEAR);
+        y.AddPoint(frame, -frame * 0.001, BEZIER);
+    }
+    change["value"]["location_x"] = x.JsonValue();
+    change["value"]["location_y"] = y.JsonValue();
+    Json::Value changes(Json::arrayValue);
+    changes.append(change);
+    Json::Value alpha_change = change;
+    alpha_change["value"] = Json::Value(Json::objectValue);
+    alpha_change["value"]["alpha"] = Keyframe(0.5).JsonValue();
+    changes.append(alpha_change);
+    const auto epoch = timeline.CacheEpoch();
+    timeline.ApplyJsonDiff(changes.toStyledString());
+    CHECK(clip.location_x.JsonValue() == x.JsonValue());
+    CHECK(clip.location_y.JsonValue() == y.JsonValue());
+    CHECK(clip.alpha.GetValue(1) == Approx(0.5));
+    CHECK(clip.Layer() == 5);
+    CHECK(clip.End() == Approx(300));
+    CHECK(timeline.CacheEpoch() > epoch);
+    // A subsequent edit replaces the curve and leaves the other axis intact.
+    x.AddPoint(500, 0.9, CONSTANT);
+    change["value"].removeMember("location_y");
+    change["value"]["location_x"] = x.JsonValue();
+    changes.clear();
+    changes.append(change);
+    timeline.ApplyJsonDiff(changes.toStyledString());
+    CHECK(clip.location_x.JsonValue() == x.JsonValue());
+    CHECK(clip.location_y.JsonValue() == y.JsonValue());
+    CHECK(clip.alpha.GetValue(1) == Approx(0.5));
+    timeline.RemoveClip(&clip);
+}

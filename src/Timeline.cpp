@@ -21,6 +21,7 @@
 #include "effects/Mask.h"
 
 #include <algorithm>
+#include <utility>
 #include <QDir>
 #include <QFileInfo>
 #include <QRegularExpression>
@@ -1400,24 +1401,25 @@ void Timeline::ApplyJsonDiff(std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
-		const Json::Value root = openshot::stringToJson(value);
+		Json::Value root = openshot::stringToJson(value);
 		const uint64_t initial_cache_epoch = CacheEpoch();
-		// Process the JSON change array, loop through each item
-		for (const Json::Value change : root) {
+		// Each change is owned here and consumed once. Move it through the
+		// existing by-value API instead of copying entire animation curves.
+		for (auto& change : root) {
 			std::string change_key = change["key"][(uint)0].asString();
 
 			// Process each type of change
 			if (change_key == "clips")
 				// Apply to CLIPS
-				apply_json_to_clips(change);
+				apply_json_to_clips(std::move(change));
 
 			else if (change_key == "effects")
 				// Apply to EFFECTS
-				apply_json_to_effects(change);
+				apply_json_to_effects(std::move(change));
 
 			else
 				// Apply to TIMELINE
-				apply_json_to_timeline(change);
+				apply_json_to_timeline(std::move(change));
 
 		}
 
@@ -1499,7 +1501,7 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 				{
 					if (e->Id() == effect_id) {
 						// Apply the change to the effect directly
-						apply_json_to_effects(change, e);
+						apply_json_to_effects(std::move(change), e);
 
 						// Effect-only diffs must clear the owning clip cache.
 						if (existing_clip->GetCache()) {
@@ -1532,7 +1534,7 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 		clip->ParentTimeline(this);
 
 		// Set properties of clip from JSON
-		clip->SetJsonValue(change["value"]);
+		clip->SetJsonValue(std::move(change["value"]));
 
 		// Add clip to timeline
 		AddClip(clip);
@@ -1546,7 +1548,7 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 			int64_t old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
 
 			// Update clip properties from JSON
-			existing_clip->SetJsonValue(change["value"]);
+			existing_clip->SetJsonValue(std::move(change["value"]));
 
 			// Calculate new start and end frames after the update
 			int64_t new_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
@@ -1614,7 +1616,7 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 	// Now that we found the effect, apply the change to it
 	if (existing_effect || change_type == "insert") {
 		// Apply change to effect
-		apply_json_to_effects(change, existing_effect);
+		apply_json_to_effects(std::move(change), existing_effect);
 	}
 }
 
@@ -1647,7 +1649,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			allocated_effects.insert(e);
 
 			// Load Json into Effect
-			e->SetJsonValue(change["value"]);
+			e->SetJsonValue(std::move(change["value"]));
 
 			// Add Effect to Timeline
 			AddEffect(e);
@@ -1664,7 +1666,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Update effect properties from JSON
-			existing_effect->SetJsonValue(change["value"]);
+			existing_effect->SetJsonValue(std::move(change["value"]));
 		}
 
 	} else if (change_type == "delete") {
@@ -1705,16 +1707,16 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		// Check for valid property
 		if (root_key == "color")
 			// Set color
-			color.SetJsonValue(change["value"]);
+			color.SetJsonValue(std::move(change["value"]));
 		else if (root_key == "viewport_scale")
 			// Set viewport scale
-			viewport_scale.SetJsonValue(change["value"]);
+			viewport_scale.SetJsonValue(std::move(change["value"]));
 		else if (root_key == "viewport_x")
 			// Set viewport x offset
-			viewport_x.SetJsonValue(change["value"]);
+			viewport_x.SetJsonValue(std::move(change["value"]));
 		else if (root_key == "viewport_y")
 			// Set viewport y offset
-			viewport_y.SetJsonValue(change["value"]);
+			viewport_y.SetJsonValue(std::move(change["value"]));
 		else if (root_key == "duration") {
 			// Update duration of timeline
 			info.duration = change["value"].asDouble();

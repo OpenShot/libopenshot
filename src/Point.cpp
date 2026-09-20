@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <utility>
 #include "Point.h"
 #include "Exceptions.h"
 
@@ -89,9 +90,9 @@ void Point::SetJson(const std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
-		const Json::Value root = openshot::stringToJson(value);
+		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -101,14 +102,14 @@ void Point::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Point::SetJsonValue(const Json::Value root) {
+void Point::SetJsonValue(Json::Value root) {
 
 	if (!root["co"].isNull())
-		co.SetJsonValue(root["co"]); // update coordinate
+		co.SetJsonValue(std::move(root["co"])); // update coordinate
 	if (!root["handle_left"].isNull())
-		handle_left.SetJsonValue(root["handle_left"]); // update coordinate
+		handle_left.SetJsonValue(std::move(root["handle_left"])); // update coordinate
 	if (!root["handle_right"].isNull())
-		handle_right.SetJsonValue(root["handle_right"]); // update coordinate
+		handle_right.SetJsonValue(std::move(root["handle_right"])); // update coordinate
 	if (!root["interpolation"].isNull())
 		interpolation = (InterpolationType) root["interpolation"].asInt();
 	if (!root["handle_type"].isNull())

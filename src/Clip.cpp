@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <utility>
 #include "Clip.h"
 
 #include "AudioResampler.h"
@@ -1035,9 +1036,9 @@ void Clip::SetJson(const std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
-		const Json::Value root = openshot::stringToJson(value);
+		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -1047,7 +1048,7 @@ void Clip::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Clip::SetJsonValue(const Json::Value root) {
+void Clip::SetJsonValue(Json::Value root) {
 	auto ensure_default_keyframe = [](Keyframe& kf, double default_value) {
 		if (kf.GetCount() == 0) {
 			kf = Keyframe(default_value);
@@ -1055,7 +1056,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 	};
 
 	// Set parent data
-	ClipBase::SetJsonValue(root);
+	SetBaseJsonValue(root);
 
 	// Older project files predate reader-applied orientation metadata and stored
 	// phone/camera rotation as ordinary clip rotation/scale keyframes.
@@ -1097,59 +1098,59 @@ void Clip::SetJsonValue(const Json::Value root) {
 	if (!root["waveform_mode"].isNull())
 		waveform_mode = root["waveform_mode"].asInt();
 	if (!root["scale_x"].isNull())
-		scale_x.SetJsonValue(root["scale_x"]);
+		scale_x.SetJsonValue(std::move(root["scale_x"]));
 	if (!root["scale_y"].isNull())
-		scale_y.SetJsonValue(root["scale_y"]);
+		scale_y.SetJsonValue(std::move(root["scale_y"]));
 	if (!root["location_x"].isNull())
-		location_x.SetJsonValue(root["location_x"]);
+		location_x.SetJsonValue(std::move(root["location_x"]));
 	if (!root["location_y"].isNull())
-		location_y.SetJsonValue(root["location_y"]);
+		location_y.SetJsonValue(std::move(root["location_y"]));
 	if (!root["alpha"].isNull())
-		alpha.SetJsonValue(root["alpha"]);
+		alpha.SetJsonValue(std::move(root["alpha"]));
 	if (!root["corner_radius"].isNull())
-		corner_radius.SetJsonValue(root["corner_radius"]);
+		corner_radius.SetJsonValue(std::move(root["corner_radius"]));
 	if (!root["margin"].isNull())
-		margin.SetJsonValue(root["margin"]);
+		margin.SetJsonValue(std::move(root["margin"]));
 	if (!root["rotation"].isNull())
-		rotation.SetJsonValue(root["rotation"]);
+		rotation.SetJsonValue(std::move(root["rotation"]));
 	if (!root["time"].isNull())
-		time.SetJsonValue(root["time"]);
+		time.SetJsonValue(std::move(root["time"]));
 	if (!root["volume"].isNull())
-		volume.SetJsonValue(root["volume"]);
+		volume.SetJsonValue(std::move(root["volume"]));
 	if (!root["wave_color"].isNull())
-		wave_color.SetJsonValue(root["wave_color"]);
+		wave_color.SetJsonValue(std::move(root["wave_color"]));
 	if (!root["shear_x"].isNull())
-		shear_x.SetJsonValue(root["shear_x"]);
+		shear_x.SetJsonValue(std::move(root["shear_x"]));
 	if (!root["shear_y"].isNull())
-		shear_y.SetJsonValue(root["shear_y"]);
+		shear_y.SetJsonValue(std::move(root["shear_y"]));
 	if (!root["origin_x"].isNull())
-		origin_x.SetJsonValue(root["origin_x"]);
+		origin_x.SetJsonValue(std::move(root["origin_x"]));
 	if (!root["origin_y"].isNull())
-		origin_y.SetJsonValue(root["origin_y"]);
+		origin_y.SetJsonValue(std::move(root["origin_y"]));
 	if (!root["channel_filter"].isNull())
-		channel_filter.SetJsonValue(root["channel_filter"]);
+		channel_filter.SetJsonValue(std::move(root["channel_filter"]));
 	if (!root["channel_mapping"].isNull())
-		channel_mapping.SetJsonValue(root["channel_mapping"]);
+		channel_mapping.SetJsonValue(std::move(root["channel_mapping"]));
 	if (!root["has_audio"].isNull())
-		has_audio.SetJsonValue(root["has_audio"]);
+		has_audio.SetJsonValue(std::move(root["has_audio"]));
 	if (!root["has_video"].isNull())
-		has_video.SetJsonValue(root["has_video"]);
+		has_video.SetJsonValue(std::move(root["has_video"]));
 	if (!root["perspective_c1_x"].isNull())
-		perspective_c1_x.SetJsonValue(root["perspective_c1_x"]);
+		perspective_c1_x.SetJsonValue(std::move(root["perspective_c1_x"]));
 	if (!root["perspective_c1_y"].isNull())
-		perspective_c1_y.SetJsonValue(root["perspective_c1_y"]);
+		perspective_c1_y.SetJsonValue(std::move(root["perspective_c1_y"]));
 	if (!root["perspective_c2_x"].isNull())
-		perspective_c2_x.SetJsonValue(root["perspective_c2_x"]);
+		perspective_c2_x.SetJsonValue(std::move(root["perspective_c2_x"]));
 	if (!root["perspective_c2_y"].isNull())
-		perspective_c2_y.SetJsonValue(root["perspective_c2_y"]);
+		perspective_c2_y.SetJsonValue(std::move(root["perspective_c2_y"]));
 	if (!root["perspective_c3_x"].isNull())
-		perspective_c3_x.SetJsonValue(root["perspective_c3_x"]);
+		perspective_c3_x.SetJsonValue(std::move(root["perspective_c3_x"]));
 	if (!root["perspective_c3_y"].isNull())
-		perspective_c3_y.SetJsonValue(root["perspective_c3_y"]);
+		perspective_c3_y.SetJsonValue(std::move(root["perspective_c3_y"]));
 	if (!root["perspective_c4_x"].isNull())
-		perspective_c4_x.SetJsonValue(root["perspective_c4_x"]);
+		perspective_c4_x.SetJsonValue(std::move(root["perspective_c4_x"]));
 	if (!root["perspective_c4_y"].isNull())
-		perspective_c4_y.SetJsonValue(root["perspective_c4_y"]);
+		perspective_c4_y.SetJsonValue(std::move(root["perspective_c4_y"]));
 
 	// Core clip transforms should never remain empty after load. Empty JSON
 	// point arrays can be produced by editing flows that remove every keyframe.
