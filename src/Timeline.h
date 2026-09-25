@@ -53,8 +53,9 @@ namespace openshot {
 				return lhs->Layer() < rhs->Layer();
 			if (lhs->Position() != rhs->Position())
 				return lhs->Position() < rhs->Position();
-			// Stable tie-breaker on address to avoid equivalence when layer/position match
-			return std::less<openshot::Clip*>()(lhs, rhs);
+			// list::sort is stable: preserve compositing order for tied clips,
+			// including their project order when loading a saved timeline.
+			return false;
 		}
 	};
 

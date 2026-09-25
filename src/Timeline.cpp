@@ -1084,8 +1084,9 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				if (!ci.intersects) continue;
 				const int layer = ci.clip->Layer();
 				auto it = top_start_for_layer.find(layer);
-				if (it == top_start_for_layer.end() || ci.start_pos > it->second) {
-					top_start_for_layer[layer] = ci.start_pos;   // strictly greater to match prior logic
+				// The last composited clip wins ties at the same start frame.
+				if (it == top_start_for_layer.end() || ci.start_pos >= it->second) {
+					top_start_for_layer[layer] = ci.start_pos;
 					top_clip_for_layer[layer]  = ci.clip;
 				}
 			}
@@ -1956,15 +1957,9 @@ std::pair<float, float> Timeline::ResolveTransitionAudioGains(Clip* source_clip,
 
 	// Keep the current top/non-top clip routing intact when two clips overlap.
 	if (audible_clips.size() == 2) {
-		auto top_it = std::max_element(
-			audible_clips.begin(),
-			audible_clips.end(),
-			[](const AudibleClipInfo& lhs, const AudibleClipInfo& rhs) {
-				if (lhs.start_pos != rhs.start_pos)
-					return lhs.start_pos < rhs.start_pos;
-				return std::less<Clip*>()(lhs.clip, rhs.clip);
-			});
-		if ((is_top_clip && source_clip != top_it->clip) || (!is_top_clip && source_clip == top_it->clip))
+		// Collected in compositing order, including equal-position ties.
+		Clip* top_clip = audible_clips.back().clip;
+		if ((is_top_clip && source_clip != top_clip) || (!is_top_clip && source_clip == top_clip))
 			return {1.0f, 1.0f};
 	}
 
