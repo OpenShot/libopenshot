@@ -20,6 +20,8 @@
 #include "../Qt/AudioPlaybackThread.h"
 #include "../Qt/VideoPlaybackThread.h"
 #include "../Qt/VideoCacheThread.h"
+#include <atomic>
+#include <mutex>
 
 namespace openshot
 {
@@ -30,19 +32,21 @@ namespace openshot
     class PlayerPrivate : juce::Thread
     {
     std::shared_ptr<openshot::Frame> frame; /// The current frame
+	std::mutex frame_mutex; /// Protects frame publication and seek state transitions
+	std::atomic<uint64_t> seek_generation{0};
     int64_t playback_frames; /// The # of frames since playback started
-	int64_t video_position; /// The current frame position.
+	std::atomic<int64_t> video_position; /// The current frame position.
 	int64_t audio_position; /// The current frame position.
 	openshot::ReaderBase *reader; /// The reader which powers this player
 	openshot::AudioPlaybackThread *audioPlayback; /// The audio thread
 	openshot::VideoPlaybackThread *videoPlayback; /// The video thread
 	openshot::VideoCacheThread *videoCache; /// The cache thread
-	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	std::atomic<int> speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	int last_speed; /// The previous speed and direction (used to detect a change)
 	openshot::RendererBase *renderer;
-	int64_t last_video_position; /// The last frame actually displayed
+	std::atomic<int64_t> last_video_position; /// The last frame actually displayed
 	int max_sleep_ms; /// The max milliseconds to sleep (when syncing audio and video)
-	bool is_dirty; /// Detect if a frame needs to be refreshed (calls to Seek() set this to true)
+	std::atomic<bool> is_dirty; /// Detect if a frame needs to be refreshed (calls to Seek() set this to true)
 
 	/// Constructor
 	PlayerPrivate(openshot::RendererBase *rb);

@@ -16,6 +16,8 @@
 
 #include <AppConfig.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <memory>
+#include <mutex>
 
 namespace openshot
 {
@@ -31,6 +33,7 @@ namespace openshot
     {
 	RendererBase *renderer;
 	std::shared_ptr<Frame> frame;
+	std::mutex frame_mutex;
 	WaitableEvent render;
 	WaitableEvent rendered;
 	bool reset;
@@ -42,6 +45,7 @@ namespace openshot
 
 	/// Get the currently playing frame number (if any)
 	int64_t getCurrentFramePosition();
+	void SetFrame(std::shared_ptr<Frame> next_frame);
 
 	/// Start the thread
 	void run();
