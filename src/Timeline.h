@@ -53,8 +53,9 @@ namespace openshot {
 				return lhs->Layer() < rhs->Layer();
 			if (lhs->Position() != rhs->Position())
 				return lhs->Position() < rhs->Position();
-			// Stable tie-breaker on address to avoid equivalence when layer/position match
-			return std::less<openshot::Clip*>()(lhs, rhs);
+			// list::sort is stable: preserve compositing order for tied clips,
+			// including their project order when loading a saved timeline.
+			return false;
 		}
 	};
 
@@ -351,8 +352,8 @@ namespace openshot {
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		/// Set Max Image Size (used for performance optimization). Convenience function for setting
-		/// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
+		/// Fit the preview within these bounds, aligning reduced dimensions to four
+		/// pixels (minimum 4x4). Ignore nonpositive bounds; preserve native output size.
 		void SetMaxSize(int width, int height);
 
 		/// @brief Apply a special formatted JSON object, which represents a change to the timeline (add, update, delete)

@@ -39,6 +39,9 @@ namespace openshot {
 		std::string previous_properties; ///< This string contains the previous JSON properties
 		openshot::TimelineBase* timeline; ///< Pointer to the parent timeline instance (if any)
 
+		/// Load common clip fields without copying derived animation data.
+		void SetBaseJsonValue(const Json::Value& root);
+
 		/// Generate JSON for a property
 		Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
 

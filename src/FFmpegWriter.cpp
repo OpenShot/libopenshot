@@ -945,7 +945,6 @@ void FFmpegWriter::flush_encoders() {
 				if (pkt->duration <= 0) {
 					pkt->duration = audio_codec_ctx->frame_size > 0 ? audio_codec_ctx->frame_size : audio_input_frame_size;
 				}
-				const int64_t packet_duration = pkt->duration;
 				av_packet_rescale_ts(pkt, audio_codec_ctx->time_base, audio_st->time_base);
 				pkt->stream_index = audio_st->index;
 				pkt->flags |= AV_PKT_FLAG_KEY;
@@ -957,7 +956,7 @@ void FFmpegWriter::flush_encoders() {
 							+ av_err2string(error_code) + "]",
 						"error_code", error_code);
 				}
-				audio_timestamp += packet_duration;
+				// Flushing emits already-submitted samples; do not advance the input clock.
 				AV_FREE_PACKET(pkt);
 			}
 			av_packet_free(&pkt);
@@ -974,8 +973,7 @@ void FFmpegWriter::flush_encoders() {
 				break;
 			}
 
-			// Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
-			// but it fixes lots of PTS related issues when I do this.
+			// Legacy encoding API timestamp fallback.
 			pkt->pts = pkt->dts = audio_timestamp;
 			if (pkt->duration <= 0) {
 				pkt->duration = audio_codec_ctx->frame_size > 0 ? audio_codec_ctx->frame_size : audio_input_frame_size;
@@ -1801,7 +1799,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		// Create output frame (and allocate arrays)
 		AVFrame *audio_converted = AV_ALLOCATE_FRAME();
 		AV_RESET_FRAME(audio_converted);
-		audio_converted->nb_samples = total_frame_samples / channels_in_frame;
+		audio_converted->nb_samples = total_frame_samples / info.channels;
 		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_converted->nb_samples, output_sample_fmt, 0);
 
 		Logger::Instance()->AppendDebugMethod(
@@ -1850,8 +1848,11 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			audio_frame->nb_samples		// number of input samples to convert
 		);
 
-		// Set remaining samples
-		remaining_frame_samples = total_frame_samples;
+		// Resampling can buffer samples internally. Only copy samples actually
+		// returned, not the estimated capacity (which can read past the buffer).
+		if (nb_samples < 0)
+			throw ErrorEncodingAudio("Could not resample audio", nb_samples);
+		remaining_frame_samples = nb_samples * info.channels;
 
 		// Create a new array (to hold all resampled S16 audio samples)
 		all_resampled_samples = (int16_t *) av_malloc(
@@ -2109,11 +2110,14 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		int error_code = avcodec_encode_audio2(audio_codec_ctx, pkt, frame_final, &got_packet_ptr);
 #endif
 		/* if zero size, it means the image was buffered */
-		if (error_code == 0 && got_packet_ptr) {
+		if (error_code == 0 && got_packet_ptr > 0) {
 
-			// Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
-			// but it fixes lots of PTS related issues when I do this.
-			pkt->pts = pkt->dts = audio_timestamp;
+			// Delayed encoders (AAC) return timestamps for earlier input frames.
+			// Preserve those timestamps, just as the flush path does.
+			if (pkt->pts == AV_NOPTS_VALUE)
+				pkt->pts = audio_timestamp;
+			if (pkt->dts == AV_NOPTS_VALUE)
+				pkt->dts = pkt->pts;
 			if (pkt->duration <= 0) {
 				pkt->duration = frame_nb_samples;
 			}
@@ -2136,8 +2140,8 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 				"error_code", error_code);
 		}
 
-		// Increment PTS (no pkt.duration, so calculate with maths)
-		audio_timestamp += FFMIN(audio_input_frame_size, audio_input_position);
+		// Count submitted samples per channel, including a partial final frame.
+		audio_timestamp += frame_nb_samples;
 
 		// deallocate AVFrame
 		av_freep(&(frame_final->data[0]));
@@ -2177,8 +2181,20 @@ AVFrame *FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 
 	// Create buffer (if not provided)
 	if (!new_buffer) {
+		int palette_padding = 0;
+#ifdef AV_PIX_FMT_FLAG_PSEUDOPAL
+		// Old av_frame_ref/av_image_copy still read a synthetic RGB8 palette,
+		// even though av_image_get_buffer_size excludes it. Keep it readable
+		// when the encoder takes a reference to this externally owned buffer.
+		if (av_pix_fmt_desc_get(pix_fmt)->flags & AV_PIX_FMT_FLAG_PSEUDOPAL)
+			palette_padding = 1024;
+#endif
 		// New Buffer
-		new_buffer = (uint8_t *) av_malloc(*buffer_size * sizeof(uint8_t));
+		new_buffer = (uint8_t *) av_malloc(*buffer_size + palette_padding);
+		if (!new_buffer)
+			throw OutOfMemory("Could not allocate video frame buffer", path);
+		if (palette_padding)
+			memset(new_buffer + *buffer_size, 0, palette_padding);
 		// Attach buffer to AVFrame
 		AV_COPY_PICTURE_DATA(new_av_frame, new_buffer, pix_fmt, width, height);
 		new_av_frame->width = width;
@@ -2233,7 +2249,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 		persistent_dst_frame->height = info.height;
 
 		persistent_dst_size = av_image_get_buffer_size(
-			dst_fmt, info.width, info.height, 1
+			dst_fmt, info.width, info.height, 32
 		);
 		if (persistent_dst_size < 0)
 			throw ErrorEncodingVideo("Invalid destination image size", -1);
@@ -2251,7 +2267,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 			dst_fmt,
 			info.width,
 			info.height,
-			1
+			32
 		);
 	}
 
@@ -2305,12 +2321,19 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 	if (!new_frame)
 		throw OutOfMemory("Could not allocate new_frame via allocate_avframe", path);
 
-	// Copy persistent_dst_buffer → new_frame buffer
-	memcpy(
-		new_frame->data[0],
-		persistent_dst_buffer,
-		static_cast<size_t>(bytes_final)
-	);
+	// Copy visible pixels from padded scaler planes into the packed encoder frame.
+#ifdef AV_PIX_FMT_FLAG_PSEUDOPAL
+	// Older FFmpeg's av_image_copy also copies a synthetic palette for RGB8
+	// (GIF), although av_image_get_buffer_size no longer allocates that palette.
+	if (av_pix_fmt_desc_get(dst_fmt)->flags & AV_PIX_FMT_FLAG_PSEUDOPAL) {
+		av_image_copy_plane(new_frame->data[0], new_frame->linesize[0],
+			persistent_dst_frame->data[0], persistent_dst_frame->linesize[0],
+			av_image_get_linesize(dst_fmt, info.width, 0), info.height);
+	} else
+#endif
+	av_image_copy(new_frame->data, new_frame->linesize,
+		const_cast<const uint8_t**>(persistent_dst_frame->data),
+		persistent_dst_frame->linesize, dst_fmt, info.width, info.height);
 
 	// Queue the deep‐copied frame for encoding
 	add_avframe(frame, new_frame);

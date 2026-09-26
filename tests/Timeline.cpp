@@ -37,6 +37,55 @@
 
 using namespace openshot;
 
+TEST_CASE("Preview sizes stay aligned after aspect fitting", "[libopenshot][timeline][preview-size]")
+{
+	for (const QSize native : {QSize(1920, 1080), QSize(1080, 1920),
+		QSize(1440, 1080), QSize(854, 480), QSize(427, 240)}) {
+		Timeline timeline(native.width(), native.height(), Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+		for (const QSize bounds : {QSize(640, 352), QSize(638, 359), QSize(333, 591),
+			QSize(799, 451), QSize(1, 1), QSize(0, 360), QSize(-1, 360)}) {
+			CAPTURE(native.width(), native.height(), bounds.width(), bounds.height());
+			const QSize previous(timeline.preview_width, timeline.preview_height);
+			timeline.SetMaxSize(bounds.width(), bounds.height());
+			if (bounds.width() <= 0 || bounds.height() <= 0) {
+				CHECK(QSize(timeline.preview_width, timeline.preview_height) == previous);
+				continue;
+			}
+			if (bounds.width() >= native.width() && bounds.height() >= native.height()) {
+				CHECK(QSize(timeline.preview_width, timeline.preview_height) == native);
+				continue;
+			}
+			CHECK(timeline.preview_width % 4 == 0);
+			CHECK(timeline.preview_height % 4 == 0);
+			CHECK(timeline.preview_width >= 4);
+			CHECK(timeline.preview_height >= 4);
+			CHECK(timeline.preview_width <= std::max(4, std::min(bounds.width(), native.width())));
+			CHECK(timeline.preview_height <= std::max(4, std::min(bounds.height(), native.height())));
+			QSize fitted = native.scaled(QSize(std::min(bounds.width(), native.width()),
+				std::min(bounds.height(), native.height())), Qt::KeepAspectRatio);
+			CHECK(std::abs(timeline.preview_width - fitted.width()) <= 4);
+			CHECK(std::abs(timeline.preview_height - fitted.height()) <= 4);
+			const QSize result(timeline.preview_width, timeline.preview_height);
+			timeline.SetMaxSize(bounds.width(), bounds.height());
+			CHECK(QSize(timeline.preview_width, timeline.preview_height) == result);
+		}
+		// Restoring native size must not resize exports or saved full-size frames.
+		timeline.SetMaxSize(native.width(), native.height());
+		CHECK(timeline.preview_width == native.width());
+		CHECK(timeline.preview_height == native.height());
+		CHECK(timeline.info.width == native.width());
+		CHECK(timeline.info.height == native.height());
+	}
+}
+
+TEST_CASE("Native tiny timelines remain exact", "[libopenshot][timeline][preview-size]")
+{
+	Timeline timeline(2, 2, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	timeline.SetMaxSize(100, 100);
+	CHECK(timeline.preview_width == 2);
+	CHECK(timeline.preview_height == 2);
+}
+
 TEST_CASE("Deleting a JSON-owned clip invalidates its former range", "[libopenshot][timeline][sentry-delete]")
 {
 	Timeline timeline(2, 2, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
@@ -186,6 +235,99 @@ public:
 	void SetJson(const std::string value) override { (void) value; }
 	void SetJsonValue(const Json::Value root) override { ReaderBase::SetJsonValue(root); }
 };
+
+TEST_CASE("Transition follows compositing order for clips at the same position", "[libopenshot][timeline][mask][same-position]")
+{
+	TimelineSolidColorReader red(32, 32, 30, 1, 1800, QColor(255, 0, 0));
+	TimelineSolidColorReader blue(32, 32, 30, 1, 600, QColor(0, 0, 255));
+	Clip first, second;
+	// Exercise both address orders: insertion order must determine visibility.
+	Clip* bottom = std::less<Clip*>()(&first, &second) ? &first : &second;
+	Clip* top = bottom == &first ? &second : &first;
+	if (GENERATE(false, true))
+		std::swap(bottom, top);
+	bottom->Reader(&red);
+	top->Reader(&blue);
+	for (auto clip : {bottom, top}) {
+		clip->Layer(5);
+		clip->Position(197.0 / 30.0);
+		clip->End(10.0);
+	}
+	bottom->Start(9.2);
+	bottom->End(52.2);
+	// Different subframe positions can also resolve to the same start frame.
+	top->Position(top->Position() + GENERATE(0.0, 0.001));
+
+	Mask transition;
+	transition.MaskReader(new TimelineSolidColorReader(32, 32, 30, 1, 600, QColor(128, 128, 128)));
+	transition.Layer(5);
+	transition.Position(top->Position());
+	transition.End(10.0);
+	transition.contrast = Keyframe(3.0);
+	bool fade_in = true;
+	SECTION("Fade in") {}
+	SECTION("Fade out") { fade_in = false; }
+	transition.brightness = Keyframe(fade_in ? 1.0 : -1.0);
+	transition.brightness.AddPoint(301, fade_in ? -1.0 : 1.0, LINEAR);
+
+	Timeline timeline(32, 32, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	timeline.AddClip(bottom);
+	timeline.AddClip(top);
+	timeline.AddEffect(&transition);
+	timeline.Open();
+	const QColor begin = timeline.GetFrame(198)->GetImage()->pixelColor(16, 16);
+	const QColor middle = timeline.GetFrame(348)->GetImage()->pixelColor(16, 16);
+	const QColor end = timeline.GetFrame(497)->GetImage()->pixelColor(16, 16);
+	CHECK(begin == (fade_in ? QColor(255, 0, 0) : QColor(0, 0, 255)));
+	CHECK(middle.red() == Approx(128).margin(3));
+	CHECK(middle.blue() == Approx(128).margin(3));
+	CHECK(end == (fade_in ? QColor(0, 0, 255) : QColor(255, 0, 0)));
+	CHECK(timeline.GetFrame(498)->GetImage()->pixelColor(16, 16) == QColor(255, 0, 0));
+	timeline.Close();
+}
+
+TEST_CASE("Timeline preserves tied clip order through sorting and JSON reload", "[libopenshot][timeline][same-position][json]")
+{
+	DummyReader reader;
+	Clip first(&reader), second(&reader), earlier(&reader), higher(&reader);
+	Clip* bottom = std::less<Clip*>()(&first, &second) ? &first : &second;
+	Clip* top = bottom == &first ? &second : &first;
+	if (GENERATE(false, true))
+		std::swap(bottom, top);
+	bottom->Id("bottom");
+	top->Id("top");
+	earlier.Id("earlier");
+	higher.Id("higher");
+	for (auto clip : {bottom, top, &earlier, &higher}) {
+		clip->Layer(5);
+		clip->Position(1.0);
+		clip->End(3.0);
+	}
+	earlier.Position(0.0);
+	higher.Layer(6);
+	higher.Position(0.0);
+	Timeline timeline(32, 32, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	// Persist source readers, as project JSON does, rather than FrameMapper wrappers.
+	timeline.AutoMapClips(false);
+	// Add out of layer/position order to verify those still take precedence.
+	for (auto clip : {&higher, bottom, top, &earlier})
+		timeline.AddClip(clip);
+	timeline.SortTimeline();
+	timeline.SortTimeline();
+	const std::vector<std::string> expected{"earlier", "bottom", "top", "higher"};
+	auto clip_ids = [](Timeline& value) {
+		std::vector<std::string> ids;
+		for (auto clip : value.Clips())
+			ids.push_back(clip->Id());
+		return ids;
+	};
+	CHECK(clip_ids(timeline) == expected);
+	Timeline restored(32, 32, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	restored.SetJson(timeline.Json());
+	CHECK(clip_ids(restored) == expected);
+	restored.SortTimeline();
+	CHECK(clip_ids(restored) == expected);
+}
 
 class TimelineConstantAudioReader : public ReaderBase {
 private:
@@ -418,6 +560,53 @@ TEST_CASE("Timeline honors Mask fade_audio_hint with equal-power overlapping aud
 	}
 
 	t.Close();
+}
+
+TEST_CASE("Transition audio follows compositing order for tied start frames", "[libopenshot][timeline][audio][transition][same-position]")
+{
+	TimelineConstantAudioReader bottom_reader(32, 32, 30, 1, 48000, 2, 90, 1.0f);
+	TimelineConstantAudioReader top_reader(32, 32, 30, 1, 48000, 2, 90, 1.0f);
+	Clip first, second;
+	Clip* bottom = std::less<Clip*>()(&first, &second) ? &first : &second;
+	Clip* top = bottom == &first ? &second : &first;
+	if (GENERATE(false, true))
+		std::swap(bottom, top);
+	bottom->Reader(&bottom_reader);
+	top->Reader(&top_reader);
+	for (auto clip : {bottom, top}) {
+		clip->Layer(0);
+		clip->Position(1.0);
+		clip->End(2.0);
+	}
+	top->Position(top->Position() + GENERATE(0.0, 0.001));
+	bottom->channel_filter = Keyframe(0.0);
+	top->channel_filter = Keyframe(1.0);
+	Mask transition;
+	transition.Layer(0);
+	transition.Position(1.0);
+	transition.End(1.0);
+	transition.fade_audio_hint = GENERATE(false, true);
+	Timeline timeline(32, 32, Fraction(30, 1), 48000, 2, LAYOUT_STEREO);
+	timeline.AddClip(bottom);
+	timeline.AddClip(top);
+	timeline.AddEffect(&transition);
+	timeline.Open();
+	for (int number : {31, 45, 60}) {
+		auto frame = timeline.GetFrame(number);
+		REQUIRE(frame->GetAudioSamplesCount() > 0);
+		// Both clips begin at the left transition edge, so both fade in.
+		// Channel isolation ensures neither clip silently bypasses its gain.
+		const double previous = transition.fade_audio_hint
+			? expected_equal_power_gain(number - 1, 31, 60, true) : 1.0;
+		const double current = transition.fade_audio_hint
+			? expected_equal_power_gain(number, 31, 60, true) : 1.0;
+		for (int channel : {0, 1}) {
+			CHECK(frame->GetAudioSamples(channel)[0] == Approx(previous).margin(0.0002));
+			CHECK(frame->GetAudioSamples(channel)[frame->GetAudioSamplesCount() - 1]
+				== Approx(current).margin(0.002));
+		}
+	}
+	timeline.Close();
 }
 
 TEST_CASE("Timeline uses transition edge proximity for single-clip fade audio", "[libopenshot][timeline][audio][transition][single]") {
@@ -2182,4 +2371,54 @@ TEST_CASE("GetMaxFrame ignores tiny float overshoot at clip end", "[libopenshot]
 	REQUIRE(t.GetMaxTime() * t.info.fps.ToDouble() > 505.0);
 	REQUIRE(t.GetMaxTime() * t.info.fps.ToDouble() < 505.0001);
 	CHECK(t.GetMaxFrame() == 505);
+}
+
+TEST_CASE("JSON transform edits preserve other properties and multiple actions", "[libopenshot][timeline][json]")
+{
+    DummyReader reader;
+    Clip clip(&reader);
+    clip.Id("transform-json");
+    clip.End(300);
+    clip.Layer(5);
+    clip.alpha = Keyframe(0.75);
+    Timeline timeline(1280, 720, Fraction(24, 1), 44100, 2, LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    Json::Value change;
+    change["type"] = "update";
+    change["key"].append("clips");
+    Json::Value id;
+    id["id"] = clip.Id();
+    change["key"].append(id);
+    Keyframe x, y;
+    for (int frame = 1; frame <= 1000; ++frame) {
+        x.AddPoint(frame, frame * 0.001, LINEAR);
+        y.AddPoint(frame, -frame * 0.001, BEZIER);
+    }
+    change["value"]["location_x"] = x.JsonValue();
+    change["value"]["location_y"] = y.JsonValue();
+    Json::Value changes(Json::arrayValue);
+    changes.append(change);
+    Json::Value alpha_change = change;
+    alpha_change["value"] = Json::Value(Json::objectValue);
+    alpha_change["value"]["alpha"] = Keyframe(0.5).JsonValue();
+    changes.append(alpha_change);
+    const auto epoch = timeline.CacheEpoch();
+    timeline.ApplyJsonDiff(changes.toStyledString());
+    CHECK(clip.location_x.JsonValue() == x.JsonValue());
+    CHECK(clip.location_y.JsonValue() == y.JsonValue());
+    CHECK(clip.alpha.GetValue(1) == Approx(0.5));
+    CHECK(clip.Layer() == 5);
+    CHECK(clip.End() == Approx(300));
+    CHECK(timeline.CacheEpoch() > epoch);
+    // A subsequent edit replaces the curve and leaves the other axis intact.
+    x.AddPoint(500, 0.9, CONSTANT);
+    change["value"].removeMember("location_y");
+    change["value"]["location_x"] = x.JsonValue();
+    changes.clear();
+    changes.append(change);
+    timeline.ApplyJsonDiff(changes.toStyledString());
+    CHECK(clip.location_x.JsonValue() == x.JsonValue());
+    CHECK(clip.location_y.JsonValue() == y.JsonValue());
+    CHECK(clip.alpha.GetValue(1) == Approx(0.5));
+    timeline.RemoveClip(&clip);
 }
