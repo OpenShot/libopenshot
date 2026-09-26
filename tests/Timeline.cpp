@@ -37,6 +37,55 @@
 
 using namespace openshot;
 
+TEST_CASE("Preview sizes stay aligned after aspect fitting", "[libopenshot][timeline][preview-size]")
+{
+	for (const QSize native : {QSize(1920, 1080), QSize(1080, 1920),
+		QSize(1440, 1080), QSize(854, 480), QSize(427, 240)}) {
+		Timeline timeline(native.width(), native.height(), Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+		for (const QSize bounds : {QSize(640, 352), QSize(638, 359), QSize(333, 591),
+			QSize(799, 451), QSize(1, 1), QSize(0, 360), QSize(-1, 360)}) {
+			CAPTURE(native.width(), native.height(), bounds.width(), bounds.height());
+			const QSize previous(timeline.preview_width, timeline.preview_height);
+			timeline.SetMaxSize(bounds.width(), bounds.height());
+			if (bounds.width() <= 0 || bounds.height() <= 0) {
+				CHECK(QSize(timeline.preview_width, timeline.preview_height) == previous);
+				continue;
+			}
+			if (bounds.width() >= native.width() && bounds.height() >= native.height()) {
+				CHECK(QSize(timeline.preview_width, timeline.preview_height) == native);
+				continue;
+			}
+			CHECK(timeline.preview_width % 4 == 0);
+			CHECK(timeline.preview_height % 4 == 0);
+			CHECK(timeline.preview_width >= 4);
+			CHECK(timeline.preview_height >= 4);
+			CHECK(timeline.preview_width <= std::max(4, std::min(bounds.width(), native.width())));
+			CHECK(timeline.preview_height <= std::max(4, std::min(bounds.height(), native.height())));
+			QSize fitted = native.scaled(QSize(std::min(bounds.width(), native.width()),
+				std::min(bounds.height(), native.height())), Qt::KeepAspectRatio);
+			CHECK(std::abs(timeline.preview_width - fitted.width()) <= 4);
+			CHECK(std::abs(timeline.preview_height - fitted.height()) <= 4);
+			const QSize result(timeline.preview_width, timeline.preview_height);
+			timeline.SetMaxSize(bounds.width(), bounds.height());
+			CHECK(QSize(timeline.preview_width, timeline.preview_height) == result);
+		}
+		// Restoring native size must not resize exports or saved full-size frames.
+		timeline.SetMaxSize(native.width(), native.height());
+		CHECK(timeline.preview_width == native.width());
+		CHECK(timeline.preview_height == native.height());
+		CHECK(timeline.info.width == native.width());
+		CHECK(timeline.info.height == native.height());
+	}
+}
+
+TEST_CASE("Native tiny timelines remain exact", "[libopenshot][timeline][preview-size]")
+{
+	Timeline timeline(2, 2, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	timeline.SetMaxSize(100, 100);
+	CHECK(timeline.preview_width == 2);
+	CHECK(timeline.preview_height == 2);
+}
+
 TEST_CASE("Deleting a JSON-owned clip invalidates its former range", "[libopenshot][timeline][sentry-delete]")
 {
 	Timeline timeline(2, 2, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);

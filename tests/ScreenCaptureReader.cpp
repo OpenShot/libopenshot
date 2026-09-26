@@ -16,6 +16,7 @@
 #include "CaptureAudioBuffer.h"
 #include "ScreenCaptureReader.h"
 #include "WaylandBufferUtilities.h"
+#include "FFmpegColorRange.h"
 
 #include <cstdlib>
 #include <cstdint>
@@ -23,6 +24,42 @@
 #include <vector>
 
 using namespace openshot;
+
+TEST_CASE("JPEG capture conversion preserves full-range black and white",
+          "[libopenshot][screencapturereader][color-range]")
+{
+	for (auto format : {AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_YUVJ422P,
+		AV_PIX_FMT_YUVJ444P, AV_PIX_FMT_YUVJ440P}) {
+		bool full_range = false;
+		const auto normalized = NormalizeDeprecatedPixFmt(format, full_range);
+		CHECK(full_range);
+		CHECK(normalized != format);
+		uint8_t* source[4] = {};
+		int strides[4] = {};
+		const int size = av_image_alloc(source, strides, 16, 16, normalized, 32);
+		REQUIRE(size > 0);
+		memset(source[0], 128, size);
+		uint8_t* dest[4] = {};
+		int dest_strides[4] = {};
+		REQUIRE(av_image_alloc(dest, dest_strides, 16, 16, AV_PIX_FMT_RGBA, 32) > 0);
+		SwsContext* context = sws_getContext(16, 16, normalized, 16, 16,
+			AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+		REQUIRE(context != nullptr);
+		const int* coefficients = sws_getCoefficients(SWS_CS_DEFAULT);
+		REQUIRE(sws_setColorspaceDetails(context, coefficients, full_range, coefficients,
+			1, 0, 1 << 16, 1 << 16) >= 0);
+		for (int level : {0, 16, 235, 255}) {
+			for (int row = 0; row < 16; ++row)
+				memset(source[0] + row * strides[0], level, 16);
+			REQUIRE(sws_scale(context, source, strides, 0, 16, dest, dest_strides) == 16);
+			for (int channel = 0; channel < 3; ++channel)
+				CHECK(int(dest[0][channel]) == Approx(level).margin(2));
+		}
+		sws_freeContext(context);
+		av_freep(&source[0]);
+		av_freep(&dest[0]);
+	}
+}
 
 TEST_CASE("PulseAudio and WASAPI clocks align to the same recording samples",
 	"[libopenshot][screencapturereader][audio][sync]")

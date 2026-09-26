@@ -314,6 +314,68 @@ TEST_CASE( "Max_Decode_Size_FFmpegReader", "[libopenshot][ffmpegreader]" )
 	r.Close();
 }
 
+TEST_CASE("Reduced decoded frames have aligned rows", "[libopenshot][ffmpegreader][preview-size]")
+{
+	for (const QSize bounds : {QSize(638, 359), QSize(640, 352), QSize(1280, 359),
+		QSize(638, 720), QSize(1, 1)}) {
+		CAPTURE(bounds.width(), bounds.height());
+		FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+		reader.SetMaxDecodeSize(bounds.width(), bounds.height());
+		reader.Open();
+		auto frame = reader.GetFrame(1);
+		REQUIRE(frame != nullptr);
+		CHECK(frame->GetWidth() % 4 == 0);
+		CHECK(frame->GetHeight() % 4 == 0);
+		CHECK(frame->GetWidth() >= 4);
+		CHECK(frame->GetHeight() >= 4);
+		CHECK(frame->GetWidth() <= std::max(4, bounds.width()));
+		CHECK(frame->GetHeight() <= std::max(4, bounds.height()));
+		CHECK(frame->GetImage()->bytesPerLine() % 16 == 0);
+		CHECK(reinterpret_cast<uintptr_t>(frame->GetPixels()) % 16 == 0);
+		reader.Close();
+	}
+}
+
+TEST_CASE("Clip fitting cannot undo preview alignment", "[libopenshot][ffmpegreader][preview-size]")
+{
+	FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	reader.Open();
+	Clip clip(&reader);
+	// A 16:9 source in a portrait preview is fitted again by the reader.
+	Timeline timeline(1080, 1920, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	timeline.SetMaxSize(333, 591);
+	timeline.AddClip(&clip);
+	clip.scale_x = Keyframe(1.13);
+	clip.scale_y = Keyframe(1.07);
+	clip.Open();
+	auto frame = reader.GetFrame(1);
+	CHECK(frame->GetWidth() < reader.info.width);
+	CHECK(frame->GetWidth() % 4 == 0);
+	CHECK(frame->GetHeight() % 4 == 0);
+	CHECK(frame->GetImage()->bytesPerLine() % 16 == 0);
+	clip.Close();
+	timeline.Close();
+}
+
+TEST_CASE("Quarter-turn previews retain aligned rows", "[libopenshot][ffmpegreader][preview-size]")
+{
+	FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	reader.SetMaxDecodeSize(359, 638);
+	reader.ApplyOrientationMetadata(true);
+	reader.Open();
+	// Model the display orientation discovered from container metadata.
+	reader.source_rotation = 90;
+	std::swap(reader.info.width, reader.info.height);
+	auto frame = reader.GetFrame(1);
+	CHECK(frame->GetWidth() <= 359);
+	CHECK(frame->GetHeight() <= 638);
+	CHECK(frame->GetHeight() > frame->GetWidth());
+	CHECK(frame->GetWidth() % 4 == 0);
+	CHECK(frame->GetHeight() % 4 == 0);
+	CHECK(frame->GetImage()->bytesPerLine() % 16 == 0);
+	reader.Close();
+}
+
 TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader

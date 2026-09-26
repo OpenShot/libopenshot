@@ -23,6 +23,8 @@
 #include <QTransform>
 
 #include "FFmpegUtilities.h"
+#include "FFmpegColorRange.h"
+#include "PreviewSize.h"
 #include "effects/CropHelpers.h"
 
 #include "FFmpegReader.h"
@@ -75,31 +77,6 @@ int hw_de_on = 0;
 	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
 
-// Normalize deprecated JPEG-range YUVJ formats before creating swscale contexts.
-// swscale expects non-YUVJ formats plus explicit color-range metadata.
-static AVPixelFormat NormalizeDeprecatedPixFmt(AVPixelFormat pix_fmt, bool& is_full_range) {
-	switch (pix_fmt) {
-		case AV_PIX_FMT_YUVJ420P:
-			is_full_range = true;
-			return AV_PIX_FMT_YUV420P;
-		case AV_PIX_FMT_YUVJ422P:
-			is_full_range = true;
-			return AV_PIX_FMT_YUV422P;
-		case AV_PIX_FMT_YUVJ444P:
-			is_full_range = true;
-			return AV_PIX_FMT_YUV444P;
-		case AV_PIX_FMT_YUVJ440P:
-			is_full_range = true;
-			return AV_PIX_FMT_YUV440P;
-#ifdef AV_PIX_FMT_YUVJ411P
-		case AV_PIX_FMT_YUVJ411P:
-			is_full_range = true;
-			return AV_PIX_FMT_YUV411P;
-#endif
-		default:
-			return pix_fmt;
-	}
-}
 
 FFmpegReader::FFmpegReader(const std::string &path, bool inspect_reader)
 		: FFmpegReader(path, DurationStrategy::VideoPreferred, inspect_reader) {}
@@ -2016,7 +1993,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 	// Determine if image needs to be scaled (for performance reasons)
 	int original_height = src_height;
-	if (max_width != 0 && max_height != 0 && max_width < width && max_height < height) {
+	if (max_width > 0 && max_height > 0 && (max_width < width || max_height < height)) {
 		// Override width and height (but maintain aspect ratio)
 		float ratio = float(width) / float(height);
 		int possible_width = round(max_height * ratio);
@@ -2030,6 +2007,13 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			// use max_width, and calculated height
 			width = max_width;
 			height = possible_height;
+		}
+		// Clip aspect ratios, animated scale/crop, and decode-size limits can
+		// undo timeline alignment. Align the final reduced RGB dimensions here.
+		if (src_width >= 4 && src_height >= 4) {
+			const QSize aligned = AlignPreviewSize(QSize(width, height));
+			width = aligned.width();
+			height = aligned.height();
 		}
 	}
 

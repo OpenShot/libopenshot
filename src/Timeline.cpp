@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Timeline.h"
+#include "PreviewSize.h"
 
 #include "CacheBase.h"
 #include "CacheDisk.h"
@@ -1858,15 +1859,22 @@ void Timeline::ClearAllCache(bool deep) {
 	BumpCacheEpoch();
 }
 
-// Set Max Image Size (used for performance optimization). Convenience function for setting
-// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
+// Set the preview size without changing the project's native dimensions.
 void Timeline::SetMaxSize(int width, int height) {
+	// Ignore transient invalid widget sizes (for example while hidden).
+	if (width <= 0 || height <= 0 || info.width <= 0 || info.height <= 0)
+		return;
 	// Maintain aspect ratio regardless of what size is passed in
 	QSize display_ratio_size = QSize(info.width, info.height);
 	QSize proposed_size = QSize(std::min(width, info.width), std::min(height, info.height));
 
 	// Scale QSize up to proposed size
 	display_ratio_size.scale(proposed_size, Qt::KeepAspectRatio);
+	// Preserve exact full-resolution output, including non-aligned profiles and
+	// tiny test images. Only reduced previews use the aligned sampling grid.
+	if (display_ratio_size != QSize(info.width, info.height) &&
+		info.width >= 4 && info.height >= 4)
+		display_ratio_size = AlignPreviewSize(display_ratio_size);
 
 	// Update preview settings
 	preview_width = display_ratio_size.width();
