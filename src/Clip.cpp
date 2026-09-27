@@ -78,6 +78,7 @@ void Clip::init_settings()
 	ClipBase::End(0.0);
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
+	location_coordinate_system = "auto";
 	anchor = ANCHOR_CANVAS;
 	display = FRAME_DISPLAY_NONE;
 	mixing = VOLUME_MIX_NONE;
@@ -969,6 +970,7 @@ Json::Value Clip::JsonValue() const {
 	root["parentObjectId"] = parentObjectId;
 	root["gravity"] = gravity;
 	root["scale"] = scale;
+	root["location_coordinate_system"] = location_coordinate_system;
 	root["anchor"] = anchor;
 	root["display"] = display;
 	root["mixing"] = mixing;
@@ -1085,6 +1087,12 @@ void Clip::SetJsonValue(Json::Value root) {
 		gravity = (GravityType) root["gravity"].asInt();
 	if (!root["scale"].isNull())
 		scale = (ScaleType) root["scale"].asInt();
+	if (!root["location_coordinate_system"].isNull()) {
+		const auto& coordinates = root["location_coordinate_system"];
+		location_coordinate_system = coordinates.isString() ? coordinates.asString() : "auto";
+		if (location_coordinate_system != "canvas" && location_coordinate_system != "geometry")
+			location_coordinate_system = "auto";
+	}
 	if (!root["anchor"].isNull())
 		anchor = (AnchorType) root["anchor"].asInt();
 	if (!root["display"].isNull())
@@ -1693,7 +1701,10 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		}
 		return location * (canvas_size - anchored_position);
 	};
-	if (scale == SCALE_CROP) {
+	// Preserve imported location curves in their original units. Converting only
+	// their keyframes cannot preserve animated scale/margin or reader resizing.
+	if (location_coordinate_system == "geometry" ||
+		(location_coordinate_system != "canvas" && scale == SCALE_CROP)) {
 		x += location_offset(location_x_value, x - layout_x, layout_width, scaled_source_width);
 		y += location_offset(location_y_value, y - layout_y, layout_height, scaled_source_height);
 	} else {
