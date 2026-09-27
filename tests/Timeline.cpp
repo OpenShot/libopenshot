@@ -10,6 +10,8 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <algorithm>
+#include <iterator>
 #include <string>
 #include <sstream>
 #include <memory>
@@ -264,9 +266,8 @@ TEST_CASE("Transition follows compositing order for clips at the same position",
 	transition.Position(top->Position());
 	transition.End(10.0);
 	transition.contrast = Keyframe(3.0);
-	bool fade_in = true;
-	SECTION("Fade in") {}
-	SECTION("Fade out") { fade_in = false; }
+	const bool fade_in = GENERATE(true, false);
+	CAPTURE(fade_in);
 	transition.brightness = Keyframe(fade_in ? 1.0 : -1.0);
 	transition.brightness.AddPoint(301, fade_in ? -1.0 : 1.0, LINEAR);
 
@@ -316,9 +317,10 @@ TEST_CASE("Timeline preserves tied clip order through sorting and JSON reload", 
 	timeline.SortTimeline();
 	const std::vector<std::string> expected{"earlier", "bottom", "top", "higher"};
 	auto clip_ids = [](Timeline& value) {
+		const auto clips = value.Clips();
 		std::vector<std::string> ids;
-		for (auto clip : value.Clips())
-			ids.push_back(clip->Id());
+		std::transform(clips.begin(), clips.end(), std::back_inserter(ids),
+			[](const auto clip) { return clip->Id(); });
 		return ids;
 	};
 	CHECK(clip_ids(timeline) == expected);
