@@ -36,6 +36,7 @@ set(OPENSHOT_TESTS
   Clip
   Color
   Coordinate
+  CrashHandler
   DummyReader
   FFmpegReader
   FFmpegWriter

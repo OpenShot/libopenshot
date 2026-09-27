@@ -46,7 +46,8 @@ CrashHandler *CrashHandler::Instance()
 		sigaction( SIGBUS,  &sa, NULL );
 		sigaction( SIGILL,  &sa, NULL );
 		sigaction( SIGFPE,  &sa, NULL );
-		sigaction( SIGPIPE, &sa, NULL );
+		// Preserve the host's SIGPIPE policy. Python ignores it so a closed
+		// output pipe reports EPIPE instead of terminating the entire editor.
 #endif
 	}
 
