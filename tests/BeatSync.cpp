@@ -18,6 +18,7 @@
 #include <QImage>
 
 #include "EffectInfo.h"
+#include "Exceptions.h"
 #include "Frame.h"
 #include "Timeline.h"
 #include "effects/BeatSync.h"
