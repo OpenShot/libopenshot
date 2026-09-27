@@ -136,7 +136,7 @@ using namespace openshot;
 using namespace std;
 
 using Clock = chrono::steady_clock;
-using TrialResult = pair<int64_t, double>;  // (frames, elapsed_seconds)
+using TrialResult = pair<int64_t, double>;  // (frames or JSON updates, elapsed_seconds)
 using TrialFunc = function<TrialResult()>;
 using Trial = pair<string, TrialFunc>;
 
@@ -198,7 +198,7 @@ static void print_results(const vector<BenchmarkRecord>& records) {
     };
 
     cout << "| " << left  << setw(static_cast<int>(max_name)) << "Trial"
-         << " | "  << right << setw(8) << "FPS"
+         << " | "  << right << setw(8) << "Ops/s"
          << " | Chart |\n";
     cout << "|:" << string(max_name, '-')
          << "-|" << string(8, '-') << ":|:"
@@ -217,6 +217,58 @@ static TrialResult timed_read(ReaderBase& r) {
     for (int64_t i = 0; i < BENCH_FRAMES; ++i)
         r.GetFrame(START_FRAME + i);
     return {BENCH_FRAMES, chrono::duration<double>(Clock::now() - t0).count()};
+}
+
+// Model dragging a clip's X/Y transform: each edit sends the complete, growing
+// curves, as openshot-qt does. Prepare strings outside the measured interval so
+// this measures ApplyJsonDiff (including parsing), not JSON generation or render.
+static TrialResult timed_transform_json(const string& image, int existing_keys) {
+    constexpr int edits = 100;
+    Clip clip(image);
+    clip.Id("json-benchmark-clip");
+    clip.Layer(5);
+    clip.End((existing_keys + edits + 24) / 24.0);
+    Timeline timeline(1280, 720, Fraction(24, 1), 44100, 2, LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+
+    Json::Value diff(Json::arrayValue);
+    Json::Value change(Json::objectValue);
+    change["type"] = "update";
+    change["key"].append("clips");
+    Json::Value id(Json::objectValue);
+    id["id"] = clip.Id();
+    change["key"].append(id);
+    diff.append(change);
+    auto& value = diff[0]["value"];
+    value["location_x"]["Points"] = Json::Value(Json::arrayValue);
+    value["location_y"]["Points"] = Json::Value(Json::arrayValue);
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    vector<string> payloads;
+    payloads.reserve(edits);
+    for (int frame = 1; frame <= existing_keys + edits; ++frame) {
+        // Include Bezier handles, matching real project keyframes.
+        value["location_x"]["Points"].append(Point(frame, sin(frame * 0.05) * 0.4, BEZIER).JsonValue());
+        value["location_y"]["Points"].append(Point(frame, cos(frame * 0.05) * 0.4, BEZIER).JsonValue());
+        if (frame == existing_keys)
+            timeline.ApplyJsonDiff(Json::writeString(writer, diff));
+        if (frame > existing_keys)
+            payloads.push_back(Json::writeString(writer, diff));
+    }
+    auto start = Clock::now();
+    for (const auto& payload : payloads)
+        timeline.ApplyJsonDiff(payload);
+    double elapsed = chrono::duration<double>(Clock::now() - start).count();
+    // A broken/no-op diff must not masquerade as an optimization.
+    const int final_frame = existing_keys + edits;
+    if (clip.location_x.GetCount() != final_frame || clip.location_y.GetCount() != final_frame ||
+        abs(clip.location_x.GetValue(final_frame) - sin(final_frame * 0.05) * 0.4) > 1e-6 ||
+        abs(clip.location_y.GetValue(final_frame) - cos(final_frame * 0.05) * 0.4) > 1e-6)
+        throw runtime_error("Transform JSON benchmark did not apply the expected keyframes");
+    timeline.Close();
+    timeline.RemoveClip(&clip);
+    return {edits, elapsed};
 }
 
 #if defined(OPENSHOT_HAS_AUDIOVISUALIZATION) || defined(OPENSHOT_HAS_BEATSYNC)
@@ -316,6 +368,12 @@ int main(int argc, char* argv[]) {
 
     vector<Trial> trials;
     trials.reserve(40);
+
+    for (int keys : {0, 1000}) {
+        trials.emplace_back("Timeline JSON transforms (" + to_string(keys) + " existing keys)",
+            [&, keys]() { return timed_transform_json(overlay, keys); });
+    }
+
 
     trials.emplace_back("FFmpegReader", [&]() -> TrialResult {
         FFmpegReader r(video);

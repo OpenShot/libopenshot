@@ -78,6 +78,10 @@ Json::Value ClipBase::JsonValue() const {
 
 // Load Json::Value into this object
 void ClipBase::SetJsonValue(const Json::Value root) {
+	SetBaseJsonValue(root);
+}
+
+void ClipBase::SetBaseJsonValue(const Json::Value& root) {
 
 	// Set data from Json (if key is found)
 	if (!root["id"].isNull())

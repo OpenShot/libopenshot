@@ -23,8 +23,9 @@ namespace openshot
     int close_to_sync = 5;
     // Constructor
     PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
-    : renderer(rb), Thread("player"), video_position(1), audio_position(0),
-      speed(1), reader(NULL), last_video_position(1), max_sleep_ms(125000), playback_frames(0), is_dirty(true)
+    : Thread("player"), playback_frames(0), video_position(1), audio_position(0),
+      reader(nullptr), speed(1), last_speed(1), renderer(rb),
+      last_video_position(1), max_sleep_ms(125000), is_dirty(true)
     {
         videoCache = new openshot::VideoCacheThread();
         audioPlayback = new openshot::AudioPlaybackThread(videoCache);
@@ -97,10 +98,16 @@ namespace openshot
             }
 
             // Get the current video frame
-            frame = getFrame();
+            const uint64_t frame_seek_generation = seek_generation.load();
+            auto frame_to_render = getFrame();
+            // A seek during decoding invalidates the old frame. Do not hand
+            // that frame to the renderer or overwrite the new playhead.
+            if (seek_generation.load() != frame_seek_generation)
+                continue;
+            const int64_t rendered_position = video_position.load();
 
             // Set the video frame on the video thread and render frame
-            videoPlayback->frame = frame;
+            videoPlayback->SetFrame(std::move(frame_to_render));
             videoPlayback->rendered.reset();
             videoPlayback->render.signal();
             // Keep decode/position advancement aligned with actual preview updates.
@@ -113,7 +120,11 @@ namespace openshot
             videoPlayback->rendered.wait(render_wait_ms);
 
             // Keep track of the last displayed frame
-            last_video_position = video_position;
+            {
+                std::lock_guard<std::mutex> lock(frame_mutex);
+                if (seek_generation.load() == frame_seek_generation)
+                    last_video_position = rendered_position;
+            }
             last_speed = speed;
 
             // Calculate the diff between 'now' and the predicted frame end time
@@ -142,51 +153,60 @@ namespace openshot
     // Get the next displayed frame (based on speed and direction)
     std::shared_ptr<openshot::Frame> PlayerPrivate::getFrame()
     {
-    try {
-        // Getting new frame, so clear this flag
-        is_dirty = false;
+	int64_t position;
+	uint64_t generation;
+	ReaderBase* current_reader;
+	{
+		std::lock_guard<std::mutex> lock(frame_mutex);
+		// Getting new frame, so clear this flag
+		is_dirty = false;
 
-        // Get the next frame (based on speed)
-        if (video_position + speed >= 1 && video_position + speed <= reader->info.video_length) {
-            video_position = video_position + speed;
+		// Get the next frame (based on speed)
+		const int current_speed = speed.load();
+		const int64_t next_position = video_position.load() + current_speed;
+		if (next_position >= 1 && next_position <= reader->info.video_length) {
+			video_position = next_position;
+		} else if (next_position < 1) {
+			video_position = 1;
+			speed = 0;
+		} else {
+			video_position = reader->info.video_length;
+			speed = 0;
+		}
 
-        } else if (video_position + speed < 1) {
-            // Start of reader (prevent negative frame number and pause playback)
-            video_position = 1;
-            speed = 0;
-        } else if (video_position + speed > reader->info.video_length) {
-            // End of reader (prevent negative frame number and pause playback)
-            video_position = reader->info.video_length;
-            speed = 0;
-        }
+		position = video_position.load();
+		if (frame && frame->number == position && position == last_video_position)
+			return frame;
+		// Increment playback frames (always in the positive direction)
+		playback_frames += std::abs(speed.load());
+		// Update cache position before releasing the seek lock.
+		videoCache->NotifyPlaybackPosition(position);
+		current_reader = reader;
+		generation = seek_generation.load();
+	}
 
-        if (frame && frame->number == video_position && video_position == last_video_position) {
-            // return cached frame
-            return frame;
-        }
-        else
-        {
-            // Increment playback frames (always in the positive direction)
-            playback_frames += std::abs(speed);
-
-            // Update playhead hint for cache window tracking without triggering seek behavior.
-            videoCache->NotifyPlaybackPosition(video_position);
-
-            // return frame from reader
-            return reader->GetFrame(video_position);
-        }
-
-    } catch (const ReaderClosed & e) {
-        // ...
-    } catch (const OutOfBoundsFrame & e) {
-        // ...
-    }
-    return std::shared_ptr<openshot::Frame>();
+	// Decoding can take much longer than a frame. Keep Seek responsive while
+	// it runs, then publish only if no newer seek invalidated the result.
+	std::shared_ptr<Frame> decoded;
+	try {
+		decoded = current_reader->GetFrame(position);
+	} catch (const ReaderClosed &) {
+	} catch (const OutOfBoundsFrame &) {
+	}
+	{
+		std::lock_guard<std::mutex> lock(frame_mutex);
+		if (seek_generation.load() != generation)
+			return {};
+		frame = std::move(decoded);
+		return frame;
+	}
     }
 
     // Seek to a new position
     void PlayerPrivate::Seek(int64_t new_position)
     {
+        std::lock_guard<std::mutex> lock(frame_mutex);
+        ++seek_generation;
         video_position = new_position;
         last_video_position = 0;
         // Drop local frame reference so same-frame refreshes cannot reuse stale

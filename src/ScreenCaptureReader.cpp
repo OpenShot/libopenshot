@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "ScreenCaptureReader.h"
+#include "FFmpegColorRange.h"
 #include "CaptureAudioBuffer.h"
 
 #include <algorithm>
@@ -1118,7 +1119,9 @@ std::shared_ptr<Frame> ScreenCaptureReader::DecodeNextFrame(int64_t number)
 
 		const int width = source_frame->width > 0 ? source_frame->width : info.width;
 		const int height = source_frame->height > 0 ? source_frame->height : info.height;
-		const PixelFormat src_fmt = static_cast<PixelFormat>(source_frame->format);
+		bool src_full_range = source_frame->color_range == AVCOL_RANGE_JPEG;
+		const PixelFormat src_fmt = NormalizeDeprecatedPixFmt(
+			static_cast<PixelFormat>(source_frame->format), src_full_range);
 
 		sws_context = sws_getCachedContext(
 			sws_context,
@@ -1135,6 +1138,10 @@ std::shared_ptr<Frame> ScreenCaptureReader::DecodeNextFrame(int64_t number)
 		if (!sws_context) {
 			throw InvalidFile("Unable to create capture pixel conversion context.", InputName());
 		}
+
+		const int* coefficients = sws_getCoefficients(SWS_CS_DEFAULT);
+		sws_setColorspaceDetails(sws_context, coefficients, src_full_range ? 1 : 0,
+			coefficients, 1, 0, 1 << 16, 1 << 16);
 
 		const int bytes_per_pixel = 4;
 		const size_t buffer_size = static_cast<size_t>(width) * height * bytes_per_pixel;

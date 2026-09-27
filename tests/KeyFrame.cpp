@@ -832,3 +832,46 @@ TEST_CASE( "Tracker stroke width compensates for preview raster scaling", "[libo
 	CHECK(blue_run_at_center() >= 3);
 }
 #endif
+
+TEST_CASE("JSON keyframe loading preserves AddPoint semantics", "[libopenshot][keyframe][json]")
+{
+    std::vector<double> frames;
+    SECTION("sorted") { frames = {1, 4, 8, 20}; }
+    SECTION("unordered and duplicate frames") { frames = {20, 4, 8, 4, 1, 20}; }
+    SECTION("fractional frames") { frames = {1, 1.25, 1.75, 1.25, 2}; }
+    SECTION("large sorted curve") {
+        for (int i = 1; i <= 5000; ++i) frames.push_back(i);
+    }
+    Json::Value data;
+    data["Points"] = Json::Value(Json::arrayValue);
+    Keyframe expected;
+    for (size_t i = 0; i < frames.size(); ++i) {
+        Point point(frames[i], i * 0.125, static_cast<InterpolationType>(i % 3));
+        // Only Bezier points serialize custom handles.
+        if (point.interpolation == BEZIER) {
+            point.handle_left = Coordinate(0.2, 0.8);
+            point.handle_right = Coordinate(0.7, 0.1);
+        }
+        data["Points"].append(point.JsonValue());
+        expected.AddPoint(point);
+    }
+    const Json::Value original = data;
+    Keyframe actual(99);
+    actual.SetJsonValue(data);
+    CHECK(data == original);
+    CHECK(actual.JsonValue() == expected.JsonValue());
+    for (int frame = 1; frame <= 20; ++frame)
+        CHECK(actual.GetValue(frame) == Approx(expected.GetValue(frame)));
+
+    // Replacing a large animation must discard old points, even when capacity
+    // is retained internally for the next drag sample.
+    actual.SetJsonValue(Json::Value(0.75));
+    CHECK(actual.GetCount() == 1);
+    CHECK(actual.GetValue(1) == Approx(0.75));
+    Json::Value empty;
+    empty["Points"] = Json::Value(Json::arrayValue);
+    actual.SetJsonValue(empty);
+    CHECK(actual.GetCount() == 0);
+    actual.SetJsonValue(data);
+    CHECK(actual.JsonValue() == expected.JsonValue());
+}

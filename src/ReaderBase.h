@@ -97,6 +97,7 @@ namespace openshot
 		void ParentClip(openshot::ClipBase* new_clip);
 
 		/// Set an optional maximum decoded frame size. Use 0,0 to disable the limit.
+		/// Reduced FFmpeg previews align both dimensions to four pixels (minimum 4x4).
 		void SetMaxDecodeSize(int width, int height);
 
 		/// Return the current maximum decoded frame width (0 when unlimited).

@@ -22,6 +22,7 @@
 #include <QImage>
 #include <QRect>
 #include <QSize>
+#include <QTemporaryDir>
 #include <QPainter>
 #include <vector>
 #include <cmath>
@@ -1972,4 +1973,94 @@ TEST_CASE("Reverse time curve (sample-exact, no resampling)", "[libopenshot][cli
 	clip.Close();
 	r.Close();
 	cache.Clear();
+}
+
+TEST_CASE("Location coordinate convention survives JSON and partial updates", "[libopenshot][clip][json][location-compat]")
+{
+    Clip clip;
+    CHECK(clip.location_coordinate_system == "auto");
+    for (const std::string coordinates : {"canvas", "geometry"}) {
+        clip.SetJson("{\"location_coordinate_system\":\"" + coordinates + "\"}");
+        clip.location_x.AddPoint(51, -0.25, BEZIER);
+        Clip restored;
+        restored.SetJson(clip.Json());
+        CHECK(restored.location_coordinate_system == coordinates);
+        CHECK(restored.location_x.Json() == clip.location_x.Json());
+        restored.SetJson("{\"scale\":0}");
+        CHECK(restored.location_coordinate_system == coordinates);
+    }
+    clip.SetJson("{\"location_coordinate_system\":\"unknown\"}");
+    CHECK(clip.location_coordinate_system == "auto");
+    clip.SetJson("{\"location_coordinate_system\":123}");
+    CHECK(clip.location_coordinate_system == "auto");
+}
+
+TEST_CASE("Imported locations match historical rendered image bounds", "[libopenshot][clip][transform][location-compat]")
+{
+    // Bounds measured from unmodified v0.7.0 (canvas) and v1.0.0 (geometry)
+    // engines, using QtImageReader. In particular SCALE_NONE must use the
+    // decoded image dimensions, not dimensions guessed from reader metadata.
+    struct HistoricalCase {
+        ScaleType scale;
+        bool animated;
+        const char* coordinates;
+        int bounds[3][4]; // left, top, right, bottom at frames 1, 51, 101
+    };
+    const HistoricalCase cases[] = {
+        {SCALE_FIT, false, "canvas", {{160,63,319,152},{160,63,319,152},{160,63,319,152}}},
+        {SCALE_FIT, true, "canvas", {{160,63,319,152},{120,41,319,175},{80,18,319,179}}},
+        {SCALE_STRETCH, false, "canvas", {{160,63,319,152},{160,63,319,152},{160,63,319,152}}},
+        {SCALE_STRETCH, true, "canvas", {{160,63,319,152},{120,41,319,175},{80,18,319,179}}},
+        {SCALE_CROP, false, "canvas", {{160,63,319,152},{160,63,319,152},{160,63,319,152}}},
+        {SCALE_CROP, true, "canvas", {{160,63,319,152},{120,41,319,175},{80,18,319,179}}},
+        {SCALE_NONE, false, "canvas", {{220,97,259,118},{220,97,259,118},{220,97,259,118}}},
+        {SCALE_NONE, true, "canvas", {{200,86,279,130},{180,74,299,141},{160,63,319,152}}},
+        {SCALE_FIT, false, "geometry", {{140,59,299,148},{140,59,299,148},{140,59,299,148}}},
+        {SCALE_FIT, true, "geometry", {{140,59,299,148},{110,38,319,172},{80,18,319,179}}},
+        {SCALE_STRETCH, false, "geometry", {{140,59,299,148},{140,59,299,148},{140,59,299,148}}},
+        {SCALE_STRETCH, true, "geometry", {{140,59,299,148},{110,38,319,172},{80,18,319,179}}},
+        {SCALE_CROP, false, "geometry", {{140,59,299,148},{140,59,299,148},{140,59,299,148}}},
+        {SCALE_CROP, true, "geometry", {{140,59,299,148},{110,38,319,172},{80,18,319,179}}},
+        {SCALE_NONE, false, "geometry", {{185,89,224,110},{185,89,224,110},{185,89,224,110}}},
+        {SCALE_NONE, true, "geometry", {{170,79,249,123},{155,69,274,135},{140,59,299,148}}},
+    };
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const QString path = directory.filePath("source.png");
+    QImage source(160, 90, QImage::Format_RGBA8888);
+    source.fill(Qt::red);
+    REQUIRE(source.save(path));
+    for (const auto& test : cases) {
+        INFO("scale=" << test.scale << " animated=" << test.animated << " units=" << test.coordinates);
+        QtImageReader reader(path.toStdString());
+        reader.Open();
+        Clip clip(&reader);
+        clip.End(4.0);
+        clip.Layer(1);
+        clip.scale = test.scale;
+        clip.location_coordinate_system = test.coordinates;
+        clip.location_x = Keyframe(0.25);
+        clip.location_y = Keyframe(0.1);
+        clip.scale_x = Keyframe(0.5);
+        clip.scale_y = Keyframe(0.5);
+        if (test.animated) {
+            clip.scale_x.AddPoint(101, 1.0, LINEAR);
+            clip.scale_y.AddPoint(101, 1.0, LINEAR);
+        }
+        Timeline timeline(320, 180, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+        timeline.AddClip(&clip);
+        timeline.SetMaxSize(320, 180);
+        timeline.Open();
+        for (int index = 0; index < 3; ++index) {
+            const int frame = 1 + 50 * index;
+            INFO("frame=" << frame);
+            const QRect bounds = red_bounds(*timeline.GetFrame(frame)->GetImage());
+            REQUIRE_FALSE(bounds.isNull());
+            CHECK(bounds.left() == Approx(test.bounds[index][0]).margin(1));
+            CHECK(bounds.top() == Approx(test.bounds[index][1]).margin(1));
+            CHECK(bounds.right() == Approx(test.bounds[index][2]).margin(1));
+            CHECK(bounds.bottom() == Approx(test.bounds[index][3]).margin(1));
+        }
+        timeline.Close();
+    }
 }

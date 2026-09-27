@@ -184,6 +184,9 @@ namespace openshot {
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
+		/// Location units retained by imported projects: "auto", "canvas", or "geometry".
+		/// Auto uses geometry-relative units for Crop and canvas-relative units otherwise.
+		std::string location_coordinate_system;
 		openshot::AnchorType anchor;	 ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips

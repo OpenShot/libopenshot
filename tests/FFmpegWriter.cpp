@@ -47,6 +47,7 @@ AVStream* first_video_stream(AVFormatContext* format_context)
 TEST_CASE("Raw video export preserves all color planes and frame ownership",
           "[libopenshot][ffmpegwriter][rawvideo]")
 {
+	const int width = GENERATE(64, 1080);
 	QTemporaryDir directory;
 	REQUIRE(directory.isValid());
 	// NUT uses a different stream time base from the codec's frame rate.
@@ -55,11 +56,11 @@ TEST_CASE("Raw video export preserves all color planes and frame ownership",
 	// Multiple frames and repeated exports exercise packet/frame cleanup.
 	for (int pass = 0; pass < 2; ++pass) {
 		FFmpegWriter writer(path);
-		writer.SetVideoOptions(true, "rawvideo", Fraction(30, 1), 64, 64,
+		writer.SetVideoOptions(true, "rawvideo", Fraction(30, 1), width, 64,
 		                       Fraction(1, 1), false, false, 1000000);
 		writer.Open();
 		for (int number = 1; number <= 3; ++number) {
-			auto frame = std::make_shared<Frame>(number, 64, 64, number == 2 ? "blue" : "red");
+			auto frame = std::make_shared<Frame>(number, width, 64, number == 2 ? "blue" : "red");
 			writer.WriteFrame(frame);
 		}
 		writer.Close();
@@ -75,7 +76,7 @@ TEST_CASE("Raw video export preserves all color planes and frame ownership",
 		int packets = 0;
 		while (av_read_frame(input, &packet) >= 0) {
 			if (packet.stream_index == stream->index) {
-				CHECK(packet.size == 64 * 64 * 3 / 2); // Complete YUV420P image
+				CHECK(packet.size == width * 64 * 3 / 2); // Complete YUV420P image
 				CHECK(packet.pts * av_q2d(stream->time_base) == Approx(packets / 30.0).margin(0.00001));
 				++packets;
 			}
@@ -92,15 +93,40 @@ TEST_CASE("Raw video export preserves all color planes and frame ownership",
 		CHECK(reader.info.video_length == 3);
 		for (int number = 1; number <= 3; ++number) {
 			auto frame = reader.GetFrame(number);
-			REQUIRE(frame->GetWidth() == 64);
+			REQUIRE(frame->GetWidth() == width);
 			REQUIRE(frame->GetHeight() == 64);
-			const QColor color = frame->GetImage()->pixelColor(32, 32);
+			const QColor color = frame->GetImage()->pixelColor(width - 1, 63);
 			CHECK(color.green() < 10);
 			CHECK(color.red() == Approx(number == 2 ? 0 : 255).margin(10));
 			CHECK(color.blue() == Approx(number == 2 ? 255 : 0).margin(10));
 		}
 		reader.Close();
 	}
+}
+
+TEST_CASE("GIF export copies padded RGB8 rows without a synthetic palette",
+          "[libopenshot][ffmpegwriter][padded-gif]")
+{
+	QTemporaryDir directory;
+	REQUIRE(directory.isValid());
+	const std::string path = directory.filePath("padded.gif").toStdString();
+	FFmpegWriter writer(path);
+	writer.SetVideoOptions(true, "gif", Fraction(25, 1), 1080, 32,
+		Fraction(1, 1), false, false, 1000000);
+	writer.Open();
+	for (int number = 1; number <= 3; ++number)
+		writer.WriteFrame(std::make_shared<Frame>(number, 1080, 32, "red"));
+	writer.Close();
+	FFmpegReader reader(path);
+	reader.Open();
+	auto frame = reader.GetFrame(1);
+	REQUIRE(frame->GetWidth() == 1080);
+	REQUIRE(frame->GetHeight() == 32);
+	const QColor color = frame->GetImage()->pixelColor(1079, 31);
+	CHECK(color.red() > 230);
+	CHECK(color.green() < 20);
+	CHECK(color.blue() < 20);
+	reader.Close();
 }
 
 TEST_CASE( "Webm", "[libopenshot][ffmpegwriter]" )
@@ -436,4 +462,58 @@ TEST_CASE( "SizeOrdering_vp9_CRF", "[libopenshot][ffmpegwriter][filesize]" )
 	CHECK(med_size < high_size);
 
 	reader.Close();
+}
+
+TEST_CASE("AAC export preserves delayed packet timestamps through flush",
+          "[libopenshot][ffmpegwriter][audio-timestamps]")
+{
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const std::string path = directory.filePath("aac.mp4").toStdString();
+    const Fraction fps(30000, 1001);
+    const int source_rate = GENERATE(48000, 44100);
+    FFmpegWriter writer(path);
+    writer.SetVideoOptions(true, "libx264", fps, 16, 16, Fraction(1, 1), false, false, 100000);
+    writer.SetAudioOptions(true, "aac", 48000, 2, LAYOUT_STEREO, 160000);
+    writer.Open();
+    int total_samples = 0;
+    for (int number = 1; number <= 230; ++number) {
+        const int samples = Frame::GetSamplesPerFrame(number, fps, source_rate, 2);
+        auto frame = std::make_shared<Frame>(number, 16, 16, "red", samples, 2);
+        frame->SampleRate(source_rate);
+        frame->ChannelsLayout(LAYOUT_STEREO);
+        frame->AddAudioSilence(samples);
+        writer.WriteFrame(frame);
+        total_samples += samples;
+    }
+    writer.Close();
+    AVFormatContext* input = nullptr;
+    REQUIRE(avformat_open_input(&input, path.c_str(), nullptr, nullptr) == 0);
+    std::unique_ptr<AVFormatContext, void(*)(AVFormatContext*)> guard(
+        input, [](AVFormatContext* context) { avformat_close_input(&context); });
+    REQUIRE(avformat_find_stream_info(input, nullptr) >= 0);
+    const int index = av_find_best_stream(input, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+    REQUIRE(index >= 0);
+    AVStream* stream = input->streams[index];
+    AVPacket packet = {};
+    int count = 0;
+    int64_t previous = AV_NOPTS_VALUE;
+    while (av_read_frame(input, &packet) >= 0) {
+        if (packet.stream_index == index) {
+            REQUIRE(packet.dts != AV_NOPTS_VALUE);
+            CHECK(packet.pts == packet.dts);
+            const int64_t sample_dts = av_rescale_q(packet.dts, stream->time_base, AVRational{1, 48000});
+            if (count) CHECK(sample_dts - previous == 1024);
+            else CHECK(sample_dts == -1024); // AAC encoder priming
+            previous = sample_dts;
+            ++count;
+        }
+        av_packet_unref(&packet);
+    }
+    const int64_t expected_samples = av_rescale(total_samples, 48000, source_rate);
+    CHECK(count == (expected_samples + 1023) / 1024 + 1);
+    // MP4 edit-list durations round to milliseconds (48 samples). Rate
+    // conversion can also retain a short filter tail in the resampler.
+    CHECK(av_rescale_q(stream->duration, stream->time_base, AVRational{1, 48000})
+          == Approx(expected_samples).margin(source_rate == 48000 ? 48 : 96));
 }
