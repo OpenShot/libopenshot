@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 # JSON keyframe edit benchmark
 
 Build `openshot-benchmark`, then run from the repository root:
