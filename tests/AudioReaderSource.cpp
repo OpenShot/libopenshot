@@ -15,8 +15,6 @@ public:
     bool block = false, entered = false, released = false;
     LevelReader() : DummyReader(openshot::Fraction(30, 1), 16, 16, 48000, 1, 1) {
         info.has_audio = true;
-        // Make the cache ready at its initial position without a decoding worker.
-        info.video_length = 1;
     }
     std::shared_ptr<openshot::Frame> GetFrame(int64_t number) override {
         if (block) {
@@ -37,11 +35,7 @@ public:
 
 TEST_CASE("AudioReaderSource replaces only the requested buffer region", "[audio-source]") {
     LevelReader reader;
-    openshot::VideoCacheThread cache;
-    cache.Reader(&reader);
-    cache.setSpeed(-1);
     openshot::AudioReaderSource source(&reader, 1);
-    source.setVideoCache(&cache);
     juce::AudioBuffer<float> buffer(2, 12);
     for (int channel = 0; channel < 2; ++channel)
         for (int sample = 0; sample < 12; ++sample)
@@ -60,11 +54,7 @@ TEST_CASE("AudioReaderSource replaces only the requested buffer region", "[audio
 TEST_CASE("AudioReaderSource discards audio decoded across a newer seek", "[audio-source][threading]") {
     LevelReader reader;
     reader.block = true;
-    openshot::VideoCacheThread cache;
-    cache.Reader(&reader);
-    cache.setSpeed(-1);
     openshot::AudioReaderSource source(&reader, 1);
-    source.setVideoCache(&cache);
     juce::AudioBuffer<float> buffer(1, 4);
     buffer.clear();
     auto callback = std::async(std::launch::async, [&] { source.getNextAudioBlock({&buffer, 0, 4}); });
