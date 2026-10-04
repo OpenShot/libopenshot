@@ -93,6 +93,7 @@ namespace openshot
 
                 // Seek audio thread (since audio is also paused)
                 audioPlayback->Seek(video_position);
+                videoCache->AcknowledgeAudioCacheMiss();
 
                 continue;
             }

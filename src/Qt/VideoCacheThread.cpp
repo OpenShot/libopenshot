@@ -60,53 +60,62 @@ namespace openshot
             return false;
         }
 
-        if (isThreadRunning() && processed_generation.load() != request_generation.load())
-            return false;
-        if (auto* timeline = dynamic_cast<Timeline*>(reader)) {
-            if (timeline->CacheRefreshPending() || (timeline_cache_epoch_initialized
-                && timeline->CacheEpoch() != seen_timeline_cache_epoch))
-                return false;
-        }
-        const int64_t ready_min = min_frames_ahead.load();
-        if (ready_min < 0) {
+        if (audio_cache_miss.load()) return false;
+        const auto* settings = Settings::Instance();
+        auto* timeline = dynamic_cast<Timeline*>(reader);
+        if (!settings->ENABLE_PLAYBACK_CACHING || !timeline || !reader->GetCache()
+            || settings->VIDEO_CACHE_MIN_PREROLL_FRAMES < 0)
             return true;
+        if (timeline->CacheEpoch() != readiness_epoch) {
+            resetReadiness();
+            readiness_epoch = timeline->CacheEpoch();
         }
+        if (readiness_physical_capacity == 0 && processed_generation.load() == request_generation.load())
+            return true;
+        const int64_t now = monotonicUs();
+        const bool current_request = processed_generation.load() == request_generation.load()
+            && !timeline->CacheRefreshPending();
+        const int dir = computeDirection();
+        const int64_t playhead = clampToTimelineRange(requested_display_frame.load(), readiness_timeline_end);
+        const int64_t shifted = (playhead - readiness_playhead) * dir;
+        const int64_t contiguous = readiness_direction == dir && shifted >= 0
+            ? std::max<int64_t>(0, contiguous_ahead - shifted) : 0;
+        CacheBase* cache = reader->GetCache();
+        // Only two bounded cache lookups in the callback; the worker probes the
+        // larger startup range. These also reject holes introduced by eviction.
+        const bool playable = cache->Contains(playhead)
+            && (readiness_minimum_step == 0 || cache->Contains(playhead + readiness_minimum_step * dir));
+        const int64_t checked_ahead = preroll_policy.Released() && playable
+            ? readiness_minimum_step : contiguous;
+        return preroll_policy.Ready(now, current_request ? checked_ahead : 0,
+            current_request && playable, min_frames_ahead.load(), readiness_minimum_step);
+    }
 
-        const int64_t cached_index = last_cached_index.load();
-        int64_t playhead = requested_display_frame.load();
-        int dir = computeDirection();
+    void VideoCacheThread::resetReadiness()
+    {
+        preroll_policy.Reset(monotonicUs());
+        contiguous_ahead = 0;
+    }
 
-        // Near timeline boundaries, don't require more pre-roll than can exist.
-        int64_t max_frame = reader->info.video_length;
-        if (auto* timeline = dynamic_cast<Timeline*>(reader)) {
-            const int64_t timeline_max = timeline->GetMaxFrame();
-            if (timeline_max > 0) {
-                max_frame = timeline_max;
-            }
-        }
-        if (max_frame < 1) {
-            return false;
-        }
-        playhead = clampToTimelineRange(playhead, max_frame);
-
-        int64_t required_ahead = ready_min;
-        int64_t available_ahead = (dir > 0)
-            ? std::max<int64_t>(0, max_frame - playhead)
-            : std::max<int64_t>(0, playhead - 1);
-        required_ahead = std::min(required_ahead, available_ahead);
-
-        if (dir > 0) {
-            return (cached_index >= playhead + required_ahead);
-        }
-        return (cached_index <= playhead - required_ahead);
+    void VideoCacheThread::updateReadiness(CacheBase* cache, int64_t playhead, int dir)
+    {
+        // Called by the worker under seek_state_mutex, never while decoding.
+        readiness_playhead = playhead;
+        readiness_direction = dir;
+        contiguous_ahead = 0;
+        const int64_t required = std::max(min_frames_ahead.load(), readiness_minimum_step);
+        while (contiguous_ahead < required && cache->Contains(playhead + (contiguous_ahead + 1) * dir))
+            ++contiguous_ahead;
     }
 
     void VideoCacheThread::setSpeed(int new_speed)
     {
         std::lock_guard<std::mutex> guard(seek_state_mutex);
         const int old_direction = computeDirection();
-        if (new_speed != speed.load())
+        if (new_speed != speed.load()) {
             request_generation.fetch_add(1);
+            resetReadiness();
+        }
         // Only update last_speed and last_dir when new_speed != 0
         if (new_speed != 0) {
             last_speed.store(new_speed);
@@ -132,7 +141,7 @@ namespace openshot
         // RGBA video frame
         int64_t bytes = static_cast<int64_t>(width) * height * sizeof(char) * 4;
         // Approximate audio: (sample_rate * channels)/fps samples per frame
-        bytes += ((sample_rate * channels) / fps) * sizeof(float);
+        if (fps > 0) bytes += (static_cast<double>(sample_rate) * channels / fps) * sizeof(float);
         return bytes;
     }
 
@@ -194,6 +203,9 @@ namespace openshot
             std::lock_guard<std::mutex> guard(seek_state_mutex);
             request_generation.fetch_add(1);
             reader = new_reader;
+            cache_audio_only.store(false);
+            audio_cache_miss.store(false);
+            resetReadiness();
             seen_timeline_cache_epoch = 0;
             timeline_cache_epoch_initialized = false;
             userSeeked.store(false);
@@ -340,6 +352,7 @@ namespace openshot
                 scrub_active.store(false);
             }
         }
+        resetReadiness();
         acknowledgeRequest(started);
     }
 
@@ -514,7 +527,9 @@ namespace openshot
             if ((timeline && timeline->CacheRefreshPending()) || !cache->Contains(next_frame)) {
                 // Frame missing, fetch and add
                 try {
+                    const int64_t decode_started = monotonicUs();
                     auto framePtr = reader->GetFrame(next_frame);
+                    const int64_t decode_us = monotonicUs() - decode_started;
                     // The reader may have cached a valid reusable frame itself.
                     // Timeline edits own invalidation under their decoder lock;
                     // do not re-add its result after that lock has been released.
@@ -525,6 +540,8 @@ namespace openshot
                             obsolete_completion_us.store(monotonicUs() - request_time_us.load());
                         return false;
                     }
+                    preroll_policy.Observe(decode_us);
+                    if (framePtr) observed_frame_bytes = std::max(observed_frame_bytes, framePtr->GetBytes());
                     if (!timeline)
                         cache->Add(framePtr);
                     cached_frame_count.store(cache->Count());
@@ -545,6 +562,15 @@ namespace openshot
                     || (timeline && timeline->CacheEpoch() != epoch))
                     return false;
                 last_cached_index.store(next_frame);
+                if (timeline) {
+                    const auto* settings = Settings::Instance();
+                    const int64_t available = dir > 0 ? resolveTimelineEnd() - requested_display_frame.load()
+                        : requested_display_frame.load() - 1;
+                    min_frames_ahead.store(preroll_policy.Target(reader->info.fps.ToDouble(), speed.load(),
+                        std::min(readiness_capacity, std::max<int64_t>(0, available)),
+                        settings->VIDEO_CACHE_MIN_PREROLL_FRAMES, settings->VIDEO_CACHE_MAX_PREROLL_FRAMES));
+                    updateReadiness(cache, requested_display_frame.load(), dir);
+                }
                 if (diagnostics_enabled.load() && request_time_us.load()
                     && first_current_frame_us.load() == 0
                     && next_frame == clampToTimelineRange(requested_display_frame.load(),
@@ -591,15 +617,17 @@ namespace openshot
                 continue;
 
             if (!settings->ENABLE_PLAYBACK_CACHING || !cache) {
+                cache_audio_only.store(false);
                 min_frames_ahead.store(-1);
                 processed_generation.store(generation);
                 wait(50);
                 continue;
             }
-            min_frames_ahead.store(settings->VIDEO_CACHE_MIN_PREROLL_FRAMES);
+
             if (!timeline) {
                 // Window prefetch is Timeline-only. Direct FFmpeg/Dummy readers
                 // must not wait forever for a cache window this worker won't fill.
+                cache_audio_only.store(false);
                 min_frames_ahead.store(-1);
                 processed_generation.store(generation);
                 wait(50);
@@ -608,15 +636,21 @@ namespace openshot
             const int64_t timeline_end = resolveTimelineEnd();
             const int64_t playhead = clampToTimelineRange(raw_playhead, timeline_end);
             const int64_t preroll_frames = computePrerollFrames(settings);
-            const int64_t bytes_per_frame = getBytes(
+            const int64_t estimated_frame_bytes = getBytes(
                 timeline->preview_width ? timeline->preview_width : reader->info.width,
                 timeline->preview_height ? timeline->preview_height : reader->info.height,
                 reader->info.sample_rate, reader->info.channels, reader->info.fps.ToFloat());
+            int64_t bytes_per_frame;
+            {
+                std::lock_guard<std::mutex> guard(seek_state_mutex);
+                if (readiness_bytes_per_frame != estimated_frame_bytes) observed_frame_bytes = 0;
+                bytes_per_frame = std::max(estimated_frame_bytes, observed_frame_bytes);
+            }
             const int64_t max_bytes = cache->GetMaxBytes();
             const int64_t capacity = (max_bytes > 0 && bytes_per_frame > 0)
                 ? std::min<int64_t>(max_bytes / bytes_per_frame, settings->VIDEO_CACHE_MAX_FRAMES)
                 : 0;
-            const int64_t ahead_count = static_cast<int64_t>(capacity * settings->VIDEO_CACHE_PERCENT_AHEAD);
+            const int64_t ahead_count = std::max<int64_t>(0, std::min<int64_t>(capacity - 1, static_cast<int64_t>(capacity * settings->VIDEO_CACHE_PERCENT_AHEAD)));
             int64_t window_begin, window_end;
             computeWindowBounds(playhead, dir, ahead_count, timeline_end, window_begin, window_end);
             {
@@ -628,6 +662,22 @@ namespace openshot
                 seen_timeline_cache_epoch = epoch;
                 timeline_cache_epoch_initialized = true;
                 cached_frame_count.store(cache->Count());
+                if (epoch_changed || readiness_bytes_per_frame != estimated_frame_bytes) {
+                    resetReadiness();
+                    observed_frame_bytes = 0;
+                }
+                readiness_bytes_per_frame = estimated_frame_bytes;
+                cache_audio_only.store(capacity >= 1);
+                readiness_epoch = epoch;
+                readiness_physical_capacity = capacity;
+                readiness_timeline_end = timeline_end;
+                readiness_capacity = std::max<int64_t>(0, std::min(capacity - 1, ahead_count));
+                const int64_t available = dir > 0 ? timeline_end - playhead : playhead - 1;
+                readiness_minimum_step = std::min({readiness_capacity, available, std::max<int64_t>(1, std::abs(static_cast<int64_t>(speed.load())))});
+                min_frames_ahead.store(preroll_policy.Target(reader->info.fps.ToDouble(), speed.load(),
+                    std::min(readiness_capacity, available), settings->VIDEO_CACHE_MIN_PREROLL_FRAMES,
+                    settings->VIDEO_CACHE_MAX_PREROLL_FRAMES));
+                updateReadiness(cache, playhead, dir);
                 if (epoch_changed || should_clear || processed_generation.load() != generation)
                     handleUserSeek(playhead, dir);
                 processed_generation.store(generation);
@@ -651,8 +701,6 @@ namespace openshot
                 wait(50);
                 continue;
             }
-            min_frames_ahead.store(std::min<int64_t>(settings->VIDEO_CACHE_MIN_PREROLL_FRAMES,
-                                                   std::max<int64_t>(0, ahead_count)));
             // Preserve reusable frames on position-only seeks. Full edit refresh
             // is requested explicitly and consumed by Timeline's decoder.
             bool window_full = prefetchWindow(cache, window_begin, window_end, dir,

@@ -13,6 +13,8 @@
 #include "AudioReaderSource.h"
 #include "Exceptions.h"
 #include "Frame.h"
+#include "CacheBase.h"
+#include "Settings.h"
 
 using namespace std;
 using namespace openshot;
@@ -64,7 +66,17 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
             try {
                 // Get current frame object
                 if (reader) {
-                    decoded_frame = reader->GetFrame(next_frame);
+                    // Shared pre-roll may fall back to a minimal buffer. A
+                    // callback spanning more frames must never decode a slow
+                    // missing Timeline frame. The next player hold seeks audio
+                    // to its playhead before the shared gate opens again.
+                    if (videoCache && videoCache->UsesCachedAudio()
+                        && Settings::Instance()->ENABLE_PLAYBACK_CACHING && reader->GetCache()) {
+                        decoded_frame = reader->GetCache()->GetFrame(next_frame);
+                        if (!decoded_frame) videoCache->NotifyAudioCacheMiss();
+                    } else {
+                        decoded_frame = reader->GetFrame(next_frame);
+                    }
                 }
             }
             catch (const ReaderClosed & e) { }

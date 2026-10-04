@@ -3,6 +3,8 @@
 #include "AudioReaderSource.h"
 #include "DummyReader.h"
 #include "Frame.h"
+#include "Timeline.h"
+#include "CacheBase.h"
 #include <condition_variable>
 #include <future>
 #include <mutex>
@@ -125,4 +127,58 @@ TEST_CASE("AudioReaderSource pause discards a whole multi-frame block without co
     paused.setSpeed(1);
     paused.getNextAudioBlock({&buffer, 0, 4});
     CHECK(buffer.getSample(0, 0) == Approx(-0.5f));
+}
+
+TEST_CASE("cached Timeline audio miss holds shared gate until player resync", "[audio-source][preroll]") {
+    class CacheGate : public openshot::VideoCacheThread {
+    public:
+        void readyAt(int64_t n) {
+            std::lock_guard<std::mutex> lock(seek_state_mutex);
+            cache_audio_only.store(true);
+            processed_generation.store(request_generation.load());
+            readiness_capacity = 20;
+            readiness_physical_capacity = 21;
+            readiness_minimum_step = 1;
+            min_frames_ahead.store(1);
+            requested_display_frame.store(n);
+            updateReadiness(reader->GetCache(), n, 1);
+        }
+    } gate;
+    class CachedTimeline : public openshot::Timeline {
+    public:
+        int calls = 0;
+        CachedTimeline() : Timeline(16,16,openshot::Fraction(30,1),48000,1,openshot::LAYOUT_MONO) {}
+        std::shared_ptr<openshot::Frame> GetFrame(int64_t) override { ++calls; return {}; }
+    } timeline;
+    gate.Reader(&timeline);
+    gate.setSpeed(1);
+    auto add = [&](int64_t n, float level) {
+        auto frame = std::make_shared<openshot::Frame>(n, 8, 1);
+        float samples[8];
+        std::fill(samples, samples + 8, level);
+        frame->AddAudio(true, 0, 0, samples, 8, 1.0f);
+        timeline.GetCache()->Add(frame);
+    };
+    add(1, 0.1f); add(2, 0.2f); // Startup has current + minimal next frame.
+    gate.readyAt(1);
+    openshot::AudioReaderSource source(&timeline, 1);
+    source.setVideoCache(&gate);
+    juce::AudioBuffer<float> buffer(1,24); // Spans a third frame not cached yet.
+    source.getNextAudioBlock({&buffer,0,24});
+    CHECK(buffer.getSample(0,0) == Approx(0.1f));
+    CHECK(buffer.getSample(0,8) == Approx(0.2f));
+    CHECK(buffer.getSample(0,16) == Approx(0.0f));
+    CHECK(timeline.calls == 0); // No synchronous Timeline decoding.
+    CHECK_FALSE(gate.isReady());
+    add(3, 0.3f); add(4, 0.4f);
+    gate.readyAt(3);
+    CHECK_FALSE(gate.isReady()); // Filling cache cannot bypass the handshake.
+    source.Seek(3); // Same operation PlayerPrivate performs during shared hold.
+    gate.AcknowledgeAudioCacheMiss();
+    CHECK(gate.isReady());
+    source.getNextAudioBlock({&buffer,0,8});
+    CHECK(buffer.getSample(0,0) == Approx(0.3f));
+    REQUIRE(source.getFrame());
+    CHECK(source.getFrame()->number == 3);
+    CHECK(timeline.calls == 0);
 }

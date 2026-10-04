@@ -14,6 +14,7 @@
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
 #include "ReaderBase.h"
+#include "AdaptivePreroll.h"
 
 #include <AppConfig.h>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -41,8 +42,12 @@ namespace openshot
         VideoCacheThread();
         ~VideoCacheThread() override;
 
-        /// @return True if at least min_frames_ahead frames have been cached.
+        /// Shared startup gate; bounded fallback resumes established video decoding.
         bool isReady();
+        /// Callback miss holds the shared gate until the player resynchronizes audio.
+        bool UsesCachedAudio() const { return cache_audio_only.load(); }
+        void NotifyAudioCacheMiss() { audio_cache_miss.store(true); }
+        void AcknowledgeAudioCacheMiss() { audio_cache_miss.store(false); }
 
         /// Play method is unimplemented
         void Play() { notify(); };
@@ -191,6 +196,24 @@ namespace openshot
                             ReaderBase* reader,
                             int64_t max_frames_to_fetch = -1,
                             uint64_t generation = UINT64_MAX);
+
+        /// Worker-only cache probing; never runs in the audio callback.
+        void updateReadiness(CacheBase* cache, int64_t playhead, int dir);
+        void resetReadiness(); // Requires seek_state_mutex.
+
+        AdaptivePreroll preroll_policy;
+        int64_t contiguous_ahead = 0;
+        int64_t readiness_playhead = 1;
+        int readiness_direction = 1;
+        std::atomic<bool> audio_cache_miss{false};
+        std::atomic<bool> cache_audio_only{false};
+        int64_t observed_frame_bytes = 0;
+        int64_t readiness_capacity = 0;
+        int64_t readiness_physical_capacity = 0;
+        int64_t readiness_timeline_end = 0;
+        int64_t readiness_bytes_per_frame = 0;
+        uint64_t readiness_epoch = 0;
+        int64_t readiness_minimum_step = 0;
 
         //---------- Internal state ----------
 

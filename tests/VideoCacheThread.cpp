@@ -43,6 +43,16 @@ public:
     using VideoCacheThread::handleUserSeek;
     using VideoCacheThread::handleUserSeekWithPreroll;
     using VideoCacheThread::computePrerollFrames;
+    void probe(int64_t playhead, int dir, int64_t target, int64_t minimum = 1) {
+        std::lock_guard<std::mutex> lock(seek_state_mutex);
+        processed_generation.store(request_generation.load());
+        readiness_capacity = target;
+        readiness_physical_capacity = target + 1;
+        readiness_timeline_end = reader->info.video_length;
+        readiness_minimum_step = minimum;
+        min_frames_ahead.store(target);
+        updateReadiness(reader->GetCache(), playhead, dir);
+    }
 
     int64_t getLastCachedIndex() const { return last_cached_index.load(); }
     void    setLastCachedIndex(int64_t v) { last_cached_index.store(v); }
@@ -110,86 +120,6 @@ TEST_CASE("computeWindowBounds: forward and backward bounds, clamped", "[VideoCa
     thread.computeWindowBounds(/*playhead=*/3, /*dir=*/-1, /*ahead_count=*/10, /*timeline_end=*/100, wb, we);
     CHECK(wb == 1);   // clamped
     CHECK(we == 3);
-}
-
-TEST_CASE("isReady: requires cached frames ahead of playhead", "[VideoCacheThread]") {
-    TestableVideoCacheThread thread;
-
-    Timeline timeline(/*width=*/1280, /*height=*/720, /*fps=*/Fraction(60,1),
-                      /*sample_rate=*/48000, /*channels=*/2, ChannelLayout::LAYOUT_STEREO);
-    thread.Reader(&timeline);
-
-    thread.setMinFramesAhead(30);
-    thread.setPlayhead(200);
-    thread.setSpeed(1);
-
-    thread.setLastCachedIndex(200);
-    CHECK(!thread.isReady());
-
-    thread.setLastCachedIndex(229);
-    CHECK(!thread.isReady());
-
-    thread.setLastCachedIndex(230);
-    CHECK(thread.isReady());
-
-    thread.setSpeed(-1);
-    thread.setLastCachedIndex(200);
-    CHECK(!thread.isReady());
-
-    thread.setLastCachedIndex(171);
-    CHECK(!thread.isReady());
-
-    thread.setLastCachedIndex(170);
-    CHECK(thread.isReady());
-}
-
-TEST_CASE("isReady: clamps preroll requirement at timeline boundaries", "[VideoCacheThread]") {
-    TestableVideoCacheThread thread;
-
-    Timeline timeline(/*width=*/1280, /*height=*/720, /*fps=*/Fraction(30,1),
-                      /*sample_rate=*/48000, /*channels=*/2, ChannelLayout::LAYOUT_STEREO);
-    thread.Reader(&timeline);
-
-    const int64_t end = timeline.info.video_length;
-    REQUIRE(end > 10);
-
-    // Forward near end: only a few frames remain, so don't require full preroll.
-    thread.setMinFramesAhead(30);
-    thread.setSpeed(1);
-    thread.setPlayhead(end - 5);
-    thread.setLastCachedIndex(end - 4);
-    CHECK(!thread.isReady());
-    thread.setLastCachedIndex(end);
-    CHECK(thread.isReady());
-
-    // Backward near start: only a few frames exist behind playhead.
-    thread.setMinFramesAhead(30);
-    thread.setSpeed(-1);
-    thread.setPlayhead(3);
-    thread.setLastCachedIndex(2);
-    CHECK(!thread.isReady());
-    thread.setLastCachedIndex(1);
-    CHECK(thread.isReady());
-}
-
-TEST_CASE("isReady: treats out-of-range playhead as timeline edge for readiness", "[VideoCacheThread]") {
-    TestableVideoCacheThread thread;
-
-    Timeline timeline(/*width=*/1280, /*height=*/720, /*fps=*/Fraction(30,1),
-                      /*sample_rate=*/48000, /*channels=*/2, ChannelLayout::LAYOUT_STEREO);
-    thread.Reader(&timeline);
-
-    const int64_t end = timeline.info.video_length;
-    REQUIRE(end > 10);
-
-    thread.setMinFramesAhead(30);
-    thread.setSpeed(1);
-    thread.setPlayhead(end + 100);
-
-    thread.setLastCachedIndex(end - 1);
-    CHECK(!thread.isReady());
-    thread.setLastCachedIndex(end);
-    CHECK(thread.isReady());
 }
 
 TEST_CASE("clearCacheIfPaused: clears only when paused and not in cache", "[VideoCacheThread]") {
@@ -847,4 +777,116 @@ TEST_CASE("direct readers do not wait for unsupported timeline prefetch", "[Vide
     CHECK(thread.StartThread());
     CHECK(wait_ready());
     CHECK(thread.StopThread(-1));
+}
+
+TEST_CASE("readiness requires actual contiguous frames and detects eviction", "[VideoCacheThread][preroll]") {
+    Timeline timeline(16, 16, Fraction(30,1), 48000, 2, LAYOUT_STEREO);
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(1);
+    thread.setPlayhead(20);
+    auto add = [&](int64_t n) { timeline.GetCache()->Add(std::make_shared<Frame>(n,16,16,"black",0,2)); };
+    add(20); add(22); add(23);
+    thread.setLastCachedIndex(100); // A distant high-water mark does not cover holes.
+    thread.probe(20, 1, 3);
+    CHECK_FALSE(thread.isReady());
+    add(21);
+    thread.probe(20, 1, 3);
+    CHECK(thread.isReady());
+    timeline.GetCache()->Remove(21);
+    CHECK_FALSE(thread.isReady());
+    add(21);
+    CHECK(thread.isReady());
+    thread.setSpeed(-1);
+    thread.probe(20, -1, 3);
+    CHECK_FALSE(thread.isReady());
+    add(19); add(18); add(17);
+    thread.probe(20, -1, 3);
+    CHECK(thread.isReady());
+    thread.Seek(20, true);
+    CHECK_FALSE(thread.isReady());
+    thread.probe(20, -1, 3);
+    CHECK_FALSE(thread.isReady()); // Same-frame playing refresh removes current frame.
+    add(20);
+    thread.probe(20, -1, 3);
+    CHECK(thread.isReady());
+    timeline.RequestClearAllCache();
+    CHECK_FALSE(thread.isReady());
+}
+TEST_CASE("readiness clamps to zero steps at timeline boundaries", "[VideoCacheThread][preroll]") {
+    Timeline timeline(16,16,Fraction(30,1),48000,2,LAYOUT_STEREO);
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(-1);
+    thread.setPlayhead(1);
+    timeline.GetCache()->Add(std::make_shared<Frame>(1,16,16,"black",0,2));
+    thread.probe(1, -1, 0, 0);
+    CHECK(thread.isReady());
+}
+
+TEST_CASE("one-frame readiness never bypasses an evicted current frame", "[VideoCacheThread][preroll]") {
+    Timeline timeline(16,16,Fraction(30,1),48000,2,LAYOUT_STEREO);
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(1);
+    thread.setPlayhead(1);
+    thread.probe(1,1,0,0);
+    CHECK_FALSE(thread.isReady());
+    timeline.GetCache()->Add(std::make_shared<Frame>(1,16,16,"black",0,2));
+    CHECK(thread.isReady());
+    timeline.GetCache()->Remove(1);
+    CHECK_FALSE(thread.isReady());
+}
+
+TEST_CASE("worker readiness handles disabled zero and one-frame capacity", "[VideoCacheThread][preroll]") {
+    auto* settings = Settings::Instance();
+    struct Restore {
+        Settings* s; bool enabled; int frames; float ahead;
+        ~Restore() { s->ENABLE_PLAYBACK_CACHING=enabled; s->VIDEO_CACHE_MAX_FRAMES=frames; s->VIDEO_CACHE_PERCENT_AHEAD=ahead; }
+    } restore{settings,settings->ENABLE_PLAYBACK_CACHING,settings->VIDEO_CACHE_MAX_FRAMES,settings->VIDEO_CACHE_PERCENT_AHEAD};
+    Timeline timeline(16,16,Fraction(30,1),48000,2,LAYOUT_STEREO);
+    timeline.Open();
+    auto ready = [&](TestableVideoCacheThread& thread) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!thread.isReady() && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        return thread.isReady();
+    };
+    settings->ENABLE_PLAYBACK_CACHING = false;
+    {
+        TestableVideoCacheThread thread;
+        thread.Reader(&timeline); thread.setSpeed(1);
+        CHECK(thread.isReady());
+        CHECK_FALSE(thread.UsesCachedAudio());
+    }
+    settings->ENABLE_PLAYBACK_CACHING = true;
+    settings->VIDEO_CACHE_MAX_FRAMES = 0;
+    {
+        TestableVideoCacheThread thread;
+        thread.Reader(&timeline); thread.setSpeed(1); thread.StartThread();
+        CHECK(ready(thread));
+        CHECK_FALSE(thread.UsesCachedAudio());
+        thread.StopThread(-1);
+    }
+    settings->VIDEO_CACHE_MAX_FRAMES = 1;
+    settings->VIDEO_CACHE_PERCENT_AHEAD = 0;
+    {
+        TestableVideoCacheThread thread;
+        thread.Reader(&timeline); thread.setSpeed(1); thread.StartThread();
+        CHECK(ready(thread));
+        CHECK(timeline.GetCache()->Contains(1));
+        CHECK(thread.UsesCachedAudio());
+        thread.StopThread(-1);
+    }
+}
+TEST_CASE("readiness clamps out-of-range requests to available endpoint", "[VideoCacheThread][preroll]") {
+    Timeline timeline(16,16,Fraction(30,1),48000,2,LAYOUT_STEREO);
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline); thread.setSpeed(1);
+    const auto end = timeline.info.video_length;
+    thread.setPlayhead(end + 100);
+    thread.probe(end,1,0,0);
+    CHECK_FALSE(thread.isReady());
+    timeline.GetCache()->Add(std::make_shared<Frame>(end,16,16,"black",0,2));
+    CHECK(thread.isReady());
 }
