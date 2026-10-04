@@ -41,8 +41,11 @@ public:
         if (samples >= 3 && fps > 0) {
             const double budget = 1000000.0 / fps / stride;
             const double cost = (mean + 3 * deviation) / budget;
-            wanted = cost < 0.5 ? 2 * stride
-                : static_cast<int64_t>(std::ceil(2 + 4 * cost)) * stride;
+            const double demand = cost < 0.5 ? 2.0 * stride
+                : std::ceil(2 + 4 * cost) * stride;
+            // Clamp in floating point before conversion, including corrupt or
+            // extreme timing/speed metadata, so demand cannot overflow int64.
+            wanted = static_cast<int64_t>(std::min<double>(limit, demand));
         }
         wanted = std::clamp<int64_t>(wanted, 0, limit);
         // Demand rises promptly; decay only after a two-frame difference.

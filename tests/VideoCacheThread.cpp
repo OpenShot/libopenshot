@@ -890,3 +890,41 @@ TEST_CASE("readiness clamps out-of-range requests to available endpoint", "[Vide
     timeline.GetCache()->Add(std::make_shared<Frame>(end,16,16,"black",0,2));
     CHECK(thread.isReady());
 }
+
+TEST_CASE("worker repairs evicted readiness holes behind its cached suffix", "[VideoCacheThread][preroll]") {
+    class RepairTimeline : public Timeline {
+    public:
+        std::atomic<int> recovered{0};
+        std::atomic<bool> count_repair{false};
+        RepairTimeline() : Timeline(16,16,Fraction(30,1),48000,2,LAYOUT_STEREO) {}
+        std::shared_ptr<Frame> GetFrame(int64_t n) override {
+            if (count_repair.load() && (n==20 || n==21)) ++recovered;
+            auto frame = std::make_shared<Frame>(n,16,16,"black",0,2);
+            GetCache()->Add(frame);
+            return frame;
+        }
+    } timeline;
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline); thread.setPlayhead(20); thread.setSpeed(1);
+    thread.StartThread();
+    const auto warm_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (thread.getLastCachedIndex() < 100 && std::chrono::steady_clock::now() < warm_deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    const bool warmed = thread.getLastCachedIndex() >= 100;
+    if (!warmed) thread.StopThread(-1);
+    REQUIRE(warmed);
+    const auto epoch = timeline.CacheEpoch();
+    timeline.count_repair.store(true);
+    timeline.GetCache()->Remove(20);
+    timeline.GetCache()->Remove(21);
+    const auto repair_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while ((timeline.recovered.load() < 2 || !thread.isReady())
+           && std::chrono::steady_clock::now() < repair_deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    thread.StopThread(-1);
+    CHECK(timeline.CacheEpoch() == epoch);
+    CHECK(timeline.recovered.load() >= 2);
+    CHECK(timeline.GetCache()->Contains(20));
+    CHECK(timeline.GetCache()->Contains(21));
+    CHECK(timeline.GetCache()->Contains(100)); // Reusable suffix retained.
+}

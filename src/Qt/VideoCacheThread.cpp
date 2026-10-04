@@ -678,6 +678,16 @@ namespace openshot
                     std::min(readiness_capacity, available), settings->VIDEO_CACHE_MIN_PREROLL_FRAMES,
                     settings->VIDEO_CACHE_MAX_PREROLL_FRAMES));
                 updateReadiness(cache, playhead, dir);
+                // Eviction can punch holes behind the prefetch high-water mark.
+                // Repair the first required hole, preserving reusable suffixes.
+                const int64_t required = std::max(min_frames_ahead.load(), readiness_minimum_step);
+                const bool missing_current = !cache->Contains(playhead);
+                if (missing_current || contiguous_ahead < required) {
+                    const int64_t missing = missing_current ? playhead
+                        : playhead + (contiguous_ahead + 1) * dir;
+                    if ((last_cached_index.load() - missing) * dir >= 0)
+                        last_cached_index.store(missing - dir);
+                }
                 if (epoch_changed || should_clear || processed_generation.load() != generation)
                     handleUserSeek(playhead, dir);
                 processed_generation.store(generation);
