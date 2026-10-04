@@ -136,6 +136,7 @@ namespace openshot
 
     	if (reader && !threads_started) {
     		// Start thread only once
+            p->audioPlayback->Play();
     		p->startPlayback();
     		threads_started = true;
     	}

@@ -28,6 +28,7 @@ set(OPENSHOT_TESTS
   AudioDeviceManager
   AudioRecorder
   AudioReaderSource
+  AudioPlaybackThread
   AnimatedCurve
   AudioWaveformer
   CameraCaptureReader
