@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Compile identical workload against a configured worktree's matching headers/lib.
-Usage: python3 tests/run-preroll-workload.py /path/to/worktree /tmp/workload-name
+Usage: python3 tests/run-preroll-workload.py /path/to/worktree /tmp/workload-name [--honor-gate [profile]]
 The worktree must have built openshot-VideoCacheThread-test in build/.
 """
 import pathlib

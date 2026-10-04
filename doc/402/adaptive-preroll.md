@@ -32,7 +32,7 @@ QT_QPA_PLATFORM=minimal valgrind --tool=memcheck --error-exitcode=99 --leak-chec
 QT_QPA_PLATFORM=minimal valgrind --tool=memcheck --error-exitcode=99 --leak-check=full --show-leak-kinds=definite,indirect build/tests/openshot-VideoCacheThread-test '[preroll]'
 ```
 
-51/51 focused native CTest cases passed after eviction recovery, 9.91 s total. Includes five deterministic fake-clock cases and the prior cancellation/audio/QtPlayer seek, handoff, destruction and restart cases. Builds and regenerated matching Python import passed. Before eviction recovery, new audio/readiness Memcheck runs each reported zero errors, zero definite/indirect/possible loss, and 80,425 bytes reachable third-party/process state; the final eviction-recovery Memcheck rerun is recorded below when complete.
+51/51 focused native CTest cases passed after eviction recovery, 9.91 s total. Includes five deterministic fake-clock cases and the prior cancellation/audio/QtPlayer seek, handoff, destruction and restart cases. Builds and regenerated matching Python import passed. Before eviction recovery, new audio/readiness Memcheck runs each reported zero errors, zero definite/indirect/possible loss, and 80,425 bytes reachable third-party/process state; the final eviction-recovery Memcheck rerun also passed with the same zero-error/zero-lost summary. The repaired-worker case passed seven assertions after adding an explicit final-ready assertion. Matching rebuilt SWIG import passed again after the repair.
 
 ## Initial native workload comparison
 
@@ -48,7 +48,7 @@ The initial baseline used the then-pristine root combined base with its ABI-only
 
 Cache peaks: cheap/variable 654,150 bytes for both; overload 411,600 baseline vs 360,150 candidate. Process peak RSS approximately 56–58 MiB. These are measured reported frame-cache bytes and process RSS, not proof of all allocator bytes conforming to a limit. The pre-existing CacheMemory cleanup retains at least 20 frames even for tiny byte limits; that separate cache behavior is unchanged.
 
-The overloaded producer demonstrates the startup/headroom tradeoff: starting earlier yielded more cache misses under forced consumption. Finite pre-roll cannot make a 55 ms producer sustain 33 ms consumption. The baseline's 30-frame fixed requirement also repeatedly failed its gate while scripted playback advanced. A second comparison honoring the gate, using an isolated pristine `9307278e` build with matching headers/library, will report actual shared-hold work tails below.
+The overloaded producer demonstrates the startup/headroom tradeoff: starting earlier yielded more cache misses under forced consumption. Finite pre-roll cannot make a 55 ms producer sustain 33 ms consumption. The baseline's 30-frame fixed requirement also repeatedly failed its gate while scripted playback advanced. A second comparison honoring the gate, using an isolated pristine `9307278e` build with matching headers/library, reports shared-hold work tails below.
 
 Reproduction helper compiles this exact workload against the selected worktree's configured headers, dependency flags, and native library:
 
@@ -69,3 +69,22 @@ python3 tests/run-preroll-workload.py /path/to/candidate-worktree /tmp/preroll-c
 - Run combined application split/trim/undo/seek/project replacement and device reconnect checks; those broader release checks belong to root integration.
 
 No macOS, Windows, translated execution, physical device reconnect, ThreadSanitizer, or full real-media effects benchmark was run in this task. These remain validation limits, not verified platform outcomes.
+
+## Gate-honoring overload follow-up
+
+The pristine baseline was built in a new detached worktree at exactly `9307278e`, with `RelWithDebInfo`, docs disabled, and the focused native test target at parallel 4. The candidate contained the repaired scheduling implementation `fcb8d544`. Workload source and all workload settings were identical; runs were sequential. `ldd` verified the baseline resolved `/preroll-baseline/build/src/libopenshot.so.32`, and the candidate `/preroll/build/src/libopenshot.so.32`, with each executable compiled against that worktree's corresponding headers. Root integration independently upgrades the final ABI to 33.
+
+The same 55 ms/frame producer now honored every shared gate hold instead of forcing consumption through it. Frame work includes gate wait plus retrieval and position update, excluding the subsequent fixed 33 ms sleep; it is an engine workload measurement rather than a hardware renderer or audible-device test. Eight startups and 360 steps per build:
+
+| Metric | Pristine baseline | Candidate |
+|---|---:|---:|
+| Startup median (ms) | 1725.15 | 500.73 |
+| Startup p95 / max (ms) | 1725.64 / 1725.64 | 500.88 / 500.88 |
+| Shared gate holds | 352 / 360 | 216 / 360 |
+| Next-frame cache misses after gate opens | 0 / 360 | 0 / 360 |
+| Frame work p95 (ms) | 29.85 | 29.77 |
+| Frame work maximum (ms) | 30.97 | 31.45 |
+| Reported peak cache bytes | 551,250 | 338,100 |
+| Process peak RSS (KiB) | 57,360 | 57,100 |
+
+This local comparison verifies lower startup latency without a material frame-work tail increase in the overloaded synthetic case. Both paths still hold because production cannot sustain 30 fps; it does not establish improved sustained producer throughput or eliminate audio/video stalls. Cheap/variable initial scripted runs had no gate-hold probes or cache misses, so gate-honoring would not insert additional waits in those recorded runs. Real mixed-media/effects project and physical device qualification remains root integration work.
