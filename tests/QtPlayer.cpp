@@ -16,6 +16,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <future>
 
 #include "DummyReader.h"
 #include "QtPlayer.h"
@@ -134,4 +135,76 @@ TEST_CASE("QtPlayer seek does not wait for a slow frame decode", "[libopenshot][
 	const auto elapsed = std::chrono::steady_clock::now() - start;
 	CHECK(elapsed < std::chrono::milliseconds(100));
 	player.Stop();
+}
+
+namespace {
+class HandoffReader : public openshot::DummyReader {
+public:
+    HandoffReader() : DummyReader(openshot::Fraction(30, 1), 16, 16, 44100, 2, 30) {
+        info.has_audio = false; // Test the video/cache ownership independently of device access.
+    }
+    std::promise<void> entered;
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    std::atomic<int> calls{0};
+    std::shared_ptr<openshot::Frame> GetFrame(int64_t number) override {
+        if (calls.fetch_add(1) == 0) {
+            entered.set_value();
+            released.wait();
+        }
+        return DummyReader::GetFrame(number);
+    }
+};
+}
+
+TEST_CASE("QtPlayer reader handoff drains pending work in playing and paused modes", "[libopenshot][qtplayer][handoff]") {
+    const bool paused = GENERATE(false, true);
+    TestRenderer renderer;
+    auto old_reader = std::make_unique<HandoffReader>();
+    HandoffReader current_reader;
+    current_reader.release.set_value();
+    old_reader->Open();
+    current_reader.Open();
+    openshot::QtPlayer player(&renderer);
+    player.Reader(old_reader.get());
+    auto entered = old_reader->entered.get_future();
+    auto current_entered = current_reader.entered.get_future();
+    player.Play();
+    const bool decoding = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!decoding) {
+        old_reader->release.set_value();
+        player.Stop();
+    }
+    REQUIRE(decoding);
+    if (paused)
+        player.Pause();
+    auto handoff = std::async(std::launch::async, [&] { player.Reader(&current_reader); });
+    CHECK(handoff.wait_for(std::chrono::milliseconds(20)) == std::future_status::timeout);
+    old_reader->release.set_value();
+    handoff.get();
+    old_reader.reset(); // Caller may immediately delete the old raw reader.
+    const bool current_decoding = current_entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    player.Stop();
+    CHECK(current_decoding); // Includes paused replacement at the same position.
+}
+
+TEST_CASE("QtPlayer destruction drains an active decoder", "[libopenshot][qtplayer][handoff]") {
+    TestRenderer renderer;
+    HandoffReader reader;
+    reader.Open();
+    auto player = std::make_unique<openshot::QtPlayer>(&renderer);
+    player->Reader(&reader);
+    auto entered = reader.entered.get_future();
+    player->Play();
+    const bool decoding = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!decoding) {
+        reader.release.set_value();
+        player->Stop();
+    }
+    REQUIRE(decoding);
+    auto destroy = std::async(std::launch::async, [owned = std::move(player)]() mutable { owned.reset(); });
+    CHECK(destroy.wait_for(std::chrono::milliseconds(20)) == std::future_status::timeout);
+    reader.release.set_value();
+    destroy.get();
+    CHECK(reader.calls.load() == 1);
 }

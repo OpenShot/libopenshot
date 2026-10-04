@@ -598,6 +598,10 @@ namespace openshot
             }
             min_frames_ahead.store(settings->VIDEO_CACHE_MIN_PREROLL_FRAMES);
             if (!timeline) {
+                // Window prefetch is Timeline-only. Direct FFmpeg/Dummy readers
+                // must not wait forever for a cache window this worker won't fill.
+                min_frames_ahead.store(-1);
+                processed_generation.store(generation);
                 wait(50);
                 continue;
             }

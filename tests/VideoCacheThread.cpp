@@ -27,6 +27,7 @@
 #include "Clip.h"
 #include <algorithm>
 #include <iostream>
+#include <thread>
 
 using namespace openshot;
 
@@ -824,4 +825,26 @@ TEST_CASE("rapid seeks coalesce into one current cache request", "[VideoCacheThr
     std::cout << "Cache request acknowledgement (us), n=1000: p50=" << acknowledgement[500]
               << " p95=" << acknowledgement[950] << " p99=" << acknowledgement[990]
               << " max=" << acknowledgement.back() << '\n';
+}
+
+TEST_CASE("direct readers do not wait for unsupported timeline prefetch", "[VideoCacheThread][cancellation]") {
+    DummyReader reader(Fraction(30, 1), 16, 16, 48000, 2, 30);
+    reader.Open();
+    TestableVideoCacheThread thread;
+    thread.Reader(&reader);
+    thread.setSpeed(1);
+    auto wait_ready = [&] {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!thread.isReady() && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        return thread.isReady();
+    };
+    CHECK(thread.StartThread());
+    CHECK(wait_ready());
+    thread.Seek(90, true);
+    CHECK(wait_ready());
+    CHECK(thread.StopThread(-1));
+    CHECK(thread.StartThread());
+    CHECK(wait_ready());
+    CHECK(thread.StopThread(-1));
 }

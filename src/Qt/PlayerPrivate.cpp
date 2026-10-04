@@ -238,6 +238,7 @@ namespace openshot
         audioPlayback->signalThreadShouldExit();
         audioPlayback->notify();
         videoPlayback->signalThreadShouldExit();
+        videoPlayback->render.signal();
         videoPlayback->notify();
         waitForThreadToExit(-1);
         // The producer may have been inside its initial startThread block when
@@ -245,6 +246,7 @@ namespace openshot
         audioPlayback->signalThreadShouldExit();
         audioPlayback->notify();
         videoPlayback->signalThreadShouldExit();
+        videoPlayback->render.signal();
         videoPlayback->notify();
         videoCache->StopThread(-1);
         audioPlayback->waitForThreadToExit(-1);

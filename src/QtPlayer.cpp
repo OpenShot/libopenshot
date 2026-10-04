@@ -210,6 +210,12 @@ namespace openshot
         const bool restart = threads_started;
         p->stopPlayback();
         threads_started = false;
+        // Release every reference/event associated with the old reader before
+        // restarting, including a paused same-position preview.
+        p->Seek(p->video_position.load());
+        p->videoPlayback->SetFrame({});
+        p->videoPlayback->render.reset();
+        p->videoPlayback->rendered.reset();
     	reader = new_reader;
     	p->reader = new_reader;
     	p->videoCache->Reader(new_reader);
