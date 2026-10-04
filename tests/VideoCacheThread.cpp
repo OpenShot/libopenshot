@@ -921,7 +921,9 @@ TEST_CASE("worker repairs evicted readiness holes behind its cached suffix", "[V
     while ((timeline.recovered.load() < 2 || !thread.isReady())
            && std::chrono::steady_clock::now() < repair_deadline)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    const bool ready_after_repair = thread.isReady();
     thread.StopThread(-1);
+    CHECK(ready_after_repair);
     CHECK(timeline.CacheEpoch() == epoch);
     CHECK(timeline.recovered.load() >= 2);
     CHECK(timeline.GetCache()->Contains(20));

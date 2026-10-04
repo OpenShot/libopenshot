@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <cstdlib>
 #include <sys/resource.h>
 using namespace openshot;
 using Clock = std::chrono::steady_clock;
@@ -32,13 +33,16 @@ public:
         return frame;
     }
 };
-int main() {
+int main(int argc, char** argv) {
+    const bool honor_gate = argc > 1;
+    const int selected_profile = argc > 2 ? std::atoi(argv[2]) : -1;
     Settings::Instance()->ENABLE_PLAYBACK_CACHING = true;
     Settings::Instance()->VIDEO_CACHE_MIN_PREROLL_FRAMES = 30;
     Settings::Instance()->VIDEO_CACHE_MAX_PREROLL_FRAMES = 60;
     Settings::Instance()->VIDEO_CACHE_MAX_FRAMES = 64;
     for (int profile = 0; profile < 3; ++profile) {
-        std::vector<double> start_ms;
+        if (selected_profile >= 0 && selected_profile != profile) continue;
+        std::vector<double> start_ms, frame_work_ms;
         int underruns = 0, holds = 0;
         int64_t peak_bytes = 0;
         for (int run = 0; run < 8; ++run) {
@@ -54,21 +58,31 @@ int main() {
             }
             start_ms.push_back(std::chrono::duration<double,std::milli>(Clock::now()-start).count());
             for (int64_t n = 1; n <= 45; ++n) {
+                const auto frame_start = Clock::now();
                 if (!worker.isReady()) ++holds;
+                if (honor_gate) {
+                    while (!worker.isReady()) {
+                        if (Clock::now() - frame_start > std::chrono::seconds(8)) return 3;
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
+                }
                 if (!timeline.GetCache()->Contains(n + 1)) ++underruns;
                 timeline.GetFrame(n + 1); // Established synchronous video fallback.
                 worker.NotifyPlaybackPosition(n + 1);
+                frame_work_ms.push_back(std::chrono::duration<double,std::milli>(Clock::now()-frame_start).count());
                 peak_bytes = std::max(peak_bytes, timeline.GetCache()->GetBytes());
                 std::this_thread::sleep_for(std::chrono::milliseconds(33));
             }
             worker.StopThread(-1);
         }
         std::sort(start_ms.begin(),start_ms.end());
+        std::sort(frame_work_ms.begin(),frame_work_ms.end());
         struct rusage usage{};
         getrusage(RUSAGE_SELF,&usage);
-        std::cout << "profile=" << profile << " n=8 startup_ms median=" << start_ms[4]
+        std::cout << "honor_gate=" << honor_gate << " profile=" << profile << " n=8 startup_ms median=" << start_ms[4]
                   << " p95=" << start_ms[7] << " max=" << start_ms.back()
                   << " next_frame_misses=" << underruns << "/360 gate_holds=" << holds
+                  << " frame_work_ms_p95=" << frame_work_ms[342] << " frame_work_ms_max=" << frame_work_ms.back()
                   << " cache_peak_bytes=" << peak_bytes << " process_peak_rss_kib=" << usage.ru_maxrss << std::endl;
     }
 }

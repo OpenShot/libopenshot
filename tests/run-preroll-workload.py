@@ -35,4 +35,4 @@ for item in link[1:]:
     args.append(item)
 print(shlex.join(args), flush=True)
 subprocess.run(args, cwd=worktree / 'build/tests', check=True)
-subprocess.run([str(output)], check=True)
+subprocess.run([str(output)] + sys.argv[3:], check=True)
