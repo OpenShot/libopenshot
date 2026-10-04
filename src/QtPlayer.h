@@ -36,6 +36,7 @@ namespace openshot
 	{
 	openshot::PlayerPrivate *p;
 	bool threads_started;
+    friend struct AudioPlaybackThreadTestAccess;
 
 	public:
 	/// Default constructor
