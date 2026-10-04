@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <memory>
+#include <future>
+#include <chrono>
+#include <condition_variable>
 #include "openshot_catch.h"
 
 #include "Qt/VideoCacheThread.h"
@@ -20,6 +23,10 @@
 #include "Settings.h"
 #include "FFmpegReader.h"
 #include "Timeline.h"
+#include "DummyReader.h"
+#include "Clip.h"
+#include <algorithm>
+#include <iostream>
 
 using namespace openshot;
 
@@ -635,4 +642,186 @@ TEST_CASE("Seek non-preroll: playback uncached target does not force cache rebui
     CHECK(!thread.getClearCacheOnNextFill());
     CHECK(thread.getRequestedDisplayFrame() == 120);
     CHECK(thread.getLastCachedIndex() == 230);
+}
+
+// A deterministic decoder boundary: release explicitly instead of relying on
+// machine-dependent decode durations. It also models Timeline's internal Add.
+class GatedCacheTimeline : public Timeline {
+public:
+    GatedCacheTimeline() : Timeline(16, 16, Fraction(30, 1), 48000, 2, LAYOUT_STEREO) {}
+    std::promise<void> entered;
+    std::promise<void> release;
+    std::promise<int64_t> second_frame;
+    std::shared_future<void> released = release.get_future().share();
+    std::atomic<int> calls{0};
+    std::shared_ptr<Frame> GetFrame(int64_t number) override {
+        const int call = calls.fetch_add(1);
+        if (call == 0) {
+            entered.set_value();
+            released.wait();
+        } else if (call == 1) {
+            second_frame.set_value(number);
+        }
+        auto frame = std::make_shared<Frame>(number, 16, 16, "black", 0, 2);
+        GetCache()->Add(frame);
+        return frame;
+    }
+    std::unique_lock<std::recursive_mutex> holdDecoder() {
+        return std::unique_lock<std::recursive_mutex>(getFrameMutex);
+    }
+};
+
+TEST_CASE("explicit seek supersedes an in-flight cache fill", "[VideoCacheThread][cancellation]") {
+    GatedCacheTimeline timeline;
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(1);
+    thread.setLastCachedIndex(0);
+    auto entered = timeline.entered.get_future();
+    auto fill = std::async(std::launch::async, [&] {
+        return thread.prefetchWindow(timeline.GetCache(), 1, 20, 1, &timeline);
+    });
+    const bool decoder_entered = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!decoder_entered) {
+        timeline.release.set_value();
+        fill.get();
+    }
+    REQUIRE(decoder_entered);
+    thread.Seek(90, false); // Live seek did not set userSeeked in the old worker.
+    const auto baseline = thread.getLastCachedIndex();
+    timeline.release.set_value();
+    fill.get();
+    CHECK(timeline.calls.load() == 1);
+    CHECK(thread.getLastCachedIndex() == baseline);
+    // A position change alone keeps valid reusable reader-owned cached frames.
+    CHECK(timeline.GetCache()->Contains(1));
+}
+
+TEST_CASE("paused edit refresh acknowledges without waiting for decoder", "[VideoCacheThread][cancellation]") {
+    GatedCacheTimeline timeline;
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    auto decoder_lock = timeline.holdDecoder();
+    auto seek = std::async(std::launch::async, [&] { thread.Seek(1, true); });
+    const auto acknowledgement = seek.wait_for(std::chrono::milliseconds(100));
+    decoder_lock.unlock();
+    seek.get();
+    CHECK(acknowledgement == std::future_status::ready);
+}
+
+TEST_CASE("timeline deferred edit refresh bypasses cached frame and survives repeated requests", "[VideoCacheThread][cancellation]") {
+    GatedCacheTimeline timeline;
+    timeline.Open();
+    auto cache = timeline.GetCache();
+    for (int i = 0; i < 100; ++i) {
+        auto old = std::make_shared<Frame>(1, 16, 16, "red", 0, 2);
+        cache->Clear();
+        cache->Add(old);
+        timeline.RequestClearAllCache();
+        timeline.RequestClearAllCache();
+        auto current = timeline.Timeline::GetFrame(1);
+        REQUIRE(current != old);
+        CHECK(cache->GetFrame(1) == current);
+    }
+}
+
+TEST_CASE("cache stop timeout drains cooperatively and reader replacement waits for ownership", "[VideoCacheThread][cancellation]") {
+    GatedCacheTimeline timeline;
+    Timeline next(16, 16, Fraction(30, 1), 48000, 2, LAYOUT_STEREO);
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(1);
+    auto entered = timeline.entered.get_future();
+    thread.StartThread();
+    const bool decoder_entered = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!decoder_entered) {
+        timeline.release.set_value();
+        thread.StopThread(-1);
+    }
+    REQUIRE(decoder_entered);
+    CHECK_FALSE(thread.StopThread(0));
+    CHECK(thread.isThreadRunning());
+    auto replacement = std::async(std::launch::async, [&] { thread.Reader(&next); });
+    CHECK(replacement.wait_for(std::chrono::milliseconds(20)) == std::future_status::timeout);
+    timeline.release.set_value();
+    replacement.get();
+    CHECK(timeline.calls.load() == 1);
+    CHECK(thread.StopThread(-1));
+    CHECK(thread.StartThread());
+    CHECK(thread.StopThread(-1));
+}
+
+class GatedCacheReader : public DummyReader {
+public:
+    GatedCacheReader() : DummyReader(Fraction(30, 1), 16, 16, 48000, 2, 30) {}
+    std::promise<void> entered;
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    std::atomic<bool> first{true};
+    std::shared_ptr<Frame> GetFrame(int64_t number) override {
+        if (first.exchange(false)) {
+            entered.set_value();
+            released.wait();
+        }
+        return DummyReader::GetFrame(number);
+    }
+};
+
+TEST_CASE("timeline does not self-publish a decode invalidated during reader work", "[VideoCacheThread][cancellation]") {
+    GatedCacheReader source;
+    Clip clip(&source);
+    clip.End(30);
+    Timeline timeline(16, 16, Fraction(30, 1), 48000, 2, LAYOUT_STEREO);
+    timeline.AutoMapClips(false);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    auto entered = source.entered.get_future();
+    auto decode = std::async(std::launch::async, [&] { return timeline.GetFrame(1); });
+    const bool decoder_entered = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!decoder_entered) {
+        source.release.set_value();
+        decode.get();
+    }
+    REQUIRE(decoder_entered);
+    for (int i = 0; i < 100; ++i)
+        timeline.RequestClearAllCache();
+    source.release.set_value();
+    decode.get();
+    CHECK_FALSE(timeline.GetCache()->Contains(1));
+    CHECK(timeline.CacheRefreshPending());
+    auto current = timeline.GetFrame(1);
+    CHECK_FALSE(timeline.CacheRefreshPending());
+    CHECK(timeline.GetCache()->GetFrame(1) == current);
+}
+
+TEST_CASE("rapid seeks coalesce into one current cache request", "[VideoCacheThread][cancellation]") {
+    GatedCacheTimeline timeline;
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(1);
+    thread.EnableRequestDiagnostics(true);
+    auto entered = timeline.entered.get_future();
+    auto next_frame = timeline.second_frame.get_future();
+    thread.StartThread();
+    const bool decoder_entered = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!decoder_entered) {
+        timeline.release.set_value();
+        thread.StopThread(-1);
+    }
+    REQUIRE(decoder_entered);
+    std::vector<int64_t> acknowledgement;
+    for (int i = 0; i < 1000; ++i) {
+        thread.Seek(i % 2 ? 200 : 20, true);
+        acknowledgement.push_back(thread.CancellationAcknowledgementUs());
+    }
+    thread.Seek(90, true);
+    timeline.release.set_value();
+    const bool current_entered = next_frame.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    thread.StopThread(-1);
+    REQUIRE(current_entered);
+    CHECK(next_frame.get() == 90);
+    std::sort(acknowledgement.begin(), acknowledgement.end());
+    std::cout << "Cache request acknowledgement (us), n=1000: p50=" << acknowledgement[500]
+              << " p95=" << acknowledgement[950] << " p99=" << acknowledgement[990]
+              << " max=" << acknowledgement.back() << '\n';
 }

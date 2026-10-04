@@ -48,15 +48,25 @@ namespace openshot
     // Destructor
     VideoCacheThread::~VideoCacheThread()
     {
+        // Raw readers remain caller-owned. Do not destroy state while decoding.
+        StopThread(-1);
     }
 
     // Is cache ready for playback (pre-roll)
     bool VideoCacheThread::isReady()
     {
+        std::lock_guard<std::mutex> guard(seek_state_mutex);
         if (!reader) {
             return false;
         }
 
+        if (isThreadRunning() && processed_generation.load() != request_generation.load())
+            return false;
+        if (auto* timeline = dynamic_cast<Timeline*>(reader)) {
+            if (timeline->CacheRefreshPending() || (timeline_cache_epoch_initialized
+                && timeline->CacheEpoch() != seen_timeline_cache_epoch))
+                return false;
+        }
         const int64_t ready_min = min_frames_ahead.load();
         if (ready_min < 0) {
             return true;
@@ -93,6 +103,10 @@ namespace openshot
 
     void VideoCacheThread::setSpeed(int new_speed)
     {
+        std::lock_guard<std::mutex> guard(seek_state_mutex);
+        const int old_direction = computeDirection();
+        if (new_speed != speed.load())
+            request_generation.fetch_add(1);
         // Only update last_speed and last_dir when new_speed != 0
         if (new_speed != 0) {
             last_speed.store(new_speed);
@@ -101,6 +115,11 @@ namespace openshot
             scrub_active.store(false);
         }
         speed.store(new_speed);
+        if (computeDirection() != old_direction) {
+            userSeeked.store(true);
+            last_cached_index.store(requested_display_frame.load() - computeDirection());
+        }
+        notify();
     }
 
     // Get the size in bytes of a frame (rough estimate)
@@ -117,33 +136,77 @@ namespace openshot
         return bytes;
     }
 
-    /// Start the cache thread at high priority, and return true if it’s actually running.
+    int64_t VideoCacheThread::monotonicUs()
+    {
+        return std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
+    void VideoCacheThread::acknowledgeRequest(int64_t started_us)
+    {
+        request_generation.fetch_add(1);
+        if (started_us) {
+            request_time_us.store(started_us);
+            first_current_frame_us.store(0);
+            obsolete_completion_us.store(0);
+            acknowledgement_us.store(monotonicUs() - started_us);
+        }
+        notify();
+    }
+
     bool VideoCacheThread::StartThread()
     {
-        // JUCE’s startThread() returns void, so we launch it and then check if
-        // the thread actually started:
+        std::lock_guard<std::mutex> guard(lifecycle_mutex);
+        // A timed stop may leave a decoder draining. Never start another worker.
+        if (isThreadRunning())
+            return !threadShouldExit();
         startThread(Priority::high);
         return isThreadRunning();
     }
 
-    /// Stop the cache thread, waiting up to timeoutMs ms. Returns true if it actually stopped.
+    void VideoCacheThread::Stop()
+    {
+        const int64_t started = diagnostics_enabled.load() ? monotonicUs() : 0;
+        std::lock_guard<std::mutex> guard(seek_state_mutex);
+        acknowledgeRequest(started);
+        signalThreadShouldExit();
+        notify();
+    }
+
     bool VideoCacheThread::StopThread(int timeoutMs)
     {
-        stopThread(timeoutMs);
-        return !isThreadRunning();
+        std::lock_guard<std::mutex> guard(lifecycle_mutex);
+        Stop();
+        // JUCE stopThread(timeout) forcibly kills on timeout. A timeout here
+        // reports unfinished work; destruction/replacement explicitly drains.
+        return waitForThreadToExit(timeoutMs);
     }
 
     void VideoCacheThread::Reader(ReaderBase* new_reader)
     {
-        std::lock_guard<std::mutex> guard(seek_state_mutex);
-        reader = new_reader;
-        seen_timeline_cache_epoch = 0;
-        timeline_cache_epoch_initialized = false;
-        Play();
+        std::lock_guard<std::mutex> lifecycle_guard(lifecycle_mutex);
+        const bool restart = isThreadRunning();
+        if (restart) {
+            Stop();
+            waitForThreadToExit(-1);
+        }
+        {
+            std::lock_guard<std::mutex> guard(seek_state_mutex);
+            request_generation.fetch_add(1);
+            reader = new_reader;
+            seen_timeline_cache_epoch = 0;
+            timeline_cache_epoch_initialized = false;
+            userSeeked.store(false);
+            last_cached_index.store(requested_display_frame.load() - computeDirection());
+        }
+        if (restart)
+            startThread(Priority::high);
     }
 
     void VideoCacheThread::Seek(int64_t new_position, bool start_preroll)
     {
+        const int64_t started = diagnostics_enabled.load() ? monotonicUs() : 0;
+        std::lock_guard<std::mutex> guard(seek_state_mutex);
         const int64_t timeline_end = resolveTimelineEnd();
         const int64_t clamped_new_position = clampToTimelineRange(new_position, timeline_end);
         const int64_t current_requested = requested_display_frame.load();
@@ -175,7 +238,7 @@ namespace openshot
                     } else {
                         // Paused same-frame edit refresh: force full cache refresh.
                         if (Timeline* timeline = dynamic_cast<Timeline*>(reader)) {
-                            timeline->ClearAllCache();
+                            timeline->RequestClearAllCache();
                         }
                         new_cached_count = 0;
                         should_mark_seek = true;
@@ -259,7 +322,6 @@ namespace openshot
         }
 
         {
-            std::lock_guard<std::mutex> guard(seek_state_mutex);
             // Reset readiness baseline only when rebuilding cache.
             const int dir = computeDirection();
             if (should_mark_seek || should_preroll || should_clear_cache) {
@@ -278,6 +340,7 @@ namespace openshot
                 scrub_active.store(false);
             }
         }
+        acknowledgeRequest(started);
     }
 
     void VideoCacheThread::Seek(int64_t new_position)
@@ -287,6 +350,7 @@ namespace openshot
 
     void VideoCacheThread::NotifyPlaybackPosition(int64_t new_position)
     {
+        std::lock_guard<std::mutex> guard(seek_state_mutex);
         if (new_position <= 0) {
             return;
         }
@@ -299,7 +363,6 @@ namespace openshot
             new_cached_count = cache->Count();
         }
         {
-            std::lock_guard<std::mutex> guard(seek_state_mutex);
             requested_display_frame.store(new_position);
             cached_frame_count.store(new_cached_count);
         }
@@ -424,8 +487,13 @@ namespace openshot
                                           int64_t window_end,
                                           int dir,
                                           ReaderBase* reader,
-                                          int64_t max_frames_to_fetch)
+                                          int64_t max_frames_to_fetch,
+                                          uint64_t generation)
     {
+        if (generation == UINT64_MAX)
+            generation = request_generation.load();
+        auto* timeline = dynamic_cast<Timeline*>(reader);
+        const uint64_t epoch = timeline ? timeline->CacheEpoch() : 0;
         bool window_full = true;
         int64_t next_frame = last_cached_index.load() + dir;
         int64_t fetched_this_pass = 0;
@@ -438,15 +506,27 @@ namespace openshot
                 break;
             }
             // If a Seek was requested mid-caching, bail out immediately
-            if (userSeeked.load()) {
+            if (userSeeked.load() || request_generation.load() != generation
+                || (timeline && timeline->CacheEpoch() != epoch)) {
                 break;
             }
 
-            if (!cache->Contains(next_frame)) {
+            if ((timeline && timeline->CacheRefreshPending()) || !cache->Contains(next_frame)) {
                 // Frame missing, fetch and add
                 try {
                     auto framePtr = reader->GetFrame(next_frame);
-                    cache->Add(framePtr);
+                    // The reader may have cached a valid reusable frame itself.
+                    // Timeline edits own invalidation under their decoder lock;
+                    // do not re-add its result after that lock has been released.
+                    std::lock_guard<std::mutex> guard(seek_state_mutex);
+                    if (threadShouldExit() || request_generation.load() != generation
+                        || (timeline && timeline->CacheEpoch() != epoch)) {
+                        if (diagnostics_enabled.load() && request_time_us.load())
+                            obsolete_completion_us.store(monotonicUs() - request_time_us.load());
+                        return false;
+                    }
+                    if (!timeline)
+                        cache->Add(framePtr);
                     cached_frame_count.store(cache->Count());
                     ++fetched_this_pass;
                 }
@@ -459,8 +539,19 @@ namespace openshot
                 cache->Touch(next_frame);
             }
 
-            last_cached_index.store(next_frame);
-            next_frame       += dir;
+            {
+                std::lock_guard<std::mutex> guard(seek_state_mutex);
+                if (threadShouldExit() || request_generation.load() != generation
+                    || (timeline && timeline->CacheEpoch() != epoch))
+                    return false;
+                last_cached_index.store(next_frame);
+                if (diagnostics_enabled.load() && request_time_us.load()
+                    && first_current_frame_us.load() == 0
+                    && next_frame == clampToTimelineRange(requested_display_frame.load(),
+                                                         timeline ? timeline->GetMaxFrame() : reader->info.video_length))
+                    first_current_frame_us.store(monotonicUs() - request_time_us.load());
+            }
+            next_frame += dir;
 
             // In active playback, avoid long uninterrupted prefetch bursts
             // that can delay player thread frame retrieval.
@@ -474,220 +565,100 @@ namespace openshot
 
     void VideoCacheThread::run()
     {
-        using micro_sec        = std::chrono::microseconds;
-        using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
-
         while (!threadShouldExit()) {
             Settings* settings = Settings::Instance();
-            CacheBase* cache   = reader ? reader->GetCache() : nullptr;
+            // Reader replacement waits for this worker before changing the raw
+            // pointer. The state lock never covers decoding or timeline clears.
+            CacheBase* cache = reader ? reader->GetCache() : nullptr;
             Timeline* timeline = dynamic_cast<Timeline*>(reader);
-
-            // Process deferred clears even when caching is currently disabled
-            // (e.g. active scrub mode), so stale ranges are removed promptly.
-            bool should_clear_cache = clear_cache_on_next_fill.exchange(false);
-            if (should_clear_cache && timeline) {
-                const int dir_on_clear = computeDirection();
-                const int64_t clear_playhead = clampToTimelineRange(
-                    requested_display_frame.load(), resolveTimelineEnd());
-                timeline->ClearAllCache();
-                cached_frame_count.store(0);
-                // Reset ready baseline immediately after clear. Otherwise a
-                // stale last_cached_index from the old cache window can make
-                // isReady() report true before new preroll is actually filled.
-                last_cached_index.store(clear_playhead - dir_on_clear);
-            }
-
-            // If caching disabled or no reader, mark cache as ready and sleep briefly
-            if (!settings->ENABLE_PLAYBACK_CACHING || !cache) {
-                cached_frame_count.store(cache ? cache->Count() : 0);
-                min_frames_ahead.store(-1);
-                std::this_thread::sleep_for(double_micro_sec(50000));
-                continue;
-            }
-
-            // init local vars
-            min_frames_ahead.store(settings->VIDEO_CACHE_MIN_PREROLL_FRAMES);
-
-            if (!timeline) {
-                std::this_thread::sleep_for(double_micro_sec(50000));
-                continue;
-            }
-            int64_t  timeline_end = resolveTimelineEnd();
-            int64_t  raw_playhead = requested_display_frame.load();
-            int64_t  playhead     = clampToTimelineRange(raw_playhead, timeline_end);
-            bool     paused       = (speed.load() == 0);
-            int64_t  preroll_frames = computePrerollFrames(settings);
-
-            cached_frame_count.store(cache->Count());
-
-            // Compute effective direction (±1)
-            int dir = computeDirection();
-            if (speed.load() != 0) {
-                last_dir.store(dir);
-            }
-
-            // If timeline-side cache invalidation occurred (e.g. ApplyJsonDiff / SetJson),
-            // restart fill from the active playhead window so invalidated gaps self-heal.
-            if (timeline) {
-                bool epoch_changed = false;
-                {
-                    std::lock_guard<std::mutex> guard(seek_state_mutex);
-                    const uint64_t timeline_epoch = timeline->CacheEpoch();
-                    if (!timeline_cache_epoch_initialized) {
-                        seen_timeline_cache_epoch = timeline_epoch;
-                        timeline_cache_epoch_initialized = true;
-                    }
-                    else if (timeline_epoch != seen_timeline_cache_epoch) {
-                        seen_timeline_cache_epoch = timeline_epoch;
-                        epoch_changed = true;
-                    }
-                }
-                if (epoch_changed) {
-                    handleUserSeek(playhead, dir);
-                }
-            }
-
-            // Compute bytes_per_frame, max_bytes, and capacity once
-            int64_t bytes_per_frame = getBytes(
-                (timeline->preview_width ? timeline->preview_width : reader->info.width),
-                (timeline->preview_height ? timeline->preview_height : reader->info.height),
-                reader->info.sample_rate,
-                reader->info.channels,
-                reader->info.fps.ToFloat()
-            );
-            int64_t max_bytes = cache->GetMaxBytes();
-            int64_t capacity  = 0;
-            if (max_bytes > 0 && bytes_per_frame > 0) {
-                capacity = max_bytes / bytes_per_frame;
-                if (capacity > settings->VIDEO_CACHE_MAX_FRAMES) {
-                    capacity = settings->VIDEO_CACHE_MAX_FRAMES;
-                }
-            }
-
-            // Handle a user-initiated seek
-            bool did_user_seek = false;
-            bool use_preroll = false;
+            uint64_t generation;
+            int64_t raw_playhead;
+            int dir;
+            bool paused, did_user_seek, use_preroll, should_clear;
             {
                 std::lock_guard<std::mutex> guard(seek_state_mutex);
+                generation = request_generation.load();
                 raw_playhead = requested_display_frame.load();
-                playhead = clampToTimelineRange(raw_playhead, timeline_end);
-                did_user_seek = userSeeked.load();
-                use_preroll = preroll_on_next_fill.load();
-                if (did_user_seek) {
-                    userSeeked.store(false);
-                    preroll_on_next_fill.store(false);
-                }
+                dir = computeDirection();
+                paused = speed.load() == 0;
+                did_user_seek = userSeeked.exchange(false);
+                use_preroll = preroll_on_next_fill.exchange(false);
+                should_clear = clear_cache_on_next_fill.exchange(false);
             }
-            if (did_user_seek) {
-                // During active playback, prioritize immediate forward readiness
-                // from the playhead. Use directional preroll offset only while
-                // paused/scrubbing contexts.
-                if (use_preroll && paused) {
-                    handleUserSeekWithPreroll(playhead, dir, timeline_end, preroll_frames);
-                }
-                else {
-                    handleUserSeek(playhead, dir);
-                }
-            }
-            else if (!paused && capacity >= 1) {
-                // In playback mode, check if last_cached_index drifted outside the new window
-                int64_t base_ahead = static_cast<int64_t>(capacity * settings->VIDEO_CACHE_PERCENT_AHEAD);
+            // Position changes reset scheduling, not reusable reader caches.
+            // Full edit invalidation is deferred by Timeline::RequestClearAllCache.
+            if (request_generation.load() != generation)
+                continue;
 
-                int64_t window_begin, window_end;
-                computeWindowBounds(
-                    playhead,
-                    dir,
-                    base_ahead,
-                    timeline_end,
-                    window_begin,
-                    window_end
-                );
-
-                bool outside_window =
-                    (dir > 0 && last_cached_index.load() > window_end) ||
-                    (dir < 0 && last_cached_index.load() < window_begin);
-                if (outside_window) {
-                    handleUserSeek(playhead, dir);
-                }
-            }
-
-            // If a clear was requested by a seek that arrived after the loop
-            // began, apply it now before any additional prefetch work. This
-            // avoids "build then suddenly clear" behavior during playback.
-            bool should_clear_mid_loop = clear_cache_on_next_fill.exchange(false);
-            if (should_clear_mid_loop && timeline) {
-                timeline->ClearAllCache();
-                cached_frame_count.store(0);
-                last_cached_index.store(playhead - dir);
-            }
-
-            // While user is dragging/scrubbing, skip cache prefetch work.
-            if (scrub_active.load()) {
-                std::this_thread::sleep_for(double_micro_sec(10000));
+            if (!settings->ENABLE_PLAYBACK_CACHING || !cache) {
+                min_frames_ahead.store(-1);
+                processed_generation.store(generation);
+                wait(50);
                 continue;
             }
-
-            // If capacity is insufficient, sleep and retry
-            if (capacity < 1) {
-                std::this_thread::sleep_for(double_micro_sec(50000));
+            min_frames_ahead.store(settings->VIDEO_CACHE_MIN_PREROLL_FRAMES);
+            if (!timeline) {
+                wait(50);
                 continue;
             }
-            int64_t ahead_count = static_cast<int64_t>(capacity *
-                                           settings->VIDEO_CACHE_PERCENT_AHEAD);
-            int64_t window_size = ahead_count + 1;
-            if (window_size < 1) {
-                window_size = 1;
-            }
-            int64_t ready_target = window_size - 1;
-            if (ready_target < 0) {
-                ready_target = 0;
-            }
-            int64_t configured_min = settings->VIDEO_CACHE_MIN_PREROLL_FRAMES;
-            const int64_t required_ahead = std::min<int64_t>(configured_min, ready_target);
-            min_frames_ahead.store(required_ahead);
-
-            // If paused and playhead is no longer in cache, clear everything
-            bool did_clear = clearCacheIfPaused(playhead, paused, cache);
-            if (did_clear) {
-                handleUserSeekWithPreroll(playhead, dir, timeline_end, preroll_frames);
-            }
-
-            // Compute the current caching window
+            const int64_t timeline_end = resolveTimelineEnd();
+            const int64_t playhead = clampToTimelineRange(raw_playhead, timeline_end);
+            const int64_t preroll_frames = computePrerollFrames(settings);
+            const int64_t bytes_per_frame = getBytes(
+                timeline->preview_width ? timeline->preview_width : reader->info.width,
+                timeline->preview_height ? timeline->preview_height : reader->info.height,
+                reader->info.sample_rate, reader->info.channels, reader->info.fps.ToFloat());
+            const int64_t max_bytes = cache->GetMaxBytes();
+            const int64_t capacity = (max_bytes > 0 && bytes_per_frame > 0)
+                ? std::min<int64_t>(max_bytes / bytes_per_frame, settings->VIDEO_CACHE_MAX_FRAMES)
+                : 0;
+            const int64_t ahead_count = static_cast<int64_t>(capacity * settings->VIDEO_CACHE_PERCENT_AHEAD);
             int64_t window_begin, window_end;
-            computeWindowBounds(playhead,
-                                dir,
-                                ahead_count,
-                                timeline_end,
-                                window_begin,
-                                window_end);
-
-            // Attempt to fill any missing frames in that window
-            int64_t max_frames_to_fetch = -1;
-            if (!paused) {
-                // Keep cache thread responsive during playback seeks so player
-                // can start as soon as pre-roll is met instead of waiting for a
-                // full cache window pass.
-                max_frames_to_fetch = 8;
+            computeWindowBounds(playhead, dir, ahead_count, timeline_end, window_begin, window_end);
+            {
+                std::lock_guard<std::mutex> guard(seek_state_mutex);
+                if (request_generation.load() != generation)
+                    continue;
+                const uint64_t epoch = timeline->CacheEpoch();
+                const bool epoch_changed = timeline_cache_epoch_initialized && epoch != seen_timeline_cache_epoch;
+                seen_timeline_cache_epoch = epoch;
+                timeline_cache_epoch_initialized = true;
+                cached_frame_count.store(cache->Count());
+                if (epoch_changed || should_clear || processed_generation.load() != generation)
+                    handleUserSeek(playhead, dir);
+                processed_generation.store(generation);
+                if (did_user_seek) {
+                    if (use_preroll && paused)
+                        handleUserSeekWithPreroll(playhead, dir, timeline_end, preroll_frames);
+                    else
+                        handleUserSeek(playhead, dir);
+                } else if (!paused && capacity >= 1) {
+                    const bool outside_window = (dir > 0 && last_cached_index.load() > window_end)
+                        || (dir < 0 && last_cached_index.load() < window_begin);
+                    if (outside_window)
+                        handleUserSeek(playhead, dir);
+                }
             }
-            bool window_full = prefetchWindow(
-                cache,
-                window_begin,
-                window_end,
-                dir,
-                reader,
-                max_frames_to_fetch
-            );
-
-            // If paused and window was already full, keep playhead fresh
-            if (paused && window_full) {
+            if (scrub_active.load()) {
+                wait(10);
+                continue;
+            }
+            if (capacity < 1) {
+                wait(50);
+                continue;
+            }
+            min_frames_ahead.store(std::min<int64_t>(settings->VIDEO_CACHE_MIN_PREROLL_FRAMES,
+                                                   std::max<int64_t>(0, ahead_count)));
+            // Preserve reusable frames on position-only seeks. Full edit refresh
+            // is requested explicitly and consumed by Timeline's decoder.
+            bool window_full = prefetchWindow(cache, window_begin, window_end, dir,
+                                               reader, paused ? -1 : 8, generation);
+            if (request_generation.load() != generation)
+                continue; // The latest request restarts immediately, without sleep.
+            if (paused && window_full)
                 cache->Touch(playhead);
-            }
-
-            // Sleep a short fraction of a frame interval
-            int64_t sleep_us = static_cast<int64_t>(
-                1000000.0 / reader->info.fps.ToFloat() / 4.0
-            );
-            std::this_thread::sleep_for(double_micro_sec(sleep_us));
+            const double fps = reader->info.fps.ToFloat();
+            wait(fps > 0 ? std::max(1, static_cast<int>(1000.0 / fps / 4.0)) : 10);
         }
     }
 

@@ -205,11 +205,19 @@ namespace openshot
     // Set the reader object
     void QtPlayer::Reader(openshot::ReaderBase *new_reader)
     {
-    	// Set new reader. Note: Be sure to close and dispose of the old reader after calling this
+        // ReaderBase is caller-owned. Drain every old-reader user before the
+        // caller may close/delete it after this method returns.
+        const bool restart = threads_started;
+        p->stopPlayback();
+        threads_started = false;
     	reader = new_reader;
     	p->reader = new_reader;
     	p->videoCache->Reader(new_reader);
     	p->audioPlayback->Reader(new_reader);
+        if (restart && new_reader) {
+            p->startPlayback();
+            threads_started = true;
+        }
     }
 
     // Get the current reader, such as a FFmpegReader

@@ -167,6 +167,8 @@ namespace openshot {
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 		double max_time; ///> The max duration (in seconds) of the timeline, based on the furthest clip (right edge)
 		double min_time; ///> The min duration (in seconds) of the timeline, based on the position of the first clip (left edge)
+		std::atomic<uint64_t> cache_clear_requested{0}; ///< Deferred refresh request sequence.
+        std::atomic<uint64_t> cache_clear_completed{0}; ///< Last refresh completed under getFrameMutex.
 		std::atomic<uint64_t> cache_epoch; ///< Cache invalidation epoch for external observers.
 
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
@@ -323,7 +325,12 @@ namespace openshot {
 		/// of this cache object though (Timeline will not delete it for you).
 		void SetCache(openshot::CacheBase* new_cache);
 
-		/// Return the current cache invalidation epoch.
+		/// Request a full refresh without waiting for an active decoder. Subsequent
+        /// GetFrame calls bypass cached results until the decoder consumes it.
+        void RequestClearAllCache();
+        bool CacheRefreshPending() const { return cache_clear_requested.load() != cache_clear_completed.load(); }
+
+        /// Return the current cache invalidation epoch.
 		uint64_t CacheEpoch() const { return cache_epoch.load(std::memory_order_relaxed); };
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
