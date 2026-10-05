@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+#
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Compile identical workload against a configured worktree's matching headers/lib.
 Usage: python3 tests/run-preroll-workload.py /path/to/worktree /tmp/workload-name [--honor-gate [profile]]

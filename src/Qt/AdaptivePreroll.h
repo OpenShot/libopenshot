@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+//
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #ifndef OPENSHOT_ADAPTIVE_PREROLL_H
 #define OPENSHOT_ADAPTIVE_PREROLL_H

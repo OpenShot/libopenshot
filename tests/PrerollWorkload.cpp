@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+//
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Optimized native workload: compile unchanged against baseline and candidate.
 #include "Qt/VideoCacheThread.h"
