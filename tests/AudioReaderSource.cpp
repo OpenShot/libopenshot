@@ -1,4 +1,12 @@
-// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+/**
+ * @file
+ * @brief Unit tests for audio seek and transport changes
+ * @author OpenShot Studios, LLC
+ *
+ * @ref License
+ */
+
+// Copyright (c) 2026 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "openshot_catch.h"

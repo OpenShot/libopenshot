@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# Copyright (c) 2026 OpenShot Studios, LLC
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """
