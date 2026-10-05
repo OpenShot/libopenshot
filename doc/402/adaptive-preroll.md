@@ -1,6 +1,6 @@
 # Adaptive preview pre-roll: implementation and evidence
 
-Base: `9307278e0ece3907dcf88bbcc3e7de0ca87d1a5a` (combined reviewed cancellation/audio integration), branch `codex/402-adaptive-preroll`. Implementation `b0af5b7f`; eviction recovery `fcb8d544`. No merge or push. Root integration supplies ABI/SOVERSION 33; consumers must rebuild against matching headers/wrappers because the native VideoCacheThread layout changed.
+Base: `9307278e0ece3907dcf88bbcc3e7de0ca87d1a5a` (combined reviewed cancellation/audio integration), branch `codex/402-adaptive-preroll`. Implementation `b0af5b7f`; eviction recovery `fcb8d544`. No merge or push. Daily builds retain SOVERSION 32 until release. Consumers must rebuild the library and Python bindings against matching headers because the native VideoCacheThread layout changed; the unchanged SO version does not make older binaries compatible.
 
 ## Behavior
 
@@ -62,7 +62,7 @@ python3 tests/run-preroll-workload.py /path/to/candidate-worktree /tmp/preroll-c
 
 ## Reviewer checklist and limits
 
-- Verify matching regenerated wrapper and ABI33 integration library; old class layouts are incompatible.
+- Verify matching regenerated wrappers and the daily-build library; old class layouts are incompatible even though the SO version remains 32.
 - Re-run focused policy/cache/audio/player cases, including actual current/next eviction repair and multi-frame audio miss/ack recovery.
 - Verify the first-frame requirement, speed direction, tiny/zero/disabled caches, timeline endpoints, and edit epoch/preview reset on representative real projects.
 - Compare startup separately from shared-hold tails and sustained production. This synthetic workload is not an MP4 effects/project or physical audio-device qualification.
@@ -72,7 +72,7 @@ No macOS, Windows, translated execution, physical device reconnect, ThreadSaniti
 
 ## Gate-honoring overload follow-up
 
-The pristine baseline was built in a new detached worktree at exactly `9307278e`, with `RelWithDebInfo`, docs disabled, and the focused native test target at parallel 4. The candidate contained the repaired scheduling implementation `fcb8d544`. Workload source and all workload settings were identical; runs were sequential. `ldd` verified the baseline resolved `/preroll-baseline/build/src/libopenshot.so.32`, and the candidate `/preroll/build/src/libopenshot.so.32`, with each executable compiled against that worktree's corresponding headers. Root integration independently upgrades the final ABI to 33.
+The pristine baseline was built in a new detached worktree at exactly `9307278e`, with `RelWithDebInfo`, docs disabled, and the focused native test target at parallel 4. The candidate contained the repaired scheduling implementation `fcb8d544`. Workload source and all workload settings were identical; runs were sequential. `ldd` verified the baseline resolved `/preroll-baseline/build/src/libopenshot.so.32`, and the candidate `/preroll/build/src/libopenshot.so.32`, with each executable compiled against that worktree's corresponding headers. The earlier combined integration used SO version 33 during validation; the split daily-build branches retain SO version 32 pending release.
 
 The same 55 ms/frame producer now honored every shared gate hold instead of forcing consumption through it. Frame work includes gate wait plus retrieval and position update, excluding the subsequent fixed 33 ms sleep; it is an engine workload measurement rather than a hardware renderer or audible-device test. Eight startups and 360 steps per build:
 

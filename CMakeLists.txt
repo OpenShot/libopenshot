@@ -25,8 +25,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
 set(PROJECT_VERSION_FULL "1.0.1")
-# Playback and Timeline class layouts changed; keep old bindings on the old ABI.
-set(PROJECT_SO_VERSION 33)
+set(PROJECT_SO_VERSION 32)
 
 # Remove the dash and anything following, to get the #.#.# version for project()
 STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
