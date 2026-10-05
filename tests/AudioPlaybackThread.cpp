@@ -48,7 +48,7 @@ struct AudioPlaybackThreadTestAccess {
         reader.Open();
         AudioPlaybackThread audio(nullptr);
         audio.Reader(&reader);
-        AudioReaderSource* original = audio.source;
+        const AudioReaderSource* original = audio.source;
         for (int iteration = 0; iteration < 3; ++iteration) {
             audio.Play();
             audio.startThread();

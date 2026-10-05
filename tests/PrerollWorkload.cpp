@@ -21,7 +21,7 @@ class SyntheticTimeline : public Timeline {
 public:
     std::mutex decode;
     int profile;
-    SyntheticTimeline(int p) : Timeline(160,90,Fraction(30,1),48000,2,LAYOUT_STEREO), profile(p) {
+    explicit SyntheticTimeline(int p) : Timeline(160,90,Fraction(30,1),48000,2,LAYOUT_STEREO), profile(p) {
         GetCache()->SetMaxBytes(16 * 1024 * 1024);
     }
     std::shared_ptr<Frame> GetFrame(int64_t n) override {

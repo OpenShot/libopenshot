@@ -20,6 +20,11 @@ public:
     LevelReader() : DummyReader(openshot::Fraction(30, 1), 16, 16, 48000, 1, 1) {
         info.has_audio = true;
     }
+    void Release() {
+        std::lock_guard<std::mutex> lock(mutex);
+        released = true;
+        condition.notify_all();
+    }
     std::shared_ptr<openshot::Frame> GetFrame(int64_t number) override {
         if (block) {
             std::unique_lock<std::mutex> lock(mutex);
@@ -66,23 +71,16 @@ TEST_CASE("AudioReaderSource discards audio decoded across a newer seek", "[audi
     {
         std::unique_lock<std::mutex> lock(reader.mutex);
         entered = reader.condition.wait_for(lock, std::chrono::seconds(2), [&] { return reader.entered; });
-        if (!entered) {
-            reader.released = true;
-            reader.condition.notify_all();
-        }
     }
     if (!entered) {
+        reader.Release();
         callback.get();
         REQUIRE(entered);
         return;
     }
     auto seek = std::async(std::launch::async, [&] { source.Seek(2); source.Seek(3); });
     const bool seek_completed = seek.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready;
-    {
-        std::lock_guard<std::mutex> lock(reader.mutex);
-        reader.released = true;
-        reader.condition.notify_all();
-    }
+    reader.Release();
     callback.get();
     seek.get();
     CHECK(seek_completed);

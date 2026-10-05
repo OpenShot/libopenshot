@@ -76,5 +76,4 @@ TEST_CASE("fake-clock startup comparison separates latency from sustained throug
     CHECK(startup(55000,false) == 1705000);
     CHECK(startup(55000,true) <= AdaptivePreroll::StartupLimitUs + 55000);
     // 55ms production still exceeds 33ms consumption after either start.
-    CHECK(55000 > 1000000 / 30);
 }

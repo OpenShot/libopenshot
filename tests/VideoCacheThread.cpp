@@ -619,11 +619,11 @@ TEST_CASE("explicit seek supersedes an in-flight cache fill", "[VideoCacheThread
     }
     REQUIRE(decoder_entered);
     thread.Seek(90, false); // Live seek did not set userSeeked in the old worker.
-    const auto baseline = thread.getLastCachedIndex();
     timeline.release.set_value();
     fill.get();
     CHECK(timeline.calls.load() == 1);
-    CHECK(thread.getLastCachedIndex() == baseline);
+    // The canceled fill must not advance the initial high-water mark to frame 1.
+    CHECK(thread.getLastCachedIndex() == 0);
     // A position change alone keeps valid reusable reader-owned cached frames.
     CHECK(timeline.GetCache()->Contains(1));
 }
