@@ -1,8 +1,9 @@
 /**
  * @file
  * @brief Source file for Outline effect class
- * @author Jonathan Thomas <jonathan@openshot.org>, HaiVQ <me@haivq.com>
- *
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
+ * 
  * @ref License
  */
 
@@ -60,12 +61,11 @@ std::shared_ptr<openshot::Frame> Outline::GetFrame(std::shared_ptr<openshot::Fra
 	}
 
 	// Get the frame's image
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-
+	cv::Mat cv_image = frame->GetBGRACvMat();
+	
 	float sigmaValue = widthValue / 3.0;
 	if (sigmaValue <= 0.0)
 		sigmaValue = 0.01;
-	cv::Mat cv_image = QImageToBGRACvMat(frame_image);
 
 	// Extract alpha channel for the mask
 	std::vector<cv::Mat> channels(4);
@@ -95,25 +95,24 @@ std::shared_ptr<openshot::Frame> Outline::GetFrame(std::shared_ptr<openshot::Fra
 	solid_color_mat.copyTo(final_image, outline_mask);
 	cv_image.copyTo(final_image, alpha_mask);
 
-	std::shared_ptr<QImage> new_frame_image = BGRACvMatToQImage(final_image);
-
-	// FIXME: The shared_ptr::swap does not work somehow
-	*frame_image = *new_frame_image;
+	frame->SetBGRACvMat(final_image);
+	
 	return frame;
 }
 
-cv::Mat Outline::QImageToBGRACvMat(std::shared_ptr<QImage>& qimage) {
-	cv::Mat cv_img(qimage->height(), qimage->width(), CV_8UC4, (uchar*)qimage->constBits(), qimage->bytesPerLine());
-	return cv_img;
-}
+// Moved to Frame.cpp
+// cv::Mat Outline::QImageToBGRACvMat(std::shared_ptr<QImage>& qimage) {
+// 	cv::Mat cv_img(qimage->height(), qimage->width(), CV_8UC4, (uchar*)qimage->constBits(), qimage->bytesPerLine());
+// 	return cv_img;
+// }
 
-std::shared_ptr<QImage> Outline::BGRACvMatToQImage(cv::Mat img) {
-	cv::Mat final_img;
-	cv::cvtColor(img, final_img, cv::COLOR_RGBA2BGRA);
-	QImage qimage(final_img.data, final_img.cols, final_img.rows, final_img.step, QImage::Format_ARGB32);
-	std::shared_ptr<QImage> imgIn = std::make_shared<QImage>(qimage.convertToFormat(QImage::Format_RGBA8888_Premultiplied));
-	return imgIn;
-}
+// std::shared_ptr<QImage> Outline::BGRACvMatToQImage(cv::Mat img) {
+// 	cv::Mat final_img;
+// 	cv::cvtColor(img, final_img, cv::COLOR_RGBA2BGRA);
+// 	QImage qimage(final_img.data, final_img.cols, final_img.rows, final_img.step, QImage::Format_ARGB32);
+// 	std::shared_ptr<QImage> imgIn = std::make_shared<QImage>(qimage.convertToFormat(QImage::Format_RGBA8888_Premultiplied));
+// 	return imgIn;
+// }
 
 // Generate JSON string of this object
 std::string Outline::Json() const {

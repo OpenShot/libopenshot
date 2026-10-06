@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for Frame class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -115,6 +116,7 @@ Frame::~Frame() {
 	audio.reset();
 	#ifdef USE_OPENCV
 	imagecv.release();
+	brga_image_cv.release();
 	#endif
 }
 
@@ -907,6 +909,13 @@ cv::Mat Frame::GetImageCV()
 	return imagecv;
 }
 
+// Set pointer to OpenCV image object
+void Frame::SetImageCV(cv::Mat _image)
+{
+	imagecv = _image;
+	image = Mat2Qimage(_image);
+}
+
 std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
 	cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 	QImage qimg((uchar*) img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
@@ -920,11 +929,39 @@ std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
 	return imgIn;
 }
 
-// Set pointer to OpenCV image object
-void Frame::SetImageCV(cv::Mat _image)
-{
-	imagecv = _image;
-	image = Mat2Qimage(_image);
+// Convert QImage to cv::Mat and vice versa
+// Frame class has GetImageCV, but it does not include alpha channel
+// so we need a separate methods which preserve alpha channel
+cv::Mat Frame::QImage2BGRACvMat(std::shared_ptr<QImage>& qimage) {
+	cv::Mat cv_img(
+		qimage->height(), qimage->width(),
+		CV_8UC4, (uchar*)qimage->constBits(),
+		qimage->bytesPerLine()
+	);
+	return cv_img;
+}
+
+// Convert cv::Mat back to QImage
+std::shared_ptr<QImage> Frame::BGRACvMat2QImage(cv::Mat img) {
+	cv::Mat final_img;
+	cv::cvtColor(img, final_img, cv::COLOR_BGRA2RGBA);
+	QImage qimage(final_img.data, final_img.cols, final_img.rows, final_img.step, QImage::Format_ARGB32);
+	std::shared_ptr<QImage> imgIn = std::make_shared<QImage>(qimage.convertToFormat(QImage::Format_RGBA8888_Premultiplied));
+	return imgIn;
+}
+
+// Get BGRA
+cv::Mat Frame::GetBGRACvMat() {
+	if (!image)
+		// Fill with black
+		AddColor(width, height, color);
+	brga_image_cv = QImage2BGRACvMat(image);
+	return brga_image_cv;
+}
+
+void Frame::SetBGRACvMat(cv::Mat _image) {
+	brga_image_cv = _image;
+	image = BGRACvMat2QImage(_image);
 }
 #endif
 

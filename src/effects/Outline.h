@@ -1,7 +1,8 @@
 /**
  * @file
  * @brief Header file for Outline effect class
- * @author Jonathan Thomas <jonathan@openshot.org>, HaiVQ <me@haivq.com>
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -33,6 +34,7 @@ namespace openshot
 	 * with openshot::Keyframe curves over time.
 	 *
 	 * Outlines can be added around any image or text, and animated over time.
+	 * Idea from: https://stackoverflow.com/a/78480103
 	 */
 	class Outline : public EffectBase
 	{
@@ -40,12 +42,9 @@ namespace openshot
 		/// Init effect settings
 		void init_effect_details();
 
-		// Convert QImage to cv::Mat and vice versa
-		// Although Frame class has GetImageCV, but it does not include alpha channel
-		// so we need a separate methods which preserve alpha channel
-		// Idea from: https://stackoverflow.com/a/78480103
-		cv::Mat QImageToBGRACvMat(std::shared_ptr<QImage>& qimage);
-		std::shared_ptr<QImage> BGRACvMatToQImage(cv::Mat img);
+		// Moved to Frame.h
+		// cv::Mat QImageToBGRACvMat(std::shared_ptr<QImage>& qimage);
+		// std::shared_ptr<QImage> BGRACvMatToQImage(cv::Mat img);
 
 	public:
 		Keyframe width;	///< Width of the outline
