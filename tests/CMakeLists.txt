@@ -16,6 +16,12 @@ endif()
 # Test media path, used by unit tests for input data
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 
+# Reproducible optimized startup workload (explicit opt-in, no test timing assertions).
+if(UNIX)
+  add_executable(openshot-preroll-workload EXCLUDE_FROM_ALL PrerollWorkload.cpp)
+  target_link_libraries(openshot-preroll-workload openshot)
+endif()
+
 # Benchmark executable
 add_executable(openshot-benchmark Benchmark.cpp BenchmarkOptions.cpp)
 target_compile_definitions(openshot-benchmark PRIVATE -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}")
@@ -25,8 +31,11 @@ target_link_libraries(openshot-benchmark openshot)
 ###  TEST SOURCE FILES
 ###
 set(OPENSHOT_TESTS
+  AdaptivePreroll
   AudioDeviceManager
   AudioRecorder
+  AudioReaderSource
+  AudioPlaybackThread
   AnimatedCurve
   AudioWaveformer
   CameraCaptureReader

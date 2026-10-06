@@ -93,6 +93,7 @@ namespace openshot
 
                 // Seek audio thread (since audio is also paused)
                 audioPlayback->Seek(video_position);
+                videoCache->AcknowledgeAudioCacheMiss();
 
                 continue;
             }
@@ -229,10 +230,28 @@ namespace openshot
     // Stop video/audio playback
     void PlayerPrivate::stopPlayback()
     {
-        if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(max_sleep_ms);
-        if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(max_sleep_ms);
-        if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(max_sleep_ms);
-        if (isThreadRunning()) stopThread(max_sleep_ms);
+        // Stop the producer first, so it cannot start workers during teardown.
+        // Signal all workers before joining. Never use JUCE's finite-timeout
+        // stopThread, which can forcibly terminate a decoder while holding locks.
+        signalThreadShouldExit();
+        notify();
+        videoCache->Stop();
+        audioPlayback->signalThreadShouldExit();
+        audioPlayback->notify();
+        videoPlayback->signalThreadShouldExit();
+        videoPlayback->render.signal();
+        videoPlayback->notify();
+        waitForThreadToExit(-1);
+        // The producer may have been inside its initial startThread block when
+        // signalled. Repeat worker signals after it has fully exited.
+        audioPlayback->signalThreadShouldExit();
+        audioPlayback->notify();
+        videoPlayback->signalThreadShouldExit();
+        videoPlayback->render.signal();
+        videoPlayback->notify();
+        videoCache->StopThread(-1);
+        audioPlayback->waitForThreadToExit(-1);
+        videoPlayback->waitForThreadToExit(-1);
     }
 
 }

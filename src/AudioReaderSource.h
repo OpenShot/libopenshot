@@ -13,6 +13,9 @@
 #ifndef OPENSHOT_AUDIOREADERSOURCE_H
 #define OPENSHOT_AUDIOREADERSOURCE_H
 
+#include <atomic>
+#include <mutex>
+
 #include "ReaderBase.h"
 #include "Qt/VideoCacheThread.h"
 
@@ -31,13 +34,19 @@ namespace openshot
 	class AudioReaderSource : public juce::PositionableAudioSource
 	{
 	private:
-	    int stream_position; /// The absolute stream position (required by PositionableAudioSource, but ignored)
-		int frame_position; /// The frame position (current frame for audio playback)
-		int speed;          /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	    std::atomic<int64_t> stream_position; /// The absolute stream position (required by PositionableAudioSource, but ignored)
+		int64_t frame_position; /// The frame position (current frame for audio playback)
+		std::atomic<int> speed;          /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
 		std::shared_ptr<Frame> frame; /// The current frame object that is being read
-		int64_t sample_position; /// The position of the current frame's audio buffer
+		std::mutex seek_mutex; ///< Serializes control writers; never acquired by the callback.
+        std::atomic<uint64_t> seek_generation{0}; ///< Even = complete seek request, odd = writer active.
+        std::atomic<int64_t> requested_frame;
+        uint64_t applied_generation = 0; ///< Callback-owned cursor generation.
+        std::atomic<uint64_t> published_generation{0};
+        std::atomic<uint64_t> speed_generation{0};
+        int64_t sample_position; /// The position of the current frame's audio buffer
         openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
 
 	public:
@@ -78,10 +87,10 @@ namespace openshot
 		void setLooping (bool shouldLoop) {  };
 
 	    /// Return the current frame object
-	    std::shared_ptr<Frame> getFrame() const { return frame; }
+	    std::shared_ptr<Frame> getFrame() const;
 
 	    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-	    void setSpeed(int new_speed) { speed = new_speed; }
+	    void setSpeed(int new_speed) { if (speed.exchange(new_speed) != new_speed) ++speed_generation; }
 	    /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	    int getSpeed() const { return speed; }
 
@@ -94,7 +103,7 @@ namespace openshot
 	    ReaderBase* Reader() const { return reader; }
 
 	    /// Seek to a specific frame
-	    void Seek(int64_t new_position) { frame_position = new_position; sample_position=0; }
+	    void Seek(int64_t new_position);
 
 	};
 

@@ -83,7 +83,7 @@ public:
 		double sampleRate;
 		int numChannels;
 		juce::WaitableEvent play;
-		bool is_playing;
+		std::atomic<bool> is_playing;
 		juce::TimeSliceThread time_thread;
 		openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
 		std::mutex transportMutex;
@@ -146,6 +146,7 @@ public:
 			return devs.getNames();
 		};
 
+		friend struct AudioPlaybackThreadTestAccess;
 		friend class PlayerPrivate;
 		friend class QtPlayer;
 };

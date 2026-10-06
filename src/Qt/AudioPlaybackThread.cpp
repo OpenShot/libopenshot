@@ -204,12 +204,20 @@ namespace openshot
 	// Destructor
 	AudioPlaybackThread::~AudioPlaybackThread()
 	{
+        // Detach the JUCE callback in run() before releasing its source.
+        signalThreadShouldExit();
+        NotifyTransportStateChanged();
+        stopThread(-1);
+        delete source;
 	}
 
 	// Set the reader object
 	void AudioPlaybackThread::Reader(openshot::ReaderBase *reader) {
-		if (source)
-			source->Reader(reader);
+		if (source) {
+            // Caller must stop/join playback before replacing the borrowed reader.
+            source->Reader(reader);
+            source->Seek(1);
+        }
 		else {
 			// Create new audio source reader
 			auto starting_frame = 1;
@@ -252,6 +260,7 @@ namespace openshot
 
 	void AudioPlaybackThread::Stop() {
 		is_playing = false;
+        if (source) source->Seek(1);
 		NotifyTransportStateChanged();
 	}
 
@@ -312,13 +321,19 @@ namespace openshot
 				player.setSource(NULL);
 				audioInstance->audioDeviceManager.removeAudioCallback(&player);
 
-				// Remove source
-				delete source;
-				source = NULL;
+				// Keep the source alive across Stop/Play. Control callers can
+                // enqueue a seek without racing source destruction. The worker
+                // detaches it above; the owner deletes it after joining.
+                mixer.removeInputSource(&transport);
 
 				// Stop time slice thread
 				time_thread.stopThread(-1);
-			}
+			} else {
+                std::unique_lock<std::mutex> lock(transportMutex);
+                transportCondition.wait_for(lock, std::chrono::milliseconds(10), [this] {
+                    return threadShouldExit() || (source && is_playing.load());
+                });
+            }
 		}
 
 	}

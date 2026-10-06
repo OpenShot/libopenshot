@@ -69,6 +69,7 @@ namespace openshot
 	std::shared_ptr<openshot::Frame> getFrame();
 
 	/// The parent class of PlayerPrivate
+	friend struct AudioPlaybackThreadTestAccess;
 	friend class QtPlayer;
     };
 

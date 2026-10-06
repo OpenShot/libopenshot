@@ -14,6 +14,7 @@
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
 #include "ReaderBase.h"
+#include "AdaptivePreroll.h"
 
 #include <AppConfig.h>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -41,14 +42,18 @@ namespace openshot
         VideoCacheThread();
         ~VideoCacheThread() override;
 
-        /// @return True if at least min_frames_ahead frames have been cached.
+        /// Shared startup gate; bounded fallback resumes established video decoding.
         bool isReady();
+        /// Callback miss holds the shared gate until the player resynchronizes audio.
+        bool UsesCachedAudio() const { return cache_audio_only.load(); }
+        void NotifyAudioCacheMiss() { audio_cache_miss.store(true); }
+        void AcknowledgeAudioCacheMiss() { audio_cache_miss.store(false); }
 
         /// Play method is unimplemented
-        void Play() {};
+        void Play() { notify(); };
 
         /// Stop method is unimplemented
-        void Stop() {};
+        void Stop();
 
         /**
          * @brief Set playback speed/direction. Positive = forward, negative = rewind, zero = pause.
@@ -80,6 +85,13 @@ namespace openshot
 
         /// Stop the cache thread (wait up to timeoutMs ms). Returns true if it stopped.
         bool StopThread(int timeoutMs = 0);
+
+        /// Optional request timings in microseconds (zero until observed).
+        /// No per-frame logging; clocks are sampled only when enabled.
+        void EnableRequestDiagnostics(bool enabled) { diagnostics_enabled.store(enabled); }
+        int64_t CancellationAcknowledgementUs() const { return acknowledgement_us.load(); }
+        int64_t ObsoleteCompletionUs() const { return obsolete_completion_us.load(); }
+        int64_t FirstCurrentFrameUs() const { return first_current_frame_us.load(); }
 
         /**
          * @brief Attach a ReaderBase (e.g. Timeline, FFmpegReader) and begin caching.
@@ -182,7 +194,26 @@ namespace openshot
                             int64_t window_end,
                             int dir,
                             ReaderBase* reader,
-                            int64_t max_frames_to_fetch = -1);
+                            int64_t max_frames_to_fetch = -1,
+                            uint64_t generation = UINT64_MAX);
+
+        /// Worker-only cache probing; never runs in the audio callback.
+        void updateReadiness(CacheBase* cache, int64_t playhead, int dir);
+        void resetReadiness(); // Requires seek_state_mutex.
+
+        AdaptivePreroll preroll_policy;
+        int64_t contiguous_ahead = 0;
+        int64_t readiness_playhead = 1;
+        int readiness_direction = 1;
+        std::atomic<bool> audio_cache_miss{false};
+        std::atomic<bool> cache_audio_only{false};
+        int64_t observed_frame_bytes = 0;
+        int64_t readiness_capacity = 0;
+        int64_t readiness_physical_capacity = 0;
+        int64_t readiness_timeline_end = 0;
+        int64_t readiness_bytes_per_frame = 0;
+        uint64_t readiness_epoch = 0;
+        int64_t readiness_minimum_step = 0;
 
         //---------- Internal state ----------
 
@@ -209,6 +240,16 @@ namespace openshot
         bool timeline_cache_epoch_initialized; ///< True once an initial epoch snapshot has been taken.
 
         std::atomic<int64_t> last_cached_index;       ///< Index of the most recently cached frame.
+        std::atomic<uint64_t> processed_generation{UINT64_MAX}; ///< Last request whose scheduling baseline was consumed.
+        std::atomic<uint64_t> request_generation{0}; ///< Invalidates obsolete fills, including seeks retaining cache.
+        std::atomic<bool> diagnostics_enabled{false};
+        std::atomic<int64_t> request_time_us{0};
+        std::atomic<int64_t> acknowledgement_us{0};
+        std::atomic<int64_t> obsolete_completion_us{0};
+        std::atomic<int64_t> first_current_frame_us{0};
+        void acknowledgeRequest(int64_t started_us);
+        static int64_t monotonicUs();
+        mutable std::mutex lifecycle_mutex; ///< Start/stop/reader drain; never acquired by worker.
         mutable std::mutex seek_state_mutex;          ///< Protects coherent seek state updates/consumption.
     };
 

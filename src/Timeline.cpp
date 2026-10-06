@@ -986,10 +986,11 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	const bool past_timeline_end = (max_frame > 0 && requested_frame > max_frame);
 
 	// Check cache
+    const uint64_t lookup_epoch = CacheEpoch();
 	std::shared_ptr<Frame> frame;
-	if (!past_timeline_end)
+	if (!past_timeline_end && !CacheRefreshPending())
 		frame = final_cache->GetFrame(requested_frame);
-	if (frame) {
+	if (frame && !CacheRefreshPending() && CacheEpoch() == lookup_epoch) {
 		// Debug output
 		Logger::Instance()->AppendDebugMethod(
 			"Timeline::GetFrame (Cached frame found)",
@@ -1002,12 +1003,15 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	{
 		// Prevent async calls to the following code
 		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+        if (CacheRefreshPending())
+            ClearAllCache();
+        const uint64_t decode_epoch = CacheEpoch();
 
 		// Check cache 2nd time
 		std::shared_ptr<Frame> frame;
 		if (!past_timeline_end)
 			frame = final_cache->GetFrame(requested_frame);
-		if (frame) {
+        if (frame && !CacheRefreshPending() && CacheEpoch() == decode_epoch) {
 			// Debug output
 			Logger::Instance()->AppendDebugMethod(
 					"Timeline::GetFrame (Cached frame found on 2nd check)",
@@ -1156,7 +1160,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			new_frame->SetFrameNumber(requested_frame);
 
 				// Add final frame to cache (only for valid timeline range)
-				if (!past_timeline_end)
+				if (!past_timeline_end && CacheEpoch() == decode_epoch
+                    && !CacheRefreshPending())
 					final_cache->Add(new_frame);
 			// Return frame (or blank frame)
 			return new_frame;
@@ -1819,10 +1824,21 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 	}
 }
 
+// Publish the request sequence first so cache lookups cannot observe a new
+// epoch while treating the old cache as current. Completion has its own sequence
+// so a request arriving during a clear cannot be lost.
+void Timeline::RequestClearAllCache() {
+    cache_clear_requested.fetch_add(1);
+    BumpCacheEpoch();
+}
+
 // Clear all caches
 void Timeline::ClearAllCache(bool deep) {
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+    // Keep the refresh pending throughout the clear (including the fast cache
+    // hit path outside getFrameMutex). Newer requests remain pending.
+    const uint64_t clear_request = cache_clear_requested.load();
 
 	// Clear primary cache
 	if (final_cache) {
@@ -1857,6 +1873,7 @@ void Timeline::ClearAllCache(bool deep) {
 
 	// Cache content changed: notify cache clients to rebuild their window baseline.
 	BumpCacheEpoch();
+    cache_clear_completed.store(clear_request);
 }
 
 // Set the preview size without changing the project's native dimensions.

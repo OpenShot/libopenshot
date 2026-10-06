@@ -52,6 +52,8 @@ namespace openshot
 	while (!threadShouldExit()) {
 	    // Make other threads wait on the render event
 		bool need_render = render.wait(500);
+        if (threadShouldExit())
+            break;
 		std::shared_ptr<Frame> frame_to_render;
 		if (need_render) {
 			std::lock_guard<std::mutex> lock(frame_mutex);
