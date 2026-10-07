@@ -257,7 +257,17 @@ QSize QtImageReader::calculate_max_size() {
     if (HasMaxDecodeSize()) {
         QSize bounded_size(max_width, max_height);
         const QSize max_decode_size(MaxDecodeWidth(), MaxDecodeHeight());
-        if (bounded_size.width() > max_decode_size.width() ||
+        const QString lower_path = path.toLower();
+        const bool is_svg = lower_path.endsWith(".svg") || lower_path.endsWith(".svgz");
+
+        if (is_svg && !parent) {
+            // Vector images have no fixed source pixel limit. With no parent
+            // Timeline/Clip to provide a render size, use MaxDecodeSize as the
+            // rasterization target instead of preserving the tiny document size.
+            bounded_size.scale(max_decode_size, Qt::KeepAspectRatio);
+            max_width = bounded_size.width();
+            max_height = bounded_size.height();
+        } else if (bounded_size.width() > max_decode_size.width() ||
             bounded_size.height() > max_decode_size.height()) {
             bounded_size.scale(max_decode_size, Qt::KeepAspectRatio);
             max_width = bounded_size.width();

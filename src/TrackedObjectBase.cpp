@@ -23,7 +23,7 @@ namespace openshot
 
 	// Constructor
 	TrackedObjectBase::TrackedObjectBase(std::string _id)
-		: visible(1.0), draw_box(1), id(_id) {}
+		: visible(1.0), draw_box(1), draw_text(1), draw_mask(1), id(_id) {}
 
 	Json::Value TrackedObjectBase::add_property_choice_json(
 		std::string name, int value, int selected_value) const

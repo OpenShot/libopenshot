@@ -11,11 +11,14 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 
 #include "TrackedObjectBBox.h"
 
 #include "Clip.h"
+#include "TimelineBase.h"
 
 #include "trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
@@ -23,6 +26,93 @@
 using google::protobuf::util::TimeUtil;
 
 using namespace openshot;
+
+namespace {
+std::vector<uint32_t> encode_object_mask_rle(const std::vector<uint8_t>& mask)
+{
+	std::vector<uint32_t> rle;
+	uint8_t current = 0;
+	uint32_t count = 0;
+	for (uint8_t value : mask) {
+		value = value ? 1 : 0;
+		if (value == current) {
+			++count;
+		} else {
+			rle.push_back(count);
+			current = value;
+			count = 1;
+		}
+	}
+	rle.push_back(count);
+	return rle;
+}
+
+std::vector<uint8_t> decode_object_mask_rle(const ObjectMaskData& mask)
+{
+	std::vector<uint8_t> decoded(static_cast<size_t>(mask.width * mask.height), 0);
+	int offset = 0;
+	bool value = false;
+	for (uint32_t count : mask.rle) {
+		const int end = std::min(mask.width * mask.height, offset + static_cast<int>(count));
+		if (value)
+			std::fill(decoded.begin() + offset, decoded.begin() + end, static_cast<uint8_t>(1));
+		offset = end;
+		value = !value;
+		if (offset >= mask.width * mask.height)
+			break;
+	}
+	return decoded;
+}
+
+ObjectMaskData transform_mask_between_boxes(
+	const ObjectMaskData& source_mask,
+	const BBox& source_box,
+	const BBox& target_box)
+{
+	ObjectMaskData result;
+	if (!source_mask.HasData() ||
+		source_box.width <= 0.0f || source_box.height <= 0.0f ||
+		target_box.width <= 0.0f || target_box.height <= 0.0f)
+		return result;
+
+	const float source_left = (source_box.cx - source_box.width / 2.0f) * source_mask.width;
+	const float source_top = (source_box.cy - source_box.height / 2.0f) * source_mask.height;
+	const float source_width = source_box.width * source_mask.width;
+	const float source_height = source_box.height * source_mask.height;
+	const float target_left = (target_box.cx - target_box.width / 2.0f) * source_mask.width;
+	const float target_top = (target_box.cy - target_box.height / 2.0f) * source_mask.height;
+	const float target_width = target_box.width * source_mask.width;
+	const float target_height = target_box.height * source_mask.height;
+	if (source_width <= 0.0f || source_height <= 0.0f || target_width <= 0.0f || target_height <= 0.0f)
+		return result;
+
+	const std::vector<uint8_t> source = decode_object_mask_rle(source_mask);
+	std::vector<uint8_t> transformed(static_cast<size_t>(source_mask.width * source_mask.height), 0);
+	const int min_x = std::max(0, static_cast<int>(std::floor(target_left)));
+	const int min_y = std::max(0, static_cast<int>(std::floor(target_top)));
+	const int max_x = std::min(source_mask.width, static_cast<int>(std::ceil(target_left + target_width)));
+	const int max_y = std::min(source_mask.height, static_cast<int>(std::ceil(target_top + target_height)));
+	for (int y = min_y; y < max_y; ++y) {
+		for (int x = min_x; x < max_x; ++x) {
+			const float source_x = source_left + (static_cast<float>(x) - target_left) * source_width / target_width;
+			const float source_y = source_top + (static_cast<float>(y) - target_top) * source_height / target_height;
+			const int sx = static_cast<int>(std::round(source_x));
+			const int sy = static_cast<int>(std::round(source_y));
+			if (sx < 0 || sx >= source_mask.width || sy < 0 || sy >= source_mask.height)
+				continue;
+			if (source[static_cast<size_t>(sy * source_mask.width + sx)])
+				transformed[static_cast<size_t>(y * source_mask.width + x)] = 1;
+		}
+	}
+
+	if (std::none_of(transformed.begin(), transformed.end(), [](uint8_t value) { return value != 0; }))
+		return result;
+	result.width = source_mask.width;
+	result.height = source_mask.height;
+	result.rle = encode_object_mask_rle(transformed);
+	return result;
+}
+}
 
 // Default Constructor, delegating
 TrackedObjectBBox::TrackedObjectBBox()
@@ -32,11 +122,13 @@ TrackedObjectBBox::TrackedObjectBBox()
 // displacement as 0 and the scales as 1 for the first frame
 TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa)
 	: delta_x(0.0), delta_y(0.0),
-	  scale_x(1.0), scale_y(1.0), rotation(0.0),
+	  scale_x(1.0), scale_y(1.0),
 	  background_alpha(0.0), background_corner(12),
+	  mask_alpha(120.0 / 255.0),
 	  stroke_width(2) , stroke_alpha(0.7),
 	  stroke(Red, Green, Blue, Alfa),
-	  background(0, 0, 255, Alfa)
+	  background(Red, Green, Blue, Alfa),
+	  mask_color(Red, Green, Blue, Alfa)
 {
 	this->TimeScale = 1.0;
 }
@@ -66,6 +158,50 @@ void TrackedObjectBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _
 		// There isn't a bounding-box indexed by the time of given frame, insert a new one
 		BoxVec.insert({time, newBBox});
 	}
+}
+
+void TrackedObjectBBox::AddMask(int64_t frame_num, const ObjectMaskData& mask)
+{
+	if (frame_num < 0 || !mask.HasData())
+		return;
+
+	double time = FrameNToTime(frame_num, 1.0);
+	MaskVec[time] = mask;
+}
+
+bool TrackedObjectBBox::HasMask(int64_t frame_num, int64_t max_frame_gap) const
+{
+	return GetMask(frame_num, max_frame_gap).HasData();
+}
+
+bool TrackedObjectBBox::HasMaskData() const
+{
+	return !MaskVec.empty();
+}
+
+ObjectMaskData TrackedObjectBBox::GetMask(int64_t frame_num, int64_t max_frame_gap) const
+{
+	double time = FrameNToTime(frame_num, 1.0);
+	auto it = MaskVec.find(time);
+	if (it != MaskVec.end())
+		return it->second;
+	if (max_frame_gap <= 0 || MaskVec.empty())
+		return {};
+
+	auto after = MaskVec.lower_bound(time);
+	if (after == MaskVec.begin())
+		return {};
+
+	auto before = std::prev(after);
+	double max_gap_time = FrameNToTime(max_frame_gap, 1.0) - FrameNToTime(0, 1.0);
+	if (time - before->first <= max_gap_time + 0.000001) {
+		auto source_box = BoxVec.find(before->first);
+		auto target_box = BoxVec.find(time);
+		if (source_box != BoxVec.end() && target_box != BoxVec.end())
+			return transform_mask_between_boxes(before->second, source_box->second, target_box->second);
+		return before->second;
+	}
+	return {};
 }
 
 // Get the size of BoxVec map
@@ -150,8 +286,6 @@ BBox TrackedObjectBBox::GetBox(int64_t frame_number)
 		currentBBox.cy += this->delta_y.GetValue(frame_number);
 		currentBBox.width *= this->scale_x.GetValue(frame_number);
 		currentBBox.height *= this->scale_y.GetValue(frame_number);
-		currentBBox.angle += this->rotation.GetValue(frame_number);
-
 		return currentBBox;
 	}
 
@@ -169,9 +303,48 @@ BBox TrackedObjectBBox::GetBox(int64_t frame_number)
 	interpolatedBBox.cy += this->delta_y.GetValue(frame_number);
 	interpolatedBBox.width *= this->scale_x.GetValue(frame_number);
 	interpolatedBBox.height *= this->scale_y.GetValue(frame_number);
-	interpolatedBBox.angle += this->rotation.GetValue(frame_number);
-
 	return interpolatedBBox;
+}
+
+double TrackedObjectBBox::ScaledStrokeWidth(int64_t frame_number, int image_width, int image_height) const
+{
+	const double base_width = std::max(0.0, static_cast<double>(stroke_width.GetValue(frame_number)));
+	Clip* parent_clip = static_cast<Clip*>(ParentClip());
+	if (!parent_clip || image_width <= 0 || image_height <= 0)
+		return base_width;
+
+	int target_width = image_width;
+	int target_height = image_height;
+	if (parent_clip->ParentTimeline()) {
+		TimelineBase* timeline = static_cast<TimelineBase*>(parent_clip->ParentTimeline());
+		if (timeline->preview_width > 0)
+			target_width = timeline->preview_width;
+		if (timeline->preview_height > 0)
+			target_height = timeline->preview_height;
+	}
+
+	QSize output_size(image_width, image_height);
+	switch (parent_clip->scale) {
+		case SCALE_FIT:
+			output_size.scale(target_width, target_height, Qt::KeepAspectRatio);
+			break;
+		case SCALE_STRETCH:
+			output_size.scale(target_width, target_height, Qt::IgnoreAspectRatio);
+			break;
+		case SCALE_CROP:
+			output_size.scale(target_width, target_height, Qt::KeepAspectRatioByExpanding);
+			break;
+		case SCALE_NONE:
+		default:
+			break;
+	}
+	if (output_size.width() <= 0 || output_size.height() <= 0)
+		return base_width;
+
+	const double raster_scale_x = static_cast<double>(output_size.width()) / image_width;
+	const double raster_scale_y = static_cast<double>(output_size.height()) / image_height;
+	const double raster_scale = std::sqrt(raster_scale_x * raster_scale_y);
+	return base_width * std::max(raster_scale, 1.0 / std::max(raster_scale, 0.000001));
 }
 
 // Interpolate the bouding-boxes properties
@@ -197,7 +370,7 @@ BBox TrackedObjectBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox r
 	Point height_right(t2, right.height, openshot::InterpolationType::LINEAR);
 	Point height = InterpolateBetween(height_left, height_right, target, 0.01);
 
-	// Interpolate the rotation angle
+	// Interpolate the source bounding-box angle
 	Point angle_left(t1, left.angle, openshot::InterpolationType::LINEAR);
 	Point angle_right(t1, right.angle, openshot::InterpolationType::LINEAR);
 	Point angle = InterpolateBetween(angle_left, angle_right, target, 0.01);
@@ -294,6 +467,7 @@ bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 void TrackedObjectBBox::clear()
 {
 	BoxVec.clear();
+	MaskVec.clear();
 }
 
 // Generate JSON string of this object
@@ -320,9 +494,14 @@ Json::Value TrackedObjectBBox::JsonValue() const
 	root["delta_y"] = delta_y.JsonValue();
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
-	root["rotation"] = rotation.JsonValue();
 	root["visible"] = visible.JsonValue();
 	root["draw_box"] = draw_box.JsonValue();
+	root["draw_text"] = draw_text.JsonValue();
+	if (!MaskVec.empty()) {
+		root["draw_mask"] = draw_mask.JsonValue();
+		root["mask_alpha"] = mask_alpha.JsonValue();
+		root["mask_color"] = mask_color.JsonValue();
+	}
 	root["stroke"] = stroke.JsonValue();
 	root["background_alpha"] = background_alpha.JsonValue();
 	root["background_corner"] = background_corner.JsonValue();
@@ -387,12 +566,18 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 		scale_x.SetJsonValue(root["scale_x"]);
 	if (!root["scale_y"].isNull())
 		scale_y.SetJsonValue(root["scale_y"]);
-	if (!root["rotation"].isNull())
-		rotation.SetJsonValue(root["rotation"]);
 	if (!root["visible"].isNull())
 		visible.SetJsonValue(root["visible"]);
 	if (!root["draw_box"].isNull())
 		draw_box.SetJsonValue(root["draw_box"]);
+	if (!root["draw_text"].isNull())
+		draw_text.SetJsonValue(root["draw_text"]);
+	if (!root["draw_mask"].isNull())
+		draw_mask.SetJsonValue(root["draw_mask"]);
+	if (!root["mask_alpha"].isNull())
+		mask_alpha.SetJsonValue(root["mask_alpha"]);
+	if (!root["mask_color"].isNull())
+		mask_color.SetJsonValue(root["mask_color"]);
 	if (!root["stroke"].isNull())
 		stroke.SetJsonValue(root["stroke"]);
 	if (!root["background_alpha"].isNull())
@@ -430,12 +615,27 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["delta_y"] = add_property_json("Displacement Y-axis", delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
 	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
 	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
 	root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, true, requested_frame);
 
 	root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, 0, 1, false, requested_frame);
-    root["draw_box"]["choices"].append(add_property_choice_json("Yes", true, draw_box.GetValue(requested_frame)));
+	root["draw_box"]["choices"].append(add_property_choice_json("Yes", true, draw_box.GetValue(requested_frame)));
 	root["draw_box"]["choices"].append(add_property_choice_json("No", false, draw_box.GetValue(requested_frame)));
+
+	root["draw_text"] = add_property_json("Draw Text", draw_text.GetValue(requested_frame), "int", "", &draw_text, 0, 1, false, requested_frame);
+	root["draw_text"]["choices"].append(add_property_choice_json("Yes", true, draw_text.GetValue(requested_frame)));
+	root["draw_text"]["choices"].append(add_property_choice_json("No", false, draw_text.GetValue(requested_frame)));
+
+	if (HasMaskData()) {
+		root["draw_mask"] = add_property_json("Draw Mask", draw_mask.GetValue(requested_frame), "int", "", &draw_mask, 0, 1, false, requested_frame);
+		root["draw_mask"]["choices"].append(add_property_choice_json("Yes", true, draw_mask.GetValue(requested_frame)));
+		root["draw_mask"]["choices"].append(add_property_choice_json("No", false, draw_mask.GetValue(requested_frame)));
+
+		root["mask_color"] = add_property_json("Mask Color", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
+		root["mask_color"]["red"] = add_property_json("Red", mask_color.red.GetValue(requested_frame), "float", "", &mask_color.red, 0, 255, false, requested_frame);
+		root["mask_color"]["blue"] = add_property_json("Blue", mask_color.blue.GetValue(requested_frame), "float", "", &mask_color.blue, 0, 255, false, requested_frame);
+		root["mask_color"]["green"] = add_property_json("Green", mask_color.green.GetValue(requested_frame), "float", "", &mask_color.green, 0, 255, false, requested_frame);
+		root["mask_alpha"] = add_property_json("Mask Alpha", mask_alpha.GetValue(requested_frame), "float", "", &mask_alpha, 0.0, 1.0, false, requested_frame);
+	}
 
 	root["stroke"] = add_property_json("Border", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["stroke"]["red"] = add_property_json("Red", stroke.red.GetValue(requested_frame), "float", "", &stroke.red, 0, 255, false, requested_frame);
@@ -515,8 +715,5 @@ std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_numbe
 	boxValues["sy"] = this->scale_y.GetValue(frame_number);
 	boxValues["dx"] = this->delta_x.GetValue(frame_number);
 	boxValues["dy"] = this->delta_y.GetValue(frame_number);
-	boxValues["r"] = this->rotation.GetValue(frame_number);
-
-
 	return boxValues;
 }

@@ -104,7 +104,14 @@ namespace openshot {
 		void init_reader_rotation();
 
 	private:
+		enum class ReaderOrientationMode {
+			Reader,
+			LegacyClipTransform
+		};
+
 		bool waveform; ///< Should a waveform be used instead of the clip's image
+		int waveform_mode; ///< Audio visualization mode used when waveform is enabled
+		ReaderOrientationMode reader_orientation_mode; ///< Internal project compatibility mode
 		std::list<openshot::EffectBase*> effects; ///< List of clips on this timeline
 		bool is_open;	///< Is Reader opened
 		std::string parentObjectId; ///< Id of the bounding box that this clip is attached to
@@ -177,6 +184,9 @@ namespace openshot {
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
+		/// Location units retained by imported projects: "auto", "canvas", or "geometry".
+		/// Auto uses geometry-relative units for Crop and canvas-relative units otherwise.
+		std::string location_coordinate_system;
 		openshot::AnchorType anchor;	 ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
@@ -317,6 +327,8 @@ namespace openshot {
 		// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
+		int WaveformMode() { return waveform_mode; } ///< Get the waveform visualization mode
+		void WaveformMode(int value) { waveform_mode = value; } ///< Set the waveform visualization mode
 
 		// Scale, Location, and Alpha curves
 		openshot::Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 1)
@@ -324,6 +336,8 @@ namespace openshot {
 		openshot::Keyframe location_x; ///< Curve representing the relative X position in percent based on the gravity (-1 to 1)
 		openshot::Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-1 to 1)
 		openshot::Keyframe alpha; ///< Curve representing the alpha (1 to 0)
+		openshot::Keyframe margin; ///< Curve representing edge margin as a percent of the canvas' shortest side
+		openshot::Keyframe corner_radius; ///< Curve representing corner radius as a percent of the clip's shortest side
 
 		// Rotation and Shear curves (origin point (x,y) is adjustable for both rotation and shear)
 		openshot::Keyframe rotation; ///< Curve representing the rotation (0 to 360)

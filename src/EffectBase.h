@@ -43,7 +43,7 @@ namespace openshot
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
 		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
 		bool has_tracked_object; ///< Determines if this effect track objects through the clip
-		bool apply_before_clip; ///< Apply effect before we evaluate the clip's keyframes
+		bool apply_before_clip; ///< Apply effect to source before we evaluate the clip's keyframes
 	};
 
 	/**
@@ -58,6 +58,7 @@ namespace openshot
 	private:
 		int order; ///< The order to evaluate this effect. Effects are processed in this order (when more than one overlap).
 		ReaderBase* mask_reader = nullptr; ///< Optional common reader-based mask source.
+		std::string mask_source_id; ///< Optional effect ID that provides a generated mask source.
 		std::shared_ptr<QImage> cached_single_mask_image; ///< Cached scaled mask for still-image mask sources.
 		int cached_single_mask_width = 0; ///< Cached mask width.
 		int cached_single_mask_height = 0; ///< Cached mask height.
@@ -68,6 +69,9 @@ namespace openshot
 		/// Blend original and effected images using mask values.
 		void BlendWithMask(std::shared_ptr<QImage> original_image, std::shared_ptr<QImage> effected_image,
 					   std::shared_ptr<QImage> mask_image) const;
+
+		/// Find the effect named by mask_source_id.
+		EffectBase* ResolveMaskSourceEffect();
 
 	protected:
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
@@ -149,6 +153,9 @@ namespace openshot
 		/// Get the indexes and IDs of all visible objects in the given frame
 		virtual std::string GetVisibleObjects(int64_t frame_number) const {return {}; };
 
+		/// Generate a black/white mask from tracked object data.
+		virtual std::shared_ptr<QImage> TrackedObjectMask(std::shared_ptr<QImage> target_image, int64_t frame_number) const;
+
 		// Get and Set JSON methods
 		virtual std::string Json() const; ///< Generate JSON string of this object
 		virtual void SetJson(const std::string value); ///< Load JSON string into this object
@@ -177,6 +184,10 @@ namespace openshot
 
 		/// Set or replace the common mask reader.
 		void MaskReader(ReaderBase* new_reader);
+
+		/// Get/Set effect ID used as a generated mask source.
+		std::string MaskSourceId() const { return mask_source_id; }
+		void MaskSourceId(const std::string& new_mask_source_id);
 
 		/// Get the order that this effect should be executed.
 		int Order() const { return order; }

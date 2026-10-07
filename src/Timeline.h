@@ -53,8 +53,9 @@ namespace openshot {
 				return lhs->Layer() < rhs->Layer();
 			if (lhs->Position() != rhs->Position())
 				return lhs->Position() < rhs->Position();
-			// Stable tie-breaker on address to avoid equivalence when layer/position match
-			return std::less<openshot::Clip*>()(lhs, rhs);
+			// list::sort is stable: preserve compositing order for tied clips,
+			// including their project order when loading a saved timeline.
+			return false;
 		}
 	};
 
@@ -166,6 +167,8 @@ namespace openshot {
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 		double max_time; ///> The max duration (in seconds) of the timeline, based on the furthest clip (right edge)
 		double min_time; ///> The min duration (in seconds) of the timeline, based on the position of the first clip (left edge)
+		std::atomic<uint64_t> cache_clear_requested{0}; ///< Deferred refresh request sequence.
+        std::atomic<uint64_t> cache_clear_completed{0}; ///< Last refresh completed under getFrameMutex.
 		std::atomic<uint64_t> cache_epoch; ///< Cache invalidation epoch for external observers.
 
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
@@ -216,6 +219,9 @@ namespace openshot {
 
 		/// Increment the cache invalidation epoch.
 		void BumpCacheEpoch();
+
+		/// Remove cached timeline frames covered by a clip and notify cache clients.
+		void InvalidateCacheForClip(const openshot::Clip* clip);
 
 	public:
 
@@ -319,7 +325,12 @@ namespace openshot {
 		/// of this cache object though (Timeline will not delete it for you).
 		void SetCache(openshot::CacheBase* new_cache);
 
-		/// Return the current cache invalidation epoch.
+		/// Request a full refresh without waiting for an active decoder. Subsequent
+        /// GetFrame calls bypass cached results until the decoder consumes it.
+        void RequestClearAllCache();
+        bool CacheRefreshPending() const { return cache_clear_requested.load() != cache_clear_completed.load(); }
+
+        /// Return the current cache invalidation epoch.
 		uint64_t CacheEpoch() const { return cache_epoch.load(std::memory_order_relaxed); };
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
@@ -348,8 +359,8 @@ namespace openshot {
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		/// Set Max Image Size (used for performance optimization). Convenience function for setting
-		/// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
+		/// Fit the preview within these bounds, aligning reduced dimensions to four
+		/// pixels (minimum 4x4). Ignore nonpositive bounds; preserve native output size.
 		void SetMaxSize(int width, int height);
 
 		/// @brief Apply a special formatted JSON object, which represents a change to the timeline (add, update, delete)

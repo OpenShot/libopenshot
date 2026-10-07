@@ -103,6 +103,26 @@ TEST_CASE("Mask replace_image emits grayscale values", "[effect][mask_effect][re
 	CHECK(px1.alpha() == px1.red());
 }
 
+TEST_CASE("Mask maximum contrast keeps a narrow transition band", "[effect][mask_effect][contrast]") {
+	auto frame = std::make_shared<Frame>(1, 3, 1, "#000000");
+	auto image = frame->GetImage();
+	image->setPixelColor(0, 0, QColor(255, 0, 0, 255));
+	image->setPixelColor(1, 0, QColor(255, 0, 0, 255));
+	image->setPixelColor(2, 0, QColor(255, 0, 0, 255));
+
+	const std::string mask_path = create_mask_png({128, 129, 134});
+	Mask mask;
+	mask.Reader(new QtImageReader(mask_path));
+	mask.brightness = Keyframe(0.0);
+	mask.contrast = Keyframe(20.0);
+
+	auto out = mask.GetFrame(frame, 1);
+
+	CHECK(out->GetImage()->pixelColor(0, 0).alpha() == 127);
+	CHECK(out->GetImage()->pixelColor(1, 0).alpha() == 87);
+	CHECK(out->GetImage()->pixelColor(2, 0).alpha() == 0);
+}
+
 TEST_CASE("Mask accepts legacy reader json field", "[effect][mask_effect][json]") {
 	const std::string mask_path = create_mask_png({128});
 	QtImageReader reader(mask_path);

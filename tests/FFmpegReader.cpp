@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
+#include <future>
+#include <thread>
 
 #include "openshot_catch.h"
 
@@ -33,6 +35,26 @@
 using namespace openshot;
 
 namespace {
+
+#if defined(__linux__) && USE_HW_ACCEL
+bool VaapiDeviceAvailableForTest()
+{
+	// These tests select HW_DE_DEVICE_SET=0. A render node can exist on an
+	// NVIDIA machine (or be inaccessible) without providing a usable VAAPI
+	// device. Probe with the same FFmpeg library and adapter as the reader.
+	AVBufferRef* device = nullptr;
+	const int result = av_hwdevice_ctx_create(
+		&device, AV_HWDEVICE_TYPE_VAAPI, "/dev/dri/renderD128", nullptr, 0);
+	av_buffer_unref(&device);
+	if (result < 0) {
+		char error[AV_ERROR_MAX_STRING_SIZE] = {};
+		av_strerror(result, error, sizeof(error));
+		WARN("Skipping VAAPI test: cannot initialize /dev/dri/renderD128: " << error);
+		return false;
+	}
+	return true;
+}
+#endif
 
 double SampleAverageLuma(const std::shared_ptr<Frame>& frame, int sample_grid = 4) {
 	const int width = frame->GetWidth();
@@ -88,6 +110,60 @@ struct TemporaryFileGuard {
 
 }
 
+TEST_CASE("Queued reader lifecycle calls recheck state after locking",
+          "[libopenshot][ffmpegreader][lifecycle]")
+{
+	class LockedReader : public FFmpegReader {
+	public:
+		using FFmpegReader::FFmpegReader;
+		using ReaderBase::getFrameMutex;
+	};
+	LockedReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	const bool initially_open = GENERATE(false, true);
+	const bool closing = GENERATE(false, true);
+	CAPTURE(initially_open, closing);
+	if (initially_open) reader.Open();
+
+	// Hold the lifecycle lock while starting the worker. Exercise
+	// Open/Open, Close/Close, and both mixed call orders.
+	std::unique_lock<std::recursive_mutex> lock(reader.getFrameMutex);
+	std::promise<void> started, finished;
+	auto done = finished.get_future();
+	std::exception_ptr error;
+	std::thread pending([&] {
+		started.set_value();
+		try {
+			if (closing) reader.Close(); else reader.Open();
+		} catch (...) { error = std::current_exception(); }
+		finished.set_value();
+	});
+	started.get_future().wait();
+	// Give the worker time to reach the held mutex. This exercises contention,
+	// but cannot guarantee scheduling on every platform.
+	const bool waited = done.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout;
+	std::exception_ptr foreground_error;
+	try {
+		if (initially_open) reader.Close(); else reader.Open();
+	} catch (...) { foreground_error = std::current_exception(); }
+	AVFormatContext* context = reader.pFormatCtx;
+	lock.unlock();
+	pending.join();
+
+	REQUIRE(waited);
+	REQUIRE(foreground_error == nullptr);
+	REQUIRE(error == nullptr);
+	CHECK(reader.IsOpen() == !closing);
+	// A queued Open must reuse the existing context, not leak it and reopen.
+	if (closing == initially_open) CHECK(reader.pFormatCtx == context);
+	CHECK_NOTHROW(reader.Close());
+	CHECK_NOTHROW(reader.Close());
+	reader.Open();
+	CHECK(reader.GetFrame(1)->GetWidth() > 0);
+	CHECK(reader.GetFrame(30)->GetWidth() > 0);
+	CHECK(reader.GetFrame(1)->GetWidth() > 0);
+	reader.Close();
+}
+
 TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
 {
 	// Check invalid path and error details
@@ -141,6 +217,36 @@ TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 
 	// Close reader
 	r.Close();
+}
+
+TEST_CASE( "Audio_Only_SetJson_Preserves_Stored_Dimensions", "[libopenshot][ffmpegreader][json]" )
+{
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "piano.wav";
+
+	FFmpegReader r(path.str());
+	std::stringstream json;
+	json << "{\"type\":\"FFmpegReader\","
+		<< "\"path\":\"" << path.str() << "\","
+		<< "\"has_audio\":true,"
+		<< "\"has_video\":false,"
+		<< "\"width\":1280,"
+		<< "\"height\":720,"
+		<< "\"fps\":{\"num\":30,\"den\":1},"
+		<< "\"sample_rate\":44100,"
+		<< "\"channels\":2,"
+		<< "\"channel_layout\":3,"
+		<< "\"duration\":1.0}";
+
+	r.SetJson(json.str());
+	r.Open();
+
+	CHECK(r.info.has_audio);
+	CHECK_FALSE(r.info.has_video);
+	CHECK(r.info.width == 1280);
+	CHECK(r.info.height == 720);
+	CHECK(r.GetFrame(1)->GetWidth() == 1280);
+	CHECK(r.GetFrame(1)->GetHeight() == 720);
 }
 
 TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
@@ -206,6 +312,68 @@ TEST_CASE( "Max_Decode_Size_FFmpegReader", "[libopenshot][ffmpegreader]" )
 	CHECK(f->GetHeight() < r.info.height);
 
 	r.Close();
+}
+
+TEST_CASE("Reduced decoded frames have aligned rows", "[libopenshot][ffmpegreader][preview-size]")
+{
+	for (const QSize bounds : {QSize(638, 359), QSize(640, 352), QSize(1280, 359),
+		QSize(638, 720), QSize(1, 1)}) {
+		CAPTURE(bounds.width(), bounds.height());
+		FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+		reader.SetMaxDecodeSize(bounds.width(), bounds.height());
+		reader.Open();
+		auto frame = reader.GetFrame(1);
+		REQUIRE(frame != nullptr);
+		CHECK(frame->GetWidth() % 4 == 0);
+		CHECK(frame->GetHeight() % 4 == 0);
+		CHECK(frame->GetWidth() >= 4);
+		CHECK(frame->GetHeight() >= 4);
+		CHECK(frame->GetWidth() <= std::max(4, bounds.width()));
+		CHECK(frame->GetHeight() <= std::max(4, bounds.height()));
+		CHECK(frame->GetImage()->bytesPerLine() % 16 == 0);
+		CHECK(reinterpret_cast<uintptr_t>(frame->GetPixels()) % 16 == 0);
+		reader.Close();
+	}
+}
+
+TEST_CASE("Clip fitting cannot undo preview alignment", "[libopenshot][ffmpegreader][preview-size]")
+{
+	FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	reader.Open();
+	Clip clip(&reader);
+	// A 16:9 source in a portrait preview is fitted again by the reader.
+	Timeline timeline(1080, 1920, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	timeline.SetMaxSize(333, 591);
+	timeline.AddClip(&clip);
+	clip.scale_x = Keyframe(1.13);
+	clip.scale_y = Keyframe(1.07);
+	clip.Open();
+	auto frame = reader.GetFrame(1);
+	CHECK(frame->GetWidth() < reader.info.width);
+	CHECK(frame->GetWidth() % 4 == 0);
+	CHECK(frame->GetHeight() % 4 == 0);
+	CHECK(frame->GetImage()->bytesPerLine() % 16 == 0);
+	clip.Close();
+	timeline.Close();
+}
+
+TEST_CASE("Quarter-turn previews retain aligned rows", "[libopenshot][ffmpegreader][preview-size]")
+{
+	FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	reader.SetMaxDecodeSize(359, 638);
+	reader.ApplyOrientationMetadata(true);
+	reader.Open();
+	// Model the display orientation discovered from container metadata.
+	reader.source_rotation = 90;
+	std::swap(reader.info.width, reader.info.height);
+	auto frame = reader.GetFrame(1);
+	CHECK(frame->GetWidth() <= 359);
+	CHECK(frame->GetHeight() <= 638);
+	CHECK(frame->GetHeight() > frame->GetWidth());
+	CHECK(frame->GetWidth() % 4 == 0);
+	CHECK(frame->GetHeight() % 4 == 0);
+	CHECK(frame->GetImage()->bytesPerLine() % 16 == 0);
+	reader.Close();
 }
 
 TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
@@ -401,6 +569,24 @@ TEST_CASE( "GIF_TimeBase", "[libopenshot][ffmpegreader]" )
         }
 
         r.Close();
+}
+
+TEST_CASE("Close discards buffered decoder output", "[libopenshot][ffmpegreader]")
+{
+	FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+	reader.Open();
+	reader.GetFrame(1);
+	const auto decoded = reader.packet_status.packets_decoded();
+	REQUIRE(reader.packet_status.packets_read() > decoded);
+	CHECK_NOTHROW(reader.Close());
+	CHECK(reader.packet_status.packets_decoded() == decoded);
+	CHECK(reader.pFormatCtx == nullptr);
+	CHECK(reader.pCodecCtx == nullptr);
+	CHECK(reader.aCodecCtx == nullptr);
+	CHECK_NOTHROW(reader.Close());
+	reader.Open();
+	CHECK(reader.GetFrame(1)->number == 1);
+	reader.Close();
 }
 
 TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
@@ -619,19 +805,14 @@ TEST_CASE( "HardwareDecodeSuccessful_IsFalse_WhenHardwareDecodeIsDisabled", "[li
 TEST_CASE( "VAAPI_H264_420_Reports_HardwareDecodeSuccess", "[libopenshot][ffmpegreader][hardware]" )
 {
 #if !defined(__linux__) || !USE_HW_ACCEL
-	WARN("Skipping hardware decode success test: requires Linux build with hardware decode support");
+	WARN("Skipping VAAPI test: requires Linux build with hardware decode support");
 	return;
 #else
 	if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
-		WARN("Skipping hardware decode success test: ffmpeg executable not available");
+		WARN("Skipping VAAPI test: ffmpeg executable not available");
 		return;
 	}
-	if (std::system("ffmpeg -hide_banner -hwaccels 2>/dev/null | grep -q '\\<vaapi\\>'") != 0) {
-		WARN("Skipping hardware decode success test: ffmpeg does not report VAAPI support");
-		return;
-	}
-	if (std::system("sh -c 'test -e /dev/dri/renderD128 -o -e /dev/dri/renderD129 -o -e /dev/dri/renderD130' >/dev/null 2>&1") != 0) {
-		WARN("Skipping hardware decode success test: no render node available under /dev/dri");
+	if (!VaapiDeviceAvailableForTest()) {
 		return;
 	}
 
@@ -670,19 +851,14 @@ TEST_CASE( "VAAPI_H264_420_Reports_HardwareDecodeSuccess", "[libopenshot][ffmpeg
 TEST_CASE( "VAAPI_H264_422_Does_Not_Return_Black_Frames", "[libopenshot][ffmpegreader][hardware]" )
 {
 #if !defined(__linux__) || !USE_HW_ACCEL
-	WARN("Skipping VAAPI regression test: requires Linux build with hardware decode support");
+	WARN("Skipping VAAPI test: requires Linux build with hardware decode support");
 	return;
 #else
 	if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
-		WARN("Skipping VAAPI regression test: ffmpeg executable not available");
+		WARN("Skipping VAAPI test: ffmpeg executable not available");
 		return;
 	}
-	if (std::system("ffmpeg -hide_banner -hwaccels 2>/dev/null | grep -q '\\<vaapi\\>'") != 0) {
-		WARN("Skipping VAAPI regression test: ffmpeg does not report VAAPI support");
-		return;
-	}
-	if (std::system("sh -c 'test -e /dev/dri/renderD128 -o -e /dev/dri/renderD129 -o -e /dev/dri/renderD130' >/dev/null 2>&1") != 0) {
-		WARN("Skipping VAAPI regression test: no render node available under /dev/dri");
+	if (!VaapiDeviceAvailableForTest()) {
 		return;
 	}
 

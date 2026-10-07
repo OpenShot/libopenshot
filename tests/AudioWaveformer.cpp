@@ -15,6 +15,8 @@
 #include "Clip.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
+#include "FFmpegWriter.h"
+#include "Frame.h"
 #include "Timeline.h"
 
 #include <algorithm>
@@ -26,6 +28,17 @@
 
 
 using namespace openshot;
+
+namespace {
+std::shared_ptr<Frame> MakeWaveformFrame(int frame_number, int sample_rate, const std::vector<float>& samples)
+{
+	auto frame = std::make_shared<Frame>(frame_number, static_cast<int>(samples.size()), 1);
+	frame->SampleRate(sample_rate);
+	frame->ChannelsLayout(LAYOUT_MONO);
+	frame->AddAudio(true, 0, 0, samples.data(), static_cast<int>(samples.size()), 1.0f);
+	return frame;
+}
+}
 
 TEST_CASE( "Extract waveform data piano.wav", "[libopenshot][audiowaveformer]" )
 {
@@ -137,6 +150,43 @@ TEST_CASE( "Channel selection returns data and rejects invalid channel", "[libop
 	CHECK(invalid.rms_samples.empty());
 
 	r.Close();
+}
+
+TEST_CASE( "FFmpegWriter FLAC includes duration metadata for waveform extraction", "[libopenshot][ffmpegwriter][audiowaveformer][flac]" )
+{
+	const std::string path = "AudioWaveformer-duration-unknown.flac";
+	std::remove(path.c_str());
+
+	const int sample_rate = 48000;
+	const int samples = sample_rate / 2;
+	std::vector<float> tone(samples);
+	for (int i = 0; i < samples; ++i) {
+		tone[i] = 0.25f * static_cast<float>(std::sin(2.0 * M_PI * 440.0 * static_cast<double>(i) / sample_rate));
+	}
+
+	FFmpegWriter writer(path);
+	writer.SetAudioOptions(true, "flac", sample_rate, 1, LAYOUT_MONO, 192000);
+	writer.Open();
+	writer.WriteFrame(MakeWaveformFrame(1, sample_rate, tone));
+	writer.WriteFrame(MakeWaveformFrame(2, sample_rate, tone));
+	writer.Close();
+
+	FFmpegReader reader(path);
+	reader.Open();
+	REQUIRE(reader.info.has_audio);
+	CHECK(reader.info.duration > 0.0f);
+	CHECK(reader.info.video_length > 0);
+
+	AudioWaveformer waveformer(&reader);
+	AudioWaveformData waveform = waveformer.ExtractSamples(-1, 20, true);
+
+	CHECK_FALSE(waveform.max_samples.empty());
+	CHECK(waveform.max_samples.size() == waveform.rms_samples.size());
+	CHECK(*std::max_element(waveform.max_samples.begin(), waveform.max_samples.end()) > 0.0f);
+	CHECK(*std::max_element(waveform.max_samples.begin(), waveform.max_samples.end()) <= Approx(1.0f).margin(0.0001f));
+
+	reader.Close();
+	std::remove(path.c_str());
 }
 
 TEST_CASE( "Waveform extraction does not mutate source reader video flag", "[libopenshot][audiowaveformer][mutation]" )

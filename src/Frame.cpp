@@ -13,6 +13,7 @@
 #include <thread>	// for std::this_thread::sleep_for
 #include <chrono>	// for std::chrono::milliseconds
 #include <iomanip>
+#include <limits>
 
 #include "Frame.h"
 #include "AudioBufferSource.h"
@@ -43,7 +44,7 @@ using namespace openshot;
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
 	: audio(std::make_shared<juce::AudioBuffer<float>>(channels, samples)),
-	  number(number), width(width), height(height),
+	  number(number), capture_timestamp(std::numeric_limits<double>::quiet_NaN()), width(width), height(height),
 	  pixel_ratio(1,1), color(color),
 	  channels(channels), channel_layout(LAYOUT_STEREO),
 	  sample_rate(44100),
@@ -86,6 +87,7 @@ Frame& Frame::operator= (const Frame& other)
 void Frame::DeepCopy(const Frame& other)
 {
 	number = other.number;
+	capture_timestamp = other.capture_timestamp;
 	channels = other.channels;
 	width = other.width;
 	height = other.height;

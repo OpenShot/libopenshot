@@ -20,7 +20,7 @@
 #include "Exceptions.h"
 #include "Frame.h"
 #include "ReaderBase.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 using namespace openshot;
 
@@ -65,7 +65,7 @@ void ImageWriter::SetVideoOptions(
     // Set the ratio based on the reduced fraction
     info.display_ratio = size;
 
-    ZmqLogger::Instance()->AppendDebugMethod(
+    Logger::Instance()->AppendDebugMethod(
         "ImageWriter::SetVideoOptions (" + format + ")",
         "width", width,
         "height", height,
@@ -120,7 +120,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 // Write a block of frames from a reader
 void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"ImageWriter::WriteFrame (from Reader)",
 		"start", start,
 		"length", length);
@@ -147,7 +147,7 @@ void ImageWriter::Close()
 	write_video_count = 0;
 	is_open = false;
 
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close");
+	Logger::Instance()->AppendDebugMethod("ImageWriter::Close");
 }
 
 #endif //USE_IMAGEMAGICK

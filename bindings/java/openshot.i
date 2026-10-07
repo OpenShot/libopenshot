@@ -14,6 +14,12 @@
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
 
+/* JUCE thread internals are implementation details, not binding API */
+%ignore juce::Thread;
+namespace juce {
+    class Thread {};
+}
+
 /* Don't generate multiple wrappers for functions with default args */
 %feature("compactdefaultargs", "1");
 
@@ -124,7 +130,7 @@ typedef struct OpenShotByteBuffer {
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "Qt/VideoCacheThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 %}
 
 // Prevent SWIG from ever generating a wrapper for juce::Thread’s constructor (or run())
@@ -223,12 +229,13 @@ typedef struct OpenShotByteBuffer {
 %include "QtPlayer.h"
 %include "QtTextReader.h"
 %include "KeyFrame.h"
+%include "AnimatedCurve.h"
 %include "RendererBase.h"
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
-%include "ZmqLogger.h"
+%include "Logger.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
@@ -246,6 +253,7 @@ typedef struct OpenShotByteBuffer {
 %include "effects/ColorShift.h"
 %include "effects/Crop.h"
 %include "effects/Deinterlace.h"
+%include "effects/FilmGrain.h"
 %include "effects/Hue.h"
 %include "effects/LensFlare.h"
 %include "effects/Mask.h"
@@ -255,6 +263,8 @@ typedef struct OpenShotByteBuffer {
 %include "effects/Sharpen.h"
 %include "effects/Shift.h"
 %include "effects/SphericalProjection.cpp"
+%include "effects/Timer.h"
+%include "effects/DenoiseImage.h"
 %include "effects/Wave.h"
 #ifdef USE_OPENCV
     %include "effects/Stabilizer.h"

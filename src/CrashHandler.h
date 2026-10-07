@@ -25,7 +25,7 @@
 #endif
 #include <errno.h>
 #include <cxxabi.h>
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 namespace openshot {
 
@@ -33,7 +33,7 @@ namespace openshot {
 	 * @brief This class is designed to catch exceptions thrown by libc (SIGABRT, SIGSEGV, SIGILL, SIGFPE)
 	 *
 	 * This class is a singleton which only needs to be instantiated 1 time, and it will register as a signal
-	 * handler with libc, and log errors using the ZmqLogger class.
+	 * handler with libc, and log errors using the Logger class.
 	 */
 	class CrashHandler {
 	private:

@@ -158,6 +158,9 @@ namespace openshot {
 		double audio_stream_duration_seconds = 0.0;
 		double format_duration_seconds = 0.0;
 		double inferred_duration_seconds = 0.0;
+		int source_width = 0;
+		int source_height = 0;
+		double source_rotation = 0.0;
 
 		// Cached conversion contexts and frames for performance
 		SwsContext *img_convert_ctx = nullptr;        ///< Cached video scaler context
@@ -251,6 +254,12 @@ namespace openshot {
 
 		/// Update File Info for video streams
 		void UpdateVideoInfo();
+
+		/// Update display-oriented geometry from source dimensions and orientation metadata
+		void UpdateOrientedVideoInfo();
+
+		/// Apply source orientation metadata to a decoded frame image
+		void ApplyFrameOrientation(std::shared_ptr<openshot::Frame> frame);
 
 	public:
 		/// Final cache object used to hold final frames

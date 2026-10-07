@@ -115,6 +115,7 @@ namespace openshot
 	public:
 		std::shared_ptr<juce::AudioBuffer<float>> audio;
 		int64_t number;	 ///< This is the frame number (starting at 1)
+		double capture_timestamp; ///< Optional source capture timestamp in seconds for live capture frames
 		bool has_audio_data; ///< This frame has been loaded with audio data
 		bool has_image_data; ///< This frame has been loaded with pixel data
 

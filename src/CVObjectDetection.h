@@ -33,6 +33,20 @@ namespace pb_objdetect {
 
 namespace openshot
 {
+    struct CVObjectMaskData{
+        int width = 0;
+        int height = 0;
+        std::vector<uint32_t> rle;
+
+        bool HasData() const { return width > 0 && height > 0 && !rle.empty(); }
+    };
+
+    struct CVTrackedMaskData{
+        size_t frameId = 0;
+        CVObjectMaskData mask;
+        cv::Rect_<float> box;
+    };
+
     // Stores the detected object bounding boxes and its properties.
     struct CVDetectionData{
         CVDetectionData(){}
@@ -41,25 +55,28 @@ namespace openshot
             std::vector<float> _confidences,
             std::vector<cv::Rect_<float>> _boxes,
             size_t _frameId,
-            std::vector<int> _objectIds)
+            std::vector<int> _objectIds,
+            std::vector<CVObjectMaskData> _masks = {})
         {
             classIds = _classIds;
             confidences = _confidences;
             boxes = _boxes;
             frameId = _frameId;
             objectIds = _objectIds;
+            masks = _masks;
         }
         size_t frameId;
         std::vector<int> classIds;
         std::vector<float> confidences;
         std::vector<cv::Rect_<float>> boxes;
         std::vector<int> objectIds;
+        std::vector<CVObjectMaskData> masks;
     };
 
     /**
      * @brief This class runs trought a clip to detect objects and returns the bounding boxes and its properties.
      *
-     * Object detection is performed using YoloV3 model with OpenCV DNN module
+     * Object detection is performed using a supported YOLO ONNX model with OpenCV DNN module.
      */
     class CVObjectDetection{
 
@@ -70,12 +87,15 @@ namespace openshot
         float confThreshold, nmsThreshold;
 
         std::string classesFile;
-        std::string modelConfiguration;
-        std::string modelWeights;
+        std::string modelPath;
         std::string processingDevice;
         std::string protobuf_data_path;
+        int inpWidth;
+        int inpHeight;
+        bool generateMasks;
 
         SortTracker sort;
+        std::map<int, CVTrackedMaskData> recentObjectMasks;
 
         uint progress;
 
@@ -97,6 +117,8 @@ namespace openshot
         // Remove the bounding boxes with low confidence using non-maxima suppression
         void postprocess(const cv::Size &frameDims, const std::vector<cv::Mat>& out, size_t frame_number);
 
+        void NormalizeTrackedClasses();
+
         // Get the names of the output layers
         std::vector<cv::String> getOutputsNames(const cv::dnn::Net& net);
 
@@ -105,6 +127,8 @@ namespace openshot
         std::map<size_t, CVDetectionData> detectionsData;
 
         CVObjectDetection(std::string processInfoJson, ProcessingController &processingController);
+
+        static std::string ValidateONNXModel(std::string modelPath);
 
         // Iterate over a clip object and run inference for each video frame
         void detectObjectsClip(openshot::Clip &video, size_t start=0, size_t end=0, bool process_interval=false);

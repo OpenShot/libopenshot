@@ -57,6 +57,10 @@ namespace openshot
 		Keyframe vertical_radius;	///< Vertical blur radius keyframe. The size of the vertical blur operation in pixels.
 		Keyframe sigma;				///< Sigma keyframe. The amount of spread in the blur operation. Should be larger than radius.
 		Keyframe iterations;		///< Iterations keyframe. The # of blur iterations per pixel. 3 iterations = Gaussian.
+		Keyframe left;			///< Size of left margin
+		Keyframe top;			///< Size of top margin
+		Keyframe right;			///< Size of right margin
+		Keyframe bottom;		///< Size of bottom margin
 		int mask_mode;			///< How to apply common masks to blur (post-blend or drive-amount).
 
 		/// Blank constructor, useful when using Json to load the effect properties
@@ -70,6 +74,19 @@ namespace openshot
 		/// @param new_sigma The curve to adjust the sigma amount (the size of the blur brush (between 0 and 100), float values accepted)
 		/// @param new_iterations The curve to adjust the # of iterations (between 1 and 100)
 		Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations);
+
+		/// Default constructor, which takes blur curves and an affected area.
+		///
+		/// @param new_horizontal_radius The curve to adjust the horizontal blur radius (between 0 and 100, rounded to int)
+		/// @param new_vertical_radius The curve to adjust the vertical blur radius (between 0 and 100, rounded to int)
+		/// @param new_sigma The curve to adjust the sigma amount (the size of the blur brush (between 0 and 100), float values accepted)
+		/// @param new_iterations The curve to adjust the # of iterations (between 1 and 100)
+		/// @param new_left The curve to adjust the left margin size (between 0 and 1)
+		/// @param new_top The curve to adjust the top margin size (between 0 and 1)
+		/// @param new_right The curve to adjust the right margin size (between 0 and 1)
+		/// @param new_bottom The curve to adjust the bottom margin size (between 0 and 1)
+		Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations,
+			 Keyframe new_left, Keyframe new_top, Keyframe new_right, Keyframe new_bottom);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

@@ -261,24 +261,21 @@ string objectDetectionJson(bool onlyProtoPath){
     string protobufDataPath = "example_object_detection.data";
     // Define processing device
     string processingDevice = "GPU";
-    // Set path to model configuration file
-    string modelConfiguration = "yolov3.cfg";
-    // Set path to model weights
-    string modelWeights = "yolov3.weights";
+    // Set path to YOLOv5 ONNX model
+    string model = "Yolo5/yolov5s.onnx";
     // Set path to class names file
-    string classesFile = "obj.names";
+    string classesFile = "Yolo5/obj.names";
 
     // Construct all the composition of the JSON string
     string protobuf_data_path = jsonFormat("protobuf_data_path", protobufDataPath);
     string processing_device = jsonFormat("processing_device", processingDevice);
-    string model_configuration = jsonFormat("model_configuration", modelConfiguration);
-    string model_weights = jsonFormat("model_weights", modelWeights);
+    string model_path = jsonFormat("model", model);
     string classes_file = jsonFormat("classes_file", classesFile);
 
     // Return only the the protobuf path in JSON format
     if(onlyProtoPath)
         return "{" + protobuf_data_path + "}";
     else
-        return "{" + protobuf_data_path + "," + processing_device + "," + model_configuration + ","
-                + model_weights + "," + classes_file + "}";
+        return "{" + protobuf_data_path + "," + processing_device + "," + model_path + ","
+                + classes_file + "}";
 }

@@ -37,3 +37,24 @@ AudioDeviceList AudioDevices::getNames() {
     }
     return m_devices;
 }
+
+// Build a list of audio input devices found, and return
+AudioDeviceList AudioDevices::getInputNames() {
+    // A temporary device manager, used to scan device names.
+    // Its initialize() is never called, and devices are not opened.
+    std::unique_ptr<juce::AudioDeviceManager>
+        manager(new juce::AudioDeviceManager());
+
+    m_devices.clear();
+
+    auto &types = manager->getAvailableDeviceTypes();
+    for (auto* t : types) {
+        t->scanForDevices();
+        const auto names = t->getDeviceNames(true);
+        for (const auto& name : names) {
+            m_devices.emplace_back(
+                name.toStdString(), t->getTypeName().toStdString());
+        }
+    }
+    return m_devices;
+}

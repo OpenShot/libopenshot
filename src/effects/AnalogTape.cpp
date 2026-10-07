@@ -118,6 +118,15 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		fps = timeline->info.fps;
 	else if (clip && clip->Reader())
 		fps = clip->Reader()->info.fps;
+	int reference_w = w;
+	int reference_h = h;
+	if (timeline && timeline->info.width > 0 && timeline->info.height > 0) {
+		reference_w = timeline->info.width;
+		reference_h = timeline->info.height;
+	}
+	const float reference_scale_x = w > 0 ? static_cast<float>(reference_w) / static_cast<float>(w) : 1.0f;
+	const float reference_scale_y = h > 0 ? static_cast<float>(reference_h) / static_cast<float>(h) : 1.0f;
+	const float inverse_scale_x = reference_scale_x > 0.0f ? 1.0f / reference_scale_x : 1.0f;
 	double fps_d = fps.ToDouble();
 	double t = fps_d > 0 ? frame_number / fps_d : frame_number;
 
@@ -128,7 +137,7 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 	const float k_stripe = stripe.GetValue(frame_number);
 	const float k_bands = staticBands.GetValue(frame_number);
 
-	int r_y = std::round(lerp(0.0f, 2.0f, k_soft));
+	int r_y = std::round(lerp(0.0f, 2.0f, k_soft) * inverse_scale_x);
 	if (k_noise > 0.6f)
 		r_y = std::min(r_y, 1);
 	if (r_y > 0) {
@@ -140,8 +149,8 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		Y.swap(tmpY);
 	}
 
-	float shift = lerp(0.0f, 2.5f, k_bleed);
-	int r_c = std::round(lerp(0.0f, 3.0f, k_bleed));
+	float shift = lerp(0.0f, 2.5f, k_bleed) * inverse_scale_x;
+	int r_c = std::round(lerp(0.0f, 3.0f, k_bleed) * inverse_scale_x);
 	float sat = 1.0f - 0.30f * k_bleed;
 	float shift_h = shift * 0.5f;
 #ifdef _OPENMP
@@ -239,6 +248,7 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 #pragma omp parallel for
 #endif
 	for (int y = 0; y < h; ++y) {
+		const int y_ref = static_cast<int>(std::round(static_cast<float>(y) * reference_scale_y));
 		float bandF = 0.0f;
 		if (Hfixed > 0.0f && y >= h - Hfixed)
 			bandF = (y - (h - Hfixed)) / std::max(1.0f, Hfixed);
@@ -265,14 +275,14 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 			}
 		}
 
-		float rowBias = row_density(SEED, frame_number, y);
+		float rowBias = row_density(SEED, frame_number, y_ref);
 		float p = baseP * (0.25f + 1.5f * rowBias);
 		p *= (1.0f + 1.5f * bandF + 2.0f * burstF);
 
 		float hum = 0.008f * k_noise *
-								std::sin(2 * PI * (y * (6.0f / h) + 0.08f * t));
-		uint32_t s0 = SEED ^ 0x9e37u * kf ^ 0x85ebu * y;
-		uint32_t s1 = SEED ^ 0x9e37u * (kf + 1) ^ 0x85ebu * y ^ 0x1234567u;
+								std::sin(2 * PI * (y_ref * (6.0f / reference_h) + 0.08f * t));
+		uint32_t s0 = SEED ^ 0x9e37u * kf ^ 0x85ebu * y_ref;
+		uint32_t s1 = SEED ^ 0x9e37u * (kf + 1) ^ 0x85ebu * y_ref ^ 0x1234567u;
 		auto step = [](uint32_t &s) {
 			s ^= s << 13;
 			s ^= s >> 17;
@@ -282,12 +292,13 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		float lift = Gfixed * bandF + Gburst * burstF;
 		float rowSigma = sigmaY * (1 + (Nfixed - 1) * bandF +
 															(Nburst - 1) * burstF);
-		float k = 0.15f + 0.35f * hash01(SEED, uint32_t(frame_number), y, 777);
+		float k = 0.15f + 0.35f * hash01(SEED, uint32_t(frame_number), y_ref, 777);
 		float sL = 0.0f, sR = 0.0f;
 		for (int x = 0; x < w; ++x) {
-			if (hash01(SEED, uint32_t(frame_number), y, x) < p)
+			const int x_ref = static_cast<int>(std::round(static_cast<float>(x) * reference_scale_x));
+			if (hash01(SEED, uint32_t(frame_number), y_ref, x_ref) < p)
 				sL = 1.0f;
-			if (hash01(SEED, uint32_t(frame_number), y, w - 1 - x) < p * 0.7f)
+			if (hash01(SEED, uint32_t(frame_number), y_ref, reference_w - 1 - x_ref) < p * 0.7f)
 				sR = 1.0f;
 			float n = ((step(s0) & 0xFFFFFF) / 16777215.0f) * (1 - a) +
 								((step(s1) & 0xFFFFFF) / 16777215.0f) * a;
@@ -303,13 +314,14 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		}
 	}
 
-	float A = lerp(0.0f, 3.0f, k_track); // pixels
+	float A = lerp(0.0f, 3.0f, k_track) * inverse_scale_x; // pixels
 	float f = lerp(0.25f, 1.2f, k_track); // Hz
 	float Hsk = lerp(0.0f, 0.10f * h, k_track); // pixels
-	float S = lerp(0.0f, 5.0f, k_track); // pixels
+	float S = lerp(0.0f, 5.0f, k_track) * inverse_scale_x; // pixels
 	float phase = 2 * PI * (f * t) + 0.7f * (SEED * 0.001f);
 	for (int y = 0; y < h; ++y) {
-		float base = A * std::sin(2 * PI * 0.0035f * y + phase);
+		const float y_ref = static_cast<float>(y) * reference_scale_y;
+		float base = A * std::sin(2 * PI * 0.0035f * y_ref + phase);
 		float skew = (y >= h - Hsk)
 										 ? S * ((y - (h - Hsk)) / std::max(1.0f, Hsk))
 										 : 0.0f;

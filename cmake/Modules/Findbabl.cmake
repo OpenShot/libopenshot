@@ -20,7 +20,7 @@ function(_babl_GET_VERSION _header)
 endfunction()
 
 find_package(PkgConfig)
-pkg_check_modules(PC_BABL babl)
+pkg_check_modules(PC_BABL QUIET babl)
 
 set(babl_VERSION ${PC_BABL_VERSION})
 

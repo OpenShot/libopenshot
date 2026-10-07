@@ -75,7 +75,7 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 	double brightness_value = brightness.GetValue(frame_number);
 
 	int brightness_adj = static_cast<int>(255 * brightness_value);
-	float contrast_factor = 20.0f / std::max(0.00001f, 20.0f - static_cast<float>(contrast_value));
+	float contrast_factor = 20.0f / std::max(0.5f, 20.0f - static_cast<float>(contrast_value));
 	const bool output_mask = replace_image;
 	const auto clamp_u8 = [](int value) -> unsigned char {
 		if (value < 0) return 0;

@@ -34,6 +34,11 @@ list below to help distinguish between them.
   * http://www.ffmpeg.org/ `(Library)`
   * This library is used to decode and encode video, audio, and image files.  It is also used to obtain information about media files, such as frame rate, sample rate, aspect ratio, and other common attributes.
 
+### PipeWire and xdg-desktop-portal (libpipewire, libspa, GIO)
+  * https://pipewire.org/ `(Library)`
+  * https://flatpak.github.io/xdg-desktop-portal/ `(Runtime Service)`
+  * These libraries and services are used for Wayland screen capture. The development packages are needed at build time, and a desktop portal implementation must be available at runtime.
+
 ### ImageMagick++ (libMagick++, libMagickWand, libMagickCore)
   * http://www.imagemagick.org/script/magick++.php `(Library)`
   * This library is **optional**, and used to decode and encode images.
@@ -66,10 +71,6 @@ list below to help distinguish between them.
 ### UnitTest++ (libunittest++)
   * https://github.com/unittest-cpp/ `(Library)`
   * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
-
-### ZeroMQ (libzmq)
-  * http://zeromq.org/ `(Library)`
-  * This library is used to communicate between libopenshot and other applications (publisher / subscriber). Primarily used to send debug data from libopenshot.
 
 ### OpenMP (-fopenmp)
   * http://openmp.org/wp/ `(Compiler Flag)`
@@ -154,18 +155,20 @@ software packages available to download and install.
                         libjsoncpp-dev \
                         libmagick++-dev \
                         libopenshot-audio-dev \
+                        libpipewire-0.3-dev \
+                        libspa-0.2-dev \
                         libswscale-dev \
                         libunittest++-dev \
                         libxcursor-dev \
                         libxinerama-dev \
                         libxrandr-dev \
-                        libzmq3-dev \
                         pkg-config \
                         python3-dev \
                         qtbase5-dev \
                         qtmultimedia5-dev \
                         swig \
-                        python3-zmq \
+                        xdg-desktop-portal \
+                        xdg-desktop-portal-gtk \
                         python3-pyqt5.qtwebengine
                         
 ```

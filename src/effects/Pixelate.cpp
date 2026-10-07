@@ -19,7 +19,19 @@
 #include <QRect>
 #include <QPoint>
 
+#include <algorithm>
+
 using namespace openshot;
+
+namespace {
+double clamp_margin(double value) {
+	if (value < 0.0)
+		return 0.0;
+	if (value > 1.0)
+		return 1.0;
+	return value;
+}
+}
 
 /// Blank constructor, useful when using Json to load the effect properties
 Pixelate::Pixelate() : pixelization(0.5), left(0.0), top(0.0), right(0.0), bottom(0.0),
@@ -69,10 +81,20 @@ Pixelate::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 	if (pixelization_value > 0.0) {
 		int w = frame_image->width();
 		int h = frame_image->height();
+		if (w <= 0 || h <= 0)
+			return frame;
 
 		// Define area we're working on in terms of a QRect with QMargins applied
 		QRect area(QPoint(0,0), frame_image->size());
-		area = area.marginsRemoved({int(left_value * w), int(top_value * h), int(right_value * w), int(bottom_value * h)});
+		area = area.marginsRemoved({
+			int(clamp_margin(left_value) * w),
+			int(clamp_margin(top_value) * h),
+			int(clamp_margin(right_value) * w),
+			int(clamp_margin(bottom_value) * h)
+		});
+		area = area.intersected(QRect(QPoint(0,0), frame_image->size()));
+		if (area.isEmpty())
+			return frame;
 
 		int scale_to = (int) (area.width() * pixelization_value);
 		if (scale_to < 1) {
@@ -198,10 +220,10 @@ std::string Pixelate::PropertiesJSON(int64_t requested_frame) const {
 
 	// Keyframes
 	root["pixelization"] = add_property_json("Pixelization", pixelization.GetValue(requested_frame), "float", "", &pixelization, 0.0, 0.9999, false, requested_frame);
-	root["left"] = add_property_json("Left Margin", left.GetValue(requested_frame), "float", "", &left, 0.0, 1.0, false, requested_frame);
-	root["top"] = add_property_json("Top Margin", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
-	root["right"] = add_property_json("Right Margin", right.GetValue(requested_frame), "float", "", &right, 0.0, 1.0, false, requested_frame);
-	root["bottom"] = add_property_json("Bottom Margin", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 1.0, false, requested_frame);
+	root["left"] = add_property_json("Margin: Left", left.GetValue(requested_frame), "float", "", &left, 0.0, 1.0, false, requested_frame);
+	root["top"] = add_property_json("Margin: Top", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
+	root["right"] = add_property_json("Margin: Right", right.GetValue(requested_frame), "float", "", &right, 0.0, 1.0, false, requested_frame);
+	root["bottom"] = add_property_json("Margin: Bottom", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 1.0, false, requested_frame);
 	root["mask_mode"] = add_property_json("Mask Mode", mask_mode, "int", "", NULL, 0, 1, false, requested_frame);
 	root["mask_mode"]["choices"].append(add_property_choice_json("Limit to Mask", PIXELATE_MASK_LIMIT_TO_AREA, mask_mode));
 	root["mask_mode"]["choices"].append(add_property_choice_json("Vary Strength", PIXELATE_MASK_VARY_STRENGTH, mask_mode));

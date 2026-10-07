@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <utility>
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -24,11 +25,19 @@
 #include "ChunkReader.h"
 #include "FFmpegReader.h"
 #include "QtImageReader.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include <omp.h>
+#include <QBrush>
+#include <QColor>
+#include <QPainter>
+#include <QRectF>
 
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
+#endif
+
+#ifdef USE_OPENCV
+	#include "TrackedObjectBBox.h"
 #endif
 
 using namespace openshot;
@@ -46,6 +55,7 @@ void EffectBase::InitEffectInfo()
 	parentEffect = NULL;
 	mask_invert = false;
 	mask_reader = NULL;
+	mask_source_id = "";
 	mask_time_mode = MASK_TIME_SOURCE_FPS;
 	mask_loop_mode = MASK_LOOP_PLAY_ONCE;
 
@@ -68,7 +78,7 @@ void EffectBase::DisplayInfo(std::ostream* out) {
 	*out << "--> Description: " << info.description << std::endl;
 	*out << "--> Has Video: " << info.has_video << std::endl;
 	*out << "--> Has Audio: " << info.has_audio << std::endl;
-	*out << "--> Apply Before Clip Keyframes: " << info.apply_before_clip << std::endl;
+	*out << "--> Apply to Source: " << info.apply_before_clip << std::endl;
 	*out << "--> Order: " << order << std::endl;
 	*out << "----------------------------" << std::endl;
 }
@@ -107,6 +117,7 @@ Json::Value EffectBase::JsonValue() const {
 	root["apply_before_clip"] = info.apply_before_clip;
 	root["order"] = Order();
 	root["mask_invert"] = mask_invert;
+	root["mask_source_id"] = mask_source_id;
 	root["mask_time_mode"] = mask_time_mode;
 	root["mask_loop_mode"] = mask_loop_mode;
 	if (mask_reader)
@@ -126,7 +137,7 @@ void EffectBase::SetJson(const std::string value) {
 	{
 		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -136,33 +147,28 @@ void EffectBase::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void EffectBase::SetJsonValue(const Json::Value root) {
-
-	if (ParentTimeline()){
-		// Get parent timeline
-		Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
-
-		// Get the list of effects on the timeline
-		std::list<EffectBase*> effects = parentTimeline->ClipEffects();
-
-		// TODO: Fix recursive call for Object Detection
-
-		// // Loop through the effects and check if we have a child effect linked to this effect
-		for (auto const& effect : effects){
-			// Set the properties of all effects which parentEffect points to this
-			if ((effect->info.parent_effect_id == this->Id()) && (effect->Id() != this->Id()))
-				effect->SetJsonValue(root);
-		}
-	}
+void EffectBase::SetJsonValue(Json::Value root) {
+	const std::string original_id = this->Id();
+	const std::string original_parent_effect_id = this->info.parent_effect_id;
 
 	// Set this effect properties with the parent effect properties (except the id and parent_effect_id)
 	Json::Value my_root;
-	if (parentEffect){
+	const bool applying_parent_payload =
+		!original_id.empty() &&
+		!original_parent_effect_id.empty() &&
+		!root["id"].isNull() &&
+		root["id"].asString() == original_parent_effect_id &&
+		root["id"].asString() != original_id;
+	if (applying_parent_payload) {
+		my_root = std::move(root);
+		my_root["id"] = original_id;
+		my_root["parent_effect_id"] = original_parent_effect_id;
+	} else if (parentEffect){
 		my_root = parentEffect->JsonValue();
 		my_root["id"] = this->Id();
 		my_root["parent_effect_id"] = this->info.parent_effect_id;
 	} else {
-		my_root = root;
+		my_root = std::move(root);
 	}
 
 	// Legacy compatibility: older shared-mask JSON stored source trim
@@ -173,7 +179,7 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 		my_root["end"] = my_root["mask_end"];
 
 	// Set parent data
-	ClipBase::SetJsonValue(my_root);
+	SetBaseJsonValue(my_root);
 
 	// Set data from Json (if key is found)
 	if (!my_root["order"].isNull())
@@ -184,6 +190,8 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 
 	if (!my_root["mask_invert"].isNull())
 		mask_invert = my_root["mask_invert"].asBool();
+	if (!my_root["mask_source_id"].isNull())
+		MaskSourceId(my_root["mask_source_id"].asString());
 	if (!my_root["mask_time_mode"].isNull()) {
 		const int time_mode = my_root["mask_time_mode"].asInt();
 		mask_time_mode = (time_mode == MASK_TIME_TIMELINE || time_mode == MASK_TIME_SOURCE_FPS)
@@ -215,6 +223,23 @@ void EffectBase::SetJsonValue(const Json::Value root) {
 		else
 			parentEffect = NULL;
 	}
+
+	if (ParentTimeline()){
+		// Get parent timeline
+		Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
+
+		// Get the list of effects on the timeline
+		std::list<EffectBase*> effects = parentTimeline->ClipEffects();
+
+		// TODO: Fix recursive call for Object Detection
+
+		// Loop through the effects and check if we have a child effect linked to this effect
+		for (auto const& effect : effects){
+			// Set the properties of all effects which parentEffect points to this
+			if ((effect->info.parent_effect_id == this->Id()) && (effect->Id() != this->Id()))
+				effect->SetJsonValue(my_root);
+		}
+	}
 }
 
 // Generate Json::Value for this object
@@ -244,7 +269,7 @@ Json::Value EffectBase::BasePropertiesJSON(int64_t requested_frame) const {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
 
 	// Add replace_image choices (dropdown style)
-	root["apply_before_clip"] = add_property_json("Apply Before Clip Keyframes", info.apply_before_clip, "int", "", NULL, 0, 1, false, requested_frame);
+	root["apply_before_clip"] = add_property_json("Apply to Source", info.apply_before_clip, "int", "", NULL, 0, 1, false, requested_frame);
 	root["apply_before_clip"]["choices"].append(add_property_choice_json("Yes", true, info.apply_before_clip));
 	root["apply_before_clip"]["choices"].append(add_property_choice_json("No", false, info.apply_before_clip));
 
@@ -269,6 +294,8 @@ Json::Value EffectBase::BasePropertiesJSON(int64_t requested_frame) const {
 			root["mask_reader"] = add_property_json("Mask: Source", 0.0, "reader", mask_reader->Json(), NULL, 0, 1, false, requested_frame);
 		else
 			root["mask_reader"] = add_property_json("Mask: Source", 0.0, "reader", "{}", NULL, 0, 1, false, requested_frame);
+
+		root["mask_source_id"] = add_property_json("Mask: Effect Source", 0.0, "string", mask_source_id, NULL, -1, -1, false, requested_frame);
 	}
 
 	return root;
@@ -320,6 +347,36 @@ void EffectBase::MaskReader(ReaderBase* new_reader) {
 	cached_single_mask_height = 0;
 	if (mask_reader)
 		mask_reader->ParentClip(clip);
+}
+
+void EffectBase::MaskSourceId(const std::string& new_mask_source_id) {
+	mask_source_id = new_mask_source_id;
+	cached_single_mask_image.reset();
+	cached_single_mask_width = 0;
+	cached_single_mask_height = 0;
+}
+
+EffectBase* EffectBase::ResolveMaskSourceEffect() {
+	if (mask_source_id.empty())
+		return NULL;
+
+	Clip* parent_clip = dynamic_cast<Clip*>(clip);
+	if (parent_clip) {
+		EffectBase* source = parent_clip->GetEffect(mask_source_id);
+		if (source && source != this)
+			return source;
+	}
+
+	Timeline* parent_timeline = dynamic_cast<Timeline*>(ParentTimeline());
+	if (parent_timeline) {
+		EffectBase* source = parent_timeline->GetClipEffect(mask_source_id);
+		if (!source)
+			source = parent_timeline->GetEffect(mask_source_id);
+		if (source && source != this)
+			return source;
+	}
+
+	return NULL;
 }
 
 double EffectBase::ResolveMaskHostFps() {
@@ -430,7 +487,22 @@ int64_t EffectBase::MapMaskFrameNumber(int64_t frame_number) {
 }
 
 std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_image, int64_t frame_number) {
-	if (!mask_reader || !target_image || target_image->isNull())
+	if (!target_image || target_image->isNull())
+		return {};
+
+	EffectBase* source_effect = ResolveMaskSourceEffect();
+	if (source_effect) {
+		auto generated_mask = source_effect->TrackedObjectMask(target_image, frame_number);
+		if (generated_mask && !generated_mask->isNull())
+			return generated_mask;
+
+		auto empty_mask = std::make_shared<QImage>(
+			target_image->width(), target_image->height(), QImage::Format_RGBA8888_Premultiplied);
+		empty_mask->fill(QColor(0, 0, 0, 255));
+		return empty_mask;
+	}
+
+	if (!mask_reader)
 		return {};
 
 	std::shared_ptr<QImage> source_mask;
@@ -455,7 +527,7 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 					source_mask = std::make_shared<QImage>(*source_frame->GetImage());
 			}
 		} catch (const std::exception& e) {
-			ZmqLogger::Instance()->Log(
+			Logger::Instance()->Log(
 				std::string("EffectBase::GetMaskImage unable to read mask frame: ") + e.what());
 			source_mask.reset();
 		}
@@ -479,6 +551,62 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 	return scaled_mask;
 }
 
+std::shared_ptr<QImage> EffectBase::TrackedObjectMask(std::shared_ptr<QImage> target_image, int64_t frame_number) const {
+#ifdef USE_OPENCV
+	if (!target_image || target_image->isNull() || trackedObjects.empty())
+		return {};
+
+	auto mask_image = std::make_shared<QImage>(
+		target_image->width(), target_image->height(), QImage::Format_RGBA8888_Premultiplied);
+	mask_image->fill(QColor(0, 0, 0, 255));
+
+	QPainter painter(mask_image.get());
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setPen(Qt::NoPen);
+	painter.setBrush(QBrush(QColor(255, 255, 255, 255)));
+
+	bool drew_any_box = false;
+	for (auto const& trackedObject : trackedObjects) {
+		auto bbox = std::dynamic_pointer_cast<TrackedObjectBBox>(trackedObject.second);
+		if (!bbox)
+			continue;
+		if (!bbox->Contains(frame_number) || bbox->visible.GetValue(frame_number) != 1)
+			continue;
+
+		BBox box = bbox->GetBox(frame_number);
+		if (box.width <= 0.0f || box.height <= 0.0f || box.cx < 0.0f || box.cy < 0.0f)
+			continue;
+
+		const double x = (box.cx - box.width / 2.0) * target_image->width();
+		const double y = (box.cy - box.height / 2.0) * target_image->height();
+		const double w = box.width * target_image->width();
+		const double h = box.height * target_image->height();
+		const double corner = bbox->background_corner.GetValue(frame_number);
+		QRectF rect(x, y, w, h);
+
+		if (std::abs(box.angle) > 0.0001f) {
+			painter.save();
+			painter.translate(rect.center());
+			painter.rotate(box.angle);
+			painter.drawRoundedRect(QRectF(-w / 2.0, -h / 2.0, w, h), corner, corner);
+			painter.restore();
+		} else {
+			painter.drawRoundedRect(rect, corner, corner);
+		}
+		drew_any_box = true;
+	}
+
+	painter.end();
+	if (!drew_any_box)
+		return {};
+	return mask_image;
+#else
+	(void) target_image;
+	(void) frame_number;
+	return {};
+#endif
+}
+
 void EffectBase::BlendWithMask(std::shared_ptr<QImage> original_image, std::shared_ptr<QImage> effected_image,
 							   std::shared_ptr<QImage> mask_image) const {
 	if (!original_image || !effected_image || !mask_image)
@@ -489,31 +617,40 @@ void EffectBase::BlendWithMask(std::shared_ptr<QImage> original_image, std::shar
 	unsigned char* original_pixels = reinterpret_cast<unsigned char*>(original_image->bits());
 	unsigned char* effected_pixels = reinterpret_cast<unsigned char*>(effected_image->bits());
 	unsigned char* mask_pixels = reinterpret_cast<unsigned char*>(mask_image->bits());
-	const int pixel_count = effected_image->width() * effected_image->height();
+	const int width = effected_image->width();
+	const int height = effected_image->height();
+	const int original_stride = original_image->bytesPerLine();
+	const int effected_stride = effected_image->bytesPerLine();
+	const int mask_stride = mask_image->bytesPerLine();
 
 	#pragma omp parallel for schedule(static)
-	for (int i = 0; i < pixel_count; ++i) {
-		const int idx = i * 4;
-		int gray = qGray(mask_pixels[idx], mask_pixels[idx + 1], mask_pixels[idx + 2]);
-		if (mask_invert)
-			gray = 255 - gray;
-		const float factor = static_cast<float>(gray) / 255.0f;
-		const float inverse = 1.0f - factor;
+	for (int y = 0; y < height; ++y) {
+		unsigned char* original_row = original_pixels + y * original_stride;
+		unsigned char* effected_row = effected_pixels + y * effected_stride;
+		unsigned char* mask_row = mask_pixels + y * mask_stride;
+		for (int x = 0; x < width; ++x) {
+			const int idx = x * 4;
+			int gray = qGray(mask_row[idx], mask_row[idx + 1], mask_row[idx + 2]);
+			if (mask_invert)
+				gray = 255 - gray;
+			const float factor = static_cast<float>(gray) / 255.0f;
+			const float inverse = 1.0f - factor;
 
-		effected_pixels[idx] = static_cast<unsigned char>(
-			(original_pixels[idx] * inverse) + (effected_pixels[idx] * factor));
-		effected_pixels[idx + 1] = static_cast<unsigned char>(
-			(original_pixels[idx + 1] * inverse) + (effected_pixels[idx + 1] * factor));
-		effected_pixels[idx + 2] = static_cast<unsigned char>(
-			(original_pixels[idx + 2] * inverse) + (effected_pixels[idx + 2] * factor));
-		effected_pixels[idx + 3] = static_cast<unsigned char>(
-			(original_pixels[idx + 3] * inverse) + (effected_pixels[idx + 3] * factor));
+			effected_row[idx] = static_cast<unsigned char>(
+				(original_row[idx] * inverse) + (effected_row[idx] * factor));
+			effected_row[idx + 1] = static_cast<unsigned char>(
+				(original_row[idx + 1] * inverse) + (effected_row[idx + 1] * factor));
+			effected_row[idx + 2] = static_cast<unsigned char>(
+				(original_row[idx + 2] * inverse) + (effected_row[idx + 2] * factor));
+			effected_row[idx + 3] = static_cast<unsigned char>(
+				(original_row[idx + 3] * inverse) + (effected_row[idx + 3] * factor));
+		}
 	}
 }
 
 std::shared_ptr<openshot::Frame> EffectBase::ProcessFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
 	// Audio-only effects skip common mask handling.
-	if (!info.has_video || !mask_reader)
+	if (!info.has_video || (!mask_reader && mask_source_id.empty()))
 		return GetFrame(frame, frame_number);
 
 	// Effects that already apply masks inside GetFrame() should bypass common blend handling.

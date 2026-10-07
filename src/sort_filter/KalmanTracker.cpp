@@ -7,6 +7,7 @@
 
 #include "KalmanTracker.h"
 #include <ctime>
+#include <algorithm>
 
 using namespace std;
 using namespace cv;
@@ -97,6 +98,42 @@ void KalmanTracker::update(
 	// convert now to string form
 
 	// detect_times.push_back(dt);
+}
+
+void KalmanTracker::update_class_scores(const std::vector<ClassScore>& classScores, int fallbackClassId, float fallbackConfidence)
+{
+	const double decay = 0.82;
+	const double update_weight = 1.0 - decay;
+	const bool had_history = !classScoreHistory.empty();
+
+	for (auto it = classScoreHistory.begin(); it != classScoreHistory.end();) {
+		it->second *= decay;
+		if (it->second < 0.0001)
+			it = classScoreHistory.erase(it);
+		else
+			++it;
+	}
+
+	const double candidate_weight = had_history ? update_weight : 1.0;
+	if (classScores.empty()) {
+		classScoreHistory[fallbackClassId] += fallbackConfidence * candidate_weight;
+	} else {
+		for (const auto& candidate : classScores) {
+			if (candidate.classId < 0 || candidate.score <= 0.0f)
+				continue;
+			classScoreHistory[candidate.classId] += candidate.score * candidate_weight;
+		}
+	}
+
+	if (classScoreHistory.empty()) {
+		classId = fallbackClassId;
+		return;
+	}
+
+	auto best = std::max_element(
+		classScoreHistory.begin(), classScoreHistory.end(),
+		[](const auto& a, const auto& b) { return a.second < b.second; });
+	classId = best->first;
 }
 
 // Return the current state vector

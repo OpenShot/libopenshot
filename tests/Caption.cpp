@@ -82,16 +82,30 @@ TEST_CASE("caption effect", "[libopenshot][caption]") {
         CHECK(c1.left.GetValue(1) == Approx(0.10f).margin(0.00001));
         CHECK(c1.right.GetValue(1) == Approx(0.10f).margin(0.00001));
         CHECK(c1.top.GetValue(1) == Approx(0.75).margin(0.00001));
+        CHECK(c1.bottom.GetValue(1) == Approx(0.0).margin(0.00001));
         CHECK(c1.stroke_width.GetValue(1) == Approx(0.5f).margin(0.00001));
         CHECK(c1.font_size.GetValue(1) == Approx(30.0f).margin(0.00001));
         CHECK(c1.font_alpha.GetValue(1) == Approx(1.0f).margin(0.00001));
         CHECK(c1.font_name == "sans");
-        CHECK(c1.fade_in.GetValue(1) == Approx(0.35f).margin(0.00001));
-        CHECK(c1.fade_out.GetValue(1) == Approx(0.35f).margin(0.00001));
+        CHECK(c1.fade_in.GetValue(1) == Approx(0.0f).margin(0.00001));
+        CHECK(c1.fade_out.GetValue(1) == Approx(0.0f).margin(0.00001));
         CHECK(c1.background_corner.GetValue(1) == Approx(10.0f).margin(0.00001));
         CHECK(c1.background_padding.GetValue(1) == Approx(20.0f).margin(0.00001));
         CHECK(c1.line_spacing.GetValue(1) == Approx(1.0f).margin(0.00001));
         CHECK(c1.CaptionText() == "00:00:00:000 --> 00:10:00:000\nEdit this caption with our caption editor");
+
+        Json::Value caption_json = c1.JsonValue();
+        REQUIRE(caption_json["bottom"].isObject());
+        caption_json["bottom"] = openshot::Keyframe(0.25).JsonValue();
+        openshot::Caption c2;
+        c2.SetJsonValue(caption_json);
+        CHECK(c2.bottom.GetValue(1) == Approx(0.25).margin(0.00001));
+
+        Json::Value properties = openshot::stringToJson(c1.PropertiesJSON(1));
+        CHECK(properties["top"]["name"].asString() == "Margin: Top");
+        CHECK(properties["left"]["name"].asString() == "Margin: Left");
+        CHECK(properties["bottom"]["name"].asString() == "Margin: Bottom");
+        CHECK(properties["right"]["name"].asString() == "Margin: Right");
 
         // Load clip with video
         std::stringstream path;

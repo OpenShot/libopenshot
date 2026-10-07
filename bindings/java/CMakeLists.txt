@@ -12,12 +12,12 @@
 find_package(SWIG 4.0 REQUIRED)
 include(${SWIG_USE_FILE})
 
-### Enable some legacy SWIG behaviors in newer CMake versions
+### Use modern SWIG target behavior when available
 if (POLICY CMP0078)
-    cmake_policy(SET CMP0078 OLD)
+    cmake_policy(SET CMP0078 NEW)
 endif()
 if (POLICY CMP0086)
-    cmake_policy(SET CMP0086 OLD)
+    cmake_policy(SET CMP0086 NEW)
 endif()
 
 find_package(Java REQUIRED)
@@ -25,8 +25,6 @@ include(UseJava)
 
 find_package(JNI REQUIRED)
 include_directories(${JNI_INCLUDE_DIRS})
-message(STATUS "JNI_INCLUDE_DIRS=${JNI_INCLUDE_DIRS}")
-message(STATUS "JNI_LIBRARIES=${JNI_LIBRARIES}")
 
 ### Enable C++ in SWIG
 set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
@@ -34,7 +32,7 @@ set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
 ### Set the swig package name for the JAR
 set_source_files_properties(openshot.i PROPERTIES
-        SWIG_FLAGS "-package;org.openshot"
+        SWIG_FLAGS "-package;org.openshot;-w503,516,813,822"
 )
 
 ### Suppress a ton of warnings in the generated SWIG C++ code
@@ -51,7 +49,6 @@ elseif(CMAKE_VERSION VERSION_GREATER 3.12)
     set(_inc $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
 endif()
 if (DEFINED _inc)
-    message(STATUS "Include directories: ${_inc}")
     set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES ${_inc})
 endif()
 
@@ -61,10 +58,12 @@ if (CMAKE_VERSION VERSION_GREATER 3.20)
 endif()
 
 ### Add the SWIG interface file (which defines all the SWIG methods)
-if (CMAKE_VERSION VERSION_LESS 3.8.0)
-    swig_add_module(openshot-java java openshot.i)
+swig_add_library(openshot-java LANGUAGE java SOURCES openshot.i)
+
+if (POLICY CMP0078)
+    set(_openshot_java_target openshot-java)
 else()
-    swig_add_library(openshot-java LANGUAGE java SOURCES openshot.i)
+    set(_openshot_java_target ${SWIG_MODULE_openshot-java_REAL_NAME})
 endif()
 
 ### Set the prefix for the library to 'lib'
@@ -72,10 +71,9 @@ endif()
 
 ### Compile the generated wrapper file
 get_property(_java_files TARGET openshot-java PROPERTY SWIG_SUPPORT_FILES)
-message("_java_files: ${_java_files}")
 
 ### Link the new Java wrapper library with libopenshot
-target_link_libraries(${SWIG_MODULE_openshot-java_REAL_NAME} PUBLIC
+target_link_libraries(${_openshot_java_target} PUBLIC
         ${JNI_LIBRARIES} openshot)
 
 ### Create a custom target for the JAR file
@@ -83,7 +81,7 @@ add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/bindings/java/openshotJNI.jar
         COMMAND ${Java_JAVAC_EXECUTABLE} -d ${CMAKE_BINARY_DIR}/bindings/java ${CMAKE_BINARY_DIR}/bindings/java/*.java
         COMMAND ${Java_JAR_EXECUTABLE} -cf ${CMAKE_BINARY_DIR}/bindings/java/openshotJNI.jar -C ${CMAKE_BINARY_DIR}/bindings/java .
-        DEPENDS openshot-java
+        DEPENDS ${_openshot_java_target}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bindings/java
         COMMENT "Creating openshotJNI.jar"
 )

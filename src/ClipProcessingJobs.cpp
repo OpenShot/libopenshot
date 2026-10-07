@@ -20,6 +20,26 @@ ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string p
 processingType(processingType), processInfoJson(processInfoJson){
 }
 
+std::string ClipProcessingJobs::ValidateONNXModel(std::string modelPath){
+#ifdef USE_OPENCV
+    return CVObjectDetection::ValidateONNXModel(modelPath);
+#else
+    return "OpenShot was not compiled with OpenCV support.";
+#endif
+}
+
+std::shared_ptr<Frame> ClipProcessingJobs::PreviewObjectMask(std::string processInfoJson, std::shared_ptr<Frame> frame){
+#ifdef USE_OPENCV
+    ProcessingController controller;
+    CVObjectMask objectMask(processInfoJson, controller);
+    return objectMask.PreviewSeedMask(frame);
+#else
+    (void)processInfoJson;
+    (void)frame;
+    return std::shared_ptr<Frame>();
+#endif
+}
+
 void ClipProcessingJobs::processClip(Clip& clip, std::string json){
     processInfoJson = json;
 
@@ -32,6 +52,9 @@ void ClipProcessingJobs::processClip(Clip& clip, std::string json){
     }
     if(processingType == "ObjectDetection"){
         t = std::thread(&ClipProcessingJobs::detectObjectsClip, this, std::ref(clip), std::ref(this->processingController));
+    }
+    if(processingType == "ObjectMask"){
+        t = std::thread(&ClipProcessingJobs::maskObjectClip, this, std::ref(clip), std::ref(this->processingController));
     }
 }
 
@@ -75,6 +98,21 @@ void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& con
         // Save object detection data
         objDetector.SaveObjDetectedData();
         // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
+}
+
+// Apply object segmentation mask to clip
+void ClipProcessingJobs::maskObjectClip(Clip& clip, ProcessingController& controller){
+	CVObjectMask objectMask(processInfoJson, controller);
+    objectMask.maskClip(clip);
+
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        objectMask.SaveObjMaskData();
         controller.SetFinished(true);
     }
 }

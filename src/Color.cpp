@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <utility>
 #include <cmath>
 
 #include "Color.h"
@@ -102,9 +103,9 @@ void Color::SetJson(const std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
-		const Json::Value root = openshot::stringToJson(value);
+		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -114,15 +115,15 @@ void Color::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Color::SetJsonValue(const Json::Value root) {
+void Color::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["red"].isNull())
-		red.SetJsonValue(root["red"]);
+		red.SetJsonValue(std::move(root["red"]));
 	if (!root["green"].isNull())
-		green.SetJsonValue(root["green"]);
+		green.SetJsonValue(std::move(root["green"]));
 	if (!root["blue"].isNull())
-		blue.SetJsonValue(root["blue"]);
+		blue.SetJsonValue(std::move(root["blue"]));
 	if (!root["alpha"].isNull())
-		alpha.SetJsonValue(root["alpha"]);
+		alpha.SetJsonValue(std::move(root["alpha"]));
 }

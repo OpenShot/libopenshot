@@ -14,6 +14,7 @@
 #include <sstream>
 #include <memory>
 #include <cstdio>
+#include <cmath>
 
 #include <QImage>
 #include <QColor>
@@ -90,6 +91,7 @@ TEST_CASE( "Default_Constructor", "[libopenshot][frame]" )
 	// Should be false until we load or create contents
 	CHECK(f1->has_image_data == false);
 	CHECK(f1->has_audio_data == false);
+	CHECK(std::isnan(f1->capture_timestamp));
 
 	// Calling GetImage() paints a blank frame, by default
 	std::shared_ptr<QImage> i1 = f1->GetImage();
@@ -98,6 +100,19 @@ TEST_CASE( "Default_Constructor", "[libopenshot][frame]" )
 
 	CHECK(f1->has_image_data == true);
 	CHECK(f1->has_audio_data == false);
+}
+
+TEST_CASE( "Capture_Timestamp_Copies", "[libopenshot][frame]" )
+{
+	openshot::Frame f1(1, 800, 600, "#000000");
+	f1.capture_timestamp = 12.345;
+
+	openshot::Frame f2(f1);
+	CHECK(f2.capture_timestamp == Approx(12.345));
+
+	openshot::Frame f3;
+	f3.DeepCopy(f1);
+	CHECK(f3.capture_timestamp == Approx(12.345));
 }
 
 

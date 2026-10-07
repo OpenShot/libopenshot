@@ -27,9 +27,9 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1),
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1), bottom(0.0),
 					 stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
-					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
+					 fade_in(0.0), fade_out(0.0), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -37,9 +37,9 @@ Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"
 
 // Default constructor
 Caption::Caption(std::string captions) :
-		color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1),
+		color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1), bottom(0.0),
 		stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
-		fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0),
+		fade_in(0.0), fade_out(0.0), background_corner(10.0), background_padding(20.0), line_spacing(1.0),
 		caption_text(captions)
 {
 	// Init effect properties
@@ -162,22 +162,28 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	double fade_in_value = fade_in.GetValue(frame_number) * fps.ToDouble();
 	double fade_out_value = fade_out.GetValue(frame_number) * fps.ToDouble();
 	double right_value = right.GetValue(frame_number);
+	double bottom_value = bottom.GetValue(frame_number);
 	double background_corner_value = background_corner.GetValue(frame_number) * timeline_scale_factor;
 	double padding_value = background_padding.GetValue(frame_number) * timeline_scale_factor;
 	double stroke_width_value = stroke_width.GetValue(frame_number) * timeline_scale_factor;
 	double line_spacing_value = line_spacing.GetValue(frame_number);
 	double metrics_line_spacing = metrics.lineSpacing();
 
-	// Calculate caption area (based on left, top, and right margin)
+	// Calculate caption area (based on left, top, right, and bottom margin)
 	double left_margin_x = frame_image->width() * left_value;
-	double starting_y = (frame_image->height() * top_value) + metrics_line_spacing;
+	double top_margin_y = frame_image->height() * top_value;
+	double starting_y = top_margin_y + metrics_line_spacing;
 	double current_y = starting_y;
 	double bottom_y = starting_y;
 	double top_y = starting_y;
 	double max_text_width = 0.0;
 	double right_margin_x = frame_image->width() - (frame_image->width() * right_value);
 	double caption_area_width = right_margin_x - left_margin_x;
-	QRectF caption_area = QRectF(left_margin_x, starting_y, caption_area_width, frame_image->height());
+	double bottom_margin_y = frame_image->height() - (frame_image->height() * bottom_value);
+	double caption_area_height = std::max(bottom_margin_y - starting_y, 0.0);
+	QRectF caption_area = QRectF(left_margin_x, starting_y, caption_area_width, caption_area_height);
+	QRectF caption_clip_area = QRectF(left_margin_x, top_margin_y, caption_area_width,
+									  std::max(bottom_margin_y - top_margin_y, 0.0));
 
 	// Keep track of all required text paths
 	std::vector<QPainterPath> text_paths;
@@ -220,8 +226,12 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 				!line.isEmpty() && frame_number >= start_frame && frame_number <= end_frame && line.length() > 1) {
 
 				// Calculate fade in/out ranges
-				fade_in_percentage = ((float) frame_number - (float) start_frame) / fade_in_value;
-				fade_out_percentage = 1.0 - (((float) frame_number - ((float) end_frame - fade_out_value)) / fade_out_value);
+				fade_in_percentage = fade_in_value > 0.0
+					? ((float) frame_number - (float) start_frame) / fade_in_value
+					: 1.0;
+				fade_out_percentage = fade_out_value > 0.0
+					? 1.0 - (((float) frame_number - ((float) end_frame - fade_out_value)) / fade_out_value)
+					: -1.0;
 
 				// Loop through words, and find word-wrap boundaries
 				QStringList words = line.split(" ");
@@ -317,6 +327,8 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	background_brush.setStyle(Qt::SolidPattern);
 	painter.setBrush(background_brush);
 	painter.setPen(Qt::NoPen);
+	painter.save();
+	painter.setClipRect(caption_clip_area);
 	painter.drawRoundedRect(caption_area_with_padding, background_corner_value, background_corner_value);
 
 	// Set fill-color of text
@@ -360,6 +372,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 		painter.setBrush(font_brush);
 		painter.drawPath(path);
 	}
+	painter.restore();
 
 	// End painter
 	painter.end();
@@ -396,6 +409,7 @@ Json::Value Caption::JsonValue() const {
 	root["left"] = left.JsonValue();
 	root["top"] = top.JsonValue();
 	root["right"] = right.JsonValue();
+	root["bottom"] = bottom.JsonValue();
 	root["caption_text"] = caption_text;
 	root["caption_font"] = font_name;
 
@@ -457,6 +471,8 @@ void Caption::SetJsonValue(const Json::Value root) {
 		top.SetJsonValue(root["top"]);
 	if (!root["right"].isNull())
 		right.SetJsonValue(root["right"]);
+	if (!root["bottom"].isNull())
+		bottom.SetJsonValue(root["bottom"]);
 	if (!root["caption_text"].isNull())
 		caption_text = root["caption_text"].asString();
 	if (!root["caption_font"].isNull())
@@ -494,9 +510,10 @@ std::string Caption::PropertiesJSON(int64_t requested_frame) const {
 	root["fade_in"] = add_property_json("Fade In (Seconds)", fade_in.GetValue(requested_frame), "float", "", &fade_in, 0.0, 3.0, false, requested_frame);
 	root["fade_out"] = add_property_json("Fade Out (Seconds)", fade_out.GetValue(requested_frame), "float", "", &fade_out, 0.0, 3.0, false, requested_frame);
 	root["line_spacing"] = add_property_json("Line Spacing", line_spacing.GetValue(requested_frame), "float", "", &line_spacing, 0.0, 5.0, false, requested_frame);
-	root["left"] = add_property_json("Left Size", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
-	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
-	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
+	root["left"] = add_property_json("Margin: Left", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
+	root["top"] = add_property_json("Margin: Top", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
+	root["right"] = add_property_json("Margin: Right", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
+	root["bottom"] = add_property_json("Margin: Bottom", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 1.0, false, requested_frame);
 	root["caption_text"] = add_property_json("Captions", 0.0, "caption", caption_text, NULL, -1, -1, false, requested_frame);
 	root["caption_font"] = add_property_json("Font", 0.0, "font", font_name, NULL, -1, -1, false, requested_frame);
 

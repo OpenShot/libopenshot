@@ -100,7 +100,6 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	if (trackedData->draw_box.GetValue(frame_number) == 1)
 	{
 		auto stroke_rgba   = trackedData->stroke.GetColorRGBA(frame_number);
-		int  stroke_width  = trackedData->stroke_width.GetValue(frame_number);
 		float stroke_alpha = trackedData->stroke_alpha.GetValue(frame_number);
 		auto bg_rgba       = trackedData->background.GetColorRGBA(frame_number);
 		float bg_alpha     = trackedData->background_alpha.GetValue(frame_number);
@@ -110,7 +109,8 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			stroke_rgba[0], stroke_rgba[1], stroke_rgba[2],
 			int(255 * stroke_alpha)
 		));
-		pen.setWidth(stroke_width);
+		pen.setWidthF(trackedData->ScaledStrokeWidth(
+			frame_number, frame_image->width(), frame_image->height()));
 		painter.setPen(pen);
 
 		QBrush brush(QColor(

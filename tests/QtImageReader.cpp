@@ -134,3 +134,25 @@ TEST_CASE( "Max_Decode_Size_QtImageReader", "[libopenshot][qtimagereader]" )
 
 	r.Close();
 }
+
+TEST_CASE( "Max_Decode_Size_SVG_QtImageReader", "[libopenshot][qtimagereader]" )
+{
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "1F0CF.svg";
+
+	QtImageReader r(path.str());
+	r.Open();
+
+	std::shared_ptr<Frame> original = r.GetFrame(1);
+	REQUIRE(original != nullptr);
+	CHECK(original->GetWidth() == 72);
+	CHECK(original->GetHeight() == 72);
+
+	r.SetMaxDecodeSize(256, 128);
+	std::shared_ptr<Frame> limited = r.GetFrame(2);
+	REQUIRE(limited != nullptr);
+	CHECK(limited->GetWidth() == 128);
+	CHECK(limited->GetHeight() == 128);
+
+	r.Close();
+}

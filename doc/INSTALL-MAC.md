@@ -11,11 +11,11 @@ These instructions describe how to build `libopenshot` (and its dependency
 working `libopenshot.dylib` and Python 3 bindings (`_openshot.so`,
 `openshot.py`) that can be imported by `openshot-qt`.
 
-They have been verified on macOS 15 (Apple Silicon, `arm64`) with
-AppleClang 17 and CMake 4.0.3. The same steps apply to Intel Macs; the
-only difference is that Homebrew lives at `/usr/local` on Intel and at
-`/opt/homebrew` on Apple Silicon. Every path used below is derived via
-`brew --prefix`, so the commands are architecture-neutral.
+They have been verified on macOS 15 and macOS 27 (Apple Silicon, `arm64`)
+with AppleClang 17 and 21 and CMake 4.0.3. The same steps apply to Intel
+Macs; the only difference is that Homebrew lives at `/usr/local` on Intel
+and at `/opt/homebrew` on Apple Silicon. Every path used below is derived
+via `brew --prefix`, so the commands are architecture-neutral.
 
 ## Supported platforms
 
@@ -57,8 +57,6 @@ as Homebrew formulae.
 * `libopenshot-audio` (built from source, see below)
 * `libomp` (OpenMP runtime for AppleClang, which does not ship OpenMP
   out of the box)
-* `zeromq` (IPC/logging)
-* `cppzmq` (C++ header-only wrappers for ZeroMQ; used by `ZmqLogger`)
 * `pkgconf` (used by FFmpeg detection)
 
 Optional but recommended for a more complete build:
@@ -73,11 +71,11 @@ Optional but recommended for a more complete build:
 ```sh
 # Qt 5 (tested):
 brew install \
-    cmake swig qt@5 ffmpeg@7 libomp zeromq cppzmq pkgconf
+    cmake swig qt@5 ffmpeg@7 libomp pkgconf
 
 # Or Qt 6 (also supported; use `qt` instead of `qt@5`):
 # brew install \
-#     cmake swig qt ffmpeg@7 libomp zeromq cppzmq pkgconf
+#     cmake swig qt ffmpeg@7 libomp pkgconf
 
 # Optional but recommended:
 brew install imagemagick resvg babl unittest-cpp catch2
@@ -177,7 +175,7 @@ cd build/bindings/python
 python3 -c "import openshot; print(openshot.OPENSHOT_VERSION_FULL)"
 ```
 
-This should print the libopenshot version (for example, `0.7.0`). If it
+This should print the libopenshot version (for example, `1.0.1`). If it
 does, the build is healthy.
 
 ## Install (optional)
@@ -216,20 +214,10 @@ ctest --test-dir build --output-on-failure
 
 ### `ld: framework 'AGL' not found` when building libopenshot-audio
 
-`AGL` was removed from the macOS SDK in macOS 10.14 (Mojave, 2018). This
-reference was removed from `libopenshot-audio` in its 0.6.x series; if
-you see this error, update to the latest `develop` branch of
-`libopenshot-audio`.
-
-### `zmq.hpp file not found`
-
-`libopenshot` includes `<zmq.hpp>` (provided by the `cppzmq` Homebrew
-formula) unconditionally, even though CMake currently marks `cppzmq` as
-"optional". Install it:
-
-```sh
-brew install cppzmq
-```
+`AGL` was removed from the macOS SDK in macOS 10.14 (Mojave, 2018). The
+stale link directive was removed from `libopenshot-audio` in version
+1.0.1; if you see this error, update to `libopenshot-audio` 1.0.1 or the
+latest `develop` branch.
 
 ### `Could NOT find OpenMP_C` during configure
 

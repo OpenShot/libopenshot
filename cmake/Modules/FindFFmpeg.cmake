@@ -111,20 +111,35 @@ endmacro()
 #
 ### Macro: parse_lib_version
 #
-# Reads the file '${_pkgconfig}/version.h' in the component's _INCLUDE_DIR,
+# Reads the files '${_pkgconfig}/version_major.h' and
+# '${_pkgconfig}/version.h' in the component's _INCLUDE_DIR,
 # and parses #define statements for COMPONENT_VERSION_(MAJOR|MINOR|PATCH)
 # into a dotted string ${_component}_VERSION.
 #
 # Needed if the version is not supplied via pkgconfig's PC_${_component}_VERSION
 macro(parse_lib_version _component _libname )
+  set(_version_major_h "${FFmpeg_${_component}_INCLUDE_DIRS}/${_libname}/version_major.h")
   set(_version_h "${FFmpeg_${_component}_INCLUDE_DIRS}/${_libname}/version.h")
+  set(_version_headers)
+  if(EXISTS "${_version_major_h}")
+    list(APPEND _version_headers "${_version_major_h}")
+  endif()
   if(EXISTS "${_version_h}")
-    #message(STATUS "Parsing ${_component} version from ${_version_h}")
+    list(APPEND _version_headers "${_version_h}")
+  endif()
+  if(_version_headers)
+    #message(STATUS "Parsing ${_component} version from ${_version_headers}")
     string(TOUPPER "${_libname}" _prefix)
     set(_parts)
     foreach(_lvl MAJOR MINOR MICRO)
-      file(STRINGS "${_version_h}" _lvl_version
-      REGEX "^[ \t]*#define[ \t]+${_prefix}_VERSION_${_lvl}[ \t]+[0-9]+[ \t]*$")
+      set(_lvl_version)
+      foreach(_header ${_version_headers})
+        file(STRINGS "${_header}" _lvl_version
+          REGEX "^[ \t]*#define[ \t]+${_prefix}_VERSION_${_lvl}[ \t]+[0-9]+[ \t]*$")
+        if(_lvl_version)
+          break()
+        endif()
+      endforeach()
       string(REGEX REPLACE
         "^.*${_prefix}_VERSION_${_lvl}[ \t]+([0-9]+)[ \t]*$"
         "\\1"

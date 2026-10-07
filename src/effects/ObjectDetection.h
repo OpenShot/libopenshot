@@ -22,6 +22,11 @@
 
 #include "Json.h"
 #include "KeyFrame.h"
+#include "TrackedObjectBBox.h"
+
+namespace openshot {
+	class TrackedObjectBBox;
+}
 
 // Struct that stores the detected bounding boxes for all the clip frames
 struct DetectionData{
@@ -31,19 +36,22 @@ struct DetectionData{
         std::vector<float> _confidences,
         std::vector<cv::Rect_<float>> _boxes,
         size_t _frameId,
-        std::vector<int> _objectIds)
+        std::vector<int> _objectIds,
+        std::vector<openshot::ObjectMaskData> _masks = {})
     {
         classIds = _classIds;
         confidences = _confidences;
         boxes = _boxes;
         frameId = _frameId;
         objectIds = _objectIds;
+        masks = _masks;
     }
     size_t frameId;
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<cv::Rect_<float>> boxes;
     std::vector<int> objectIds;
+    std::vector<openshot::ObjectMaskData> masks;
 };
 
 namespace openshot
@@ -69,11 +77,14 @@ namespace openshot
         Keyframe display_boxes;
 
         /// Minimum confidence value to display the detected objects
-        float confidence_threshold = 0.5;
+        float confidence_threshold = 0.25;
 
         /// Contain the user selected classes for visualization
         std::vector<std::string> display_classes;
         std::string class_filter;
+
+        /// Last explicit "All Objects" settings, used for stable UI readback
+        std::shared_ptr<TrackedObjectBBox> allObjectsProperties;
 
         /// Init effect settings
         void init_effect_details();
@@ -103,6 +114,9 @@ namespace openshot
 
         /// Get the indexes and IDs of all visible objects in the given frame
         std::string GetVisibleObjects(int64_t frame_number) const override;
+
+        /// Generate a black/white mask from visible detected bounding boxes.
+        std::shared_ptr<QImage> TrackedObjectMask(std::shared_ptr<QImage> target_image, int64_t frame_number) const override;
 
         // Get and Set JSON methods
         std::string Json() const override; ///< Generate JSON string of this object

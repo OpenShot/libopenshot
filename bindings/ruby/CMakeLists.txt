@@ -12,12 +12,12 @@
 find_package(SWIG 3.0 REQUIRED)
 include(${SWIG_USE_FILE})
 
-### Enable some legacy SWIG behaviors, in newer CMAKEs
+### Use modern SWIG target behavior when available
 if (POLICY CMP0078)
-	cmake_policy(SET CMP0078 OLD)
+	cmake_policy(SET CMP0078 NEW)
 endif()
 if (POLICY CMP0086)
-	cmake_policy(SET CMP0086 OLD)
+	cmake_policy(SET CMP0086 NEW)
 endif()
 
 find_package(Ruby)
@@ -102,10 +102,12 @@ if (CMAKE_VERSION VERSION_GREATER 3.20)
 endif()
 
 ### Add the SWIG interface file (which defines all the SWIG methods)
-if (CMAKE_VERSION VERSION_LESS 3.8.0)
-	swig_add_module(rbopenshot ruby openshot.i)
+swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
+
+if (POLICY CMP0078)
+  set(_rbopenshot_target rbopenshot)
 else()
-	swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
+  set(_rbopenshot_target ${SWIG_MODULE_rbopenshot_REAL_NAME})
 endif()
 
 ### Set name of target (with no prefix, since Ruby does not like that)
@@ -113,11 +115,11 @@ endif()
 #      e.g. rbopenshot.so, but its initializer method will be named
 #      'Init_openshot()' (via the module name set in the SWIG .i file).
 #      Which leads to Ruby barfing when it attempts to load the module.
-set_target_properties(${SWIG_MODULE_rbopenshot_REAL_NAME} PROPERTIES
+set_target_properties(${_rbopenshot_target} PROPERTIES
   PREFIX "" OUTPUT_NAME "openshot")
 
 ### Link the new Ruby wrapper library with libopenshot
-target_link_libraries(${SWIG_MODULE_rbopenshot_REAL_NAME} PUBLIC
+target_link_libraries(${_rbopenshot_target} PUBLIC
     ${RUBY_LIBRARY} openshot)
 
 ######### INSTALL PATH ########
@@ -147,5 +149,5 @@ message(STATUS "RUBY_MODULE_PATH: ${CMAKE_INSTALL_PREFIX}/${RUBY_MODULE_PATH}")
 
 ############### INSTALL HEADERS & LIBRARY ################
 # Install Ruby bindings
-install(TARGETS ${SWIG_MODULE_rbopenshot_REAL_NAME}
+install(TARGETS ${_rbopenshot_target}
   DESTINATION ${RUBY_MODULE_PATH} )

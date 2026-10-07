@@ -25,9 +25,8 @@ using namespace openshot;
 
 std::string effectInfo =(" {\"protobuf_data_path\": \"objdetector.data\", "
                          "  \"processing_device\": \"GPU\", "
-                         "  \"model_configuration\": \"~/yolo/yolov3.cfg\", "
-                         "  \"model_weights\": \"~/yolo/yolov3.weights\", "
-                         "  \"classes_file\": \"~/yolo/obj.names\"} ");
+                         "  \"model\": \"~/yolo/Yolo5/yolov5s.onnx\", "
+                         "  \"classes_file\": \"~/yolo/Yolo5/obj.names\"} ");
 
 // Just for the stabilizer constructor, it won't be used
 ProcessingController processingController;

@@ -14,6 +14,12 @@
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
 
+/* JUCE thread internals are implementation details, not binding API */
+%ignore juce::Thread;
+namespace juce {
+    class Thread {};
+}
+
 /* Don't generate multiple wrappers for functions with default args */
 %feature("compactdefaultargs", "1");
 
@@ -69,7 +75,9 @@ class QWidget;
 #include "ReaderBase.h"
 #include "WriterBase.h"
 #include "AudioDevices.h"
+#include "AudioRecorder.h"
 #include "AudioWaveformer.h"
+#include "CameraCaptureReader.h"
 #include "CacheBase.h"
 #include "CacheDisk.h"
 #include "CacheMemory.h"
@@ -90,10 +98,12 @@ class QWidget;
 #include "FFmpegWriter.h"
 #include "Fraction.h"
 #include "Frame.h"
+#include "FrameScope.h"
 #include "FrameMapper.h"
 #include "PlayerBase.h"
 #include "Point.h"
 #include "Profiles.h"
+#include "ScreenCaptureReader.h"
 #include "QtHtmlReader.h"
 #include "QtImageReader.h"
 #include "QtPlayer.h"
@@ -104,7 +114,7 @@ class QWidget;
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "Qt/VideoCacheThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 #include <QtWidgets/QWidget>
 
 static void *openshot_swig_pylong_as_ptr(PyObject *obj) {
@@ -247,7 +257,7 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
     $1 = reinterpret_cast<QWidget*>(ptr);
 }
 
-%typemap(typecheck) QWidget * {
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) QWidget * {
     $1 = openshot_swig_is_qwidget($input);
 }
 
@@ -473,7 +483,10 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "ReaderBase.h"
 %include "WriterBase.h"
 %include "AudioDevices.h"
+%include "AudioRecorder.h"
 %include "AudioWaveformer.h"
+%include "CameraCaptureReader.h"
+%template(CameraCaptureModeVector) std::vector<openshot::CameraCaptureMode>;
 %include "CacheBase.h"
 %include "CacheDisk.h"
 %include "CacheMemory.h"
@@ -494,21 +507,24 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "FFmpegWriter.h"
 %include "Fraction.h"
 %include "Frame.h"
+%include "FrameScope.h"
 %include "FrameMapper.h"
 %include "PlayerBase.h"
 %include "Point.h"
 %include "Profiles.h"
+%include "ScreenCaptureReader.h"
 %include "QtHtmlReader.h"
 %include "QtImageReader.h"
 %include "QtPlayer.h"
 %include "QtTextReader.h"
 %include "KeyFrame.h"
+%include "AnimatedCurve.h"
 %include "RendererBase.h"
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
-%include "ZmqLogger.h"
+%include "Logger.h"
 
 #ifdef USE_OPENCV
     %include "ClipProcessingJobs.h"
@@ -532,6 +548,7 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "effects/ColorShift.h"
 %include "effects/Crop.h"
 %include "effects/Deinterlace.h"
+%include "effects/FilmGrain.h"
 %include "effects/Hue.h"
 %include "effects/LensFlare.h"
 %include "effects/Mask.h"
@@ -541,6 +558,8 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "effects/Sharpen.h"
 %include "effects/Shift.h"
 %include "effects/SphericalProjection.cpp"
+%include "effects/Timer.h"
+%include "effects/DenoiseImage.h"
 %include "effects/Wave.h"
 #ifdef USE_OPENCV
     %include "effects/Stabilizer.h"
@@ -548,3 +567,8 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
     %include "effects/ObjectDetection.h"
     %include "effects/Outline.h"
 #endif
+
+%pythoncode %{
+# Deprecated source compatibility alias (no networking).
+ZmqLogger = Logger
+%}

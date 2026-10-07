@@ -300,6 +300,14 @@ namespace openshot {
 		/// \note This is an overloaded function.
 		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
+		/// @brief Add a frame at a specific output video frame number.
+		/// @param frame The openshot::Frame object to write
+		/// @param frame_number The 1-based output video frame number used for video PTS
+		///
+		/// \note Audio is still written sequentially. This overload is intended for
+		/// timestamped live video capture where missing frame numbers represent gaps.
+		void WriteFrameAt(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
+
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader

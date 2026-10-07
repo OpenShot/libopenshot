@@ -22,6 +22,7 @@
 	#include "CVStabilization.h"
     #include "CVTracker.h"
 	#include "CVObjectDetection.h"
+	#include "CVObjectMask.h"
 #endif
 
 #include <thread>
@@ -51,11 +52,15 @@ class ClipProcessingJobs{
 		void stabilizeClip(Clip& clip, ProcessingController& controller);
 		// Apply object detection to clip
 		void detectObjectsClip(Clip& clip, ProcessingController& controller);
+		// Apply object segmentation mask to clip
+		void maskObjectClip(Clip& clip, ProcessingController& controller);
 
 
 	public:
 		// Constructor
 		ClipProcessingJobs(std::string processingType, std::string processInfoJson);
+		static std::string ValidateONNXModel(std::string modelPath);
+		static std::shared_ptr<Frame> PreviewObjectMask(std::string processInfoJson, std::shared_ptr<Frame> frame);
 		// Process clip accordingly to processingType
 		void processClip(Clip& clip, std::string json);
 

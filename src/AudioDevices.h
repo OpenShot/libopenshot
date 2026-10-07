@@ -50,6 +50,9 @@ public:
 	/// Return a vector of std::pair<> objects holding the
 	/// device name and type for each audio device detected
 	AudioDeviceList getNames();
+
+	/// Return only audio input devices, for recording workflows
+	AudioDeviceList getInputNames();
 private:
 	AudioDeviceList m_devices;
 };

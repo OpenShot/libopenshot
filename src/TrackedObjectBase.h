@@ -45,6 +45,12 @@ namespace openshot {
 	    /// Keyframe to determine if a specific box is drawn (or hidden)
 		Keyframe draw_box;
 
+	    /// Keyframe to determine if a specific object label is drawn (or hidden)
+		Keyframe draw_text;
+
+	    /// Keyframe to determine if a specific object mask is drawn (when mask data exists)
+		Keyframe draw_mask;
+
 		/// Default constructor
 		TrackedObjectBase();
 
@@ -67,7 +73,7 @@ namespace openshot {
 
 		/// Scale an object's property
 		virtual void ScalePoints(double scale) { return; };
-		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation
+		/// Return the main properties of a tracked object instance, such as position and size
 		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
 		/// Add a bounding box to the tracked object's BoxVec map
 		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };

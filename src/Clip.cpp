@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <utility>
 #include "Clip.h"
 
 #include "AudioResampler.h"
@@ -20,12 +21,14 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
+#include "effects/AudioVisualization.h"
 
 #include <algorithm>
 #include <cmath>
 #include <sstream>
 #include <QPainter>
+#include <QPainterPath>
 
 #ifdef USE_IMAGEMAGICK
 	#include "MagickUtilities.h"
@@ -75,11 +78,14 @@ void Clip::init_settings()
 	ClipBase::End(0.0);
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
+	location_coordinate_system = "auto";
 	anchor = ANCHOR_CANVAS;
 	display = FRAME_DISPLAY_NONE;
 	mixing = VOLUME_MIX_NONE;
 	composite = COMPOSITE_SOURCE_OVER;
 	waveform = false;
+	waveform_mode = AUDIO_VISUALIZATION_FILLED_WAVEFORM;
+	reader_orientation_mode = ReaderOrientationMode::Reader;
 	previous_properties = "";
 	parentObjectId = "";
 
@@ -93,6 +99,8 @@ void Clip::init_settings()
 
 	// Init alpha
 	alpha = Keyframe(1.0);
+	margin = Keyframe(0.0);
+	corner_radius = Keyframe(0.0);
 
 	// Init time & volume
 	time = Keyframe(1.0);
@@ -149,6 +157,11 @@ void Clip::init_reader_rotation() {
 	// Only apply metadata rotation if clip rotation has not been explicitly set.
 	if (rotation.GetCount() > 0 || !reader)
 		return;
+
+	if (reader->ApplyOrientationMetadata()) {
+		rotation = Keyframe(0.0f);
+		return;
+	}
 
 	const auto rotate_meta = reader->info.metadata.find("rotate");
 	if (rotate_meta == reader->info.metadata.end()) {
@@ -357,6 +370,7 @@ void Clip::Reader(ReaderBase* new_reader)
 
 	// set parent
 	if (reader) {
+		reader->ApplyOrientationMetadata(reader_orientation_mode == ReaderOrientationMode::Reader);
 		reader->ParentClip(this);
 
 		// Init reader info struct
@@ -399,7 +413,7 @@ void Clip::Open()
 void Clip::Close()
 {
 	if (is_open && reader) {
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
+		Logger::Instance()->AppendDebugMethod("Clip::Close");
 
 		// Close the reader
 		reader->Close();
@@ -753,7 +767,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 		}
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod(
+		Logger::Instance()->AppendDebugMethod(
 				"Clip::GetOrCreateFrame (from reader)",
 				"number", number, "clip_frame_number", clip_frame_number);
 
@@ -790,7 +804,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 	int estimated_samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"Clip::GetOrCreateFrame (create blank)",
 		"number", number,
 		"estimated_samples_in_frame", estimated_samples_in_frame);
@@ -829,6 +843,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["composite"] = add_property_json("Composite", composite, "int", "", NULL, 0, composite_choices_count - 1, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
+	root["waveform_mode"] = add_property_json("Waveform Mode", waveform_mode, "int", "", NULL, 0, AUDIO_VISUALIZATION_RADIAL_BARS, false, requested_frame);
 	root["parentObjectId"] = add_property_json("Parent", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
 
 	// Add gravity choices (dropdown style)
@@ -866,6 +881,17 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
+
+	// Add waveform mode choices (dropdown style)
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Waveform", AUDIO_VISUALIZATION_WAVEFORM, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Filled Waveform", AUDIO_VISUALIZATION_FILLED_WAVEFORM, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Bars", AUDIO_VISUALIZATION_BARS, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Radial", AUDIO_VISUALIZATION_RADIAL, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Radial Bars", AUDIO_VISUALIZATION_RADIAL_BARS, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Spectrum", AUDIO_VISUALIZATION_SPECTRUM, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Phase Scope", AUDIO_VISUALIZATION_PHASE_SCOPE, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("Particles", AUDIO_VISUALIZATION_PARTICLES, waveform_mode));
+	root["waveform_mode"]["choices"].append(add_property_choice_json("VU Meter", AUDIO_VISUALIZATION_VU_METER, waveform_mode));
 
 	// Add the parentClipObject's properties
 	if (parentClipObject)
@@ -907,6 +933,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 
 	// Keyframes
 	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", &alpha, 0.0, 1.0, false, requested_frame);
+	root["corner_radius"] = add_property_json("Corner Radius", corner_radius.GetValue(requested_frame), "float", "", &corner_radius, 0.0, 0.5, false, requested_frame);
+	root["margin"] = add_property_json("Margin", margin.GetValue(requested_frame), "float", "", &margin, 0.0, 0.5, false, requested_frame);
 	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
 	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
@@ -942,16 +970,29 @@ Json::Value Clip::JsonValue() const {
 	root["parentObjectId"] = parentObjectId;
 	root["gravity"] = gravity;
 	root["scale"] = scale;
+	root["location_coordinate_system"] = location_coordinate_system;
 	root["anchor"] = anchor;
 	root["display"] = display;
 	root["mixing"] = mixing;
 	root["composite"] = composite;
 	root["waveform"] = waveform;
+	root["waveform_mode"] = waveform_mode;
+	switch (reader_orientation_mode) {
+		case ReaderOrientationMode::LegacyClipTransform:
+			root["reader_orientation_mode"] = "legacy_clip_transform";
+			break;
+		case ReaderOrientationMode::Reader:
+		default:
+			root["reader_orientation_mode"] = "reader";
+			break;
+	}
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
 	root["location_x"] = location_x.JsonValue();
 	root["location_y"] = location_y.JsonValue();
 	root["alpha"] = alpha.JsonValue();
+	root["corner_radius"] = corner_radius.JsonValue();
+	root["margin"] = margin.JsonValue();
 	root["rotation"] = rotation.JsonValue();
 	root["time"] = time.JsonValue();
 	root["volume"] = volume.JsonValue();
@@ -997,9 +1038,9 @@ void Clip::SetJson(const std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
-		const Json::Value root = openshot::stringToJson(value);
+		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
-		SetJsonValue(root);
+		SetJsonValue(std::move(root));
 	}
 	catch (const std::exception& e)
 	{
@@ -1009,7 +1050,7 @@ void Clip::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Clip::SetJsonValue(const Json::Value root) {
+void Clip::SetJsonValue(Json::Value root) {
 	auto ensure_default_keyframe = [](Keyframe& kf, double default_value) {
 		if (kf.GetCount() == 0) {
 			kf = Keyframe(default_value);
@@ -1017,7 +1058,20 @@ void Clip::SetJsonValue(const Json::Value root) {
 	};
 
 	// Set parent data
-	ClipBase::SetJsonValue(root);
+	SetBaseJsonValue(root);
+
+	// Older project files predate reader-applied orientation metadata and stored
+	// phone/camera rotation as ordinary clip rotation/scale keyframes.
+	if (root["reader_orientation_mode"].isNull()) {
+		reader_orientation_mode = ReaderOrientationMode::LegacyClipTransform;
+	} else {
+		const std::string mode = root["reader_orientation_mode"].asString();
+		if (mode == "legacy_clip_transform") {
+			reader_orientation_mode = ReaderOrientationMode::LegacyClipTransform;
+		} else {
+			reader_orientation_mode = ReaderOrientationMode::Reader;
+		}
+	}
 
 	// Set data from Json (if key is found)
 	if (!root["parentObjectId"].isNull()){
@@ -1033,6 +1087,12 @@ void Clip::SetJsonValue(const Json::Value root) {
 		gravity = (GravityType) root["gravity"].asInt();
 	if (!root["scale"].isNull())
 		scale = (ScaleType) root["scale"].asInt();
+	if (!root["location_coordinate_system"].isNull()) {
+		const auto& coordinates = root["location_coordinate_system"];
+		location_coordinate_system = coordinates.isString() ? coordinates.asString() : "auto";
+		if (location_coordinate_system != "canvas" && location_coordinate_system != "geometry")
+			location_coordinate_system = "auto";
+	}
 	if (!root["anchor"].isNull())
 		anchor = (AnchorType) root["anchor"].asInt();
 	if (!root["display"].isNull())
@@ -1043,56 +1103,62 @@ void Clip::SetJsonValue(const Json::Value root) {
 		composite = (CompositeType) root["composite"].asInt();
 	if (!root["waveform"].isNull())
 		waveform = root["waveform"].asBool();
+	if (!root["waveform_mode"].isNull())
+		waveform_mode = root["waveform_mode"].asInt();
 	if (!root["scale_x"].isNull())
-		scale_x.SetJsonValue(root["scale_x"]);
+		scale_x.SetJsonValue(std::move(root["scale_x"]));
 	if (!root["scale_y"].isNull())
-		scale_y.SetJsonValue(root["scale_y"]);
+		scale_y.SetJsonValue(std::move(root["scale_y"]));
 	if (!root["location_x"].isNull())
-		location_x.SetJsonValue(root["location_x"]);
+		location_x.SetJsonValue(std::move(root["location_x"]));
 	if (!root["location_y"].isNull())
-		location_y.SetJsonValue(root["location_y"]);
+		location_y.SetJsonValue(std::move(root["location_y"]));
 	if (!root["alpha"].isNull())
-		alpha.SetJsonValue(root["alpha"]);
+		alpha.SetJsonValue(std::move(root["alpha"]));
+	if (!root["corner_radius"].isNull())
+		corner_radius.SetJsonValue(std::move(root["corner_radius"]));
+	if (!root["margin"].isNull())
+		margin.SetJsonValue(std::move(root["margin"]));
 	if (!root["rotation"].isNull())
-		rotation.SetJsonValue(root["rotation"]);
+		rotation.SetJsonValue(std::move(root["rotation"]));
 	if (!root["time"].isNull())
-		time.SetJsonValue(root["time"]);
+		time.SetJsonValue(std::move(root["time"]));
 	if (!root["volume"].isNull())
-		volume.SetJsonValue(root["volume"]);
+		volume.SetJsonValue(std::move(root["volume"]));
 	if (!root["wave_color"].isNull())
-		wave_color.SetJsonValue(root["wave_color"]);
+		wave_color.SetJsonValue(std::move(root["wave_color"]));
 	if (!root["shear_x"].isNull())
-		shear_x.SetJsonValue(root["shear_x"]);
+		shear_x.SetJsonValue(std::move(root["shear_x"]));
 	if (!root["shear_y"].isNull())
-		shear_y.SetJsonValue(root["shear_y"]);
+		shear_y.SetJsonValue(std::move(root["shear_y"]));
 	if (!root["origin_x"].isNull())
-		origin_x.SetJsonValue(root["origin_x"]);
+		origin_x.SetJsonValue(std::move(root["origin_x"]));
 	if (!root["origin_y"].isNull())
-		origin_y.SetJsonValue(root["origin_y"]);
+		origin_y.SetJsonValue(std::move(root["origin_y"]));
 	if (!root["channel_filter"].isNull())
-		channel_filter.SetJsonValue(root["channel_filter"]);
+		channel_filter.SetJsonValue(std::move(root["channel_filter"]));
 	if (!root["channel_mapping"].isNull())
-		channel_mapping.SetJsonValue(root["channel_mapping"]);
+		channel_mapping.SetJsonValue(std::move(root["channel_mapping"]));
 	if (!root["has_audio"].isNull())
-		has_audio.SetJsonValue(root["has_audio"]);
+		has_audio.SetJsonValue(std::move(root["has_audio"]));
 	if (!root["has_video"].isNull())
-		has_video.SetJsonValue(root["has_video"]);
+		has_video.SetJsonValue(std::move(root["has_video"]));
 	if (!root["perspective_c1_x"].isNull())
-		perspective_c1_x.SetJsonValue(root["perspective_c1_x"]);
+		perspective_c1_x.SetJsonValue(std::move(root["perspective_c1_x"]));
 	if (!root["perspective_c1_y"].isNull())
-		perspective_c1_y.SetJsonValue(root["perspective_c1_y"]);
+		perspective_c1_y.SetJsonValue(std::move(root["perspective_c1_y"]));
 	if (!root["perspective_c2_x"].isNull())
-		perspective_c2_x.SetJsonValue(root["perspective_c2_x"]);
+		perspective_c2_x.SetJsonValue(std::move(root["perspective_c2_x"]));
 	if (!root["perspective_c2_y"].isNull())
-		perspective_c2_y.SetJsonValue(root["perspective_c2_y"]);
+		perspective_c2_y.SetJsonValue(std::move(root["perspective_c2_y"]));
 	if (!root["perspective_c3_x"].isNull())
-		perspective_c3_x.SetJsonValue(root["perspective_c3_x"]);
+		perspective_c3_x.SetJsonValue(std::move(root["perspective_c3_x"]));
 	if (!root["perspective_c3_y"].isNull())
-		perspective_c3_y.SetJsonValue(root["perspective_c3_y"]);
+		perspective_c3_y.SetJsonValue(std::move(root["perspective_c3_y"]));
 	if (!root["perspective_c4_x"].isNull())
-		perspective_c4_x.SetJsonValue(root["perspective_c4_x"]);
+		perspective_c4_x.SetJsonValue(std::move(root["perspective_c4_x"]));
 	if (!root["perspective_c4_y"].isNull())
-		perspective_c4_y.SetJsonValue(root["perspective_c4_y"]);
+		perspective_c4_y.SetJsonValue(std::move(root["perspective_c4_y"]));
 
 	// Core clip transforms should never remain empty after load. Empty JSON
 	// point arrays can be produced by editing flows that remove every keyframe.
@@ -1103,6 +1169,8 @@ void Clip::SetJsonValue(const Json::Value root) {
 	ensure_default_keyframe(origin_x, 0.5);
 	ensure_default_keyframe(origin_y, 0.5);
 	ensure_default_keyframe(rotation, 0.0);
+	ensure_default_keyframe(corner_radius, 0.0);
+	ensure_default_keyframe(margin, 0.0);
 	if (!root["effects"].isNull()) {
 
 		// Clear existing effects
@@ -1196,6 +1264,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 			// mark as managed reader and set parent
 			if (reader) {
+				reader->ApplyOrientationMetadata(reader_orientation_mode == ReaderOrientationMode::Reader);
 				reader->ParentClip(this);
 				allocated_reader = reader;
 			}
@@ -1352,6 +1421,18 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 
 	// Apply opacity via painter instead of per-pixel alpha manipulation
 	const float alpha_value = alpha.GetValue(frame->number);
+	const double corner_radius_value = std::max(0.0, std::min(0.5, corner_radius.GetValue(frame->number)));
+	if (corner_radius_value > 0.0f) {
+		painter.setRenderHint(QPainter::Antialiasing, true);
+		const double radius_pixels = corner_radius_value
+			* std::min(source_image->width(), source_image->height());
+		QPainterPath clip_path;
+		clip_path.addRoundedRect(
+			QRectF(0, 0, source_image->width(), source_image->height()),
+			radius_pixels,
+			radius_pixels);
+		painter.setClipPath(clip_path);
+	}
 	if (alpha_value != 1.0f) {
 		painter.setOpacity(alpha_value);
 		painter.drawImage(0, 0, *source_image);
@@ -1404,11 +1485,8 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 		return;
 	}
 
-	// Get image from clip
-	std::shared_ptr<QImage> source_image = frame->GetImage();
-
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_waveform (Generate Waveform Image)",
+	Logger::Instance()->AppendDebugMethod("Clip::apply_waveform (Generate Waveform Image)",
 			"frame->number", frame->number,
 			"Waveform()", Waveform(),
 			"width", timeline_size.width(),
@@ -1420,9 +1498,34 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	int blue = wave_color.blue.GetInt(frame->number);
 	int alpha = wave_color.alpha.GetInt(frame->number);
 
-	// Generate Waveform Dynamically (the size of the timeline)
-	source_image = frame->GetWaveform(timeline_size.width(), timeline_size.height(), red, green, blue, alpha);
-	frame->AddImage(source_image);
+	// Render the waveform through the audio visualization effect so clip shortcuts
+	// and explicit effects share the same rendering path.
+	auto visual_frame = std::make_shared<Frame>(*frame.get());
+	visual_frame->AddImage(std::make_shared<QImage>(
+		timeline_size.width(), timeline_size.height(), QImage::Format_RGBA8888_Premultiplied));
+	visual_frame->GetImage()->fill(Qt::transparent);
+
+	AudioVisualization visualization;
+	visualization.visualization_type = waveform_mode;
+	visualization.style = AUDIO_VISUALIZATION_STYLE_MINIMAL;
+	visualization.color = Color(
+		static_cast<unsigned char>(red),
+		static_cast<unsigned char>(green),
+		static_cast<unsigned char>(blue),
+		static_cast<unsigned char>(alpha));
+	visualization.intensity = Keyframe(1.0);
+	visualization.smoothing = Keyframe(0.25);
+	visualization.detail = Keyframe(0.75);
+	visualization.glow = Keyframe(0.0);
+	visualization.color_spread = Keyframe(0.0);
+	visualization.color_mode = AUDIO_VISUALIZATION_COLOR_SEED;
+	visualization.channel_layout = AUDIO_VISUALIZATION_CHANNEL_AUTO;
+	visualization.frequency_low = Keyframe(0.0);
+	visualization.frequency_high = Keyframe(1.0);
+	visualization.background = AUDIO_VISUALIZATION_BACKGROUND_TRANSPARENT;
+	visualization.GetFrame(visual_frame, frame->number);
+
+	frame->AddImage(visual_frame->GetImage());
 }
 
 // Scale a source size to a target size (given a specific scale-type)
@@ -1452,8 +1555,15 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	// Get image from clip
 	std::shared_ptr<QImage> source_image = frame->GetImage();
 
+	const double margin_value = std::max(0.0, std::min(0.5, margin.GetValue(frame->number)));
+	const double margin_pixels = margin_value * std::min(width, height);
+	const double layout_x = margin_pixels;
+	const double layout_y = margin_pixels;
+	const double layout_width = std::max(1.0, width - (margin_pixels * 2.0));
+	const double layout_height = std::max(1.0, height - (margin_pixels * 2.0));
+
 	/* RESIZE SOURCE IMAGE - based on scale type */
-	QSize source_size = scale_size(source_image->size(), scale, width, height);
+	QSize source_size = scale_size(source_image->size(), scale, layout_width, layout_height);
 
 	// Initialize parent object's properties (Clip or Tracked Object)
 	float parentObject_location_x = 0.0;
@@ -1533,40 +1643,46 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	switch (gravity)
 	{
 		case (GRAVITY_TOP_LEFT):
+			x = layout_x;
+			y = layout_y;
 			// This is only here to prevent unused-enum warnings
 			break;
 		case (GRAVITY_TOP):
-			x = (width - scaled_source_width) / 2.0; // center
+			x = layout_x + ((layout_width - scaled_source_width) / 2.0); // center
+			y = layout_y;
 			break;
 		case (GRAVITY_TOP_RIGHT):
-			x = width - scaled_source_width; // right
+			x = layout_x + layout_width - scaled_source_width; // right
+			y = layout_y;
 			break;
 		case (GRAVITY_LEFT):
-			y = (height - scaled_source_height) / 2.0; // center
+			x = layout_x;
+			y = layout_y + ((layout_height - scaled_source_height) / 2.0); // center
 			break;
 		case (GRAVITY_CENTER):
-			x = (width - scaled_source_width) / 2.0; // center
-			y = (height - scaled_source_height) / 2.0; // center
+			x = layout_x + ((layout_width - scaled_source_width) / 2.0); // center
+			y = layout_y + ((layout_height - scaled_source_height) / 2.0); // center
 			break;
 		case (GRAVITY_RIGHT):
-			x = width - scaled_source_width; // right
-			y = (height - scaled_source_height) / 2.0; // center
+			x = layout_x + layout_width - scaled_source_width; // right
+			y = layout_y + ((layout_height - scaled_source_height) / 2.0); // center
 			break;
 		case (GRAVITY_BOTTOM_LEFT):
-			y = (height - scaled_source_height); // bottom
+			x = layout_x;
+			y = layout_y + (layout_height - scaled_source_height); // bottom
 			break;
 		case (GRAVITY_BOTTOM):
-			x = (width - scaled_source_width) / 2.0; // center
-			y = (height - scaled_source_height); // bottom
+			x = layout_x + ((layout_width - scaled_source_width) / 2.0); // center
+			y = layout_y + (layout_height - scaled_source_height); // bottom
 			break;
 		case (GRAVITY_BOTTOM_RIGHT):
-			x = width - scaled_source_width; // right
-			y = (height - scaled_source_height); // bottom
+			x = layout_x + layout_width - scaled_source_width; // right
+			y = layout_y + (layout_height - scaled_source_height); // bottom
 			break;
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"Clip::get_transform (Gravity)",
 		"frame->number", frame->number,
 		"source_clip->gravity", gravity,
@@ -1577,15 +1693,34 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number) + parentObject_rotation; // rotate in degrees
-	x += width * (location_x.GetValue(frame->number) + parentObject_location_x); // move in percentage of final width
-	y += height * (location_y.GetValue(frame->number) + parentObject_location_y); // move in percentage of final height
+	float location_x_value = location_x.GetValue(frame->number) + parentObject_location_x;
+	float location_y_value = location_y.GetValue(frame->number) + parentObject_location_y;
+	auto location_offset = [](float location, float anchored_position, float canvas_size, float clip_size) {
+		if (location < 0.0f) {
+			return location * (anchored_position + clip_size);
+		}
+		return location * (canvas_size - anchored_position);
+	};
+	// Preserve imported location curves in their original units. Converting only
+	// their keyframes cannot preserve animated scale/margin or reader resizing.
+	if (location_coordinate_system == "geometry" ||
+		(location_coordinate_system != "canvas" && scale == SCALE_CROP)) {
+		x += location_offset(location_x_value, x - layout_x, layout_width, scaled_source_width);
+		y += location_offset(location_y_value, y - layout_y, layout_height, scaled_source_height);
+	} else {
+		// Preserve the historical canvas-relative meaning of location_x/y for
+		// non-cropped clips. Existing projects store these values as a fraction
+		// of the canvas dimensions, not of the scaled clip geometry.
+		x += width * location_x_value;
+		y += height * location_y_value;
+	}
 	float shear_x_value = shear_x.GetValue(frame->number) + parentObject_shear_x;
 	float shear_y_value = shear_y.GetValue(frame->number) + parentObject_shear_y;
 	float origin_x_value = origin_x.GetValue(frame->number);
 	float origin_y_value = origin_y.GetValue(frame->number);
 
 	// Transform source image (if needed)
-	ZmqLogger::Instance()->AppendDebugMethod(
+	Logger::Instance()->AppendDebugMethod(
 		"Clip::get_transform (Build QTransform - if needed)",
 		"frame->number", frame->number,
 		"x", x, "y", y,

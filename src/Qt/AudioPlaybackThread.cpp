@@ -19,7 +19,7 @@
 #include "../AudioReaderSource.h"
 #include "../AudioDevices.h"
 #include "../Settings.h"
-#include "../ZmqLogger.h"
+#include "../Logger.h"
 
 #include <mutex>
 #include <thread>	// for std::this_thread::sleep_for
@@ -61,7 +61,7 @@ namespace openshot
 			constructor_title << "AudioDeviceManagerSingleton::Instance (default audio device type: " <<
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE << ", default audio device name: " <<
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME << ")";
-			ZmqLogger::Instance()->AppendDebugMethod(constructor_title.str(), "channels", channels, "buffer", Settings::Instance()->PLAYBACK_AUDIO_BUFFER_SIZE);
+			Logger::Instance()->AppendDebugMethod(constructor_title.str(), "channels", channels, "buffer", Settings::Instance()->PLAYBACK_AUDIO_BUFFER_SIZE);
 
 			// Get preferred audio device type and name (if any - these can be blank)
 			openshot::AudioDeviceInfo requested_device = {Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE,
@@ -85,7 +85,7 @@ namespace openshot
 			for (const auto t : mgr->getAvailableDeviceTypes()) {
 				std::stringstream type_debug;
 				type_debug << "AudioDeviceManagerSingleton::Instance (iterate audio device type: " <<  t->getTypeName() << ")";
-				ZmqLogger::Instance()->AppendDebugMethod(type_debug.str(), "rate", rate, "channels", channels);
+				Logger::Instance()->AppendDebugMethod(type_debug.str(), "rate", rate, "channels", channels);
 
 				t->scanForDevices();
 				for (const auto n : t->getDeviceNames()) {
@@ -93,7 +93,7 @@ namespace openshot
 					devices.push_back(device);
 					std::stringstream device_debug;
 					device_debug << "AudioDeviceManagerSingleton::Instance (iterate audio device name: " <<  device.name << ", type: " <<  t->getTypeName() << ")";
-					ZmqLogger::Instance()->AppendDebugMethod(device_debug.str(), "rate", rate, "channels", channels);
+					Logger::Instance()->AppendDebugMethod(device_debug.str(), "rate", rate, "channels", channels);
 				}
 			}
 
@@ -122,7 +122,7 @@ namespace openshot
 				for(int attempt_rate : possible_rates) {
 					std::stringstream title_rate;
 					title_rate << "AudioDeviceManagerSingleton::Instance (attempt audio device name: " <<  attempt_device.name << ")";
-					ZmqLogger::Instance()->AppendDebugMethod(title_rate.str(), "rate", attempt_rate, "channels", channels);
+					Logger::Instance()->AppendDebugMethod(title_rate.str(), "rate", attempt_rate, "channels", channels);
 
 					// Update the audio device setup for the current sample rate
 					m_pInstance->defaultSampleRate = attempt_rate;
@@ -147,7 +147,7 @@ namespace openshot
 						std::stringstream title_error;
 						title_error << "AudioDeviceManagerSingleton::Instance (audio device error: " <<
 						m_pInstance->initialise_error << ")";
-						ZmqLogger::Instance()->AppendDebugMethod(title_error.str(), "rate", attempt_rate, "channels", channels);
+						Logger::Instance()->AppendDebugMethod(title_error.str(), "rate", attempt_rate, "channels", channels);
 					}
 
 					// Determine if audio device was opened successfully, and matches the attempted sample rate
@@ -158,7 +158,7 @@ namespace openshot
 						std::stringstream title_found;
 						title_found << "AudioDeviceManagerSingleton::Instance (successful audio device found: " <<
 						foundAudioIODevice->getTypeName() << ", name: " << foundAudioIODevice->getName() << ")";
-						ZmqLogger::Instance()->AppendDebugMethod(title_found.str(), "rate", attempt_rate, "channels", channels);
+						Logger::Instance()->AppendDebugMethod(title_found.str(), "rate", attempt_rate, "channels", channels);
 						break;
 					}
 				}
@@ -169,7 +169,7 @@ namespace openshot
 				}
 			}
 
-			ZmqLogger::Instance()->AppendDebugMethod("AudioDeviceManagerSingleton::Instance (audio device initialization completed)");
+			Logger::Instance()->AppendDebugMethod("AudioDeviceManagerSingleton::Instance (audio device initialization completed)");
 		}
 		return m_pInstance;
 	}
@@ -204,12 +204,20 @@ namespace openshot
 	// Destructor
 	AudioPlaybackThread::~AudioPlaybackThread()
 	{
+        // Detach the JUCE callback in run() before releasing its source.
+        signalThreadShouldExit();
+        NotifyTransportStateChanged();
+        stopThread(-1);
+        delete source;
 	}
 
 	// Set the reader object
 	void AudioPlaybackThread::Reader(openshot::ReaderBase *reader) {
-		if (source)
-			source->Reader(reader);
+		if (source) {
+            // Caller must stop/join playback before replacing the borrowed reader.
+            source->Reader(reader);
+            source->Seek(1);
+        }
 		else {
 			// Create new audio source reader
 			auto starting_frame = 1;
@@ -220,7 +228,7 @@ namespace openshot
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
-        ZmqLogger::Instance()->AppendDebugMethod("AudioPlaybackThread::Reader", "rate", sampleRate, "channel", numChannels);
+        Logger::Instance()->AppendDebugMethod("AudioPlaybackThread::Reader", "rate", sampleRate, "channel", numChannels);
 
 		// Set video cache thread
 		source->setVideoCache(videoCache);
@@ -252,6 +260,7 @@ namespace openshot
 
 	void AudioPlaybackThread::Stop() {
 		is_playing = false;
+        if (source) source->Seek(1);
 		NotifyTransportStateChanged();
 	}
 
@@ -312,13 +321,19 @@ namespace openshot
 				player.setSource(NULL);
 				audioInstance->audioDeviceManager.removeAudioCallback(&player);
 
-				// Remove source
-				delete source;
-				source = NULL;
+				// Keep the source alive across Stop/Play. Control callers can
+                // enqueue a seek without racing source destruction. The worker
+                // detaches it above; the owner deletes it after joining.
+                mixer.removeInputSource(&transport);
 
 				// Stop time slice thread
 				time_thread.stopThread(-1);
-			}
+			} else {
+                std::unique_lock<std::mutex> lock(transportMutex);
+                transportCondition.wait_for(lock, std::chrono::milliseconds(10), [this] {
+                    return threadShouldExit() || (source && is_playing.load());
+                });
+            }
 		}
 
 	}

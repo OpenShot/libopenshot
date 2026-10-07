@@ -15,16 +15,21 @@
 
 /* Effects */
 #include "effects/AnalogTape.h"
+#include "effects/AudioVisualization.h"
 #include "effects/Bars.h"
+#include "effects/BeatSync.h"
 #include "effects/Blur.h"
 #include "effects/Brightness.h"
 #include "effects/Caption.h"
 #include "effects/ChromaKey.h"
+#include "effects/ColorGrade.h"
 #include "effects/ColorMap.h"
 #include "effects/ColorShift.h"
 #include "effects/Crop.h"
 #include "effects/Deinterlace.h"
 #include "effects/Displace.h"
+#include "effects/FilmGrain.h"
+#include "effects/Glow.h"
 #include "effects/Hue.h"
 #include "effects/LensFlare.h"
 #include "effects/Mask.h"
@@ -32,8 +37,11 @@
 #include "effects/Pixelate.h"
 #include "effects/Saturation.h"
 #include "effects/Sharpen.h"
+#include "effects/Shadow.h"
 #include "effects/SphericalProjection.h"
 #include "effects/Shift.h"
+#include "effects/Timer.h"
+#include "effects/DenoiseImage.h"
 #include "effects/Wave.h"
 
 /* Audio Effects */
@@ -51,6 +59,7 @@
 #ifdef USE_OPENCV
 #include "effects/Outline.h"
 #include "effects/ObjectDetection.h"
+#include "effects/ObjectMask.h"
 #include "effects/Tracker.h"
 #include "effects/Stabilizer.h"
 #endif

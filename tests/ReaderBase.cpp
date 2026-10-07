@@ -59,6 +59,12 @@ TEST_CASE( "derived class", "[libopenshot][readerbase]" )
 
 	t1.SetMaxDecodeSize(0, 0);
 	CHECK_FALSE(t1.HasMaxDecodeSize());
+	CHECK(t1.ApplyOrientationMetadata());
+
+	t1.ApplyOrientationMetadata(false);
+	CHECK_FALSE(t1.ApplyOrientationMetadata());
+	t1.ApplyOrientationMetadata(true);
+	CHECK(t1.ApplyOrientationMetadata());
 
 	t1.Close();
 	t1.Open();

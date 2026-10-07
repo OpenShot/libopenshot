@@ -52,6 +52,8 @@ Please see [`doc/HW-ACCEL.md`](doc/HW-ACCEL.md) for more information.
 
 ## Documentation
 
+See [Logging](doc/logging.rst) for file output, verbosity, and environment settings.
+
 Beautiful HTML documentation can be generated using Doxygen.
 ```
 make doc

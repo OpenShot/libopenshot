@@ -57,6 +57,7 @@ ReaderBase::ReaderBase()
 	clip = NULL;
 	max_decode_width = 0;
 	max_decode_height = 0;
+	apply_orientation_metadata = true;
 }
 
 // Display file information
@@ -264,4 +265,12 @@ int ReaderBase::MaxDecodeHeight() const {
 
 bool ReaderBase::HasMaxDecodeSize() const {
 	return max_decode_width > 0 && max_decode_height > 0;
+}
+
+void ReaderBase::ApplyOrientationMetadata(bool value) {
+	apply_orientation_metadata = value;
+}
+
+bool ReaderBase::ApplyOrientationMetadata() const {
+	return apply_orientation_metadata;
 }

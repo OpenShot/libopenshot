@@ -15,12 +15,16 @@
 #include <sstream>
 #include <memory>
 
+#include <QColor>
+#include <QImage>
+
 #include "KeyFrame.h"
 #include "Coordinate.h"
 #include "Clip.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "Fraction.h"
+#include "Frame.h"
 #include "Point.h"
 #include "Timeline.h"
 
@@ -580,10 +584,10 @@ TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 	CHECK(kfb.scale_x.GetInt(1) == 1);
 	CHECK(kfb.scale_y.GetInt(1) == 1);
 
-	CHECK(kfb.rotation.GetInt(1) == 0);
-
 	CHECK(kfb.stroke_width.GetInt(1) == 2);
     CHECK(kfb.stroke_alpha.GetValue(1) == Approx(0.7f).margin(0.0001));
+	CHECK(kfb.draw_box.GetInt(1) == 1);
+	CHECK(kfb.draw_text.GetInt(1) == 1);
 
 	CHECK(kfb.background_alpha .GetInt(1) == 0);
 	CHECK(kfb.background_corner.GetInt(1) == 12);
@@ -593,9 +597,9 @@ TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 	CHECK(kfb.stroke.blue.GetInt(1) == 0);
 	CHECK(kfb.stroke.alpha.GetInt(1) == 212);
 
-	CHECK(kfb.background.red.GetInt(1) == 0);
-	CHECK(kfb.background.green.GetInt(1) == 0);
-	CHECK(kfb.background.blue.GetInt(1) == 255);
+	CHECK(kfb.background.red.GetInt(1) == 62);
+	CHECK(kfb.background.green.GetInt(1) == 143);
+	CHECK(kfb.background.blue.GetInt(1) == 0);
 	CHECK(kfb.background.alpha.GetInt(1) == 212);
 }
 
@@ -787,4 +791,87 @@ TEST_CASE( "GetBoxValues", "[libopenshot][keyframe]" )
 	CHECK(boxValues["h"] == 20.0);
 	CHECK(boxValues["ang"] == 30.0);
 }
+
+TEST_CASE( "Tracker stroke width compensates for preview raster scaling", "[libopenshot][keyframe][tracker]" )
+{
+	auto blue_run_at_center = []() {
+		Timeline timeline(100, 100, Fraction(30, 1), 44100, 2, ChannelLayout::LAYOUT_STEREO);
+		Clip parent;
+		parent.ParentTimeline(&timeline);
+
+		Tracker tracker;
+		tracker.ParentClip(&parent);
+		tracker.trackedData->ParentClip(&parent);
+		tracker.trackedData->AddBox(1, 0.5f, 0.5f, 0.4f, 0.4f, 0.0f);
+		tracker.trackedData->stroke_alpha = Keyframe(1.0);
+		tracker.trackedData->background_alpha = Keyframe(0.0);
+
+		auto image = std::make_shared<QImage>(200, 200, QImage::Format_RGBA8888_Premultiplied);
+		image->fill(QColor(0, 0, 0, 0));
+		auto frame = std::make_shared<Frame>(1, 200, 200, "#000000", 0, 0);
+		frame->AddImage(image);
+
+		tracker.GetFrame(frame, 1);
+		auto rendered = frame->GetImage();
+
+		int best_run = 0;
+		int current_run = 0;
+		for (int x = 40; x <= 160; ++x) {
+			const QColor pixel = rendered->pixelColor(x, 100);
+			const bool blue_pixel = pixel.alpha() > 0 && pixel.blue() > 120 && pixel.red() < 80 && pixel.green() < 80;
+			if (blue_pixel) {
+				current_run++;
+				best_run = std::max(best_run, current_run);
+			} else {
+				current_run = 0;
+			}
+		}
+		return best_run;
+	};
+
+	CHECK(blue_run_at_center() >= 3);
+}
 #endif
+
+TEST_CASE("JSON keyframe loading preserves AddPoint semantics", "[libopenshot][keyframe][json]")
+{
+    std::vector<double> frames;
+    SECTION("sorted") { frames = {1, 4, 8, 20}; }
+    SECTION("unordered and duplicate frames") { frames = {20, 4, 8, 4, 1, 20}; }
+    SECTION("fractional frames") { frames = {1, 1.25, 1.75, 1.25, 2}; }
+    SECTION("large sorted curve") {
+        for (int i = 1; i <= 5000; ++i) frames.push_back(i);
+    }
+    Json::Value data;
+    data["Points"] = Json::Value(Json::arrayValue);
+    Keyframe expected;
+    for (size_t i = 0; i < frames.size(); ++i) {
+        Point point(frames[i], i * 0.125, static_cast<InterpolationType>(i % 3));
+        // Only Bezier points serialize custom handles.
+        if (point.interpolation == BEZIER) {
+            point.handle_left = Coordinate(0.2, 0.8);
+            point.handle_right = Coordinate(0.7, 0.1);
+        }
+        data["Points"].append(point.JsonValue());
+        expected.AddPoint(point);
+    }
+    const Json::Value original = data;
+    Keyframe actual(99);
+    actual.SetJsonValue(data);
+    CHECK(data == original);
+    CHECK(actual.JsonValue() == expected.JsonValue());
+    for (int frame = 1; frame <= 20; ++frame)
+        CHECK(actual.GetValue(frame) == Approx(expected.GetValue(frame)));
+
+    // Replacing a large animation must discard old points, even when capacity
+    // is retained internally for the next drag sample.
+    actual.SetJsonValue(Json::Value(0.75));
+    CHECK(actual.GetCount() == 1);
+    CHECK(actual.GetValue(1) == Approx(0.75));
+    Json::Value empty;
+    empty["Points"] = Json::Value(Json::arrayValue);
+    actual.SetJsonValue(empty);
+    CHECK(actual.GetCount() == 0);
+    actual.SetJsonValue(data);
+    CHECK(actual.JsonValue() == expected.JsonValue());
+}

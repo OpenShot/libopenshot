@@ -276,8 +276,9 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 		return data;
 	}
 
-	int total_samples = static_cast<int>(std::ceil(reader_duration * num_per_second));
-	if (total_samples <= 0 || source_reader->info.channels == 0) {
+	const bool known_duration = reader_duration > 0.0f && reader_video_length > 0;
+	int total_samples = known_duration ? static_cast<int>(std::ceil(reader_duration * num_per_second)) : 0;
+	if (source_reader->info.channels == 0) {
 		return data;
 	}
 
@@ -285,9 +286,16 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 		return data;
 	}
 
-	// Resize and clear audio buffers
-	data.resize(total_samples);
-	data.zero(total_samples);
+	// Resize and clear audio buffers when duration is known. Some audio-only
+	// formats, especially raw FLAC, may not expose a container duration even
+	// though frames are readable, so those are appended dynamically below.
+	if (known_duration) {
+		data.resize(total_samples);
+		data.zero(total_samples);
+	} else {
+		data.max_samples.reserve(num_per_second);
+		data.rms_samples.reserve(num_per_second);
+	}
 
 	int extracted_index = 0;
 	int sample_index = 0;
@@ -297,10 +305,41 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 
 	int channel_count = (channel == -1) ? source_reader->info.channels : 1;
 	std::vector<float*> channels(source_reader->info.channels, nullptr);
+	const double frame_rate = fps_value > 0.0 ? fps_value : 30.0;
+	const int64_t max_unknown_frames = static_cast<int64_t>(std::ceil(frame_rate * 60.0 * 60.0 * 12.0));
+	int empty_audio_frames = 0;
+
+	auto append_sample = [&](float max_sample, float rms_sample) {
+		if (known_duration) {
+			if (extracted_index >= total_samples) {
+				return;
+			}
+			data.max_samples[extracted_index] = max_sample;
+			data.rms_samples[extracted_index] = rms_sample;
+		} else {
+			data.max_samples.push_back(max_sample);
+			data.rms_samples.push_back(rms_sample);
+		}
+		samples_max = std::max(samples_max, max_sample);
+		extracted_index++;
+	};
 
 	try {
-		for (int64_t f = 1; f <= reader_video_length && extracted_index < total_samples; f++) {
+		for (int64_t f = 1;
+			 (known_duration ? f <= reader_video_length && extracted_index < total_samples : f <= max_unknown_frames);
+			 f++) {
 			std::shared_ptr<openshot::Frame> frame = get_frame_with_retry(f);
+			if (!known_duration && frame && frame->number < f) {
+				break;
+			}
+			int sample_count = frame->GetAudioSamplesCount();
+			if (sample_count <= 0) {
+				if (!known_duration && extracted_index > 0 && ++empty_audio_frames >= 3) {
+					break;
+				}
+				continue;
+			}
+			empty_audio_frames = 0;
 
 			for (int channel_index = 0; channel_index < source_reader->info.channels; channel_index++) {
 				if (channel == channel_index || channel == -1) {
@@ -308,7 +347,6 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 				}
 			}
 
-			int sample_count = frame->GetAudioSamplesCount();
 			for (int s = 0; s < sample_count; s++) {
 				for (int channel_index = 0; channel_index < source_reader->info.channels; channel_index++) {
 					if (channel == channel_index || channel == -1) {
@@ -330,18 +368,15 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 						avg_squared_sum = static_cast<float>(chunk_squared_sum / static_cast<double>(sample_divisor * channel_count));
 					}
 
-					if (extracted_index < total_samples) {
-						data.max_samples[extracted_index] = chunk_max;
-						data.rms_samples[extracted_index] = std::sqrt(avg_squared_sum);
-						samples_max = std::max(samples_max, chunk_max);
-						extracted_index++;
+					if (!known_duration || extracted_index < total_samples) {
+						append_sample(chunk_max, std::sqrt(avg_squared_sum));
 					}
 
 					sample_index = 0;
 					chunk_max = 0.0f;
 					chunk_squared_sum = 0.0;
 
-					if (extracted_index >= total_samples) {
+					if (known_duration && extracted_index >= total_samples) {
 						break;
 					}
 				}
@@ -351,21 +386,18 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 		throw;
 	}
 
-	if (sample_index > 0 && extracted_index < total_samples) {
+	if (sample_index > 0 && (!known_duration || extracted_index < total_samples)) {
 		float avg_squared_sum = 0.0f;
 		if (channel_count > 0) {
 			avg_squared_sum = static_cast<float>(chunk_squared_sum / static_cast<double>(sample_index * channel_count));
 		}
 
-		data.max_samples[extracted_index] = chunk_max;
-		data.rms_samples[extracted_index] = std::sqrt(avg_squared_sum);
-		samples_max = std::max(samples_max, chunk_max);
-		extracted_index++;
+		append_sample(chunk_max, std::sqrt(avg_squared_sum));
 	}
 
 	if (normalize && samples_max > 0.0f) {
 		float scale = 1.0f / samples_max;
-		data.scale(total_samples, scale);
+		data.scale(static_cast<int>(data.max_samples.size()), scale);
 	}
 
 	return data;

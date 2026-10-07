@@ -65,6 +65,7 @@ public:
 	Keyframe left;		 ///< Size of left bar
 	Keyframe top;		 ///< Size of top bar
 	Keyframe right;		 ///< Size of right bar
+	Keyframe bottom;	 ///< Size of bottom bar
 	Keyframe fade_in;		 ///< Fade in per caption (# of seconds)
 	Keyframe fade_out;		 ///< Fade in per caption (# of seconds)
 	std::string font_name;	///< Font string

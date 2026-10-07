@@ -14,6 +14,21 @@
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
 
+/* JUCE thread internals are implementation details, not binding API */
+%ignore juce::Thread;
+namespace juce {
+    class Thread {};
+}
+
+/* Ruby bindings intentionally expose the primary OpenShot base class only */
+%warnfilter(802) openshot::Clip;
+%warnfilter(802) openshot::Timeline;
+
+/* Ruby bindings do not expose Profile comparison operators */
+%warnfilter(503) operator<;
+%warnfilter(503) operator>;
+%warnfilter(503) operator==;
+
 /* Don't generate multiple wrappers for functions with default args */
 %feature("compactdefaultargs", "1");
 
@@ -121,7 +136,7 @@ typedef struct OpenShotByteBuffer {
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "Qt/VideoCacheThread.h"
-#include "ZmqLogger.h"
+#include "Logger.h"
 
 /* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
 #ifdef RSHIFT
@@ -251,12 +266,13 @@ typedef struct OpenShotByteBuffer {
 %include "QtPlayer.h"
 %include "QtTextReader.h"
 %include "KeyFrame.h"
+%include "AnimatedCurve.h"
 %include "RendererBase.h"
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"
 %include "Timeline.h"
-%include "ZmqLogger.h"
+%include "Logger.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
@@ -273,6 +289,7 @@ typedef struct OpenShotByteBuffer {
 %include "effects/ColorShift.h"
 %include "effects/Crop.h"
 %include "effects/Deinterlace.h"
+%include "effects/FilmGrain.h"
 %include "effects/Hue.h"
 %include "effects/LensFlare.h"
 %include "effects/Mask.h"
@@ -280,5 +297,6 @@ typedef struct OpenShotByteBuffer {
 %include "effects/Pixelate.h"
 %include "effects/Saturation.h"
 %include "effects/Shift.h"
+%include "effects/Timer.h"
+%include "effects/DenoiseImage.h"
 %include "effects/Wave.h"
-
