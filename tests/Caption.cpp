@@ -216,6 +216,78 @@ TEST_CASE("caption effect", "[libopenshot][caption]") {
         clip1.Close();
     }
 
+
+    SECTION("stroke before fill regression") {
+        // Compare the filled interior of caption glyphs with and
+        // without a thick outline. The outline must not darken
+        // pixels that belong to the original glyph fill.
+        const std::string text =
+            "00:00.000 --> 00:10.000\nOPEN";
+
+        openshot::Caption fill_only(text);
+        fill_only.color = openshot::Color("#ffffff");
+        fill_only.stroke = openshot::Color("#000000");
+        fill_only.stroke_width = openshot::Keyframe(0.0);
+        fill_only.font_size = openshot::Keyframe(110.0);
+        fill_only.top = openshot::Keyframe(0.2);
+
+        openshot::Caption outlined(text);
+        outlined.color = openshot::Color("#ffffff");
+        outlined.stroke = openshot::Color("#000000");
+        outlined.stroke_width = openshot::Keyframe(16.0);
+        outlined.font_size = openshot::Keyframe(110.0);
+        outlined.top = openshot::Keyframe(0.2);
+
+        // The timeline supplies the FPS used by caption cue timing.
+        openshot::Timeline timeline(
+            600, 300, openshot::Fraction(24, 1),
+            44100, 2, openshot::LAYOUT_STEREO);
+
+        timeline.AddEffect(&fill_only);
+
+        auto base_frame = std::make_shared<openshot::Frame>(
+            1, 600, 300, "#000000");
+        auto base = fill_only.GetFrame(base_frame, 1);
+
+        timeline.RemoveEffect(&fill_only);
+        timeline.AddEffect(&outlined);
+
+        auto outlined_frame = std::make_shared<openshot::Frame>(
+            1, 600, 300, "#000000");
+        auto result = outlined.GetFrame(outlined_frame, 1);
+
+        int fill_pixels = 0;
+        int darkened_pixels = 0;
+
+        for (int y = 0; y < 300; ++y) {
+            const unsigned char* baseline = base->GetPixels(y);
+            const unsigned char* actual = result->GetPixels(y);
+
+            for (int x = 0; x < 600; ++x) {
+                const int index = x * 4;
+
+                if (baseline[index] < 240 ||
+                    baseline[index + 1] < 240 ||
+                    baseline[index + 2] < 240)
+                    continue;
+
+                ++fill_pixels;
+
+                if (actual[index] < baseline[index] - 10)
+                    ++darkened_pixels;
+            }
+        }
+
+        INFO("Fill pixels: " << fill_pixels);
+        INFO("Darkened fill pixels: " << darkened_pixels);
+
+        REQUIRE(fill_pixels > 0);
+        CHECK(darkened_pixels == 0);
+
+        timeline.RemoveEffect(&outlined);
+        timeline.Close();
+    }
+
     // Close QApplication
     app.quit();
 }
