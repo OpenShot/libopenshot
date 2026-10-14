@@ -1,3 +1,4 @@
+#include <iostream>
 /**
  * @file
  * @brief Source file for Clip class
@@ -14,6 +15,7 @@
 #include "Clip.h"
 
 #include "AudioResampler.h"
+#include "PitchProcessor.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
@@ -586,12 +588,323 @@ std::string Clip::get_file_extension(std::string path)
 }
 
 // Adjust the audio and image of a time mapped frame
+void Clip::ResetPitchProcessor()
+{
+	if (pitch_processor) {
+		pitch_processor->Reset();
+	}
+
+	pitch_output_buffer.clear();
+	pitch_output_offset = 0;
+	pitch_delay_remaining = 0;
+	pitch_last_frame = 0;
+	pitch_has_last_frame = false;
+	pitch_source_frame = 0;
+	pitch_source_offset = 0;
+	pitch_remap_location.frame = 0;
+	pitch_remap_location.sample_start = 0;
+}
+
+bool Clip::InitializePitchProcessor(int sample_rate,
+                                    int channels,
+                                    double time_ratio,
+                                    double pitch_semitones)
+{
+    if (sample_rate <= 0 || channels <= 0)
+        return false;
+
+    ResetPitchProcessor();
+
+    pitch_processor = std::make_unique<PitchProcessor>(
+        sample_rate, channels);
+
+    if (!pitch_processor->IsAvailable()) {
+        pitch_processor.reset();
+        return false;
+    }
+
+    pitch_processor->Configure(time_ratio, pitch_semitones);
+
+    pitch_output_buffer.resize(channels);
+    pitch_output_offset = 0;
+    pitch_delay_remaining = pitch_processor->StartDelay();
+
+    // Prime Rubber Band with its recommended startup padding.
+    // The corresponding output latency is removed by BufferPitchAudio().
+    const std::size_t start_pad =
+        pitch_processor->PreferredStartPad();
+
+    if (start_pad > 0) {
+        std::vector<std::vector<float>> silence(
+            channels, std::vector<float>(start_pad, 0.0f));
+
+        std::vector<const float*> input_pointers;
+        input_pointers.reserve(channels);
+
+        for (const auto& channel : silence)
+            input_pointers.push_back(channel.data());
+
+        BufferPitchAudio(input_pointers.data(), start_pad, false);
+    }
+
+    return true;
+}
+
+void Clip::BufferPitchAudio(const float* const* input,
+                            std::size_t sample_count,
+                            bool final_block)
+{
+    if (!pitch_processor || !pitch_processor->IsAvailable())
+        return;
+
+    pitch_processor->Process(input, sample_count, final_block);
+
+    const std::size_t channels = pitch_output_buffer.size();
+
+    // Drain all available Rubber Band output.
+    while (pitch_processor->Available() > 0) {
+        const std::size_t available = pitch_processor->Available();
+
+        std::vector<std::vector<float>> retrieved(
+            channels, std::vector<float>(available));
+
+        std::vector<float*> output_pointers;
+        output_pointers.reserve(channels);
+
+        for (auto& channel : retrieved)
+            output_pointers.push_back(channel.data());
+
+        const std::size_t received =
+            pitch_processor->Retrieve(output_pointers.data(), available);
+
+        if (received == 0)
+            break;
+
+        const std::size_t discard =
+            std::min(pitch_delay_remaining, received);
+
+        pitch_delay_remaining -= discard;
+
+        for (std::size_t channel = 0; channel < channels; ++channel) {
+            pitch_output_buffer[channel].insert(
+                pitch_output_buffer[channel].end(),
+                retrieved[channel].begin() + discard,
+                retrieved[channel].begin() + received);
+        }
+    }
+}
+
+std::size_t Clip::RetrievePitchAudio(float* const* output,
+                                     std::size_t sample_count)
+{
+    if (pitch_output_buffer.empty() || !output)
+        return 0;
+
+    const std::size_t buffered =
+        pitch_output_buffer.front().size();
+
+    if (pitch_output_offset >= buffered)
+        return 0;
+
+    const std::size_t count =
+        std::min(sample_count, buffered - pitch_output_offset);
+
+    // Validate all destination channels before copying.
+    for (std::size_t channel = 0;
+         channel < pitch_output_buffer.size(); ++channel) {
+        if (!output[channel])
+            return 0;
+    }
+
+    for (std::size_t channel = 0;
+         channel < pitch_output_buffer.size(); ++channel) {
+        const auto& source = pitch_output_buffer[channel];
+
+        std::copy_n(
+            source.data() + pitch_output_offset,
+            count,
+            output[channel]);
+    }
+
+    pitch_output_offset += count;
+
+    // Release consumed samples while retaining surplus audio.
+    if (pitch_output_offset == buffered ||
+        pitch_output_offset >= 16384) {
+
+        for (auto& channel : pitch_output_buffer) {
+            channel.erase(
+                channel.begin(),
+                channel.begin() + pitch_output_offset);
+        }
+
+        pitch_output_offset = 0;
+    }
+
+    return count;
+}
+
+std::size_t Clip::AvailablePitchAudio() const
+{
+    if (pitch_output_buffer.empty())
+        return 0;
+
+    const std::size_t buffered =
+        pitch_output_buffer.front().size();
+
+    return pitch_output_offset < buffered
+        ? buffered - pitch_output_offset
+        : 0;
+}
+
+void Clip::ApplyPitchOnly(std::shared_ptr<Frame> frame,
+                          double pitch_semitones)
+{
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+
+    if (!frame || !reader)
+        return;
+
+    const int sample_rate = frame->SampleRate();
+    const int channels = frame->GetAudioChannelsCount();
+    const int target_samples = frame->GetAudioSamplesCount();
+
+    if (sample_rate <= 0 || channels <= 0 || target_samples <= 0)
+        return;
+
+    const int64_t output_frame = frame->number;
+
+    // Start a new processing sequence after seeking.
+    if (!pitch_processor ||
+        !pitch_has_last_frame ||
+        output_frame != pitch_last_frame + 1) {
+
+        if (!InitializePitchProcessor(
+                sample_rate, channels, 1.0, pitch_semitones))
+            return;
+
+        pitch_source_frame = output_frame;
+        pitch_source_offset = 0;
+    } else {
+        pitch_processor->Configure(1.0, pitch_semitones);
+    }
+
+    // Supply enough source samples to generate one output frame.
+    // Allow additional input for Rubber Band's internal latency.
+    const std::size_t required =
+        static_cast<std::size_t>(target_samples);
+
+    int iterations = 0;
+    const int max_iterations = 128;
+
+    while (AvailablePitchAudio() < required &&
+           iterations++ < max_iterations) {
+
+        auto source = GetOrCreateFrame(pitch_source_frame, false);
+
+        const int available_samples =
+            source->GetAudioSamplesCount();
+
+        if (available_samples <= 0 ||
+            source->GetAudioChannelsCount() < channels)
+            break;
+
+        if (pitch_source_offset >=
+            static_cast<std::size_t>(available_samples)) {
+
+            ++pitch_source_frame;
+            pitch_source_offset = 0;
+            continue;
+        }
+
+        const std::size_t remaining =
+            static_cast<std::size_t>(available_samples) -
+            pitch_source_offset;
+
+        const std::size_t suggested =
+            pitch_processor->SamplesRequired();
+
+        const std::size_t chunk =
+            std::min(remaining,
+                     std::max<std::size_t>(suggested, 1024));
+
+        std::vector<const float*> input;
+        input.reserve(channels);
+
+        for (int channel = 0; channel < channels; ++channel) {
+            input.push_back(
+                source->GetAudioSamples(channel) +
+                pitch_source_offset);
+        }
+
+        BufferPitchAudio(input.data(), chunk, false);
+
+        pitch_source_offset += chunk;
+
+        if (pitch_source_offset >=
+            static_cast<std::size_t>(available_samples)) {
+            ++pitch_source_frame;
+            pitch_source_offset = 0;
+        }
+    }
+
+    // Use silence only for samples that the processor
+    // could not supply.
+    std::vector<std::vector<float>> output(
+        channels, std::vector<float>(required, 0.0f));
+
+    std::vector<float*> output_pointers;
+    output_pointers.reserve(channels);
+
+    for (auto& channel : output)
+        output_pointers.push_back(channel.data());
+
+    const std::size_t received =
+        RetrievePitchAudio(output_pointers.data(), required);
+
+    frame->AddAudioSilence(target_samples);
+
+    for (int channel = 0; channel < channels; ++channel) {
+        frame->AddAudio(
+            true, channel, 0,
+            output[channel].data(),
+            target_samples, 1.0f);
+    }
+
+    pitch_last_frame = output_frame;
+    pitch_has_last_frame = true;
+
+    (void)received;
+}
+
 void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 {
 	// Check for valid reader
 	if (!reader)
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+
+	// Determine whether independent pitch processing is requested.
+	const int64_t frame_number = frame->number;
+	const double pitch_semitones = pitch.GetValue(frame_number);
+	const bool keep_pitch = preserve_pitch.GetValue(frame_number) >= 0.5;
+	const bool use_pitch_processor =
+		(pitch_semitones != 0.0 || keep_pitch);
+
+	// Discard buffered pitch audio after a seek or when processing
+	// is disabled. Consecutive frames may reuse processor state.
+	if (!use_pitch_processor ||
+	    (pitch_has_last_frame &&
+	     frame_number != pitch_last_frame + 1)) {
+		ResetPitchProcessor();
+	}
+
+	// Apply independent pitch shifting at normal playback speed.
+	// Time-remapped playback will be integrated separately.
+	if (use_pitch_processor && time.GetLength() <= 1) {
+		ApplyPitchOnly(frame, pitch_semitones);
+		return;
+	}
 
 	// Check for a valid time map curve
 	if (time.GetLength() > 1)
@@ -617,6 +930,163 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 															  Reader()->info.sample_rate,
 															  Reader()->info.channels);
 		int source_sample_count = round(target_sample_count * fabs(delta));
+
+        // Independent pitch-preserving time stretching.
+        // Use a dedicated source-feed cursor, independent of the
+        // legacy time-mapping resampler's previous_location.
+        if (use_pitch_processor &&
+            is_increasing &&
+            std::isfinite(delta) &&
+            delta > 0.0 &&
+            source_sample_count > 0 &&
+            target_sample_count > 0) {
+
+            const double time_ratio =
+                static_cast<double>(target_sample_count) /
+                static_cast<double>(source_sample_count);
+
+            const bool new_sequence =
+                !pitch_processor ||
+                !pitch_has_last_frame ||
+                frame_number != pitch_last_frame + 1;
+
+            if (new_sequence) {
+                if (InitializePitchProcessor(
+                        Reader()->info.sample_rate,
+                        Reader()->info.channels,
+                        time_ratio,
+                        pitch_semitones)) {
+
+                    // Preserve the fractional source-frame position.
+                    // GetLong() rounds the time map to an integer frame,
+                    // which can introduce an audio offset after seeking.
+                    const double source_position =
+                        time.GetValue(clip_frame_number);
+
+                    const int64_t source_frame_number =
+                        std::max<int64_t>(
+                            1,
+                            static_cast<int64_t>(
+                                std::floor(source_position)));
+
+                    pitch_remap_location.frame =
+                        source_frame_number;
+                    pitch_remap_location.sample_start = 0;
+
+                    const double fractional_position =
+                        std::max(
+                            0.0,
+                            source_position -
+                                static_cast<double>(
+                                    source_frame_number));
+
+                    if (fractional_position > 0.0) {
+                        auto source_frame =
+                            GetOrCreateFrame(
+                                source_frame_number, false);
+
+                        const int source_samples =
+                            source_frame->GetAudioSamplesCount();
+
+                        pitch_remap_location.sample_start =
+                            static_cast<int>(
+                                std::floor(
+                                    fractional_position *
+                                    source_samples));
+                    }
+                }
+            } else {
+                pitch_processor->Configure(
+                    time_ratio, pitch_semitones);
+            }
+
+            if (pitch_processor && pitch_processor->IsAvailable()) {
+                const int channels = Reader()->info.channels;
+                const std::size_t required =
+                    static_cast<std::size_t>(target_sample_count);
+
+                int iterations = 0;
+                const int max_iterations = 128;
+
+                while (AvailablePitchAudio() < required &&
+                       iterations++ < max_iterations) {
+
+                    auto source = GetOrCreateFrame(
+                        pitch_remap_location.frame, false);
+
+                    const int count = source->GetAudioSamplesCount();
+
+                    if (count <= 0 ||
+                        source->GetAudioChannelsCount() < channels)
+                        break;
+
+                    if (pitch_remap_location.sample_start >= count) {
+                        ++pitch_remap_location.frame;
+                        pitch_remap_location.sample_start = 0;
+                        continue;
+                    }
+
+                    const std::size_t remaining =
+                        static_cast<std::size_t>(
+                            count - pitch_remap_location.sample_start);
+
+                    const std::size_t suggested =
+                        pitch_processor->SamplesRequired();
+
+                    const std::size_t chunk =
+                        std::min(
+                            remaining,
+                            std::max<std::size_t>(suggested, 1024));
+
+                    std::vector<const float*> input;
+                    input.reserve(channels);
+
+                    for (int channel = 0;
+                         channel < channels; ++channel) {
+                        input.push_back(
+                            source->GetAudioSamples(channel) +
+                            pitch_remap_location.sample_start);
+                    }
+
+                    BufferPitchAudio(input.data(), chunk, false);
+
+                    pitch_remap_location.sample_start +=
+                        static_cast<int>(chunk);
+
+                    if (pitch_remap_location.sample_start >= count) {
+                        ++pitch_remap_location.frame;
+                        pitch_remap_location.sample_start = 0;
+                    }
+                }
+
+                std::vector<std::vector<float>> output(
+                    channels, std::vector<float>(required, 0.0f));
+
+                std::vector<float*> output_ptrs;
+                output_ptrs.reserve(channels);
+
+                for (auto& channel : output)
+                    output_ptrs.push_back(channel.data());
+
+                RetrievePitchAudio(output_ptrs.data(), required);
+
+                frame->AddAudioSilence(target_sample_count);
+
+                for (int channel = 0;
+                     channel < channels; ++channel) {
+                    frame->AddAudio(
+                        true, channel, 0,
+                        output[channel].data(),
+                        target_sample_count, 1.0f);
+                }
+
+                pitch_last_frame = frame_number;
+                pitch_has_last_frame = true;
+
+                return;
+            }
+        }
+
 
 		// Determine starting audio location
 		AudioLocation location;
@@ -704,6 +1174,7 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 			}
 
 		}
+
 
 		// Resize audio for current frame object + fill with silence
 		// We are fixing to clobber this with actual audio data (possibly resampled)

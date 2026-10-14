@@ -24,6 +24,9 @@
 #endif
 
 #include <memory>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 #include <string>
 
 #include "AudioLocation.h"
@@ -39,6 +42,7 @@
 
 namespace openshot {
 	class AudioResampler;
+	class PitchProcessor;
 	class EffectInfo;
 	class Frame;
 
@@ -123,6 +127,61 @@ namespace openshot {
 		
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
+
+		// Persistent pitch/time processor, allocated when needed.
+		std::unique_ptr<openshot::PitchProcessor> pitch_processor;
+
+		// Processed audio retained between consecutive output frames.
+		std::vector<std::vector<float>> pitch_output_buffer;
+
+		// Number of buffered samples already delivered.
+		std::size_t pitch_output_offset = 0;
+
+		// Startup latency samples still to discard.
+		std::size_t pitch_delay_remaining = 0;
+
+		// Last output frame processed, for seek detection.
+		int64_t pitch_last_frame = 0;
+
+		// Whether a previous output frame has been processed.
+		bool pitch_has_last_frame = false;
+
+		// Independent source cursor for pitch-preserving time remapping.
+		// This must not share state with the legacy resampler cursor.
+		AudioLocation pitch_remap_location;
+
+		// Next source frame to feed into the pitch processor.
+		int64_t pitch_source_frame = 0;
+
+		// Sample offset within the next source frame.
+		std::size_t pitch_source_offset = 0;
+
+		// Reset persistent pitch-processing state.
+		void ResetPitchProcessor();
+
+		// Apply pitch shifting at normal playback speed.
+		// Preserve the output frame's audio sample count.
+		void ApplyPitchOnly(std::shared_ptr<Frame> frame,
+		                    double pitch_semitones);
+
+		// Initialize Rubber Band for a new processing sequence.
+		bool InitializePitchProcessor(int sample_rate,
+		                              int channels,
+		                              double time_ratio,
+		                              double pitch_semitones);
+
+		// Feed planar audio to Rubber Band and buffer its output.
+		void BufferPitchAudio(const float* const* input,
+		                      std::size_t sample_count,
+		                      bool final_block = false);
+
+		// Copy buffered output into planar destination channels.
+		// Returns the number of samples copied per channel.
+		std::size_t RetrievePitchAudio(float* const* output,
+		                               std::size_t sample_count);
+
+		// Number of processed samples awaiting delivery.
+		std::size_t AvailablePitchAudio() const;
 
 		// File Reader object
 		openshot::ReaderBase* reader;

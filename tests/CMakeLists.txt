@@ -159,6 +159,13 @@ foreach(tname ${OPENSHOT_TESTS})
     openshot
   )
 
+  # Compile Rubber Band audio regression tests only when available.
+  if(tname STREQUAL "Clip" AND
+     ENABLE_RUBBERBAND AND RUBBERBAND_FOUND)
+    target_compile_definitions(openshot-${tname}-test PRIVATE
+      OPENSHOT_HAVE_RUBBERBAND=1)
+  endif()
+
   set(test_properties
     LABELS ${tname}
   )
