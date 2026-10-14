@@ -2064,3 +2064,52 @@ TEST_CASE("Imported locations match historical rendered image bounds", "[libopen
         timeline.Close();
     }
 }
+
+
+// Independent pitch and speed regression tests
+
+TEST_CASE("Pitch controls default to neutral values", "[libopenshot][clip][pitch]")
+{
+    Clip clip;
+
+    CHECK(clip.pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+    CHECK(clip.preserve_pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+    CHECK(clip.time.GetValue(1) == Approx(1.0).margin(0.00001));
+}
+
+TEST_CASE("Pitch controls survive JSON round trip", "[libopenshot][clip][pitch]")
+{
+    Clip original;
+
+    original.pitch = Keyframe(12.0);
+    original.preserve_pitch = Keyframe(1.0);
+
+    Json::Value json = original.JsonValue();
+
+    REQUIRE(json.isMember("pitch"));
+    REQUIRE(json.isMember("preserve_pitch"));
+
+    Clip restored;
+    restored.SetJsonValue(json);
+
+    CHECK(restored.pitch.GetValue(1) == Approx(12.0).margin(0.00001));
+    CHECK(restored.preserve_pitch.GetValue(1) == Approx(1.0).margin(0.00001));
+}
+
+TEST_CASE("Legacy clip JSON restores neutral pitch defaults", "[libopenshot][clip][pitch]")
+{
+    Clip original;
+    Json::Value json = original.JsonValue();
+
+    json.removeMember("pitch");
+    json.removeMember("preserve_pitch");
+
+    Clip restored;
+    restored.pitch = Keyframe(7.0);
+    restored.preserve_pitch = Keyframe(1.0);
+
+    restored.SetJsonValue(json);
+
+    CHECK(restored.pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+    CHECK(restored.preserve_pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+}

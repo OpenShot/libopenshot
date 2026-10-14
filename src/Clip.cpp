@@ -104,6 +104,8 @@ void Clip::init_settings()
 
 	// Init time & volume
 	time = Keyframe(1.0);
+	pitch = Keyframe(0.0);
+	preserve_pitch = Keyframe(0.0);
 	volume = Keyframe(1.0);
 
 	// Init audio waveform color
@@ -937,6 +939,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["margin"] = add_property_json("Margin", margin.GetValue(requested_frame), "float", "", &margin, 0.0, 0.5, false, requested_frame);
 	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
 	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
+	root["pitch"] = add_property_json("Pitch (Semitones)", pitch.GetValue(requested_frame), "float", "", &pitch, -24.0, 24.0, false, requested_frame);
+	root["preserve_pitch"] = add_property_json("Preserve Pitch", preserve_pitch.GetValue(requested_frame), "int", "", &preserve_pitch, 0, 1, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", &time, 0.0, 30 * 60 * 60 * 48, false, requested_frame);
 	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "int", "", &channel_filter, -1, 10, false, requested_frame);
@@ -995,6 +999,8 @@ Json::Value Clip::JsonValue() const {
 	root["margin"] = margin.JsonValue();
 	root["rotation"] = rotation.JsonValue();
 	root["time"] = time.JsonValue();
+	root["pitch"] = pitch.JsonValue();
+	root["preserve_pitch"] = preserve_pitch.JsonValue();
 	root["volume"] = volume.JsonValue();
 	root["wave_color"] = wave_color.JsonValue();
 	root["shear_x"] = shear_x.JsonValue();
@@ -1123,6 +1129,14 @@ void Clip::SetJsonValue(Json::Value root) {
 		rotation.SetJsonValue(std::move(root["rotation"]));
 	if (!root["time"].isNull())
 		time.SetJsonValue(std::move(root["time"]));
+	if (!root["pitch"].isNull())
+		pitch.SetJsonValue(std::move(root["pitch"]));
+	else
+		pitch = Keyframe(0.0);
+	if (!root["preserve_pitch"].isNull())
+		preserve_pitch.SetJsonValue(std::move(root["preserve_pitch"]));
+	else
+		preserve_pitch = Keyframe(0.0);
 	if (!root["volume"].isNull())
 		volume.SetJsonValue(std::move(root["volume"]));
 	if (!root["wave_color"].isNull())

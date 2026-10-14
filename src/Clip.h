@@ -348,6 +348,8 @@ namespace openshot {
 
 		// Time and Volume curves
 		openshot::Keyframe time; ///< Curve representing the frames over time to play (used for speed and direction of video)
+		openshot::Keyframe pitch; ///< Pitch shift in semitones (-24 to +24)
+		openshot::Keyframe preserve_pitch; ///< Preserve pitch during time changes (0=off, 1=on)
 		openshot::Keyframe volume; ///< Curve representing the volume (0 to 1)
 
 		/// Curve representing the color of the audio wave form
