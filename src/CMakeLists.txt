@@ -241,6 +241,21 @@ if(NOT TARGET OpenShot::Audio)
 endif()
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
 
+# Optional Rubber Band support for independent pitch and speed processing
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+  pkg_check_modules(RUBBERBAND QUIET IMPORTED_TARGET rubberband)
+endif()
+
+if(TARGET PkgConfig::RUBBERBAND)
+  target_link_libraries(openshot PRIVATE PkgConfig::RUBBERBAND)
+  target_compile_definitions(openshot PRIVATE OPENSHOT_HAVE_RUBBERBAND=1)
+  message(STATUS "Rubber Band audio processing enabled")
+else()
+  message(STATUS "Rubber Band not found; independent pitch processing disabled")
+endif()
+
+
 ###
 ### ImageMagick
 ###
