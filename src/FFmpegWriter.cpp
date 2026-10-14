@@ -1610,7 +1610,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		}
 
 		switch (video_codec_ctx->codec_id) {
-			case AV_CODEC_ID_H264:
+			case AV_CODEC_ID_H264: {
 				video_codec_ctx->max_b_frames = 0;  // At least this GPU doesn't support b-frames
 				// Honor an explicitly requested High Profile (e.g. via SetOption).
 				// Keep the legacy Constrained Baseline default for other cases.
@@ -1622,6 +1622,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				av_opt_set(video_codec_ctx->priv_data, "vprofile",
 					use_high_profile ? "high" : "baseline", AV_OPT_SEARCH_CHILDREN);
 				break;
+			}
 			case AV_CODEC_ID_HEVC:
 				// tested to work with defaults
 				break;
