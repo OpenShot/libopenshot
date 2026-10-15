@@ -14,7 +14,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
+#include <vector>
 #include <cmath>
 #include <ctime>
 #include <sstream>
@@ -1657,7 +1659,51 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	/* open the codec */
 	if (avcodec_open2(video_codec_ctx, codec, &opts) < 0)
 		throw InvalidCodec("Could not open video codec", path);
+#if LIBAVFORMAT_VERSION_MAJOR >= 61
+	// Preserve spherical metadata across codec parameter copying.
+	std::vector<uint8_t> spherical_copy;
+
+	const AVPacketSideData* spherical = av_packet_side_data_get(
+		st->codecpar->coded_side_data,
+		st->codecpar->nb_coded_side_data,
+		AV_PKT_DATA_SPHERICAL);
+
+	if (spherical) {
+		if (!spherical->data ||
+		    spherical->size < sizeof(AVSphericalMapping)) {
+			throw InvalidCodec("Invalid spherical metadata.", path);
+		}
+
+		spherical_copy.assign(
+			spherical->data,
+			spherical->data + spherical->size);
+	}
+
+	if (avcodec_parameters_from_context(
+			st->codecpar, video_codec_ctx) < 0) {
+		throw InvalidCodec("Could not copy video codec parameters.", path);
+	}
+
+	if (!spherical_copy.empty()) {
+		AVPacketSideData* restored = av_packet_side_data_new(
+			&st->codecpar->coded_side_data,
+			&st->codecpar->nb_coded_side_data,
+			AV_PKT_DATA_SPHERICAL,
+			spherical_copy.size(),
+			0);
+
+		if (!restored)
+			throw OutOfMemory("Could not restore spherical metadata.", path);
+
+		std::memcpy(
+			restored->data,
+			spherical_copy.data(),
+			spherical_copy.size());
+	}
+#else
 	AV_COPY_PARAMS_FROM_CONTEXT(st, video_codec_ctx);
+#endif
+
 	st->avg_frame_rate = av_make_q(info.fps.num, info.fps.den);
 	st->r_frame_rate = av_make_q(info.fps.num, info.fps.den);
 
