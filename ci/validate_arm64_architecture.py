@@ -16,6 +16,7 @@ checks, exactly as required by design-amendment-A1:
    the *currently running* Python process and asserts
      - pNativeMachine == IMAGE_FILE_MACHINE_ARM64 (0xAA64)
      - pProcessMachine == IMAGE_FILE_MACHINE_UNKNOWN (0x0)
+   The running interpreter PE header must independently identify ARM64.
    Any nonzero pProcessMachine is WOW/emulated execution and fails this
    check. This check only passes evidence when actually run under a native
    Arm64 Python interpreter; on any other host it reports the real, honest
@@ -75,6 +76,7 @@ def read_native_process_oracle():
         "native_machine": None,
         "is_wow_or_emulated": None,
         "native_arm64_ok": False,
+        "executable_machine": None,
         "reason": None,
     }
 
@@ -114,9 +116,13 @@ def read_native_process_oracle():
         result["process_machine"] = process_machine.value
         result["native_machine"] = native_machine.value
         result["is_wow_or_emulated"] = process_machine.value != IMAGE_FILE_MACHINE_UNKNOWN
+        # The host API alone can be ambiguous under x64 emulation. Inspect
+        # the interpreter that is actually executing this validator as well.
+        result["executable_machine"] = read_pe_machine(sys.executable)
         result["native_arm64_ok"] = (
             native_machine.value == IMAGE_FILE_MACHINE_ARM64
             and process_machine.value == IMAGE_FILE_MACHINE_UNKNOWN
+            and result["executable_machine"] == IMAGE_FILE_MACHINE_ARM64
         )
         return result
     except Exception as exc:  # noqa: BLE001 - report, don't hide
@@ -190,7 +196,7 @@ def scan_payload_architecture(root):
     return results, failures
 
 
-def verify_package_lock(path):
+def verify_package_lock(path, require_exact_versions=True):
     failures = []
     verified = []
     try:
@@ -243,9 +249,10 @@ def verify_package_lock(path):
             "package": package,
             "version": actual_version,
             "expected_version": expected_version,
+            "version_matches": actual_version == expected_version,
             "expected_sha256": expected_sha256,
         })
-        if actual_version != expected_version:
+        if require_exact_versions and actual_version != expected_version:
             failures.append(
                 "Wrong package version for %s: %s (expected %s)"
                 % (package, actual_version, expected_version)
@@ -276,10 +283,16 @@ def main():
         default=None,
         help="Optional path to write the full machine-readable report.",
     )
-    parser.add_argument(
+    packages = parser.add_mutually_exclusive_group()
+    packages.add_argument(
         "--package-lock",
         default=None,
         help="Verify installed pacman package versions against this lock file.",
+    )
+    packages.add_argument(
+        "--package-baseline",
+        help="Record installed versions and report drift from a reference lock; "
+             "missing packages still fail. This does not verify exact versions.",
     )
     args = parser.parse_args()
 
@@ -298,8 +311,10 @@ def main():
 
     package_results = []
     package_failures = []
-    if args.package_lock:
-        package_results, package_failures = verify_package_lock(args.package_lock)
+    package_manifest = args.package_lock or args.package_baseline
+    if package_manifest:
+        package_results, package_failures = verify_package_lock(
+            package_manifest, require_exact_versions=bool(args.package_lock))
 
     report = {
         "contract": "windows-arm64-clangarm64-v1",
@@ -311,6 +326,8 @@ def main():
         "payload_failures": payload_failures,
         "payload_results": payload_results,
         "package_lock": args.package_lock,
+        "package_baseline": args.package_baseline,
+        "exact_package_versions_required": bool(args.package_lock),
         "package_results": package_results,
         "package_failures": package_failures,
     }
@@ -334,13 +351,19 @@ def main():
         print("  SKIPPED: no --payload-root supplied")
 
     print("== MSYS2 package lock ==")
-    if args.package_lock:
-        print("  lock = %s" % args.package_lock)
+    if package_manifest:
+        print("  manifest = %s" % package_manifest)
+        if args.package_baseline:
+            print("  BASELINE ONLY: exact package versions are not required")
+            for package in package_results:
+                if not package["version_matches"]:
+                    print("  VERSION DRIFT: %s = %s (baseline %s)" % (
+                        package["package"], package["version"], package["expected_version"]))
         print("  packages verified = %d" % len(package_results))
         for failure in package_failures:
             print("  FAIL: %s" % failure)
     else:
-        print("  SKIPPED: no --package-lock supplied")
+        print("  SKIPPED: no package manifest supplied")
 
     if args.json_report:
         with open(args.json_report, "w", encoding="utf-8") as f:

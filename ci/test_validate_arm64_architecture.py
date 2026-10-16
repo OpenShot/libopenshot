@@ -30,6 +30,48 @@ def write_pe(path, machine):
 
 
 class Arm64ArchitectureValidatorTests(unittest.TestCase):
+    def test_host_api_requires_independent_arm64_interpreter(self):
+        kernel32 = mock.Mock()
+        def query(_handle, process, native):
+            process._obj.value = validator.IMAGE_FILE_MACHINE_UNKNOWN
+            native._obj.value = validator.IMAGE_FILE_MACHINE_ARM64
+            return 1
+        kernel32.IsWow64Process2.side_effect = query
+        with tempfile.TemporaryDirectory() as root:
+            executable = os.path.join(root, "python.exe")
+            for machine, expected in ((validator.IMAGE_FILE_MACHINE_ARM64, True),
+                                      (validator.IMAGE_FILE_MACHINE_AMD64, False),
+                                      (validator.IMAGE_FILE_MACHINE_I386, False)):
+                with self.subTest(machine=machine):
+                    write_pe(executable, machine)
+                    with mock.patch.object(sys, "platform", "win32"), \
+                         mock.patch.object(sys, "executable", executable), \
+                         mock.patch.object(validator.ctypes, "WinDLL", return_value=kernel32, create=True):
+                        result = validator.read_native_process_oracle()
+                    self.assertEqual(result["native_arm64_ok"], expected)
+                    self.assertEqual(result["executable_machine"], machine)
+            with open(executable, "w") as stream:
+                stream.write("invalid executable")
+            with mock.patch.object(sys, "platform", "win32"), \
+                 mock.patch.object(sys, "executable", executable), \
+                 mock.patch.object(validator.ctypes, "WinDLL", return_value=kernel32, create=True):
+                self.assertFalse(validator.read_native_process_oracle()["native_arm64_ok"])
+
+    def test_baseline_records_drift_but_still_requires_packages(self):
+        with tempfile.TemporaryDirectory() as root:
+            lock_path = os.path.join(root, "packages.lock")
+            with open(lock_path, "w") as stream:
+                stream.write("example-package=1.2.3,UNVERIFIED-NO-SIGNED-SNAPSHOT\n")
+            completed = mock.Mock(returncode=0, stdout="example-package 1.2.4\n")
+            with mock.patch.object(validator.subprocess, "run", return_value=completed):
+                verified, failures = validator.verify_package_lock(lock_path, require_exact_versions=False)
+            self.assertEqual(failures, [])
+            self.assertFalse(verified[0]["version_matches"])
+            completed.returncode = 1
+            with mock.patch.object(validator.subprocess, "run", return_value=completed):
+                _, failures = validator.verify_package_lock(lock_path, require_exact_versions=False)
+            self.assertIn("Package not installed", failures[0])
+
     def test_package_lock_reports_missing_file(self):
         verified, failures = validator.verify_package_lock("missing-package-lock.txt")
         self.assertEqual(verified, [])

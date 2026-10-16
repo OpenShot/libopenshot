@@ -66,7 +66,12 @@ TEST_CASE( "NativeArm64ProcessOracle_A1", "[libopenshot][windows][arm64]" )
     REQUIRE(ok);
 
     const bool isWowOrEmulated = (processMachine != IMAGE_FILE_MACHINE_UNKNOWN);
-    const bool nativeArm64Ok =
+#if defined(_M_ARM64) || defined(__aarch64__)
+    constexpr bool compiledForArm64 = true;
+#else
+    constexpr bool compiledForArm64 = false;
+#endif
+    const bool nativeArm64Ok = compiledForArm64 &&
         (nativeMachine == IMAGE_FILE_MACHINE_ARM64) &&
         (processMachine == IMAGE_FILE_MACHINE_UNKNOWN);
 
@@ -77,9 +82,9 @@ TEST_CASE( "NativeArm64ProcessOracle_A1", "[libopenshot][windows][arm64]" )
     if (isWowOrEmulated) {
         WARN("Process is running under WOW/emulation.");
     }
-    // On an Arm64 host, any nonzero process machine is WOW/emulated and must
-    // fail. Other hosts only prove that they are not native Arm64.
-    if (nativeMachine == IMAGE_FILE_MACHINE_ARM64) {
+    // Assert native execution only for an ARM64 binary. An x86/x64 test
+    // running under emulation on ARM64 is valid, but is not native evidence.
+    if (compiledForArm64) {
         REQUIRE_FALSE(isWowOrEmulated);
         REQUIRE(nativeArm64Ok);
     } else {

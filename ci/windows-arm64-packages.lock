@@ -1,22 +1,13 @@
-# Windows Arm64 MSYS2 CLANGARM64 package/provenance lock
+# Windows ARM64 MSYS2 CLANGARM64 reference package versions
 # SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
-# Contract identity: windows-arm64-clangarm64-v1
-# Target: Windows 11 Arm64, PE/COFF Machine=ARM64 (0xAA64)
-# Environment: MSYS2 CLANGARM64 at C:\msys64\clangarm64, aarch64-w64-mingw32
-#
-# This file pins the exact MSYS2 CLANGARM64 package set/versions required to
-# build libopenshot-audio (and, transitively, libopenshot and openshot-qt) for
-# the native Windows Arm64 lane. It is consumed unchanged by PR A, PR B, and
-# PR C so that all three producer artifacts share one dependency snapshot.
-#
-# Populate the sha256 column from the signed MSYS2 CLANGARM64 repo database
-# (repo.db.sig) once release infrastructure publishes the mirrored/pinned
-# snapshot required by design-spec.md G1. Until that snapshot exists, this
-# lock records the exact package/version identity only; the sha256 column is
-# intentionally left as UNVERIFIED-NO-SIGNED-SNAPSHOT so no producer job can
-# silently claim checksum verification that has not actually happened.
+# Integration builds install available packages from the rolling MSYS2 repo.
+# --package-baseline records installed versions and reports drift from this
+# reference. It still rejects missing packages. --package-lock instead
+# requires an exact version match, for a separately provisioned environment.
+# This file does not provide archived packages or verify archive checksums.
+# Keep the audio and library copies in sync when refreshing the reference.
 #
 # name=version-release,sha256
 mingw-w64-clang-aarch64-clang=22.1.8-2,UNVERIFIED-NO-SIGNED-SNAPSHOT

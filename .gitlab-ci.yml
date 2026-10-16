@@ -35,6 +35,7 @@ linux-builder:
     -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
     - fi
     - unzip artifacts.zip
+    - "if [ \"$CI_COMMIT_REF_NAME\" = \"arm64-support\" ]; then grep -qx \"CI_COMMIT_REF_NAME:arm64-support\" build/install-x64/share/libopenshot-audio.env || exit 1; fi"
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - export CMAKE_PREFIX_PATH="$OPENCV_ROOT:$CMAKE_PREFIX_PATH"
     - export PKG_CONFIG_PATH="$OPENCV_ROOT/lib/pkgconfig:$PKG_CONFIG_PATH"
@@ -75,6 +76,7 @@ mac-builder:
     -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=mac-builder"
     - fi
     - unzip artifacts.zip
+    - "if [ \"$CI_COMMIT_REF_NAME\" = \"arm64-support\" ]; then grep -qx \"CI_COMMIT_REF_NAME:arm64-support\" build/install-x64/share/libopenshot-audio.env || exit 1; fi"
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - export PKG_CONFIG_PATH="$FFMPEGDIR/lib/pkgconfig:$PKG_CONFIG_PATH"
     - export DYLD_LIBRARY_PATH=$FFMPEGDIR/lib:$OPENCV_ROOT/lib:$DYLD_LIBRARY_PATH
@@ -104,6 +106,7 @@ windows-builder-x64:
     - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
     - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - "if ($CI_COMMIT_REF_NAME -eq \"arm64-support\" -and -not (Select-String -Path \"build/install-x64/share/libopenshot-audio.env\" -Pattern \"^CI_COMMIT_REF_NAME:arm64-support$\" -Quiet)) { throw \"Matching arm64-support audio artifacts are required\" }"
     - $env:OPENCV_ROOT = "C:\msys64\mingw64\opencv-4.13.0"
     - $env:OpenCV_DIR = "$env:OPENCV_ROOT\lib\cmake\opencv4"
     - $env:Path = "$env:OPENCV_ROOT\x64\mingw\bin;$env:OPENCV_ROOT\bin;C:\msys64\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
@@ -133,9 +136,9 @@ windows-builder-arm64:
     - build\install-arm64\*
     - build\arm64-architecture-report.json
   script:
-    - try { Invoke-WebRequest -Uri "https://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-arm64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
-    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "https://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-arm64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
+    - Invoke-WebRequest -Uri "https://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-arm64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" -ErrorAction Stop
     - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - "if ($CI_COMMIT_REF_NAME -eq \"arm64-support\" -and -not (Select-String -Path \"build/install-arm64/share/libopenshot-audio.env\" -Pattern \"^CI_COMMIT_REF_NAME:arm64-support$\" -Quiet)) { throw \"Matching arm64-support audio artifacts are required\" }"
     - $env:MSYSTEM = "CLANGARM64"
     - $env:Path = "C:\msys64\clangarm64\bin;C:\msys64\usr\bin;" + $env:Path;
     - cmake -B build -S . -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_C_COMPILER=clang" -D"CMAKE_CXX_COMPILER=clang++" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-arm64" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-arm64" -D"PYTHON_MODULE_PATH=python" -D"USE_QT6=ON" -D"OPENSHOT_QT_API=pyqt6" -G Ninja -D"CMAKE_BUILD_TYPE:STRING=Release"
@@ -143,16 +146,18 @@ windows-builder-arm64:
     - ctest --test-dir build --output-on-failure -VV
     - cmake --install build
     - python -m unittest discover -s ci -p "test_*.py" -v
-    - python ci\validate_arm64_architecture.py --require-native-arm64 --package-lock ci\windows-arm64-packages.lock --payload-root build\install-arm64 --require-payload --json-report build\arm64-architecture-report.json
+    - python ci\validate_arm64_architecture.py --require-native-arm64 --package-baseline ci\windows-arm64-packages.lock --payload-root build\install-arm64 --require-payload --json-report build\arm64-architecture-report.json
     - $PROJECT_VERSION = (Select-String -Path "CMakeLists.txt" -Pattern '^set\(PROJECT_VERSION_FULL "(.*)\"' | %{$_.Matches.Groups[1].value})
     - $PROJECT_SO = (Select-String -Path "CMakeLists.txt" -Pattern '^set\(PROJECT_SO_VERSION (.*)\)' | %{$_.Matches.Groups[1].value})
     - New-Item -path "build/install-arm64/share/" -Name "$CI_PROJECT_NAME.env" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID`nCI_PIPELINE_ID:$CI_PIPELINE_ID`nVERSION:$PROJECT_VERSION`nSO:$PROJECT_SO`nTARGET_TRIPLET:aarch64-w64-mingw32`nPE_MACHINE:0xAA64" -ItemType file -force
     - $PREV_GIT_LABEL=(git describe --tags --abbrev=0 '@^')
     - git log "$PREV_GIT_LABEL..@" --oneline --pretty=format:"- %C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "build/install-arm64/share/$CI_PROJECT_NAME.log"
   when: always
-  rules:
-    - if: '$ENABLE_WINDOWS_ARM64 == "1" && $CI_COMMIT_TAG == null'
-    - when: never
+  only:
+    variables:
+      - $ENABLE_WINDOWS_ARM64 == "1"
+  except:
+    - tags
   tags:
     - windows-arm64
   # Requires PR A's published windows-builder-arm64 artifact/digest and a
@@ -171,6 +176,7 @@ windows-builder-x86:
     - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
     - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - "if ($CI_COMMIT_REF_NAME -eq \"arm64-support\" -and -not (Select-String -Path \"build/install-x86/share/libopenshot-audio.env\" -Pattern \"^CI_COMMIT_REF_NAME:arm64-support$\" -Quiet)) { throw \"Matching arm64-support audio artifacts are required\" }"
     - $env:OPENCV_ROOT = "C:\msys64\mingw32\opencv-4.13.0"
     - $env:OpenCV_DIR = "$env:OPENCV_ROOT\lib\cmake\opencv4"
     - $env:Path = "$env:OPENCV_ROOT\bin;C:\msys64\mingw32\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
