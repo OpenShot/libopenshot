@@ -108,7 +108,14 @@ namespace openshot {
 		int videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
 #if USE_HW_ACCEL
-		AVBufferRef *hw_device_ctx = NULL; //PM
+		AVBufferRef *hw_device_ctx = NULL;
+		using HardwareDeviceCreateFn = int (*)(
+			AVBufferRef **,
+			enum AVHWDeviceType,
+			const char *,
+			AVDictionary *,
+			int);
+		HardwareDeviceCreateFn hardware_device_create = &av_hwdevice_ctx_create;
 #endif
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
@@ -167,6 +174,8 @@ namespace openshot {
 		SWRCONTEXT *avr_ctx = nullptr;                ///< Cached audio resample context
 		AVFrame *pFrameRGB_cached = nullptr;          ///< Temporary frame used for video conversion
 
+		int selected_hw_decoder = 0;
+		int hw_de_on = 0;
 		int hw_de_supported = 0;	// Is set by FFmpegReader
 		bool force_sw_decode = false;
 		bool hw_decode_failed = false;
@@ -175,6 +184,8 @@ namespace openshot {
 #if USE_HW_ACCEL
 		AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
 		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_NONE;
+		static AVPixelFormat GetHardwareDecodeFormat(
+			AVCodecContext *ctx, const AVPixelFormat *pix_fmts);
 		int IsHardwareDecodeSupported(int codecid);
 #endif
 
