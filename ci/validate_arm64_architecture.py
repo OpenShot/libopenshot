@@ -2,39 +2,11 @@
 # SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
-"""
-@file
-@brief Reusable Windows Arm64 architecture validator (design-spec.md
-       G2/G3/G8/G11) implementing design-amendment-A1 native-process
-       semantics.
+"""Validate Windows ARM64 host, payload, and dependency architectures.
 
-This script is shared, byte-for-byte, across libopenshot-audio (PR A),
-libopenshot (PR B), and openshot-qt (PR C). It performs two independent
-checks, exactly as required by design-amendment-A1:
-
-1. Native-process oracle (host evidence): calls IsWow64Process2 via ctypes on
-   the *currently running* Python process and asserts
-     - pNativeMachine == IMAGE_FILE_MACHINE_ARM64 (0xAA64)
-     - pProcessMachine == IMAGE_FILE_MACHINE_UNKNOWN (0x0)
-   The running interpreter PE header must independently identify ARM64.
-   Any nonzero pProcessMachine is WOW/emulated execution and fails this
-   check. This check only passes evidence when actually run under a native
-   Arm64 Python interpreter; on any other host it reports the real, honest
-   values it observed and does not fabricate a pass.
-
-2. Recursive static PE architecture scan (payload evidence): recursively
-   scans a given root directory for every .exe, .dll, and .pyd, reads the
-   COFF file header "Machine" field directly (no external tool dependency),
-   and asserts every one of them is IMAGE_FILE_MACHINE_ARM64 (0xAA64). This
-   check is independent of the host architecture and can run on any Python
-   3 interpreter, including this AMD64 documentation/implementation
-   workspace, against whatever candidate payload directory is supplied.
-
-The two checks are deliberately independent, per design-amendment-A1: a
-native process oracle failure does not imply a payload architecture
-failure, and vice versa. Callers (CI jobs) should run both and fail closed
-if either reports a problem, unless the repository/job intentionally only
-has one kind of evidence available (e.g. no payload directory yet).
+The Windows host API and running interpreter PE header must both identify
+native ARM64 execution. A separate recursive scan checks every payload PE.
+Package manifests can enforce exact versions or report baseline drift.
 """
 
 import argparse
@@ -42,7 +14,7 @@ import ctypes
 import json
 import os
 import re
-import subprocess
+import subprocess  # nosec B404 - Query pacman with an argument list, never a shell.
 import struct
 import sys
 
@@ -225,7 +197,7 @@ def verify_package_lock(path, require_exact_versions=True):
                 % (package, expected_sha256)
             )
         try:
-            completed = subprocess.run(
+            completed = subprocess.run(  # nosec B603 B607 - Fixed pacman command and validated package name; no shell.
                 ["pacman", "-Q", "--", package],
                 capture_output=True,
                 text=True,
@@ -258,6 +230,48 @@ def verify_package_lock(path, require_exact_versions=True):
                 % (package, actual_version, expected_version)
             )
     return verified, failures
+
+
+def print_native_report(oracle):
+    """Print the native-process validation result."""
+    print("== Native Arm64 process oracle (design-amendment-A1) ==")
+    if oracle["checked"]:
+        print("  process_machine = %s" % machine_name(oracle["process_machine"]))
+        print("  native_machine  = %s" % machine_name(oracle["native_machine"]))
+        print("  wow/emulated    = %s" % oracle["is_wow_or_emulated"])
+        print("  native ARM64 ok = %s" % oracle["native_arm64_ok"])
+    else:
+        print("  NOT AVAILABLE: %s" % oracle["reason"])
+
+
+def print_payload_report(root, results, failures):
+    """Print the payload scan result."""
+    print("== Recursive payload PE architecture scan ==")
+    if root:
+        print("  root = %s" % root)
+        print("  files scanned = %d" % len(results))
+        for failure in failures:
+            print("  FAIL: %s" % failure)
+    else:
+        print("  SKIPPED: no --payload-root supplied")
+
+
+def print_package_report(manifest, baseline, results, failures):
+    """Print package versions without claiming baseline drift is a lock match."""
+    print("== MSYS2 package lock ==")
+    if manifest:
+        print("  manifest = %s" % manifest)
+        if baseline:
+            print("  BASELINE ONLY: exact package versions are not required")
+            for package in results:
+                if not package["version_matches"]:
+                    print("  VERSION DRIFT: %s = %s (baseline %s)" % (
+                        package["package"], package["version"], package["expected_version"]))
+        print("  packages verified = %d" % len(results))
+        for failure in failures:
+            print("  FAIL: %s" % failure)
+    else:
+        print("  SKIPPED: no package manifest supplied")
 
 
 def main():
@@ -332,38 +346,9 @@ def main():
         "package_failures": package_failures,
     }
 
-    print("== Native Arm64 process oracle (design-amendment-A1) ==")
-    if oracle["checked"]:
-        print("  process_machine = %s" % machine_name(oracle["process_machine"]))
-        print("  native_machine  = %s" % machine_name(oracle["native_machine"]))
-        print("  wow/emulated    = %s" % oracle["is_wow_or_emulated"])
-        print("  native ARM64 ok = %s" % oracle["native_arm64_ok"])
-    else:
-        print("  NOT AVAILABLE: %s" % oracle["reason"])
-
-    print("== Recursive payload PE architecture scan ==")
-    if args.payload_root:
-        print("  root = %s" % args.payload_root)
-        print("  files scanned = %d" % len(payload_results))
-        for failure in payload_failures:
-            print("  FAIL: %s" % failure)
-    else:
-        print("  SKIPPED: no --payload-root supplied")
-
-    print("== MSYS2 package lock ==")
-    if package_manifest:
-        print("  manifest = %s" % package_manifest)
-        if args.package_baseline:
-            print("  BASELINE ONLY: exact package versions are not required")
-            for package in package_results:
-                if not package["version_matches"]:
-                    print("  VERSION DRIFT: %s = %s (baseline %s)" % (
-                        package["package"], package["version"], package["expected_version"]))
-        print("  packages verified = %d" % len(package_results))
-        for failure in package_failures:
-            print("  FAIL: %s" % failure)
-    else:
-        print("  SKIPPED: no package manifest supplied")
+    print_native_report(oracle)
+    print_payload_report(args.payload_root, payload_results, payload_failures)
+    print_package_report(package_manifest, args.package_baseline, package_results, package_failures)
 
     if args.json_report:
         with open(args.json_report, "w", encoding="utf-8") as f:

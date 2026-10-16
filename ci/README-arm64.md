@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 # Experimental Windows ARM64 builds
 
 The `arm64-support` branch collects build support before integration into
