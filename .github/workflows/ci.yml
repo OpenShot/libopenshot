@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: OpenShot/libopenshot-audio
-          ref: ${{ (github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop' }}
+          ref: ${{ (github.head_ref == 'arm64-support' || github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop' }}
           path: audio
 
       - name: Checkout Resvg
@@ -167,7 +167,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ vars.OPENSHOT_AUDIO_REPOSITORY || 'OpenShot/libopenshot-audio' }}
-          ref: ${{ vars.OPENSHOT_AUDIO_REF || ((github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop') }}
+          ref: ${{ vars.OPENSHOT_AUDIO_REF || ((github.head_ref == 'arm64-support' || github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop') }}
           path: audio
 
       - name: Checkout Catch2
