@@ -17,13 +17,12 @@ Macs; the only difference is that Homebrew lives at `/usr/local` on Intel
 and at `/opt/homebrew` on Apple Silicon. Every path used below is derived
 via `brew --prefix`, so the commands are architecture-neutral.
 
-## Supported platforms
+## Build environments
 
 * macOS 11 (Big Sur) or newer.
-* Both Apple Silicon (`arm64`) and Intel (`x86_64`) are supported.
-* Earlier macOS versions are not tested; in particular, macOS 10.14 or
-  newer is required because AppleClang on older SDKs lacked pieces needed
-  by Qt 5 / modern C++17.
+* The commands cover Apple Silicon (`arm64`) and Intel (`x86_64`) paths.
+* This contributor recipe does not change the deployment target of official
+  builds or establish a new minimum supported macOS version.
 
 ## Build tools
 
@@ -52,8 +51,8 @@ as Homebrew formulae.
 * `qt@5` or `qt` (Qt 6). Both are supported; CMake auto-detects the
   version via `-DUSE_QT6=AUTO` (the default). Qt formulae are keg-only,
   so they must be referenced via `CMAKE_PREFIX_PATH`.
-* `ffmpeg@7` (recommended today; the default `ffmpeg` formula is already
-  at FFmpeg 8, which is not yet supported on the `develop` branch)
+* `ffmpeg@7` (the version used by this recipe; newer FFmpeg compatibility
+  is being validated separately)
 * `libopenshot-audio` (built from source, see below)
 * `libomp` (OpenMP runtime for AppleClang, which does not ship OpenMP
   out of the box)
@@ -64,7 +63,7 @@ Optional but recommended for a more complete build:
 * `imagemagick` (adds extra image decode/encode paths)
 * `resvg` or `librsvg` (SVG rendering)
 * `babl` (colorspace conversions used by some effects)
-* `unittest-cpp` and/or `catch2` (required only to build and run the unit tests)
+* `catch2` (required only to build and run the unit tests)
 
 ## Install dependencies
 
@@ -78,7 +77,7 @@ brew install \
 #     cmake swig qt ffmpeg@7 libomp pkgconf
 
 # Optional but recommended:
-brew install imagemagick resvg babl unittest-cpp catch2
+brew install imagemagick resvg babl catch2
 ```
 
 `qt@5`, `ffmpeg@7`, and `libomp` are keg-only on Homebrew and are
@@ -201,10 +200,10 @@ cmake --install build
 
 ## Running the tests (optional)
 
-Unit tests use Catch2 (preferred) or UnitTest++.
+Unit tests require Catch2. CMake disables tests when Catch2 is not found.
 
 ```sh
-brew install catch2      # or: brew install unittest-cpp
+brew install catch2
 cmake -B build -S . -DENABLE_TESTS=1 ...    # plus the flags above
 cmake --build build -j
 ctest --test-dir build --output-on-failure
@@ -238,9 +237,9 @@ or install it into a directory listed in `CMAKE_PREFIX_PATH`.
 
 ### FFmpeg version mismatches
 
-The current `develop` branch of `libopenshot` targets FFmpeg 7. Homebrew's
-default `ffmpeg` formula has moved on to FFmpeg 8, which is not yet
-supported. Install the pinned `ffmpeg@7` formula as shown above.
+This recipe was verified with FFmpeg 7. Use the versioned `ffmpeg@7`
+formula and the explicit prefix above to avoid accidentally selecting a
+newer Homebrew FFmpeg while its compatibility is being validated.
 
 ## Next steps
 
