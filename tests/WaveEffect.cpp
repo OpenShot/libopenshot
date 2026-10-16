@@ -167,3 +167,62 @@ TEST_CASE("Wave directional displacement clamps image boundaries", "[effect][wav
     CHECK(image->pixelColor(3, 3) == QColor(180, 90, 0));
     CHECK(image->pixelColor(6, 6) == QColor(180, 180, 0));
 }
+
+
+TEST_CASE("Wave directional property metadata", "[effect][wave]")
+{
+    Wave wave;
+    wave.direction = Keyframe(3.0);
+    wave.warp_angle = Keyframe(45.0);
+    wave.displacement_angle = Keyframe(90.0);
+
+    Json::Value properties;
+    Json::Reader reader;
+
+    REQUIRE(reader.parse(wave.PropertiesJSON(1), properties));
+
+    REQUIRE(properties.isMember("direction"));
+    REQUIRE(properties.isMember("warp_angle"));
+    REQUIRE(properties.isMember("displacement_angle"));
+
+    CHECK(properties["direction"]["value"].asDouble() == 3.0);
+    CHECK(properties["warp_angle"]["value"].asDouble() == 45.0);
+    CHECK(properties["displacement_angle"]["value"].asDouble() == 90.0);
+}
+
+TEST_CASE("Wave directional mode handles empty image", "[effect][wave]")
+{
+    Wave wave = MakeDirectionalWave(1);
+
+    auto frame = std::make_shared<Frame>();
+    auto image = frame->GetImage();
+
+    REQUIRE(image != nullptr);
+    *image = QImage();
+
+    auto result = wave.GetFrame(frame, 1);
+
+    CHECK(result == frame);
+    CHECK(result->GetImage()->isNull());
+}
+
+TEST_CASE("Wave parameterized constructor preserves legacy defaults", "[effect][wave]")
+{
+    Wave wave(
+        Keyframe(0.1),
+        Keyframe(0.5),
+        Keyframe(0.2),
+        Keyframe(2.0),
+        Keyframe(0.3)
+    );
+
+    CHECK(wave.wavelength.GetValue(1) == Catch::Approx(0.1));
+    CHECK(wave.amplitude.GetValue(1) == 0.5);
+    CHECK(wave.multiplier.GetValue(1) == Catch::Approx(0.2));
+    CHECK(wave.shift_x.GetValue(1) == 2.0);
+    CHECK(wave.speed_y.GetValue(1) == Catch::Approx(0.3));
+
+    CHECK(wave.direction.GetValue(1) == 0.0);
+    CHECK(wave.warp_angle.GetValue(1) == 0.0);
+    CHECK(wave.displacement_angle.GetValue(1) == 0.0);
+}
