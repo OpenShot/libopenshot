@@ -71,11 +71,6 @@ typedef struct VAAPIDecodeContext {
 
 using namespace openshot;
 
-int hw_de_on = 0;
-#if USE_HW_ACCEL
-	AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
-	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
-#endif
 
 
 FFmpegReader::FFmpegReader(const std::string &path, bool inspect_reader)
@@ -140,12 +135,16 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 #if USE_HW_ACCEL
 
 // Get hardware pix format
-static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+AVPixelFormat FFmpegReader::GetHardwareDecodeFormat(AVCodecContext *ctx, const AVPixelFormat *pix_fmts)
 {
+	FFmpegReader *reader = static_cast<FFmpegReader *>(ctx->opaque);
+	if (!reader)
+		return AV_PIX_FMT_NONE;
+
 	const enum AVPixelFormat *p;
 
 	// Prefer only the format matching the selected hardware decoder
-	int selected = openshot::Settings::Instance()->HARDWARE_DECODER;
+	int selected = reader->selected_hw_decoder;
 
 	for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 		switch (*p) {
@@ -153,15 +152,15 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 			// Linux pix formats
 			case AV_PIX_FMT_VAAPI:
 				if (selected == 1) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_VAAPI;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 					return *p;
 				}
 				break;
 			case AV_PIX_FMT_VDPAU:
 				if (selected == 6) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VDPAU;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VDPAU;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_VDPAU;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU;
 					return *p;
 				}
 				break;
@@ -170,15 +169,15 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 			// Windows pix formats
 			case AV_PIX_FMT_DXVA2_VLD:
 				if (selected == 3) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
 					return *p;
 				}
 				break;
 			case AV_PIX_FMT_D3D11:
 				if (selected == 4) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_D3D11;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
 					return *p;
 				}
 				break;
@@ -187,8 +186,8 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 			// Apple pix formats
 			case AV_PIX_FMT_VIDEOTOOLBOX:
 				if (selected == 5) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_VIDEOTOOLBOX;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
 					return *p;
 				}
 				break;
@@ -196,15 +195,15 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 				// Cross-platform pix formats
 			case AV_PIX_FMT_CUDA:
 				if (selected == 2) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_CUDA;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
 					return *p;
 				}
 				break;
 			case AV_PIX_FMT_QSV:
 				if (selected == 7) {
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
+					reader->hw_de_av_pix_fmt = AV_PIX_FMT_QSV;
+					reader->hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
 					return *p;
 				}
 				break;
@@ -246,7 +245,8 @@ void FFmpegReader::Open() {
 		// Initialize format context
 		pFormatCtx = NULL;
 		{
-			hw_de_on = (!force_sw_decode && openshot::Settings::Instance()->HARDWARE_DECODER != 0 ? 1 : 0);
+			selected_hw_decoder = openshot::Settings::Instance()->HARDWARE_DECODER;
+			hw_de_on = (!force_sw_decode && selected_hw_decoder != 0 ? 1 : 0);
 			hw_decode_failed = false;
 			hw_decode_error_count = 0;
 			hw_decode_succeeded = false;
@@ -333,74 +333,56 @@ void FFmpegReader::Open() {
 					Logger::Instance()->AppendDebugMethod("Hardware decoding device number", "adapter_num", adapter_num);
 
 					// Set hardware pix format (callback)
-					pCodecCtx->get_format = get_hw_dec_format;
+					pCodecCtx->opaque = this;
+					pCodecCtx->get_format = FFmpegReader::GetHardwareDecodeFormat;
 
-					if (adapter_num < 3 && adapter_num >=0) {
 #if defined(__linux__)
-						snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
-						adapter_ptr = adapter;
-						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
-						switch (i_decoder_hw) {
-								case 1:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-									break;
-								case 2:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-									break;
-								case 6:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU;
-									break;
-								case 7:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-									break;
-								default:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-									break;
-							}
-
+					i_decoder_hw = selected_hw_decoder;
+					switch (i_decoder_hw) {
+						case 1: hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI; break;
+						case 2: hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA; break;
+						case 6: hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU; break;
+						case 7: hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV; break;
+						default: hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI; break;
+					}
 #elif defined(_WIN32)
-						adapter_ptr = NULL;
-						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
-						switch (i_decoder_hw) {
-							case 2:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-								break;
-							case 3:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-								break;
-							case 4:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
-								break;
-							case 7:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-								break;
-							default:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-								break;
-						}
+					i_decoder_hw = selected_hw_decoder;
+					switch (i_decoder_hw) {
+						case 2: hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA; break;
+						case 3: hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2; break;
+						case 4: hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA; break;
+						case 7: hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV; break;
+						default: hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2; break;
+					}
 #elif defined(__APPLE__)
-						adapter_ptr = NULL;
-						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
-						switch (i_decoder_hw) {
-							case 5:
-								hw_de_av_device_type =  AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-								break;
-							case 7:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-								break;
-							default:
-								hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-								break;
-						}
+					i_decoder_hw = selected_hw_decoder;
+					switch (i_decoder_hw) {
+						case 5: hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX; break;
+						case 7: hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV; break;
+						default: hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX; break;
+					}
 #endif
 
+					if (adapter_num >= 0 && adapter_num < 3) {
+#if defined(__linux__)
+						if (i_decoder_hw == 2) {
+							// CUDA uses a GPU index rather than a DRM render node.
+							snprintf(adapter, sizeof(adapter), "%d", adapter_num);
+						} else {
+							snprintf(adapter, sizeof(adapter),
+									 "/dev/dri/renderD%d", adapter_num + 128);
+						}
+						adapter_ptr = adapter;
+#endif
 					} else {
-						adapter_ptr = NULL; // Just to be sure
+						adapter_ptr = NULL;
 					}
 
 					// Check if it is there and writable
 #if defined(__linux__)
-					if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == 0 ) {
+					if (adapter_ptr != NULL &&
+					    (hw_de_av_device_type == AV_HWDEVICE_TYPE_CUDA ||
+					     access(adapter_ptr, W_OK) == 0)) {
 #elif defined(_WIN32)
 					if( adapter_ptr != NULL ) {
 #elif defined(__APPLE__)
@@ -413,9 +395,11 @@ void FFmpegReader::Open() {
 						Logger::Instance()->AppendDebugMethod("Decode Device not present using default");
 					}
 
-					hw_device_ctx = NULL;
+					if (hw_device_ctx) {
+						av_buffer_unref(&hw_device_ctx);
+					}
 					// Here the first hardware initialisations are made
-					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+					if (hardware_device_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
 						const char* hw_name = av_hwdevice_get_type_name(hw_de_av_device_type);
 						std::string hw_msg = "HW decode active: ";
 						hw_msg += (hw_name ? hw_name : "unknown");
@@ -453,10 +437,19 @@ void FFmpegReader::Open() {
 					}
 					else {
 						Logger::Instance()->Log("HW decode active: no (falling back to software)");
-						throw InvalidCodec("Hardware device create failed.", path);
+						hw_de_supported = 0;
+						retry_decode_open = 1;
+						AV_FREE_CONTEXT(pCodecCtx);
+						if (hw_device_ctx) {
+							av_buffer_unref(&hw_device_ctx);
+							hw_device_ctx = NULL;
+						}
 					}
 				}
 #endif // USE_HW_ACCEL
+
+				if (retry_decode_open)
+					continue;
 
 				// Disable per-frame threading for album arts
 				// Using FF_THREAD_FRAME adds one frame decoding delay per thread,
@@ -482,8 +475,10 @@ void FFmpegReader::Open() {
 
 // TODO: needs va_config!
 #if ENABLE_VAAPI
-					((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
-					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,hwconfig);
+					if (hwconfig) {
+						((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
+						constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, hwconfig);
+					}
 #endif // ENABLE_VAAPI
 					if (constraints) {
 						if (pCodecCtx->coded_width < constraints->min_width  	||
@@ -505,9 +500,6 @@ void FFmpegReader::Open() {
 							retry_decode_open = 0;
 						}
 						av_hwframe_constraints_free(&constraints);
-						if (hwconfig) {
-							av_freep(&hwconfig);
-						}
 					}
 					else {
 						int max_h, max_w;
@@ -534,6 +526,9 @@ void FFmpegReader::Open() {
 							Logger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height);
 							retry_decode_open = 0;
 						}
+					}
+					if (hwconfig) {
+						av_freep(&hwconfig);
 					}
 				} // if hw_de_on && hw_de_supported
 				else {
@@ -754,11 +749,8 @@ void FFmpegReader::Close() {
 			}
 			AV_FREE_CONTEXT(pCodecCtx);
 #if USE_HW_ACCEL
-			if (hw_de_on) {
-				if (hw_device_ctx) {
-					av_buffer_unref(&hw_device_ctx);
-					hw_device_ctx = NULL;
-				}
+			if (hw_device_ctx) {
+				av_buffer_unref(&hw_device_ctx);
 			}
 #endif // USE_HW_ACCEL
 			if (img_convert_ctx) {
@@ -1564,8 +1556,8 @@ bool FFmpegReader::GetAVFrame() {
 
 	#if USE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
-		hw_de_av_pix_fmt = hw_de_av_pix_fmt_global;
-		hw_de_av_device_type = hw_de_av_device_type_global;
+		/* Hardware pixel format is maintained per reader. */
+		/* Hardware device type is maintained per reader. */
 	#endif // USE_HW_ACCEL
 		if (send_packet_err < 0 && send_packet_err != AVERROR_EOF) {
 			Logger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet: Not sent [" + av_err2string(send_packet_err) + "])", "send_packet_err", send_packet_err, "send_packet_pts", send_packet_pts);
