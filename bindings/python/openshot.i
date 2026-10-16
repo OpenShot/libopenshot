@@ -63,7 +63,7 @@ class QWidget;
 %template() std::map<std::string, int>;
 %template() std::pair<int, int>;
 %template() std::vector<int>;
-%template() std::vector<float>;
+%template(FloatVector) std::vector<float>;
 %template() std::pair<double, double>;
 %template() std::pair<float, float>;
 %template() std::pair<std::string, std::string>;
@@ -76,6 +76,7 @@ class QWidget;
 #include "WriterBase.h"
 #include "AudioDevices.h"
 #include "AudioRecorder.h"
+#include "AudioReactiveKeyframes.h"
 #include "AudioWaveformer.h"
 #include "CameraCaptureReader.h"
 #include "CacheBase.h"
@@ -518,6 +519,7 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "QtPlayer.h"
 %include "QtTextReader.h"
 %include "KeyFrame.h"
+%include "AudioReactiveKeyframes.h"
 %include "AnimatedCurve.h"
 %include "RendererBase.h"
 %include "Settings.h"
