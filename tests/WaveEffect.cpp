@@ -56,21 +56,20 @@ static std::shared_ptr<Frame> MakeWaveFrame()
     return frame;
 }
 
-static Wave MakeDirectionalWave(int mode)
+static void ConfigureDirectionalWave(Wave& wave, int mode)
 {
-    Wave wave;
     wave.direction = Keyframe(mode);
     wave.wavelength = Keyframe(0.0);
     wave.amplitude = Keyframe(1.0);
     wave.multiplier = Keyframe(0.01);
     wave.shift_x = Keyframe(1.0);
     wave.speed_y = Keyframe(0.0);
-    return wave;
 }
 
 TEST_CASE("Wave horizontal directional displacement", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(1);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 1);
     auto image = wave.GetFrame(MakeWaveFrame(), 1)->GetImage();
 
     CHECK(image->pixelColor(3, 3) == QColor(120, 90, 0));
@@ -78,7 +77,8 @@ TEST_CASE("Wave horizontal directional displacement", "[effect][wave]")
 
 TEST_CASE("Wave vertical directional displacement", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(2);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 2);
     auto image = wave.GetFrame(MakeWaveFrame(), 1)->GetImage();
 
     CHECK(image->pixelColor(3, 3) == QColor(90, 120, 0));
@@ -86,7 +86,8 @@ TEST_CASE("Wave vertical directional displacement", "[effect][wave]")
 
 TEST_CASE("Wave angled displacement", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(3);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 3);
     wave.displacement_angle = Keyframe(90.0);
 
     auto image = wave.GetFrame(MakeWaveFrame(), 1)->GetImage();
@@ -128,7 +129,8 @@ TEST_CASE("Wave legacy JSON defaults", "[effect][wave]")
 
 TEST_CASE("Wave warp angle changes pattern orientation", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(1);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 1);
     wave.wavelength = Keyframe(1.5707963267948966);
     wave.shift_x = Keyframe(0.0);
 
@@ -144,7 +146,8 @@ TEST_CASE("Wave warp angle changes pattern orientation", "[effect][wave]")
 
 TEST_CASE("Wave direction supports animated keyframes", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(1);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 1);
     wave.direction = Keyframe();
 
     wave.direction.AddPoint(1, 1.0);
@@ -159,7 +162,8 @@ TEST_CASE("Wave direction supports animated keyframes", "[effect][wave]")
 
 TEST_CASE("Wave directional displacement clamps image boundaries", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(1);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 1);
     wave.shift_x = Keyframe(100.0);
 
     auto image = wave.GetFrame(MakeWaveFrame(), 1)->GetImage();
@@ -192,7 +196,8 @@ TEST_CASE("Wave directional property metadata", "[effect][wave]")
 
 TEST_CASE("Wave directional mode handles empty image", "[effect][wave]")
 {
-    Wave wave = MakeDirectionalWave(1);
+    Wave wave;
+    ConfigureDirectionalWave(wave, 1);
 
     auto frame = std::make_shared<Frame>();
     auto image = frame->GetImage();
