@@ -369,6 +369,14 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 			painter.setPen(pen);
 		}
 
+		// Draw the text outline first, then the fill so the border
+		// does not obscure the interior of the caption characters.
+		if (stroke_width_value > 0.0) {
+			painter.setBrush(Qt::NoBrush);
+			painter.drawPath(path);
+		}
+
+		painter.setPen(Qt::NoPen);
 		painter.setBrush(font_brush);
 		painter.drawPath(path);
 	}
