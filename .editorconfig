@@ -1,0 +1,15 @@
+# EditorConfig: https://editorconfig.org/
+# Apply consistent defaults to new edits without reformatting existing files.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Preserve whitespace in Markdown hard line breaks.
+[*.md]
+trim_trailing_whitespace = false
+
+# Keep indentation governed by existing file conventions.
