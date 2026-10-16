@@ -97,11 +97,7 @@ def read_native_process_oracle():
 
 
 def read_pe_machine(path):
-    """
-    Read the COFF "Machine" field directly from a PE file's file header,
-    without requiring llvm-readobj/dumpbin/objdump. Returns an int machine
-    value, or None if the file is not a valid PE (e.g. a script stub).
-    """
+    """Read the COFF machine field directly, returning None for invalid PE files."""
     with open(path, "rb") as f:
         dos_header = f.read(64)
         if len(dos_header) < 64 or dos_header[0:2] != b"MZ":
@@ -119,12 +115,7 @@ def read_pe_machine(path):
 
 
 def scan_payload_architecture(root):
-    """
-    Recursively scan `root` for .exe/.dll/.pyd files and read each PE
-    Machine field. Returns (results, failures) where results is a list of
-    {"path", "machine", "machine_name"} and failures is a list of
-    human-readable problem strings (missing PE header, wrong architecture).
-    """
+    """Recursively return PE architecture results and failures for a payload."""
     results = []
     failures = []
     if not os.path.isdir(root):
