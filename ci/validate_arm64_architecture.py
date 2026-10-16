@@ -2,12 +2,11 @@
 # SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
-"""Validate Windows ARM64 host, payload, and dependency architectures.
+"""Validate Windows ARM64 host, payload, and dependency architectures."""
 
-The Windows host API and running interpreter PE header must both identify
-native ARM64 execution. A separate recursive scan checks every payload PE.
-Package manifests can enforce exact versions or report baseline drift.
-"""
+# The Windows host API and interpreter PE header must both identify native
+# ARM64 execution. A separate recursive scan checks every payload PE.
+# Package manifests can enforce exact versions or report baseline drift.
 
 import argparse
 import ctypes
@@ -36,12 +35,7 @@ def machine_name(value):
 
 
 def read_native_process_oracle():
-    """
-    Query IsWow64Process2 for the current process. Returns a dict with the
-    exact observed pProcessMachine / pNativeMachine values, the derived
-    WOW/emulation state, and a pass/fail verdict against
-    design-amendment-A1's native-execution requirement.
-    """
+    """Report host API values, interpreter architecture, and native ARM64 status."""
     result = {
         "checked": False,
         "process_machine": None,
