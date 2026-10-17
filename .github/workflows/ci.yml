@@ -38,11 +38,27 @@ jobs:
           # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
           fetch-depth: 0
 
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout OpenShotAudio
         uses: actions/checkout@v3
         with:
           repository: OpenShot/libopenshot-audio
-          ref: ${{ (github.head_ref == 'arm64-support' || github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop' }}
+          ref: ${{ steps.audio-branch.outputs.ref }}
           path: audio
 
       - name: Checkout Resvg
@@ -151,23 +167,36 @@ jobs:
         with:
           file: build/coverage.info
 
-  # Supplemental native Arm64 presubmit. Its output is never a release
-  # artifact; GitLab remains the production artifact chain.
-  build-arm64-presubmit:
-    if: ${{ vars.ENABLE_WINDOWS_ARM64 == '1' }}
+  windows-arm64:
+    name: Windows ARM64 build and tests
     runs-on: windows-11-arm
-    continue-on-error: true
     steps:
       - name: Preserve repository line endings
         run: git config --global core.autocrlf input
 
       - uses: actions/checkout@v4
 
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout OpenShotAudio
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.OPENSHOT_AUDIO_REPOSITORY || 'OpenShot/libopenshot-audio' }}
-          ref: ${{ vars.OPENSHOT_AUDIO_REF || ((github.head_ref == 'arm64-support' || github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop') }}
+          repository: OpenShot/libopenshot-audio
+          ref: ${{ steps.audio-branch.outputs.ref }}
           path: audio
 
       - name: Checkout Catch2
@@ -188,7 +217,7 @@ jobs:
           mapfile -t packages < <(sed -n '/^[^#[:space:]][^=]*=/s/=.*//p' ci/windows-arm64-packages.lock)
           pacman --noconfirm -S --needed -- "${packages[@]}"
 
-      - name: Build (CLANGARM64, presubmit only)
+      - name: Build (CLANGARM64, ARM64)
         shell: msys2 {0}
         run: |
           cmake -B Catch2/build -S Catch2 -G Ninja \
@@ -216,7 +245,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_LIB_DOCS=OFF
           cmake --build build
-          ctest --test-dir build --output-on-failure -VV
+          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error
           cmake --install build
           python -m unittest discover -s ci -p "test_*.py" -v
           python ci/validate_arm64_architecture.py \
@@ -224,4 +253,63 @@ jobs:
             --package-baseline ci/windows-arm64-packages.lock \
             --payload-root install-arm64 \
             --require-payload \
-            --json-report build/arm64-presubmit-report.json
+            --json-report build/arm64-report.json
+
+  linux-arm64:
+    name: Linux ARM64 build and tests
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check out audio dependency
+        uses: actions/checkout@v4
+        with:
+          repository: OpenShot/libopenshot-audio
+          ref: ${{ steps.audio-branch.outputs.ref }}
+          path: audio
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build swig python3-dev catch2 \
+            libasound2-dev qtbase5-dev libqt5svg5-dev libavcodec-dev libavdevice-dev \
+            libavformat-dev libavutil-dev libswscale-dev libswresample-dev \
+            libbabl-dev libopencv-dev libprotobuf-dev protobuf-compiler libjsoncpp-dev
+      - name: Build audio and libopenshot
+        run: |
+          test "$(uname -m)" = aarch64
+          prefix="$RUNNER_TEMP/openshot-arm64"
+          cmake -S audio -B audio/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$prefix" -DENABLE_AUDIO_DOCS=OFF
+          cmake --build audio/build --parallel 2
+          cmake --install audio/build
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$prefix" -DCMAKE_INSTALL_PREFIX="$prefix" \
+            -DPYTHON_MODULE_PATH=python -DPYTHON_EXECUTABLE=/usr/bin/python3 \
+            -DENABLE_LIB_DOCS=OFF -DUSE_QT6=OFF
+          cmake --build build --parallel 2
+          cmake --install build
+          readelf -h "$prefix/lib/libopenshot.so" | grep -Eq 'Machine:.*AArch64'
+          echo "PYTHONPATH=$prefix/python" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$prefix/lib" >> "$GITHUB_ENV"
+      - name: Run library and Python tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error -j2
+          python3 -c "import openshot; print(openshot.OPENSHOT_VERSION_FULL_STRING)"
+          python3 -m unittest discover -s ci -p 'test_*.py' -v

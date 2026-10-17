@@ -30,11 +30,27 @@ jobs:
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Check out audio dependency
         uses: actions/checkout@v4
         with:
           repository: OpenShot/libopenshot-audio
-          ref: ${{ (github.head_ref == 'arm64-support' || github.base_ref == 'arm64-support' || github.ref_name == 'arm64-support') && 'arm64-support' || 'develop' }}
+          ref: ${{ steps.audio-branch.outputs.ref }}
           path: audio
       - name: Install build dependencies
         run: |
