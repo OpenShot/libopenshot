@@ -141,11 +141,13 @@ jobs:
           ctest --test-dir build --output-on-failure --output-junit junit-results.xml
 
       - name: Upload Codecov Test Analytics
-        if: ${{ always() }}
-        uses: codecov/test-results-action@v1
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
         with:
           files: build/junit-results.xml
+          report_type: test_results
           fail_ci_if_error: false
+          verbose: true
 
       - name: Check reader and raw-video stability
         if: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
