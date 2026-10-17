@@ -26,6 +26,7 @@
 
 #define private public
 #include "FFmpegReader.h"
+#include "FFmpegColorMatrix.h"
 #undef private
 #include "Exceptions.h"
 #include "Frame.h"
@@ -1054,4 +1055,37 @@ TEST_CASE("BT.2020 PQ source metadata propagation",
     CHECK(frame->source_color_metadata.chroma_location == 1);
 
     reader.Close();
+}
+
+TEST_CASE("FFmpeg source color matrix selection", "[libopenshot][ffmpegreader][ColorMatrix]") {
+    CHECK(SourceSwsColorspace(AVCOL_SPC_BT709) == SWS_CS_ITU709);
+    CHECK(SourceSwsColorspace(AVCOL_SPC_BT2020_NCL) == SWS_CS_BT2020);
+    CHECK(SourceSwsColorspace(AVCOL_SPC_BT470BG) == SWS_CS_SMPTE170M);
+    CHECK(SourceSwsColorspace(AVCOL_SPC_UNSPECIFIED) == SWS_CS_DEFAULT);
+    CHECK(SourceSwsColorspace(AVCOL_SPC_BT2020_CL) == -1);
+}
+
+TEST_CASE("FFmpeg source color matrix pixel accuracy", "[libopenshot][ffmpegreader][ColorMatrixPixels]") {
+    struct Sample {
+        const char* filename;
+        int green;
+    };
+    const Sample samples[] = {
+        {"bt709-matrix-test.mkv", 240},
+        {"bt2020-pq-test.mkv", 255}
+    };
+    for (const auto& sample : samples) {
+        FFmpegReader reader(std::string(TEST_MEDIA_PATH) + sample.filename, false);
+        reader.Open();
+        auto frame = reader.GetFrame(1);
+        REQUIRE(frame != nullptr);
+        const unsigned char* pixels = frame->GetPixels(60);
+        REQUIRE(pixels != nullptr);
+        const int index = 161 * 4;
+        CHECK((int)pixels[index] == Approx(0).margin(3));
+        CHECK((int)pixels[index + 1] == Approx(sample.green).margin(3));
+        CHECK((int)pixels[index + 2] == Approx(255).margin(3));
+        CHECK((int)pixels[index + 3] == 255);
+        reader.Close();
+    }
 }
