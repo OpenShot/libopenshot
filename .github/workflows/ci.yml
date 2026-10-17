@@ -138,7 +138,7 @@ jobs:
         run: |
           export DISPLAY=:0.0
           export QT_QPA_PLATFORM=offscreen
-          ctest --test-dir build --output-on-failure --output-junit build/junit-results.xml
+          ctest --test-dir build --output-on-failure --output-junit junit-results.xml
 
       - name: Upload Codecov Test Analytics
         if: ${{ always() }}
