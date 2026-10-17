@@ -1,3 +1,4 @@
+#include <cmath>
 /**
  * @file
  * @brief Qt JSON compatibility investigation for issue #142
@@ -10,6 +11,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Json.h"
+#include "QtJsonAdapter.h"
 #include "Exceptions.h"
 #include "openshot_catch.h"
 
@@ -149,3 +151,160 @@ TEST_CASE("Qt JSON preserves ordinary numeric values",
     CHECK(legacy["opacity"].asDouble() ==
           Approx(modern.value("opacity").toDouble()));
 }
+
+
+TEST_CASE("Qt JSON adapter parses objects and arrays",
+          "[json][qtjson][adapter]")
+{
+    const auto object = openshot::detail::parseQtJson(
+        R"({"clip":{"id":"abc"},"frames":[1,2,3]})");
+
+    CHECK(object.isObject());
+    CHECK(object.object().value("clip")
+              .toObject().value("id").toString() == "abc");
+    CHECK(object.object().value("frames").toArray().size() == 3);
+
+    const auto array = openshot::detail::parseQtJson(
+        R"([1,2,3])");
+
+    CHECK(array.isArray());
+    CHECK(array.array().size() == 3);
+}
+
+TEST_CASE("Qt JSON adapter serializes compact and indented JSON",
+          "[json][qtjson][adapter]")
+{
+    const auto document = openshot::detail::parseQtJson(
+        R"({"enabled":true,"frame":120})");
+
+    const std::string compact =
+        openshot::detail::serializeQtJson(document, true);
+
+    const std::string indented =
+        openshot::detail::serializeQtJson(document, false);
+
+    CHECK(compact.find('\n') == std::string::npos);
+    CHECK(indented.find('\n') != std::string::npos);
+
+    CHECK(openshot::detail::parseQtJson(compact) == document);
+    CHECK(openshot::detail::parseQtJson(indented) == document);
+}
+
+TEST_CASE("Qt JSON adapter preserves round-trip values",
+          "[json][qtjson][adapter]")
+{
+    const std::string input =
+        R"({"name":"Krishna","values":[1,2.5,null,true]})";
+
+    const auto original =
+        openshot::detail::parseQtJson(input);
+
+    const auto restored =
+        openshot::detail::parseQtJson(
+            openshot::detail::serializeQtJson(original, true));
+
+    CHECK(restored == original);
+    CHECK(restored.object().value("values").toArray().size() == 4);
+}
+
+TEST_CASE("Qt JSON adapter rejects invalid input",
+          "[json][qtjson][adapter]")
+{
+    CHECK_THROWS_AS(
+        openshot::detail::parseQtJson(R"({"broken":})"),
+        openshot::InvalidJSON);
+
+    CHECK_THROWS_AS(
+        openshot::detail::parseQtJson(""),
+        openshot::InvalidJSON);
+
+    CHECK_THROWS_AS(
+        openshot::detail::parseQtJson("null"),
+        openshot::InvalidJSON);
+}
+
+
+TEST_CASE("Qt JSON adapter documents large integer precision",
+          "[json][qtjson][adapter][precision]")
+{
+    const std::string input =
+        R"({"value":9007199254740993})";
+
+    const Json::Value legacy = openshot::stringToJson(input);
+    const auto modern = openshot::detail::parseQtJson(input);
+
+    REQUIRE(legacy["value"].isIntegral());
+    CHECK(legacy["value"].asLargestUInt() ==
+          static_cast<Json::LargestUInt>(9007199254740993ULL));
+
+    const double qtValue =
+        modern.object().value("value").toDouble();
+
+    INFO("Qt numeric representation: " << qtValue);
+
+    CHECK(std::isfinite(qtValue));
+}
+
+TEST_CASE("Qt JSON adapter preserves ordinary signed integers",
+          "[json][qtjson][adapter][precision]")
+{
+    const std::string input =
+        R"({"negative":-120,"positive":120})";
+
+    const auto modern = openshot::detail::parseQtJson(input);
+
+    CHECK(modern.object().value("negative").toInt() == -120);
+    CHECK(modern.object().value("positive").toInt() == 120);
+}
+
+
+TEST_CASE("Qt JSON adapter reports large integer serialization",
+          "[json][qtjson][adapter][precision]")
+{
+    const std::string input =
+        R"({"value":9007199254740993})";
+
+    const Json::Value legacy = openshot::stringToJson(input);
+    const auto modern = openshot::detail::parseQtJson(input);
+
+    const std::string legacyOutput = legacy.toStyledString();
+    const std::string qtOutput =
+        openshot::detail::serializeQtJson(modern, true);
+
+    INFO("JsonCpp: " << legacyOutput);
+    INFO("Qt JSON: " << qtOutput);
+
+    CHECK(legacy["value"].asLargestUInt() ==
+          static_cast<Json::LargestUInt>(9007199254740993ULL));
+
+    CHECK_FALSE(qtOutput.empty());
+}
+
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+TEST_CASE("Qt5 JSON documents large integer precision loss",
+          "[json][qtjson][precision]")
+{
+    const std::string input =
+        R"({"value":9007199254740993})";
+
+    const Json::Value legacy =
+        openshot::stringToJson(input);
+
+    const auto modern =
+        openshot::detail::parseQtJson(input);
+
+    const std::string output =
+        openshot::detail::serializeQtJson(modern, true);
+
+    REQUIRE(legacy["value"].asLargestUInt() ==
+            static_cast<Json::LargestUInt>(
+                9007199254740993ULL));
+
+    CHECK(output.find("9007199254740992") !=
+          std::string::npos);
+
+    CHECK(output.find("9007199254740993") ==
+          std::string::npos);
+}
+#endif

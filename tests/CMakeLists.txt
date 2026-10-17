@@ -161,6 +161,9 @@ foreach(tname ${OPENSHOT_TESTS})
   )
 
   if(tname STREQUAL "QtJsonCompatibility")
+    target_sources(openshot-${tname}-test PRIVATE
+      "${PROJECT_SOURCE_DIR}/src/QtJsonAdapter.cpp"
+    )
     if(TARGET Qt6::Core)
       target_link_libraries(openshot-${tname}-test Qt6::Core)
     else()
