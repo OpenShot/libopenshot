@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #include "ColorSpace.h"
 #include "openshot_catch.h"
 #include <cmath>
