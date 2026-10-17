@@ -13,6 +13,7 @@
 #ifndef OPENSHOT_FFMPEG_UTILITIES_H
 #define OPENSHOT_FFMPEG_UTILITIES_H
 
+#include "Exceptions.h"
 #include "OpenShotVersion.h"  // For FFMPEG_USE_SWRESAMPLE
 
 // Required for libavformat to build on Windows
@@ -404,6 +405,68 @@ inline static int ffmpeg_stream_add_side_data(
 // Aligned memory allocation helpers (cross-platform)
 #if defined(_WIN32)
 #include <malloc.h>
+#endif
+
+// FFmpeg 7.1 introduced this API at libavcodec 61.13.100. FFmpeg 7.0
+// still needs the AVCodec fields, as do older supported releases.
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
+template<typename T>
+inline static const T* ffmpeg_codec_config(const AVCodec* codec,
+                                         const AVCodecContext* context,
+                                         AVCodecConfig config) {
+    const void* values = nullptr;
+    const int result = avcodec_get_supported_config(context, codec, config, 0,
+                                                    &values, nullptr);
+    // A successful NULL list means unrestricted support. A failed query must
+    // not silently turn into unrestricted support or a default format.
+    if (result < 0)
+        throw openshot::InvalidCodec("Could not query codec capabilities: " + av_err2string(result), "");
+    return static_cast<const T*>(values);
+}
+#endif
+
+inline static const AVPixelFormat* ffmpeg_codec_pix_fmts(const AVCodec* codec,
+                                                        const AVCodecContext* context) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
+    return ffmpeg_codec_config<AVPixelFormat>(codec, context, AV_CODEC_CONFIG_PIX_FORMAT);
+#else
+    (void)context;
+    return codec->pix_fmts;
+#endif
+}
+
+inline static const int* ffmpeg_codec_sample_rates(const AVCodec* codec,
+                                                  const AVCodecContext* context) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
+    return ffmpeg_codec_config<int>(codec, context, AV_CODEC_CONFIG_SAMPLE_RATE);
+#else
+    (void)context;
+    return codec->supported_samplerates;
+#endif
+}
+
+inline static const AVSampleFormat* ffmpeg_codec_sample_fmts(const AVCodec* codec,
+                                                            const AVCodecContext* context) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
+    return ffmpeg_codec_config<AVSampleFormat>(codec, context, AV_CODEC_CONFIG_SAMPLE_FORMAT);
+#else
+    (void)context;
+    return codec->sample_fmts;
+#endif
+}
+
+// AVChannelLayout itself is unavailable before FFmpeg 5.1. Guard the whole
+// declaration, not only the function body.
+#if HAVE_CH_LAYOUT
+inline static const AVChannelLayout* ffmpeg_codec_ch_layouts(const AVCodec* codec,
+                                                            const AVCodecContext* context) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
+    return ffmpeg_codec_config<AVChannelLayout>(codec, context, AV_CODEC_CONFIG_CHANNEL_LAYOUT);
+#else
+    (void)context;
+    return codec->ch_layouts;
+#endif
+}
 #endif
 
 inline static void* aligned_malloc(size_t size, size_t alignment = 32)

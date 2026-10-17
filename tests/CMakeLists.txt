@@ -47,6 +47,7 @@ set(OPENSHOT_TESTS
   Coordinate
   CrashHandler
   DummyReader
+  FFmpegCapabilities
   FFmpegReader
   FFmpegWriter
   Fraction
@@ -60,6 +61,7 @@ set(OPENSHOT_TESTS
   QtPlayer
   QtImageReader
   ReaderBase
+  NativeArm64ProcessOracle
   Settings
   ScreenCaptureReader
   SphericalMetadata

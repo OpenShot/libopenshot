@@ -1,0 +1,36 @@
+# Windows ARM64 MSYS2 CLANGARM64 reference package versions
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Integration builds install available packages from the rolling MSYS2 repo.
+# --package-baseline records installed versions and reports drift from this
+# reference. It still rejects missing packages. --package-lock instead
+# requires an exact version match, for a separately provisioned environment.
+# This file does not provide archived packages or verify archive checksums.
+# Keep the audio and library copies in sync when refreshing the reference.
+#
+# name=version-release,sha256
+mingw-w64-clang-aarch64-clang=22.1.8-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-libc++=22.1.8-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-compiler-rt=22.1.8-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-llvm-openmp=22.1.8-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-libwinpthread=14.0.0.r302.gd7f3c5201-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-cmake=4.4.2-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-ninja=1.13.2-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-swig=4.5.0-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-python=3.14.7-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-python-pyqt6=6.11.0-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-python-pyqt6-sip=13.12.0-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-qt6-base=6.11.2-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-qt6-svg=6.11.2-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-qt6-multimedia=6.11.2-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-qt6-imageformats=6.11.2-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-ffmpeg=9.0.1-3,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-opencv=5.0.0-3,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-protobuf=35.1-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-zeromq=4.3.5-5,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-cppzmq=4.11.0-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-babl=0.1.128-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-imagemagick=7.1.2.30-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-jsoncpp=1.9.8-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
+mingw-w64-clang-aarch64-zlib=1.3.2-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
