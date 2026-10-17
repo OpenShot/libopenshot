@@ -23,6 +23,24 @@ struct ColorMetadata {
     int chroma_location = 0;
 };
 
+// Transfer characteristics for encoded RGB signals.
+enum class TransferFunction {
+    BT709,
+    SRGB,
+    PQ,
+    HLG
+};
+
+// Convert one encoded component to linear light.
+// PQ returns absolute luminance in cd/m^2 (nits).
+// Other functions return relative linear-light values.
+double DecodeTransfer(double encoded, TransferFunction function);
+
+// Convert one linear-light component to an encoded signal.
+// PQ expects absolute luminance in cd/m^2 (nits).
+// Other functions expect relative linear-light values.
+double EncodeTransfer(double linear, TransferFunction function);
+
 struct LinearRGB {
     double r;
     double g;

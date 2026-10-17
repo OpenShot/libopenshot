@@ -3,6 +3,8 @@
 
 #include "ColorSpace.h"
 #include <stdexcept>
+#include <cmath>
+#include <algorithm>
 
 namespace openshot {
 namespace {
@@ -86,6 +88,105 @@ LinearRGB ConvertLinearRGB(
 
     const LinearRGB xyz = Multiply(src, rgb);
     return Multiply(Inverse(dst), xyz);
+}
+
+
+double DecodeTransfer(double encoded, TransferFunction function)
+{
+    if (!std::isfinite(encoded) || encoded < 0.0 || encoded > 1.0)
+        throw std::out_of_range("Encoded value outside [0, 1]");
+
+    switch (function) {
+    case TransferFunction::BT709:
+        return encoded < 0.081
+            ? encoded / 4.5
+            : std::pow((encoded + 0.099) / 1.099, 1.0 / 0.45);
+
+    case TransferFunction::SRGB:
+        return encoded <= 0.04045
+            ? encoded / 12.92
+            : std::pow((encoded + 0.055) / 1.055, 2.4);
+
+    case TransferFunction::PQ: {
+        constexpr double m1 = 2610.0 / 16384.0;
+        constexpr double m2 = 2523.0 / 32.0;
+        constexpr double c1 = 3424.0 / 4096.0;
+        constexpr double c2 = 2413.0 / 128.0;
+        constexpr double c3 = 2392.0 / 128.0;
+
+        const double n = std::pow(encoded, 1.0 / m2);
+        const double numerator = std::max(n - c1, 0.0);
+        return 10000.0 * std::pow(
+            numerator / (c2 - c3 * n), 1.0 / m1);
+    }
+
+    case TransferFunction::HLG: {
+        constexpr double a = 0.17883277;
+        constexpr double b = 1.0 - 4.0 * a;
+        constexpr double c = 0.55991073;
+
+        return encoded <= 0.5
+            ? (encoded * encoded) / 3.0
+            : (std::exp((encoded - c) / a) + b) / 12.0;
+    }
+
+    default:
+        throw std::invalid_argument("Transfer function not implemented");
+    }
+}
+
+
+double EncodeTransfer(double linear, TransferFunction function)
+{
+    if (!std::isfinite(linear) || linear < 0.0)
+        throw std::out_of_range("Linear value must be finite and nonnegative");
+
+    switch (function) {
+    case TransferFunction::BT709:
+        if (linear > 1.0)
+            throw std::out_of_range("SDR linear value exceeds 1");
+        return linear < 0.018
+            ? 4.5 * linear
+            : 1.099 * std::pow(linear, 0.45) - 0.099;
+
+    case TransferFunction::SRGB:
+        if (linear > 1.0)
+            throw std::out_of_range("SDR linear value exceeds 1");
+        return linear <= 0.0031308
+            ? 12.92 * linear
+            : 1.055 * std::pow(linear, 1.0 / 2.4) - 0.055;
+
+    case TransferFunction::PQ: {
+        if (linear > 10000.0)
+            throw std::out_of_range("PQ luminance exceeds 10000 nits");
+
+        constexpr double m1 = 2610.0 / 16384.0;
+        constexpr double m2 = 2523.0 / 32.0;
+        constexpr double c1 = 3424.0 / 4096.0;
+        constexpr double c2 = 2413.0 / 128.0;
+        constexpr double c3 = 2392.0 / 128.0;
+
+        const double n = std::pow(linear / 10000.0, m1);
+        return std::pow(
+            (c1 + c2 * n) / (1.0 + c3 * n), m2);
+    }
+
+    case TransferFunction::HLG: {
+        if (linear > 1.0)
+            throw std::out_of_range("HLG linear value exceeds 1");
+
+        constexpr double a = 0.17883277;
+        constexpr double b = 1.0 - 4.0 * a;
+        constexpr double c = 0.55991073;
+
+        return linear <= (1.0 / 12.0)
+            ? std::sqrt(3.0 * linear)
+            : a * std::log(12.0 * linear - b) + c;
+    }
+
+    default:
+        throw std::invalid_argument("Transfer function not implemented");
+    }
 }
 
 } // namespace openshot
