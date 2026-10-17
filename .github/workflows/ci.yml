@@ -244,7 +244,11 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$PWD/install-arm64" \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_LIB_DOCS=OFF
-          cmake --build build
+          if ! cmake --build build; then
+            # Keep generated rules available in logs when Ninja rejects them.
+            grep -n -E '\$[^$ :{a-zA-Z_]' build/build.ninja build/CMakeFiles/rules.ninja || true
+            exit 1
+          fi
           QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error
           cmake --install build
           python -m unittest discover -s ci -p "test_*.py" -v
