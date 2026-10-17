@@ -38,6 +38,7 @@ set(OPENSHOT_TESTS
   AudioPlaybackThread
   AnimatedCurve
   QtJsonCompatibility
+  ChunkReaderJson
   AudioWaveformer
   CameraCaptureReader
   CacheDisk

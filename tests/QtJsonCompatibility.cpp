@@ -308,3 +308,58 @@ TEST_CASE("Qt5 JSON documents large integer precision loss",
           std::string::npos);
 }
 #endif
+
+TEST_CASE("Compare string-valued integer conversions",
+          "[json][qtjson][conversion]")
+{
+    const std::string input = R"({"width":"1280"})";
+
+    const Json::Value legacy =
+        openshot::stringToJson(input);
+
+    const QJsonObject modern =
+        openshot::detail::parseQtJson(input).object();
+
+    INFO("JsonCpp width type: " << legacy["width"].type());
+    INFO("Qt width type: " << modern.value("width").type());
+
+    CHECK(modern.value("width").toInt() == 0);
+
+    // Check whether JsonCpp rejects this conversion.
+    bool legacyThrows = false;
+    try {
+        (void)legacy["width"].asInt();
+    } catch (const std::exception&) {
+        legacyThrows = true;
+    }
+
+    INFO("JsonCpp conversion throws: " << legacyThrows);
+    CHECK(legacyThrows);
+}
+
+TEST_CASE("Compare out-of-range integer conversions",
+          "[json][qtjson][conversion]")
+{
+    const std::string input =
+        R"({"width":9223372036854775807})";
+
+    const Json::Value legacy =
+        openshot::stringToJson(input);
+
+    const QJsonObject modern =
+        openshot::detail::parseQtJson(input).object();
+
+    CHECK(modern.value("width").toInt() == 0);
+
+    bool legacyThrows = false;
+    try {
+        (void)legacy["width"].asInt();
+    } catch (const std::exception&) {
+        legacyThrows = true;
+    }
+
+    INFO("JsonCpp out-of-range conversion throws: "
+         << legacyThrows);
+
+    CHECK(legacyThrows);
+}
