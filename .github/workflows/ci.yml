@@ -239,6 +239,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
             -DUSE_QT6=ON \
+            -DENABLE_MAGICK=OFF \
             -DOpenShotAudio_ROOT="$PWD/audio/install-arm64" \
             -DCatch2_DIR="$PWD/catch2-install/lib/cmake/Catch2" \
             -DCMAKE_INSTALL_PREFIX="$PWD/install-arm64" \
