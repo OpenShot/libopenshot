@@ -284,6 +284,7 @@ if(DEFINED UNIT_TEST_TARGETS AND NOT TARGET coverage)
     DEPENDS openshot ${UNIT_TEST_TARGETS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Running unit tests (coverage disabled)"
+    VERBATIM
   )
   foreach(_t IN LISTS UNIT_TEST_NAMES)
     add_custom_target("${_t}_coverage"
@@ -291,6 +292,7 @@ if(DEFINED UNIT_TEST_TARGETS AND NOT TARGET coverage)
       DEPENDS openshot openshot-${_t}-test
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Running unit tests for ${_t} class (coverage disabled)"
+      VERBATIM
     )
   endforeach()
 endif()
