@@ -293,6 +293,9 @@ if (ENABLE_MAGICK)
 
     # Link with ImageMagick library
     target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
+    if(TARGET ImageMagick::MagickCore)
+      target_link_libraries(openshot PUBLIC ImageMagick::MagickCore)
+    endif()
 
     set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
     mark_as_advanced(HAVE_IMAGEMAGICK)
