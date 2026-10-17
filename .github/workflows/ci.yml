@@ -133,6 +133,20 @@ jobs:
           export QT_QPA_PLATFORM=offscreen
           cmake --build build --target coverage -- VERBOSE=1 || true
 
+      - name: Generate JUnit test results
+        if: ${{ !cancelled() }}
+        run: |
+          export DISPLAY=:0.0
+          export QT_QPA_PLATFORM=offscreen
+          ctest --test-dir build --output-on-failure --output-junit build/junit-results.xml
+
+      - name: Upload Codecov Test Analytics
+        if: ${{ always() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: build/junit-results.xml
+          fail_ci_if_error: false
+
       - name: Check reader and raw-video stability
         if: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
         timeout-minutes: 10
