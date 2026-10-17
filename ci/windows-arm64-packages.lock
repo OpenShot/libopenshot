@@ -31,6 +31,5 @@ mingw-w64-clang-aarch64-protobuf=35.1-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
 mingw-w64-clang-aarch64-zeromq=4.3.5-5,UNVERIFIED-NO-SIGNED-SNAPSHOT
 mingw-w64-clang-aarch64-cppzmq=4.11.0-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
 mingw-w64-clang-aarch64-babl=0.1.128-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
-mingw-w64-clang-aarch64-imagemagick=7.1.2.30-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
 mingw-w64-clang-aarch64-jsoncpp=1.9.8-1,UNVERIFIED-NO-SIGNED-SNAPSHOT
 mingw-w64-clang-aarch64-zlib=1.3.2-2,UNVERIFIED-NO-SIGNED-SNAPSHOT
