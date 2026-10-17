@@ -47,6 +47,7 @@ set(OPENSHOT_TESTS
   Coordinate
   CrashHandler
   DummyReader
+  FFmpegCapabilities
   FFmpegReader
   FFmpegWriter
   Fraction

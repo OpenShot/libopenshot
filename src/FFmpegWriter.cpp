@@ -1140,7 +1140,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 #endif
 
 	// Set valid sample rate (or throw error)
-	if (const int* supported_rates = ffmpeg_codec_sample_rates(codec)) {
+	if (const int* supported_rates = ffmpeg_codec_sample_rates(codec, c)) {
 		int i;
 		for (i = 0; supported_rates[i] != 0; i++)
 			if (info.sample_rate == supported_rates[i]) {
@@ -1160,9 +1160,10 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	uint64_t channel_layout = info.channel_layout;
 #if HAVE_CH_LAYOUT
 	// Set a valid number of channels (or throw error)
-	AVChannelLayout ch_layout;
-	av_channel_layout_from_mask(&ch_layout, info.channel_layout);
-	if (const AVChannelLayout* codec_layouts = ffmpeg_codec_ch_layouts(codec)) {
+	AVChannelLayout ch_layout = {};
+	if (av_channel_layout_from_mask(&ch_layout, info.channel_layout) < 0)
+		throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
+	if (const AVChannelLayout* codec_layouts = ffmpeg_codec_ch_layouts(codec, c)) {
 		int i;
 		for (i = 0; av_channel_layout_check(&codec_layouts[i]); i++)
 			if (av_channel_layout_compare(&ch_layout, &codec_layouts[i]) == 0) {
@@ -1177,12 +1178,19 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		av_channel_layout_copy(&c->ch_layout, &ch_layout);
 	}
 #else
-	// Set a valid number of channels (or throw error)
+	// Preserve validation on FFmpeg versions using legacy channel masks.
+	if (codec->channel_layouts) {
+		const uint64_t* layout = codec->channel_layouts;
+		while (*layout != 0 && *layout != channel_layout)
+			++layout;
+		if (*layout == 0)
+			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
+	}
 	c->channel_layout = channel_layout;
 #endif
 
 	// Choose a valid sample_fmt
-	if (const AVSampleFormat* codec_fmts = ffmpeg_codec_sample_fmts(codec)) {
+	if (const AVSampleFormat* codec_fmts = ffmpeg_codec_sample_fmts(codec, c)) {
 		for (int i = 0; codec_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
 			// Set sample format to 1st valid format (and then exit loop)
 			c->sample_fmt = codec_fmts[i];
@@ -1388,7 +1396,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 #endif
 
 	// Find all supported pixel formats for this codec
-	if (const PixelFormat* supported_pixel_formats = ffmpeg_codec_pix_fmts(codec)) {
+	if (const PixelFormat* supported_pixel_formats = ffmpeg_codec_pix_fmts(codec, c)) {
 		while (*supported_pixel_formats != PIX_FMT_NONE) {
 			// Assign the 1st valid pixel format (if one is missing)
 			if (c->pix_fmt == PIX_FMT_NONE)
