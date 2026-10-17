@@ -159,6 +159,13 @@ foreach(tname ${OPENSHOT_TESTS})
     openshot
   )
 
+  if(tname STREQUAL "ObjectMask" AND ENABLE_OPENCV)
+    find_package(Protobuf 3 REQUIRED)
+    target_link_libraries(openshot-${tname}-test
+      protobuf::libprotobuf
+    )
+  endif()
+
   set(test_properties
     LABELS ${tname}
   )
