@@ -311,5 +311,5 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error -j2
-          python3 -c "import openshot; print(openshot.OPENSHOT_VERSION_FULL_STRING)"
+          python3 -c "import openshot; print(openshot.OPENSHOT_VERSION_FULL)"
           python3 -m unittest discover -s ci -p 'test_*.py' -v
