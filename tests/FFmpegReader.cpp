@@ -1030,3 +1030,28 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		// Ignore older FFmpeg versions which don't support AV1
 	}
 }
+
+
+// Verify that FFmpeg source color characteristics survive
+// decoding and are preserved on the OpenShot Frame.
+TEST_CASE("BT.2020 PQ source metadata propagation",
+          "[libopenshot][ffmpegreader][ColorMetadata]")
+{
+    const std::string path =
+        std::string(TEST_MEDIA_PATH) + "bt2020-pq-test.mkv";
+
+    openshot::FFmpegReader reader(path, false);
+    reader.Open();
+
+    auto frame = reader.GetFrame(1);
+
+    REQUIRE(frame != nullptr);
+
+    CHECK(frame->source_color_metadata.primaries == 9);
+    CHECK(frame->source_color_metadata.transfer == 16);
+    CHECK(frame->source_color_metadata.matrix == 9);
+    CHECK(frame->source_color_metadata.range == 1);
+    CHECK(frame->source_color_metadata.chroma_location == 1);
+
+    reader.Close();
+}

@@ -12,6 +12,17 @@ enum class RGBColorSpace {
     DisplayP3
 };
 
+// Original source-video color characteristics.
+// Values correspond to FFmpeg/ITU color metadata identifiers.
+// These describe the encoded source, not necessarily converted RGB pixels.
+struct ColorMetadata {
+    int primaries = 2;
+    int transfer = 2;
+    int matrix = 2;
+    int range = 0;
+    int chroma_location = 0;
+};
+
 struct LinearRGB {
     double r;
     double g;

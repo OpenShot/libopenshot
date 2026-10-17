@@ -2089,6 +2089,14 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	// Create or get the existing frame object
 	std::shared_ptr<Frame> f = CreateFrame(current_frame);
 
+	// Preserve the original encoded source color characteristics.
+	// These do not describe the converted RGBA pixel representation.
+	f->source_color_metadata.primaries = pFrame->color_primaries;
+	f->source_color_metadata.transfer = pFrame->color_trc;
+	f->source_color_metadata.matrix = pFrame->colorspace;
+	f->source_color_metadata.range = pFrame->color_range;
+	f->source_color_metadata.chroma_location = pFrame->chroma_location;
+
 	// Add Image data to frame
 	if (!ffmpeg_has_alpha(src_pix_fmt)) {
 		// Add image with no alpha channel, Speed optimization
