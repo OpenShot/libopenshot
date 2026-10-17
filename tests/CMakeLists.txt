@@ -48,7 +48,6 @@ set(OPENSHOT_TESTS
   Clip
   Color
   Coordinate
-  CrashHandler
   DummyReader
   FFmpegCapabilities
   FFmpegReader
@@ -96,6 +95,12 @@ set(OPENSHOT_TESTS
   DenoiseImage
   WaveEffect
 )
+
+# The SIGPIPE crash-handler test is POSIX-only. Do not create an empty
+# Catch2 executable on Windows, where discovery registers a NOT_BUILT test.
+if(NOT WIN32)
+  list(APPEND OPENSHOT_TESTS CrashHandler)
+endif()
 
 # ImageMagick related test files
 if($CACHE{HAVE_IMAGEMAGICK})
