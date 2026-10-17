@@ -1030,3 +1030,90 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		// Ignore older FFmpeg versions which don't support AV1
 	}
 }
+
+
+TEST_CASE("HDR color metadata is exposed in reader JSON",
+          "[libopenshot][ffmpegreader][hdr]")
+{
+    if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
+        WARN("Skipping HDR metadata test: ffmpeg executable unavailable");
+        return;
+    }
+
+    if (std::system(
+            "ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx265"
+        ) != 0) {
+        WARN("Skipping HDR metadata test: libx265 encoder unavailable");
+        return;
+    }
+
+    struct ColorFixture {
+        const char* name;
+        const char* primaries;
+        const char* transfer;
+        const char* matrix;
+        const char* hdr;
+    };
+
+    const ColorFixture fixtures[] = {
+        {"pq",  "bt2020", "smpte2084",    "bt2020nc", "PQ"},
+        {"hlg", "bt2020", "arib-std-b67", "bt2020nc", "HLG"},
+        {"sdr", "bt709",  "bt709",        "bt709",    nullptr}
+    };
+
+    for (const auto& fixture : fixtures) {
+        DYNAMIC_SECTION("Color signaling: " << fixture.name) {
+            std::stringstream filename;
+            filename << "libopenshot-hdr-"
+                     << fixture.name << "-"
+                     << std::time(nullptr) << "-"
+                     << std::rand() << ".mp4";
+
+            TemporaryFileGuard cleanup(filename.str());
+
+            std::stringstream command;
+            command << "ffmpeg -y -hide_banner -loglevel error "
+                    << "-f lavfi -i color=c=gray:s=64x64:r=1 "
+                    << "-frames:v 1 "
+                    << "-c:v libx265 "
+                    << "-pix_fmt yuv420p10le "
+                    << "-threads 1 "
+                    << "-x265-params "
+                    << "log-level=error:pools=1:frame-threads=1:"
+                    << "colorprim=" << fixture.primaries << ":"
+                    << "transfer=" << fixture.transfer << ":"
+                    << "colormatrix=" << fixture.matrix << " "
+                    << "-color_primaries " << fixture.primaries << " "
+                    << "-color_trc " << fixture.transfer << " "
+                    << "-colorspace " << fixture.matrix << " "
+                    << "\"" << filename.str() << "\" "
+                    << ">/dev/null 2>&1";
+
+            REQUIRE(std::system(command.str().c_str()) == 0);
+
+            FFmpegReader reader(filename.str());
+            reader.Open();
+
+            const auto& metadata = reader.info.metadata;
+
+            REQUIRE(metadata.at("color_primaries") == fixture.primaries);
+            REQUIRE(metadata.at("color_transfer") == fixture.transfer);
+            REQUIRE(metadata.at("color_space") == fixture.matrix);
+            REQUIRE(metadata.at("bit_depth") == "10");
+
+            if (fixture.hdr) {
+                REQUIRE(metadata.at("hdr_transfer") == fixture.hdr);
+            } else {
+                CHECK(metadata.count("hdr_transfer") == 0);
+            }
+
+            const Json::Value json = reader.JsonValue();
+            REQUIRE(json["metadata"]["color_primaries"].asString()
+                    == fixture.primaries);
+            REQUIRE(json["metadata"]["color_transfer"].asString()
+                    == fixture.transfer);
+
+            reader.Close();
+        }
+    }
+}
