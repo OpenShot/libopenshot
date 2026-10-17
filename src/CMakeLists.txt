@@ -60,6 +60,7 @@ set(OPENSHOT_SOURCES
   ChunkReader.cpp
   ChunkWriter.cpp
   Color.cpp
+  ColorSpace.cpp
   Clip.cpp
   ClipBase.cpp
   Coordinate.cpp

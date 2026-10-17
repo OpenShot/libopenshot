@@ -44,6 +44,7 @@ set(OPENSHOT_TESTS
   Caption
   Clip
   Color
+  ColorSpace
   Coordinate
   CrashHandler
   DummyReader
