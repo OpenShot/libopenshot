@@ -533,7 +533,10 @@ endif ()
 
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
-  find_package(OpenCV 4)
+  find_package(OpenCV 5 QUIET)
+  if(NOT OpenCV_FOUND)
+    find_package(OpenCV 4.3)
+  endif()
   if(NOT OpenCV_FOUND)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
