@@ -2552,7 +2552,18 @@ void FFmpegWriter::AddSphericalMetadata(const std::string& projection, float yaw
 	map->pitch = static_cast<int32_t>(pitch_deg * (1 << 16));
 	map->roll  = static_cast<int32_t>(roll_deg  * (1 << 16));
 
-	ffmpeg_stream_add_side_data(video_st, AV_PKT_DATA_SPHERICAL,
-		reinterpret_cast<uint8_t*>(map), sd_size);
+#if LIBAVFORMAT_VERSION_MAJOR >= 61
+	// Encoder initialization copies coded side data into the stream parameters.
+	// Keep the mapping on the context so that copy does not discard it.
+	AVPacketSideData* side_data = av_packet_side_data_add(
+		&video_codec_ctx->coded_side_data, &video_codec_ctx->nb_coded_side_data,
+		AV_PKT_DATA_SPHERICAL, reinterpret_cast<uint8_t*>(map), sd_size, 0);
+	if (!side_data)
+		av_free(map);
+#else
+	if (ffmpeg_stream_add_side_data(video_st, AV_PKT_DATA_SPHERICAL,
+			reinterpret_cast<uint8_t*>(map), sd_size) < 0)
+		av_free(map);
+#endif
 #endif
 }

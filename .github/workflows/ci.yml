@@ -251,6 +251,8 @@ jobs:
             exit 1
           fi
           QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error
+          # Show known upstream warnings even when CTest succeeds.
+          grep -A 8 'Skipping spherical reader angle assertions:' build/Testing/Temporary/LastTest.log || true
           cmake --install build
           python -m unittest discover -s ci -p "test_*.py" -v
           python ci/validate_arm64_architecture.py \
