@@ -293,6 +293,9 @@ if (ENABLE_MAGICK)
 
     # Link with ImageMagick library
     target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
+    if(TARGET ImageMagick::MagickCore)
+      target_link_libraries(openshot PUBLIC ImageMagick::MagickCore)
+    endif()
 
     set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
     mark_as_advanced(HAVE_IMAGEMAGICK)
@@ -533,7 +536,10 @@ endif ()
 
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
-  find_package(OpenCV 4)
+  find_package(OpenCV 5 QUIET)
+  if(NOT OpenCV_FOUND)
+    find_package(OpenCV 4)
+  endif()
   if(NOT OpenCV_FOUND)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
@@ -548,7 +554,16 @@ See https://github.com/opencv/opencv/issues/19260]])
     ###
     ### Protocol Buffers
     ###
-    find_package(Protobuf 3 REQUIRED)
+    # Config packages include transitive dependencies (such as Abseil).
+    # Keep FindProtobuf for older distributions without a config package.
+    set(protobuf_MODULE_COMPATIBLE TRUE)
+    find_package(Protobuf CONFIG QUIET)
+    if(NOT Protobuf_FOUND)
+      find_package(Protobuf 3 REQUIRED MODULE)
+    endif()
+    if(Protobuf_VERSION VERSION_LESS 3)
+      message(FATAL_ERROR "Protobuf 3 or newer is required")
+    endif()
 
     # Create a target for libprotobuf, if necessary (CMake < 3.9)
     if(NOT TARGET protobuf::libprotobuf)

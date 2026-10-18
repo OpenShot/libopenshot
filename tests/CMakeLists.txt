@@ -14,7 +14,10 @@ if(POLICY CMP0110)
 endif()
 
 # Test media path, used by unit tests for input data
-file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
+file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
+if(NOT TEST_MEDIA_PATH MATCHES "/$")
+  string(APPEND TEST_MEDIA_PATH "/")
+endif()
 
 # Reproducible optimized startup workload (explicit opt-in, no test timing assertions).
 if(UNIX)
@@ -45,8 +48,8 @@ set(OPENSHOT_TESTS
   Clip
   Color
   Coordinate
-  CrashHandler
   DummyReader
+  FFmpegCapabilities
   FFmpegReader
   FFmpegWriter
   Fraction
@@ -60,6 +63,7 @@ set(OPENSHOT_TESTS
   QtPlayer
   QtImageReader
   ReaderBase
+  NativeArm64ProcessOracle
   Settings
   ScreenCaptureReader
   SphericalMetadata
@@ -91,6 +95,12 @@ set(OPENSHOT_TESTS
   DenoiseImage
   WaveEffect
 )
+
+# The SIGPIPE crash-handler test is POSIX-only. Do not create an empty
+# Catch2 executable on Windows, where discovery registers a NOT_BUILT test.
+if(NOT WIN32)
+  list(APPEND OPENSHOT_TESTS CrashHandler)
+endif()
 
 # ImageMagick related test files
 if($CACHE{HAVE_IMAGEMAGICK})

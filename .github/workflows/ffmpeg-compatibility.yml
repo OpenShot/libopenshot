@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: FFmpeg compatibility
+on:
+  pull_request:
+    paths:
+      - 'src/FFmpeg*'
+      - 'tests/FFmpeg*'
+      - 'tests/CMakeLists.txt'
+      - '.github/workflows/ffmpeg-compatibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codecs:
+    name: Codec exports (FFmpeg ${{ matrix.ffmpeg }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # 7.0 has the new channel-layout types but not the capability API.
+        # 7.1 introduced the API; 8.0 removed the deprecated codec fields.
+        # The existing Ubuntu build matrix covers older FFmpeg releases.
+        ffmpeg: ['7.0', '7.1.3', '8.0']
+    env:
+      FFMPEG_VERSION: ${{ matrix.ffmpeg }}
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check out audio dependency
+        uses: actions/checkout@v4
+        with:
+          repository: OpenShot/libopenshot-audio
+          ref: ${{ steps.audio-branch.outputs.ref }}
+          path: audio
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config nasm catch2 \
+            libasound2-dev qtbase5-dev libqt5svg5-dev libbabl-dev libjsoncpp-dev \
+            libx264-dev libvpx-dev libvorbis-dev
+      - name: Build isolated FFmpeg and audio dependencies
+        run: |
+          prefix="$RUNNER_TEMP/ffmpeg-dependencies"
+          curl --fail --location --retry 3 \
+            "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" -o ffmpeg.tar.xz
+          mkdir ffmpeg-source
+          tar -xf ffmpeg.tar.xz -C ffmpeg-source --strip-components=1
+          cd ffmpeg-source
+          ./configure --prefix="$prefix" --enable-shared --disable-static \
+            --disable-autodetect --disable-doc --disable-programs \
+            --enable-gpl --enable-libx264 --enable-libvpx --enable-libvorbis
+          make -j2
+          make install
+          cd ..
+          cmake -S audio -B audio/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$prefix" -DENABLE_AUDIO_DOCS=OFF
+          cmake --build audio/build --parallel 2
+          cmake --install audio/build
+          echo "PKG_CONFIG_PATH=$prefix/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$prefix/lib" >> "$GITHUB_ENV"
+      - name: Build codec regression tests
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/ffmpeg-dependencies" \
+            -DENABLE_LIB_DOCS=OFF -DENABLE_PYTHON=OFF -DENABLE_OPENCV=OFF \
+            -DENABLE_MAGICK=OFF -DUSE_QT6=OFF
+          cmake --build build --parallel 2 --target \
+            openshot-FFmpegCapabilities-test openshot-FFmpegWriter-test
+      - name: Test capability validation and audio/video exports
+        working-directory: build
+        run: ctest -L '^(FFmpegCapabilities|FFmpegWriter)$' --output-on-failure --timeout 180 -j2

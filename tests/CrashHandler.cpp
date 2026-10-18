@@ -1,9 +1,9 @@
 // Copyright (c) 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "openshot_catch.h"
-#include "CrashHandler.h"
 
 #ifndef _WIN32
+#include "CrashHandler.h"
 #include <cerrno>
 #include <csignal>
 #include <unistd.h>
