@@ -213,6 +213,7 @@ namespace openshot
         int64_t readiness_timeline_end = 0;
         int64_t readiness_bytes_per_frame = 0;
         uint64_t readiness_epoch = 0;
+        uint64_t readiness_generation = UINT64_MAX; ///< Request covered by the readiness snapshot.
         int64_t readiness_minimum_step = 0;
 
         //---------- Internal state ----------

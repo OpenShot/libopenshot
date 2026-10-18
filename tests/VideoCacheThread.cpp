@@ -60,6 +60,7 @@ public:
     void    setMinFramesAhead(int64_t v) { min_frames_ahead.store(v); }
     void    setLastDir(int d) { last_dir.store(d); }
     void    forceUserSeekFlag() { userSeeked.store(true); }
+    void    clearUserSeekFlag() { userSeeked.store(false); }
     bool    isScrubbing() const { return scrub_active.load(); }
     bool    getUserSeekedFlag() const { return userSeeked.load(); }
     bool    getPrerollOnNextFill() const { return preroll_on_next_fill.load(); }
@@ -929,4 +930,44 @@ TEST_CASE("worker repairs evicted readiness holes behind its cached suffix", "[V
     CHECK(timeline.GetCache()->Contains(20));
     CHECK(timeline.GetCache()->Contains(21));
     CHECK(timeline.GetCache()->Contains(100)); // Reusable suffix retained.
+}
+
+TEST_CASE("cached seek remains ready while unrelated decode is blocked", "[VideoCacheThread][preroll]") {
+    GatedCacheTimeline timeline;
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    const int speed = GENERATE(1, -1, 2, -2);
+    const int dir = speed > 0 ? 1 : -1;
+    thread.setSpeed(speed);
+    auto* cache = timeline.GetCache();
+    for (int n = 20; n <= 40; ++n)
+        cache->Add(std::make_shared<Frame>(n,16,16,"black",0,2));
+    thread.setPlayhead(25);
+    thread.probe(25, dir, 3, std::abs(speed));
+    REQUIRE(thread.isReady());
+    // The synthetic fill starts after the direction-change request is consumed.
+    thread.clearUserSeekFlag();
+    thread.setLastCachedIndex(99);
+    auto entered = timeline.entered.get_future();
+    auto fill = std::async(std::launch::async, [&] {
+        return thread.prefetchWindow(cache, 100, 110, 1, &timeline);
+    });
+    const bool blocked = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (blocked) {
+        thread.Seek(30, true);
+        CHECK(thread.isReady());
+        CHECK(cache->Contains(20));
+        CHECK(cache->Contains(30));
+        // A cached destination alone is insufficient if playback immediately
+        // reaches a hole, or an edit has invalidated the existing frames.
+        cache->Remove(35 + speed);
+        thread.Seek(35, true);
+        CHECK_FALSE(thread.isReady());
+        timeline.RequestClearAllCache();
+        thread.Seek(25, true);
+        CHECK_FALSE(thread.isReady());
+    }
+    timeline.release.set_value();
+    fill.get();
+    REQUIRE(blocked);
 }
