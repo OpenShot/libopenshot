@@ -17,7 +17,10 @@
 
 #include "ReaderBase.h"
 
+#include <list>
 #include <memory>
+#include <string>
+#include <utility>
 
 #include "Enums.h"
 
@@ -76,6 +79,12 @@ namespace openshot
         int64_t render_frame = 1;
         double render_scale = 1.0; ///< Raster scale for a SCALE_NONE clip in a resized preview
         double PreviewScale();
+        openshot::Fraction source_fps = openshot::Fraction(30, 1); ///< Frame rate that style curves are keyed to
+        /// Recently rendered animated styles, newest first (bounded by count and bytes)
+        std::list<std::pair<std::string, std::shared_ptr<QImage>>> render_cache;
+        std::shared_ptr<QImage> Render(const Json::Value& style);
+        void UseStyle(const Json::Value& style);
+        void UpdateInfo();
         Json::Value EvaluateStyle(int64_t frame) const;
         bool document_layout = false;
         double padding = 12.0;

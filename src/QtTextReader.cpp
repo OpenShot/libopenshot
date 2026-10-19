@@ -33,25 +33,25 @@ using namespace openshot;
 /// Default constructor (blank text)
 QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font(QFont("Arial", 10)), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
 {
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
-	Open();
-	Close();
+	// Populate attributes (such as height, width, etc...) without rendering
+	UpdateInfo();
 }
 
 QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color)
 : width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
-	Open();
-	Close();
+	// Populate attributes (such as height, width, etc...) without rendering
+	UpdateInfo();
 }
 
 void QtTextReader::SetTextBackgroundColor(std::string color) {
 	text_background_color = color;
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
-	Open();
-	Close();
+	// Re-render an open reader with the new text background color
+	if (is_open) {
+		Close();
+		Open();
+	}
 }
 
 // Clip-local style curves are evaluated in source frames, like other readers.
@@ -84,18 +84,14 @@ double QtTextReader::PreviewScale() {
     return timeline->preview_width / double(timeline->info.width);
 }
 
-// Open reader
-void QtTextReader::Open()
+// Render one style into a new image (layout in project pixels, raster at render_scale)
+std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
 {
-	// Open reader if not already open
-	if (!is_open)
-	{
-        rendered_style = EvaluateStyle(render_frame);
         const auto color_at = [&](const char* key, const std::string& fallback) {
-            return rendered_style.isMember(key) ? rendered_style[key].asString() : fallback;
+            return style.isMember(key) ? style[key].asString() : fallback;
         };
         const auto number_at = [&](const char* key, double fallback) {
-            return rendered_style.isMember(key) ? rendered_style[key].asDouble() : fallback;
+            return style.isMember(key) ? style[key].asDouble() : fallback;
         };
         const auto text_color = color_at("color", this->text_color);
         const auto background_color = color_at("background", this->background_color);
@@ -107,12 +103,12 @@ void QtTextReader::Open()
 		// create image (layout stays in project pixels; only the raster is scaled)
 		const int image_width = std::max(1, int(std::round(width * render_scale)));
 		const int image_height = std::max(1, int(std::round(height * render_scale)));
-		image = std::make_shared<QImage>(image_width, image_height, QImage::Format_RGBA8888_Premultiplied);
+		auto image = std::make_shared<QImage>(image_width, image_height, QImage::Format_RGBA8888_Premultiplied);
 		image->fill(QColor(background_color.c_str()));
 
 		QPainter painter;
 		if (!painter.begin(image.get())) {
-			return;
+			return nullptr;
 		}
 		painter.scale(image_width / double(width), image_height / double(height));
 
@@ -197,7 +193,12 @@ void QtTextReader::Open()
 
 		painter.end();
 
-		// Update image properties
+		return image;
+}
+
+// Populate reader info from the current properties
+void QtTextReader::UpdateInfo()
+{
 		info.has_audio = false;
 		info.has_video = true;
 		info.has_single_image = text_animation.empty();
@@ -208,10 +209,10 @@ void QtTextReader::Open()
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
 		info.duration = 60 * 60 * 1;  // 1 hour duration
-		info.fps.num = 30;
-		info.fps.den = 1;
-		info.video_timebase.num = 1;
-		info.video_timebase.den = 30;
+		// Style curves use the project's frame numbers, so match its frame rate
+		// and let the timeline's FrameMapper pass frames through unchanged.
+		info.fps = source_fps;
+		info.video_timebase = source_fps.Reciprocal();
 		info.video_length = round(info.duration * info.fps.ToDouble());
 
 		// Calculate the DAR (display aspect ratio)
@@ -223,6 +224,52 @@ void QtTextReader::Open()
 		// Set the ratio based on the reduced fraction
 		info.display_ratio.num = font_size.num;
 		info.display_ratio.den = font_size.den;
+}
+
+// Show a style, reusing a recent render of an identical style when possible
+void QtTextReader::UseStyle(const Json::Value& style)
+{
+	const std::string key = style.toStyledString();
+	for (auto entry = render_cache.begin(); entry != render_cache.end(); ++entry) {
+		if (entry->first == key) {
+			render_cache.splice(render_cache.begin(), render_cache, entry);
+			image = entry->second;
+			rendered_style = style;
+			return;
+		}
+	}
+	auto rendered = Render(style);
+	if (!rendered)
+		return;
+	image = rendered;
+	rendered_style = style;
+	render_cache.emplace_front(key, rendered);
+	// Out-of-order frames from parallel rendering must not re-render held
+	// styles, but cached rasters stay small: a few entries, 16 MB at most.
+	const qint64 max_bytes = 16 * 1024 * 1024;
+	qint64 bytes = 0;
+	size_t count = 0;
+	for (auto entry = render_cache.begin(); entry != render_cache.end();) {
+		bytes += entry->second->sizeInBytes();
+		if (++count > 4 || (count > 1 && bytes > max_bytes))
+			entry = render_cache.erase(entry);
+		else
+			++entry;
+	}
+}
+
+// Open reader
+void QtTextReader::Open()
+{
+	// Open reader if not already open
+	if (!is_open)
+	{
+		UseStyle(EvaluateStyle(render_frame));
+		if (!image)
+			return;
+
+		// Update image properties
+		UpdateInfo();
 
 		// Mark as "open"
 		is_open = true;
@@ -238,8 +285,9 @@ void QtTextReader::Close()
 		// Mark as "closed"
 		is_open = false;
 
-		// Delete the image
+		// Delete the image and recent renders
 		image.reset();
+		render_cache.clear();
 
 		info.vcodec = "";
 		info.acodec = "";
@@ -255,12 +303,16 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 	auto sample_count = Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels);
 
     const double preview_scale = PreviewScale();
-    if (std::abs(preview_scale - render_scale) > 1e-6 ||
-        (!text_animation.empty() && EvaluateStyle(requested_frame) != rendered_style)) {
+    if (std::abs(preview_scale - render_scale) > 1e-6) {
         render_scale = preview_scale;
         render_frame = requested_frame;
         Close();
         Open();
+    }
+    if (is_open && !text_animation.empty()) {
+        const auto style = EvaluateStyle(requested_frame);
+        if (style != rendered_style)
+            UseStyle(style);
     }
 
 	if (image)
@@ -373,6 +425,10 @@ void QtTextReader::SetJsonValue(const Json::Value root) {
     if (!root["border_color"].isNull()) border_color = root["border_color"].asString();
     width = std::max(1, width);
     height = std::max(1, height);
+    if (root["fps"].isObject() && root["fps"]["num"].asInt() > 0 && root["fps"]["den"].asInt() > 0)
+        source_fps = Fraction(root["fps"]["num"].asInt(), root["fps"]["den"].asInt());
+    render_cache.clear();
+    UpdateInfo();
 
     // Re-Open path, and re-init everything (if needed)
 	if (is_open)

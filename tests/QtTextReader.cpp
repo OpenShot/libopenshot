@@ -176,3 +176,108 @@ TEST_CASE("Unscaled text keeps its project size in a smaller preview", "[libopen
     CHECK(std::abs(spans[1] - spans[0]) < 0.02);
     reader.Close();
 }
+
+namespace {
+// A solid background animated from red at frame 1 to blue at frame 61.
+Json::Value animated_background(QtTextReader& reader, const Fraction& fps)
+{
+    Json::Value data = reader.JsonValue();
+    data["width"] = 160;
+    data["height"] = 90;
+    data["text"] = "";
+    data["document_layout"] = true;
+    data["background_color"] = "#ffff0000";
+    data["fps"]["num"] = fps.num;
+    data["fps"]["den"] = fps.den;
+    Color color("#ff0000");
+    color.red.AddPoint(61, 0, LINEAR);
+    color.blue.AddPoint(61, 255, LINEAR);
+    data["text_animation"]["background"] = color.JsonValue();
+    return data;
+}
+}
+
+TEST_CASE("Text reader info is populated without opening or rendering", "[libopenshot][qttextreader]")
+{
+    int argc = 1;
+    char name[] = "text-test";
+    char* argv[] = {name, nullptr};
+    QGuiApplication application(argc, argv);
+    QtTextReader reader;
+    CHECK_FALSE(reader.IsOpen());
+    CHECK(reader.info.width == 1024);
+    CHECK(reader.info.height == 768);
+    CHECK(reader.info.fps.num == 30);
+    Json::Value data = reader.JsonValue();
+    data["width"] = 320;
+    data["height"] = 40;
+    data["fps"]["num"] = 60000;
+    data["fps"]["den"] = 1001;
+    reader.SetJsonValue(data);
+    CHECK_FALSE(reader.IsOpen());
+    CHECK(reader.info.width == 320);
+    CHECK(reader.info.fps.num == 60000);
+    CHECK(reader.info.fps.den == 1001);
+    CHECK(reader.info.video_timebase.num == 1001);
+    CHECK(reader.info.video_timebase.den == 60000);
+    // Empty text still renders a frame of the requested size.
+    data["text"] = "";
+    reader.SetJsonValue(data);
+    reader.Open();
+    auto image = reader.GetFrame(1)->GetImage();
+    CHECK(image->width() == 320);
+    CHECK(image->height() == 40);
+    reader.Close();
+}
+
+TEST_CASE("Text style curves follow project frames at any frame rate", "[libopenshot][qttextreader]")
+{
+    int argc = 1;
+    char name[] = "text-test";
+    char* argv[] = {name, nullptr};
+    QGuiApplication application(argc, argv);
+    for (int rate : {24, 30, 60}) {
+        CAPTURE(rate);
+        QtTextReader reader;
+        reader.SetJsonValue(animated_background(reader, Fraction(rate, 1)));
+        Clip clip(&reader);
+        clip.scale = SCALE_STRETCH;
+        clip.End(4.0);
+        Timeline timeline(160, 90, Fraction(rate, 1), 44100, 2, LAYOUT_STEREO);
+        timeline.AddClip(&clip);
+        timeline.Open();
+        // Project frame 31 is halfway along curves keyed to project frames.
+        auto middle = timeline.GetFrame(31)->GetImage()->pixelColor(80, 45);
+        CHECK(std::abs(middle.red() - 128) <= 3);
+        CHECK(std::abs(middle.blue() - 128) <= 3);
+        auto last = timeline.GetFrame(61)->GetImage()->pixelColor(80, 45);
+        CHECK(last.red() <= 2);
+        timeline.Close();
+    }
+}
+
+TEST_CASE("Out-of-order animated frames reuse renders without mixing styles", "[libopenshot][qttextreader]")
+{
+    int argc = 1;
+    char name[] = "text-test";
+    char* argv[] = {name, nullptr};
+    QGuiApplication application(argc, argv);
+    QtTextReader reader;
+    reader.SetJsonValue(animated_background(reader, Fraction(30, 1)));
+    reader.Open();
+    // Parallel rendering requests frames out of order; each must keep its style.
+    for (int pass = 0; pass < 3; ++pass) {
+        for (int frame : {61, 1, 31, 61, 1}) {
+            CAPTURE(pass, frame);
+            auto color = reader.GetFrame(frame)->GetImage()->pixelColor(80, 45);
+            const int expected_red = frame == 1 ? 255 : frame == 31 ? 128 : 0;
+            CHECK(std::abs(color.red() - expected_red) <= 2);
+            CHECK(std::abs(color.blue() - (255 - expected_red)) <= 2);
+        }
+    }
+    // Frames already returned keep their own pixels after later renders.
+    auto red = reader.GetFrame(1);
+    reader.GetFrame(61);
+    CHECK(red->GetImage()->pixelColor(80, 45).red() >= 253);
+    reader.Close();
+}
