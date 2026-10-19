@@ -11,12 +11,32 @@
 
 using namespace openshot;
 
+namespace {
+int text_argc = 1;
+char text_name[] = "text-test";
+char* text_argv[] = {text_name, nullptr};
+
+int& system_font_args()
+{
+#ifdef _WIN32
+    // Offscreen reads fonts only from <Qt>/lib/fonts on Windows, which Qt no
+    // longer ships; without fonts, text renders no pixels.
+    if (!qEnvironmentVariableIsSet("QT_QPA_FONTDIR")) {
+        QByteArray root = qgetenv("SystemRoot");
+        qputenv("QT_QPA_FONTDIR", (root.isEmpty() ? QByteArray("C:\\Windows") : root) + "\\Fonts");
+    }
+#endif
+    return text_argc;
+}
+
+struct TextTestApplication : QGuiApplication {
+    TextTestApplication() : QGuiApplication(system_font_args(), text_argv) {}
+};
+}
+
 TEST_CASE("Text source survives clip JSON round trip without a path", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     QtTextReader source;
     Json::Value data = source.JsonValue();
     data["width"] = 320;
@@ -66,10 +86,7 @@ TEST_CASE("Text source survives clip JSON round trip without a path", "[libopens
 
 TEST_CASE("Text reader re-renders edits and preserves legacy layout", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     QtTextReader reader;
     CHECK_FALSE(reader.JsonValue()["document_layout"].asBool());
     reader.Open();
@@ -84,10 +101,7 @@ TEST_CASE("Text reader re-renders edits and preserves legacy layout", "[libopens
 
 TEST_CASE("Text style curves render through the timeline and survive JSON", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     QtTextReader reader;
     Json::Value data = reader.JsonValue();
     data["width"] = 320;
@@ -135,10 +149,7 @@ TEST_CASE("Text style curves render through the timeline and survive JSON", "[li
 
 TEST_CASE("Unscaled text keeps its project size in a smaller preview", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     QtTextReader reader;
     Json::Value data = reader.JsonValue();
     data["width"] = 640;
@@ -199,10 +210,7 @@ Json::Value animated_background(QtTextReader& reader, const Fraction& fps)
 
 TEST_CASE("Text reader info is populated without opening or rendering", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     QtTextReader reader;
     CHECK_FALSE(reader.IsOpen());
     CHECK(reader.info.width == 1024);
@@ -232,10 +240,7 @@ TEST_CASE("Text reader info is populated without opening or rendering", "[libope
 
 TEST_CASE("Text style curves follow project frames at any frame rate", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     for (int rate : {24, 30, 60}) {
         CAPTURE(rate);
         QtTextReader reader;
@@ -258,10 +263,7 @@ TEST_CASE("Text style curves follow project frames at any frame rate", "[libopen
 
 TEST_CASE("Out-of-order animated frames reuse renders without mixing styles", "[libopenshot][qttextreader]")
 {
-    int argc = 1;
-    char name[] = "text-test";
-    char* argv[] = {name, nullptr};
-    QGuiApplication application(argc, argv);
+    TextTestApplication application;
     QtTextReader reader;
     reader.SetJsonValue(animated_background(reader, Fraction(30, 1)));
     reader.Open();
