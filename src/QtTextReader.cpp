@@ -14,11 +14,19 @@
 
 #include "QtTextReader.h"
 #include "CacheBase.h"
+#include "Clip.h"
+#include "Timeline.h"
 #include "Exceptions.h"
 #include "Frame.h"
+#include "Color.h"
 
 #include <QImage>
 #include <QPainter>
+#include <QTextDocument>
+#include <QTextCursor>
+#include <QAbstractTextDocumentLayout>
+#include <algorithm>
+#include <cmath>
 
 using namespace openshot;
 
@@ -46,20 +54,67 @@ void QtTextReader::SetTextBackgroundColor(std::string color) {
 	Close();
 }
 
+// Clip-local style curves are evaluated in source frames, like other readers.
+Json::Value QtTextReader::EvaluateStyle(int64_t frame) const {
+    Json::Value result(Json::objectValue);
+    for (const auto& key : text_animation.getMemberNames()) {
+        if (key == "color" || key == "background" || key == "stroke_color" || key == "border_color") {
+            Color color("#ffffff");
+            color.SetJsonValue(text_animation[key]);
+            auto rgba = color.GetColorRGBA(frame);
+            result[key] = QColor(rgba[0], rgba[1], rgba[2], rgba[3]).name(QColor::HexArgb).toStdString();
+        } else if (key == "stroke_width" || key == "border_width") {
+            Keyframe value;
+            value.SetJsonValue(text_animation[key]);
+            result[key] = std::max(0.0, value.GetValue(frame));
+        }
+    }
+    return result;
+}
+
+// SCALE_NONE draws a source at its pixel size, so match QtImageReader and
+// rasterize at the preview-to-project ratio rather than full project pixels.
+double QtTextReader::PreviewScale() {
+    Clip* parent = (Clip*) ParentClip();
+    if (!parent || parent->scale != SCALE_NONE || !parent->ParentTimeline())
+        return 1.0;
+    Timeline* timeline = (Timeline*) parent->ParentTimeline();
+    if (timeline->preview_width <= 0 || timeline->info.width <= 0)
+        return 1.0;
+    return timeline->preview_width / double(timeline->info.width);
+}
+
 // Open reader
 void QtTextReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
 	{
-		// create image
-		image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
+        rendered_style = EvaluateStyle(render_frame);
+        const auto color_at = [&](const char* key, const std::string& fallback) {
+            return rendered_style.isMember(key) ? rendered_style[key].asString() : fallback;
+        };
+        const auto number_at = [&](const char* key, double fallback) {
+            return rendered_style.isMember(key) ? rendered_style[key].asDouble() : fallback;
+        };
+        const auto text_color = color_at("color", this->text_color);
+        const auto background_color = color_at("background", this->background_color);
+        const auto stroke_color = color_at("stroke_color", this->stroke_color);
+        const auto border_color = color_at("border_color", this->border_color);
+        const auto stroke_width = number_at("stroke_width", this->stroke_width);
+        const auto border_width = number_at("border_width", this->border_width);
+
+		// create image (layout stays in project pixels; only the raster is scaled)
+		const int image_width = std::max(1, int(std::round(width * render_scale)));
+		const int image_height = std::max(1, int(std::round(height * render_scale)));
+		image = std::make_shared<QImage>(image_width, image_height, QImage::Format_RGBA8888_Premultiplied);
 		image->fill(QColor(background_color.c_str()));
 
 		QPainter painter;
 		if (!painter.begin(image.get())) {
 			return;
 		}
+		painter.scale(image_width / double(width), image_height / double(height));
 
 		// set background
 		if (!text_background_color.empty()) {
@@ -107,14 +162,45 @@ void QtTextReader::Open()
 		}
 
 		// Draw image
-		painter.drawText(x_offset, y_offset, width, height, align_flag, text.c_str());
+		if (document_layout) {
+            QTextDocument document;
+            document.setDefaultFont(font);
+            document.setDocumentMargin(padding);
+            QTextOption option;
+            option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+            option.setAlignment(Qt::Alignment(align_flag & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter)));
+            document.setDefaultTextOption(option);
+            document.setPlainText(QString::fromStdString(text));
+            document.setTextWidth(width);
+            QTextCursor cursor(&document);
+            cursor.select(QTextCursor::Document);
+            QTextCharFormat format;
+            format.setForeground(QColor(QString::fromStdString(text_color)));
+            if (stroke_width > 0)
+                format.setTextOutline(QPen(QColor(QString::fromStdString(stroke_color)), stroke_width));
+            cursor.mergeCharFormat(format);
+            QAbstractTextDocumentLayout::PaintContext context;
+            context.palette.setColor(QPalette::Text, QColor(QString::fromStdString(text_color)));
+            painter.save();
+            painter.translate(x_offset, y_offset);
+            document.documentLayout()->draw(&painter, context);
+            painter.restore();
+            if (border_width > 0) {
+                painter.setPen(QPen(QColor(QString::fromStdString(border_color)), border_width));
+                painter.setBrush(Qt::NoBrush);
+                painter.drawRect(QRectF(border_width / 2, border_width / 2,
+                                       width - border_width, height - border_width));
+            }
+        } else {
+            painter.drawText(x_offset, y_offset, width, height, align_flag, text.c_str());
+        }
 
 		painter.end();
 
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
-		info.has_single_image = true;
+		info.has_single_image = text_animation.empty();
 		info.file_size = 0;
 		info.vcodec = "QImage";
 		info.width = width;
@@ -168,6 +254,15 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 
 	auto sample_count = Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels);
 
+    const double preview_scale = PreviewScale();
+    if (std::abs(preview_scale - render_scale) > 1e-6 ||
+        (!text_animation.empty() && EvaluateStyle(requested_frame) != rendered_style)) {
+        render_scale = preview_scale;
+        render_frame = requested_frame;
+        Close();
+        Open();
+    }
+
 	if (image)
 	{
 		// Create or get frame object
@@ -202,6 +297,13 @@ Json::Value QtTextReader::JsonValue() const {
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "QtTextReader";
+    root["document_layout"] = document_layout;
+    root["text_animation"] = text_animation;
+    root["padding"] = padding;
+    root["stroke_width"] = stroke_width;
+    root["stroke_color"] = stroke_color;
+    root["border_width"] = border_width;
+    root["border_color"] = border_color;
 	root["width"] = width;
 	root["height"] = height;
 	root["x_offset"] = x_offset;
@@ -262,7 +364,17 @@ void QtTextReader::SetJsonValue(const Json::Value root) {
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 
-	// Re-Open path, and re-init everything (if needed)
+	if (root.isMember("text_animation")) text_animation = root["text_animation"];
+    if (!root["document_layout"].isNull()) document_layout = root["document_layout"].asBool();
+    if (!root["padding"].isNull()) padding = std::max(0.0, root["padding"].asDouble());
+    if (!root["stroke_width"].isNull()) stroke_width = std::max(0.0, root["stroke_width"].asDouble());
+    if (!root["stroke_color"].isNull()) stroke_color = root["stroke_color"].asString();
+    if (!root["border_width"].isNull()) border_width = std::max(0.0, root["border_width"].asDouble());
+    if (!root["border_color"].isNull()) border_color = root["border_color"].asString();
+    width = std::max(1, width);
+    height = std::max(1, height);
+
+    // Re-Open path, and re-init everything (if needed)
 	if (is_open)
 	{
 		Close();

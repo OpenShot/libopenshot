@@ -69,6 +69,20 @@ namespace openshot
 	class QtTextReader : public ReaderBase
 	{
 	private:
+        // Opt-in document layout keeps existing readers' drawText behavior intact.
+        // These settings round-trip through JSON; dimensions and padding are pixels.
+        Json::Value text_animation;
+        Json::Value rendered_style;
+        int64_t render_frame = 1;
+        double render_scale = 1.0; ///< Raster scale for a SCALE_NONE clip in a resized preview
+        double PreviewScale();
+        Json::Value EvaluateStyle(int64_t frame) const;
+        bool document_layout = false;
+        double padding = 12.0;
+        double stroke_width = 0.0;
+        std::string stroke_color = "#000000";
+        double border_width = 0.0;
+        std::string border_color = "#ffffff";
 		int width;
 		int height;
 		int x_offset;

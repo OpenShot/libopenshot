@@ -18,6 +18,7 @@
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
 #include "QtImageReader.h"
+#include "QtTextReader.h"
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
@@ -1222,6 +1223,10 @@ void Clip::SetJsonValue(Json::Value root) {
 				// Create new reader
 				reader = new openshot::FFmpegReader(root["reader"]["path"].asString(), false);
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "QtTextReader") {
+                reader = new openshot::QtTextReader();
+                reader->SetJsonValue(root["reader"]);
 
 			} else if (type == "QtImageReader") {
 
