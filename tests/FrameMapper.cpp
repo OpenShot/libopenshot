@@ -216,6 +216,67 @@ TEST_CASE( "30_fps_to_24_fps_Pulldown_None", "[libopenshot][framemapper]" )
 	CHECK(frame5.Even.Frame == 6);
 }
 
+static void add_constant_audio_frames(CacheMemory& cache, int frames, Fraction fps,
+	int sample_rate, int channels, ChannelLayout layout, float value)
+{
+	for (int number = 1; number <= frames; ++number) {
+		const int samples = Frame::GetSamplesPerFrame(number, fps, sample_rate, channels);
+		auto frame = std::make_shared<Frame>(number, 1, 1, "#000000", samples, channels);
+		frame->SampleRate(sample_rate);
+		frame->ChannelsLayout(layout);
+		std::vector<float> buffer(samples, value);
+		for (int channel = 0; channel < channels; ++channel)
+			frame->AddAudio(true, channel, 0, buffer.data(), samples, 1.0f);
+		cache.Add(frame);
+	}
+}
+
+TEST_CASE( "mono_to_stereo_mapping_keeps_full_level", "[libopenshot][framemapper][audio]" )
+{
+	CacheMemory cache;
+	const Fraction fps(30, 1);
+	add_constant_audio_frames(cache, 10, fps, 48000, 1, LAYOUT_MONO, 0.5f);
+	DummyReader reader(fps, 1, 1, 48000, 1, 10.0 / fps.ToDouble(), &cache);
+	reader.info.has_audio = true;
+	reader.info.channel_layout = LAYOUT_MONO;
+	reader.Open();
+
+	FrameMapper map(&reader, fps, PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
+	map.Open();
+
+	// Mono audio should play at the same level on both sides (not -3 dB)
+	auto frame = map.GetFrame(5);
+	REQUIRE(frame->GetAudioChannelsCount() == 2);
+	const int middle = frame->GetAudioSamplesCount() / 2;
+	CHECK(frame->GetAudioSample(0, middle, 1.0) == Approx(0.5f).margin(0.001f));
+	CHECK(frame->GetAudioSample(1, middle, 1.0) == Approx(0.5f).margin(0.001f));
+
+	map.Close();
+	reader.Close();
+}
+
+TEST_CASE( "resampling_keeps_audio_above_full_scale", "[libopenshot][framemapper][audio]" )
+{
+	CacheMemory cache;
+	const Fraction fps(30, 1);
+	add_constant_audio_frames(cache, 10, fps, 44100, 2, LAYOUT_STEREO, 1.5f);
+	DummyReader reader(fps, 1, 1, 44100, 2, 10.0 / fps.ToDouble(), &cache);
+	reader.info.has_audio = true;
+	reader.Open();
+
+	FrameMapper map(&reader, fps, PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
+	map.Open();
+
+	// Loud samples must not be clipped before clip volume and mixing are applied
+	auto frame = map.GetFrame(5);
+	const int middle = frame->GetAudioSamplesCount() / 2;
+	CHECK(frame->GetAudioSample(0, middle, 1.0) == Approx(1.5f).margin(0.01f));
+	CHECK(frame->GetAudioSample(1, middle, 1.0) == Approx(1.5f).margin(0.01f));
+
+	map.Close();
+	reader.Close();
+}
+
 TEST_CASE( "resample_audio_48000_to_41000", "[libopenshot][framemapper]" )
 {
 	// Create a reader
