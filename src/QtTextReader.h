@@ -92,6 +92,7 @@ namespace openshot
         std::string stroke_color = "#000000";
         double border_width = 0.0;
         std::string border_color = "#ffffff";
+        double letter_spacing = 0.0; ///< Extra pixels between letters (negative tightens)
 		int width;
 		int height;
 		int x_offset;

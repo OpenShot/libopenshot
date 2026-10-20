@@ -122,7 +122,10 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
 		painter.setPen(QPen(text_color.c_str()));
 
 		// set font
-		painter.setFont(font);
+		QFont text_font(font);
+		if (letter_spacing != 0.0)
+			text_font.setLetterSpacing(QFont::AbsoluteSpacing, letter_spacing);
+		painter.setFont(text_font);
 
 		// Set gravity (map between OpenShot and Qt)
 		int align_flag = 0;
@@ -160,7 +163,7 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
 		// Draw image
 		if (document_layout) {
             QTextDocument document;
-            document.setDefaultFont(font);
+            document.setDefaultFont(text_font);
             document.setDocumentMargin(padding);
             QTextOption option;
             option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
@@ -182,7 +185,10 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
             document.documentLayout()->draw(&painter, context);
             painter.restore();
             if (border_width > 0) {
-                painter.setPen(QPen(QColor(QString::fromStdString(border_color)), border_width));
+                // Square corners at any width (the default bevel cuts them off).
+                QPen border_pen(QColor(QString::fromStdString(border_color)), border_width);
+                border_pen.setJoinStyle(Qt::MiterJoin);
+                painter.setPen(border_pen);
                 painter.setBrush(Qt::NoBrush);
                 painter.drawRect(QRectF(border_width / 2, border_width / 2,
                                        width - border_width, height - border_width));
@@ -356,6 +362,7 @@ Json::Value QtTextReader::JsonValue() const {
     root["stroke_color"] = stroke_color;
     root["border_width"] = border_width;
     root["border_color"] = border_color;
+    root["letter_spacing"] = letter_spacing;
 	root["width"] = width;
 	root["height"] = height;
 	root["x_offset"] = x_offset;
@@ -423,6 +430,7 @@ void QtTextReader::SetJsonValue(const Json::Value root) {
     if (!root["stroke_color"].isNull()) stroke_color = root["stroke_color"].asString();
     if (!root["border_width"].isNull()) border_width = std::max(0.0, root["border_width"].asDouble());
     if (!root["border_color"].isNull()) border_color = root["border_color"].asString();
+    if (!root["letter_spacing"].isNull()) letter_spacing = root["letter_spacing"].asDouble();
     width = std::max(1, width);
     height = std::max(1, height);
     if (root["fps"].isObject() && root["fps"]["num"].asInt() > 0 && root["fps"]["den"].asInt() > 0)

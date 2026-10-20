@@ -294,3 +294,49 @@ TEST_CASE("Out-of-order animated frames reuse renders without mixing styles", "[
     CHECK(red->GetImage()->pixelColor(80, 45).red() >= 253);
     reader.Close();
 }
+
+TEST_CASE("Text letter spacing widens text and borders keep square corners", "[libopenshot][qttextreader]")
+{
+    TextTestApplication application;
+    QFont font("DejaVu Sans");
+    font.setPixelSize(32);
+    Json::Value data = QtTextReader().JsonValue();
+    data["width"] = 400;
+    data["height"] = 80;
+    data["text"] = "Wide";
+    data["font"] = font.toString().toStdString();
+    data["text_color"] = "#ffffff";
+    data["background_color"] = "transparent";
+    data["gravity"] = GRAVITY_TOP_LEFT;
+    data["document_layout"] = true;
+    data["padding"] = 0;
+    const auto ink_width = [](const std::shared_ptr<QImage>& image) {
+        int left = image->width(), right = -1;
+        for (int y = 0; y < image->height(); ++y)
+            for (int x = 0; x < image->width(); ++x)
+                if (image->pixelColor(x, y).alpha() > 0) {
+                    left = std::min(left, x);
+                    right = std::max(right, x);
+                }
+        return right - left;
+    };
+    QtTextReader reader;
+    reader.SetJsonValue(data);
+    reader.Open();
+    const int normal = ink_width(reader.GetFrame(1)->GetImage());
+    CHECK(reader.JsonValue()["letter_spacing"].asDouble() == 0.0);
+    data["letter_spacing"] = 10.0;
+    reader.SetJsonValue(data);
+    CHECK(reader.JsonValue()["letter_spacing"].asDouble() == 10.0);
+    CHECK(ink_width(reader.GetFrame(1)->GetImage()) >= normal + 25);
+
+    data["letter_spacing"] = 0.0;
+    data["text"] = "";
+    data["border_width"] = 20.0;
+    data["border_color"] = "#ff0000";
+    reader.SetJsonValue(data);
+    auto image = reader.GetFrame(1)->GetImage();
+    CHECK(image->pixelColor(0, 0).alpha() == 255);
+    CHECK(image->pixelColor(image->width() - 1, image->height() - 1).alpha() == 255);
+    reader.Close();
+}
