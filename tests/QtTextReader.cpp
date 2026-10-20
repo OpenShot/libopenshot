@@ -1,4 +1,15 @@
-/** Tests for generated text sources and native clip JSON loading. */
+/**
+ * @file
+ * @brief Unit tests for openshot::QtTextReader
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @ref License
+ */
+
+// Copyright (c) 2008-2026 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #include "openshot_catch.h"
 #include "QtTextReader.h"
 #include "Clip.h"
