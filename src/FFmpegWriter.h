@@ -217,6 +217,30 @@ namespace openshot {
 		/// Determine if codec name is valid
 		static bool IsValidCodec(std::string codec_name);
 
+		/// @brief Describe an encoder's capabilities as JSON.
+		///
+		/// Lists are null when the encoder accepts any value. Unknown encoders return {"found": false}.
+		/// @param codec_name The encoder name (i.e. aac, libmp3lame, libx264)
+		static std::string GetEncoderInfo(std::string codec_name);
+
+		/// @brief Describe an output format as JSON (name, extensions, and default codecs).
+		///
+		/// The format is matched the same way the writer matches it: by file extension first,
+		/// and then by FFmpeg's short format name. Unknown formats return {"found": false}.
+		/// @param format_name A file extension or format name (i.e. mp4, mkv, webm, matroska)
+		static std::string GetFormatInfo(std::string format_name);
+
+		/// @brief List the available encoders as a JSON array.
+		/// @param media_type "audio" or "video"
+		/// @param format_name Only list encoders this format can store (optional)
+		static std::string GetEncoders(std::string media_type, std::string format_name = "");
+
+		/// @brief Determine if an output format can store a codec.
+		/// @returns 1 if it can, 0 if it can't, and -1 if FFmpeg doesn't know
+		/// @param format_name A file extension or format name (i.e. mp4, mkv, webm, matroska)
+		/// @param codec_name The encoder name (i.e. aac, libmp3lame, libx264)
+		static int IsCodecSupportedByFormat(std::string format_name, std::string codec_name);
+
 		/// Open writer
 		void Open();
 

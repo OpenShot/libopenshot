@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <cmath>
 #include <ctime>
 #include <sstream>
@@ -607,6 +608,211 @@ bool FFmpegWriter::IsValidCodec(std::string codec_name) {
 
 	// Find the codec (if any)
 	return avcodec_find_encoder_by_name(codec_name.c_str()) != NULL;
+}
+
+// Find an output format the same way the writer does (by extension), or by short name
+static const AVOutputFormat* find_output_format(std::string format_name) {
+	if (!format_name.empty() && format_name[0] == '.')
+		format_name.erase(0, 1);
+	if (format_name.empty())
+		return nullptr;
+	const AVOutputFormat* format = av_guess_format(NULL, ("file." + format_name).c_str(), NULL);
+	if (!format)
+		format = av_guess_format(format_name.c_str(), NULL, NULL);
+	return format;
+}
+
+// Visit every registered encoder
+template<typename Visitor>
+static void for_each_encoder(Visitor visit) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 10, 100)
+	void* iterator = nullptr;
+	const AVCodec* codec = nullptr;
+	while ((codec = av_codec_iterate(&iterator)))
+#else
+	const AVCodec* codec = nullptr;
+	while ((codec = av_codec_next(codec)))
+#endif
+		if (av_codec_is_encoder(codec))
+			visit(codec);
+}
+
+// Name of the encoder FFmpeg would pick for a codec ID (or an empty string)
+static std::string default_encoder_name(AVCodecID codec_id) {
+	if (codec_id == AV_CODEC_ID_NONE)
+		return "";
+	const AVCodec* codec = avcodec_find_encoder(codec_id);
+	return codec ? codec->name : "";
+}
+
+static bool encoder_has_option(const AVCodec* codec, const char* name) {
+	if (!codec->priv_class)
+		return false;
+	const AVClass* priv_class = codec->priv_class;
+	return av_opt_find(&priv_class, name, NULL, 0, AV_OPT_SEARCH_FAKE_OBJ) != nullptr;
+}
+
+std::string FFmpegWriter::GetEncoderInfo(std::string codec_name) {
+	AV_REGISTER_ALL
+
+	Json::Value root;
+	const AVCodec* codec = avcodec_find_encoder_by_name(codec_name.c_str());
+	root["found"] = codec != nullptr;
+	if (!codec)
+		return root.toStyledString();
+
+	root["name"] = codec->name;
+	root["long_name"] = codec->long_name ? codec->long_name : "";
+	const char* media_type = av_get_media_type_string(codec->type);
+	root["type"] = media_type ? media_type : "unknown";
+
+	bool hardware = false;
+#ifdef AV_CODEC_CAP_HARDWARE
+	hardware = hardware || (codec->capabilities & AV_CODEC_CAP_HARDWARE);
+#endif
+#ifdef AV_CODEC_CAP_HYBRID
+	hardware = hardware || (codec->capabilities & AV_CODEC_CAP_HYBRID);
+#endif
+	root["hardware"] = hardware;
+#ifdef AV_CODEC_CAP_EXPERIMENTAL
+	root["experimental"] = (codec->capabilities & AV_CODEC_CAP_EXPERIMENTAL) != 0;
+#else
+	root["experimental"] = (codec->capabilities & CODEC_CAP_EXPERIMENTAL) != 0;
+#endif
+
+	// Lossless-only codecs (FLAC, PCM, FFV1) ignore the bit rate
+	const AVCodecDescriptor* descriptor = avcodec_descriptor_get(codec->id);
+	root["lossless"] = descriptor && (descriptor->props & AV_CODEC_PROP_LOSSLESS);
+	root["lossy"] = descriptor && (descriptor->props & AV_CODEC_PROP_LOSSY);
+
+	Json::Value quality_options(Json::arrayValue);
+	for (const char* option : {"crf", "qp", "cq", "global_quality"})
+		if (encoder_has_option(codec, option))
+			quality_options.append(option);
+	root["quality_options"] = quality_options;
+
+	root["sample_rates"] = Json::Value(Json::nullValue);
+	root["channel_layouts"] = Json::Value(Json::nullValue);
+	root["sample_formats"] = Json::Value(Json::nullValue);
+	root["pixel_formats"] = Json::Value(Json::nullValue);
+
+	std::unique_ptr<AVCodecContext, void(*)(AVCodecContext*)> context(
+		avcodec_alloc_context3(codec),
+		[](AVCodecContext* value) { avcodec_free_context(&value); });
+	if (!context)
+		return root.toStyledString();
+
+	try {
+		if (codec->type == AVMEDIA_TYPE_AUDIO) {
+			if (const int* rates = ffmpeg_codec_sample_rates(codec, context.get())) {
+				Json::Value values(Json::arrayValue);
+				for (int i = 0; rates[i] != 0; i++)
+					values.append(rates[i]);
+				root["sample_rates"] = values;
+			}
+#if HAVE_CH_LAYOUT
+			if (const AVChannelLayout* layouts = ffmpeg_codec_ch_layouts(codec, context.get())) {
+				Json::Value values(Json::arrayValue);
+				for (int i = 0; av_channel_layout_check(&layouts[i]); i++)
+					if (layouts[i].order == AV_CHANNEL_ORDER_NATIVE)
+						values.append((Json::UInt64) layouts[i].u.mask);
+				root["channel_layouts"] = values;
+			}
+#else
+			if (codec->channel_layouts) {
+				Json::Value values(Json::arrayValue);
+				for (int i = 0; codec->channel_layouts[i] != 0; i++)
+					values.append((Json::UInt64) codec->channel_layouts[i]);
+				root["channel_layouts"] = values;
+			}
+#endif
+			if (const AVSampleFormat* formats = ffmpeg_codec_sample_fmts(codec, context.get())) {
+				Json::Value values(Json::arrayValue);
+				for (int i = 0; formats[i] != AV_SAMPLE_FMT_NONE; i++) {
+					const char* name = av_get_sample_fmt_name(formats[i]);
+					if (name)
+						values.append(name);
+				}
+				root["sample_formats"] = values;
+			}
+		} else if (codec->type == AVMEDIA_TYPE_VIDEO) {
+			if (const AVPixelFormat* formats = ffmpeg_codec_pix_fmts(codec, context.get())) {
+				Json::Value values(Json::arrayValue);
+				for (int i = 0; formats[i] != AV_PIX_FMT_NONE; i++) {
+					const char* name = av_get_pix_fmt_name(formats[i]);
+					if (name)
+						values.append(name);
+				}
+				root["pixel_formats"] = values;
+			}
+		}
+	} catch (const InvalidCodec&) {
+		// Leave the remaining lists unrestricted; the writer reports real failures on open
+	}
+
+	return root.toStyledString();
+}
+
+std::string FFmpegWriter::GetFormatInfo(std::string format_name) {
+	AV_REGISTER_ALL
+
+	Json::Value root;
+	const AVOutputFormat* format = find_output_format(format_name);
+	root["found"] = format != nullptr;
+	if (!format)
+		return root.toStyledString();
+
+	root["name"] = format->name;
+	root["long_name"] = format->long_name ? format->long_name : "";
+	Json::Value extensions(Json::arrayValue);
+	std::stringstream extension_list(format->extensions ? format->extensions : "");
+	std::string extension;
+	while (std::getline(extension_list, extension, ','))
+		if (!extension.empty())
+			extensions.append(extension);
+	root["extensions"] = extensions;
+	root["default_audio_codec"] = default_encoder_name(format->audio_codec);
+	root["default_video_codec"] = default_encoder_name(format->video_codec);
+	return root.toStyledString();
+}
+
+std::string FFmpegWriter::GetEncoders(std::string media_type, std::string format_name) {
+	AV_REGISTER_ALL
+
+	Json::Value encoders(Json::arrayValue);
+	const AVOutputFormat* format = nullptr;
+	if (!format_name.empty()) {
+		format = find_output_format(format_name);
+		if (!format)
+			return encoders.toStyledString();
+	}
+
+	for_each_encoder([&](const AVCodec* codec) {
+		const char* type = av_get_media_type_string(codec->type);
+		if (!type || media_type != type)
+			return;
+		// Keep encoders FFmpeg can't rule out; the writer reports real failures on open
+		if (format && avformat_query_codec(format, codec->id, FF_COMPLIANCE_NORMAL) == 0)
+			return;
+		Json::Value encoder;
+		encoder["name"] = codec->name;
+		encoder["long_name"] = codec->long_name ? codec->long_name : "";
+		encoders.append(encoder);
+	});
+	return encoders.toStyledString();
+}
+
+int FFmpegWriter::IsCodecSupportedByFormat(std::string format_name, std::string codec_name) {
+	AV_REGISTER_ALL
+
+	const AVOutputFormat* format = find_output_format(format_name);
+	const AVCodec* codec = avcodec_find_encoder_by_name(codec_name.c_str());
+	if (!format || !codec)
+		return 0;
+	const int result = avformat_query_codec(format, codec->id, FF_COMPLIANCE_NORMAL);
+	if (result < 0)
+		return -1;
+	return result > 0 ? 1 : 0;
 }
 
 // Prepare & initialize streams and open codecs
