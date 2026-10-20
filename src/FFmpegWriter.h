@@ -125,6 +125,7 @@ namespace openshot {
 		bool write_header;
 		bool write_trailer;
 		bool allow_b_frames;
+		bool testing;
 
 		AVFormatContext* oc;
 		AVStream *audio_st, *video_st;
@@ -243,6 +244,17 @@ namespace openshot {
 
 		/// Open writer
 		void Open();
+
+		/// @brief Check the current settings without writing a file, and return the result as JSON.
+		///
+		/// Call this instead of Open(), after the same options an export would set. It opens the
+		/// encoders (including hardware encoders) and writes the header to memory, so the format and
+		/// codecs reject anything they would reject during a real export. FFmpeg's messages are
+		/// returned instead of printed. The writer can't be used after this call.
+		///
+		/// Returns {"ok", "stage", "message", "log", "elapsed_ms"}, where stage is "video", "audio",
+		/// or "header" when the check fails.
+		std::string Test();
 
 		/// Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)
 		void OutputStreamInfo();

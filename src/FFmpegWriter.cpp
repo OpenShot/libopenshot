@@ -14,6 +14,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <algorithm>
+#include <chrono>
+#include <cstdarg>
 #include <iostream>
 #include <memory>
 #include <cmath>
@@ -80,7 +82,7 @@ FFmpegWriter::FFmpegWriter(const std::string& path) :
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL),
 		video_codec_ctx(NULL), audio_codec_ctx(NULL), is_writing(false), video_timestamp(0), audio_timestamp(0),
 		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
-		write_header(false), write_trailer(false), allow_b_frames(false), audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
+		write_header(false), write_trailer(false), allow_b_frames(false), testing(false), audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
 
 	// Disable audio & video (so they can be independently enabled)
 	info.has_audio = false;
@@ -815,6 +817,119 @@ int FFmpegWriter::IsCodecSupportedByFormat(std::string format_name, std::string 
 	return result > 0 ? 1 : 0;
 }
 
+// FFmpeg messages logged on a thread running Test() (other threads print as usual)
+struct TestLogLine {
+	int level;
+	std::string text;
+};
+static thread_local std::vector<TestLogLine>* test_log = nullptr;
+
+static void test_log_callback(void* avcl, int level, const char* fmt, va_list vl) {
+	if (!test_log) {
+		av_log_default_callback(avcl, level, fmt, vl);
+		return;
+	}
+	if (level > AV_LOG_WARNING)
+		return;
+	char line[1024];
+	vsnprintf(line, sizeof(line), fmt, vl);
+	std::string text(line);
+	while (!text.empty() && (text.back() == '\n' || text.back() == '\r' || text.back() == ' '))
+		text.pop_back();
+	if (text.empty())
+		return;
+	// Name the component (i.e. "mp3: ...") instead of FFmpeg's "[mp3 @ 0x...]" prefix
+	AVClass* av_class = avcl ? *(AVClass**)avcl : nullptr;
+	if (av_class && av_class->item_name)
+		text = std::string(av_class->item_name(avcl)) + ": " + text;
+	test_log->push_back({level, text});
+}
+
+// Check the current settings without writing a file
+std::string FFmpegWriter::Test() {
+	auto start = std::chrono::steady_clock::now();
+	std::vector<TestLogLine> messages;
+	std::string stage;
+	std::string error;
+
+	testing = true;
+	test_log = &messages;
+	av_log_set_callback(test_log_callback);
+
+	try {
+		if (!prepare_streams)
+			PrepareStreams();
+		if (info.has_video && video_st) {
+			stage = "video";
+			open_video(oc, video_st);
+		}
+		if (info.has_audio && audio_st) {
+			stage = "audio";
+			open_audio(oc, audio_st);
+		}
+		stage = "header";
+		WriteHeader();
+		av_write_trailer(oc);
+		write_trailer = true;
+		stage = "";
+	} catch (const ExceptionBase& e) {
+		error = e.what();
+	} catch (const std::exception& e) {
+		error = e.what();
+	}
+
+	// Release everything (the test output, encoders, and any hardware device)
+	if (oc && oc->pb && !(oc->oformat->flags & AVFMT_NOFILE)) {
+		uint8_t* buffer = NULL;
+		avio_close_dyn_buf(oc->pb, &buffer);
+		av_free(buffer);
+		oc->pb = NULL;
+	}
+	if (video_st)
+		close_video(oc, video_st);
+	if (audio_st)
+		close_audio(oc, audio_st);
+	video_codec_ctx = NULL;
+	audio_codec_ctx = NULL;
+	video_st = NULL;
+	audio_st = NULL;
+	if (oc) {
+		avformat_free_context(oc);
+		oc = NULL;
+	}
+	if (mux_dict)
+		av_dict_free(&mux_dict);
+	av_log_set_callback(av_log_default_callback);
+	test_log = nullptr;
+	is_open = false;
+	prepare_streams = false;
+	write_header = false;
+	write_trailer = false;
+	testing = false;
+
+	// FFmpeg's own explanation (its last error) is clearer than the exception text
+	std::string message = error;
+	if (!error.empty()) {
+		for (auto line = messages.rbegin(); line != messages.rend(); ++line) {
+			if (line->level <= AV_LOG_ERROR) {
+				message = line->text;
+				break;
+			}
+		}
+	}
+
+	Json::Value root;
+	root["ok"] = error.empty();
+	root["stage"] = stage;
+	root["message"] = message;
+	root["log"] = Json::Value(Json::arrayValue);
+	for (const auto& line : messages)
+		root["log"].append(line.text);
+	root["elapsed_ms"] = (Json::Int64) std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - start).count();
+	return root.toStyledString();
+}
+
 // Prepare & initialize streams and open codecs
 void FFmpegWriter::PrepareStreams() {
 	if (!info.has_audio && !info.has_video)
@@ -839,7 +954,11 @@ void FFmpegWriter::WriteHeader() {
 
 	// Open the output file, if needed
 	if (!(oc->oformat->flags & AVFMT_NOFILE)) {
-		if (avio_open(&oc->pb, path.c_str(), AVIO_FLAG_WRITE) < 0)
+		if (testing) {
+			// Test() writes the header to memory instead
+			if (avio_open_dyn_buf(&oc->pb) < 0)
+				throw OutOfMemory("Could not allocate memory for the test output.", path);
+		} else if (avio_open(&oc->pb, path.c_str(), AVIO_FLAG_WRITE) < 0)
 			throw InvalidFile("Could not open or write file.", path);
 	}
 
@@ -1264,8 +1383,8 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 
 // Close the writer
 void FFmpegWriter::Close() {
-	// Write trailer (if needed)
-	if (!write_trailer)
+	// Write trailer (if needed). A failed header leaves nothing to finish.
+	if (write_header && !write_trailer)
 		WriteTrailer();
 
 	// Close each codec

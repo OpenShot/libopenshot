@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <memory>
+#include <QFileInfo>
 #include <QTemporaryDir>
 
 #include "openshot_catch.h"
@@ -169,4 +170,49 @@ TEST_CASE("Formats report which codecs they can store",
     for (const auto& encoder : wav_video)
         CHECK(encoder["name"].asString() != "mpeg4");
     CHECK(openshot::stringToJson(FFmpegWriter::GetEncoders("audio", "not-a-format")).empty());
+}
+
+TEST_CASE("Testing settings opens the encoders without writing a file",
+          "[libopenshot][ffmpegwriter][codec-capabilities]")
+{
+    AV_REGISTER_ALL
+    REQUIRE(avcodec_find_encoder_by_name("mp2") != nullptr);
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+
+    SECTION("A format accepts a codec it can hold") {
+        const std::string path = directory.filePath("audio.mkv").toStdString();
+        FFmpegWriter writer(path);
+        writer.SetAudioOptions(true, "mp2", 48000, 2, LAYOUT_STEREO, 128000);
+        writer.PrepareStreams();
+        const Json::Value result = openshot::stringToJson(writer.Test());
+        CHECK(result["ok"].asBool());
+        CHECK(result["stage"].asString().empty());
+        CHECK(result["elapsed_ms"].asInt64() >= 0);
+        CHECK_FALSE(QFileInfo::exists(QString::fromStdString(path)));
+    }
+    SECTION("A format rejects a codec with FFmpeg's explanation") {
+        const std::string path = directory.filePath("audio.mp3").toStdString();
+        FFmpegWriter writer(path);
+        writer.SetAudioOptions(true, "mp2", 48000, 2, LAYOUT_STEREO, 128000);
+        writer.PrepareStreams();
+        const Json::Value result = openshot::stringToJson(writer.Test());
+        CHECK_FALSE(result["ok"].asBool());
+        CHECK(result["stage"].asString() == "header");
+        CHECK(result["message"].asString().find("MP3") != std::string::npos);
+        CHECK(result["log"].size() >= 1);
+        CHECK_FALSE(QFileInfo::exists(QString::fromStdString(path)));
+    }
+}
+
+TEST_CASE("Closing after a failed header does not write a trailer",
+          "[libopenshot][ffmpegwriter][codec-capabilities]")
+{
+    AV_REGISTER_ALL
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    FFmpegWriter writer(directory.filePath("audio.mp3").toStdString());
+    writer.SetAudioOptions(true, "mp2", 48000, 2, LAYOUT_STEREO, 128000);
+    CHECK_THROWS_AS(writer.Open(), InvalidFile);
+    CHECK_NOTHROW(writer.Close());
 }
