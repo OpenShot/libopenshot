@@ -103,6 +103,58 @@ TEST_CASE("Audio recorder waveform accumulator downsamples max and RMS", "[libop
 	CHECK(snapshot.rms_samples == chunks[0].rms_samples);
 }
 
+TEST_CASE("Audio recorder opens stereo devices for mono recordings", "[libopenshot][audiorecorder]")
+{
+	CHECK(AudioRecorderInputMapper::DeviceChannels(1) == 2);
+	CHECK(AudioRecorderInputMapper::DeviceChannels(2) == 2);
+}
+
+TEST_CASE("Audio recorder maps device channels to the requested channels", "[libopenshot][audiorecorder]")
+{
+	const std::vector<float> left = {0.1f, 0.2f};
+	const std::vector<float> right = {-0.3f, -0.4f};
+	const std::vector<float> third = {0.5f, 0.6f};
+	AudioRecorderBlock block;
+
+	SECTION("mono from a stereo device uses the first channel") {
+		const float* input[] = {left.data(), right.data()};
+		AudioRecorderInputMapper::FillBlock(block, 1, input, 2, 2);
+		REQUIRE(block.channels.size() == 1);
+		CHECK(block.channels[0] == left);
+	}
+
+	SECTION("stereo from a stereo device keeps both channels") {
+		const float* input[] = {left.data(), right.data()};
+		AudioRecorderInputMapper::FillBlock(block, 2, input, 2, 2);
+		REQUIRE(block.channels.size() == 2);
+		CHECK(block.channels[0] == left);
+		CHECK(block.channels[1] == right);
+	}
+
+	SECTION("stereo from a mono device repeats the only channel") {
+		const float* input[] = {left.data()};
+		AudioRecorderInputMapper::FillBlock(block, 2, input, 1, 2);
+		REQUIRE(block.channels.size() == 2);
+		CHECK(block.channels[0] == left);
+		CHECK(block.channels[1] == left);
+	}
+
+	SECTION("stereo from a multi-channel device uses the first two channels") {
+		const float* input[] = {left.data(), right.data(), third.data()};
+		AudioRecorderInputMapper::FillBlock(block, 2, input, 3, 2);
+		REQUIRE(block.channels.size() == 2);
+		CHECK(block.channels[0] == left);
+		CHECK(block.channels[1] == right);
+	}
+
+	SECTION("missing device data records silence") {
+		const float* input[] = {nullptr};
+		AudioRecorderInputMapper::FillBlock(block, 1, input, 1, 2);
+		REQUIRE(block.channels.size() == 1);
+		CHECK(block.channels[0] == std::vector<float>({0.0f, 0.0f}));
+	}
+}
+
 TEST_CASE("Audio recording frame factory creates audio-only frames", "[libopenshot][audiorecorder]")
 {
 	auto block = MakeBlock(
