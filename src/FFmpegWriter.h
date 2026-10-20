@@ -234,6 +234,13 @@ namespace openshot {
 		/// @param format_name A file extension or format name (i.e. mp4, mkv, webm, matroska)
 		static std::string GetFormatInfo(std::string format_name);
 
+		/// @brief List the file extensions the writer can export to, as a JSON array.
+		///
+		/// One entry per extension (i.e. mkv), with its format's name, long name, and default
+		/// codecs. Only extensions that select that format are listed, matching how the writer
+		/// picks a format from the file name.
+		static std::string GetFormats();
+
 		/// @brief List the available encoders as a JSON array.
 		/// @param media_type "audio" or "video"
 		/// @param format_name Only list encoders this format can store (optional)

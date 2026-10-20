@@ -18,6 +18,7 @@
 #include <cstdarg>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <cmath>
 #include <ctime>
 #include <sstream>
@@ -639,12 +640,46 @@ static void for_each_encoder(Visitor visit) {
 			visit(codec);
 }
 
+// Visit every registered output format (muxer)
+template<typename Visitor>
+static void for_each_muxer(Visitor visit) {
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+	void* iterator = nullptr;
+	const AVOutputFormat* format = nullptr;
+	while ((format = av_muxer_iterate(&iterator)))
+#else
+	AVOutputFormat* format = nullptr;
+	while ((format = av_oformat_next(format)))
+#endif
+		visit(format);
+}
+
 // Name of the encoder FFmpeg would pick for a codec ID (or an empty string)
 static std::string default_encoder_name(AVCodecID codec_id) {
 	if (codec_id == AV_CODEC_ID_NONE)
 		return "";
 	const AVCodec* codec = avcodec_find_encoder(codec_id);
 	return codec ? codec->name : "";
+}
+
+// Codecs FFmpeg uses for single image files (i.e. png, bmp, tiff), from its image2 format
+static const std::set<AVCodecID>& image_codec_ids() {
+	static const std::set<AVCodecID> ids = [] {
+		std::set<AVCodecID> found;
+		const AVOutputFormat* image2 = av_guess_format("image2", NULL, NULL);
+		if (!image2 || !image2->extensions)
+			return found;
+		std::stringstream extension_list(image2->extensions);
+		std::string extension;
+		while (std::getline(extension_list, extension, ',')) {
+			AVCodecID id = av_guess_codec(const_cast<AVOutputFormat*>(image2), NULL,
+			                              ("file." + extension).c_str(), NULL, AVMEDIA_TYPE_VIDEO);
+			if (id != AV_CODEC_ID_NONE)
+				found.insert(id);
+		}
+		return found;
+	}();
+	return ids;
 }
 
 static bool encoder_has_option(const AVCodec* codec, const char* name) {
@@ -688,6 +723,8 @@ std::string FFmpegWriter::GetEncoderInfo(std::string codec_name) {
 	root["lossy"] = descriptor && (descriptor->props & AV_CODEC_PROP_LOSSY);
 	// Every frame is a picture (i.e. ProRes, DNxHD, MJPEG), which suits editing over delivery
 	root["intra_only"] = descriptor && (descriptor->props & AV_CODEC_PROP_INTRA_ONLY);
+	// Writes single image files (i.e. png, bmp, tiff)
+	root["image"] = image_codec_ids().count(codec->id) > 0;
 	// The codec this encoder writes (i.e. "h264" for libx264 and h264_nvenc)
 	root["codec"] = avcodec_get_name(codec->id);
 
@@ -780,6 +817,39 @@ std::string FFmpegWriter::GetFormatInfo(std::string format_name) {
 	root["default_audio_codec"] = default_encoder_name(format->audio_codec);
 	root["default_video_codec"] = default_encoder_name(format->video_codec);
 	return root.toStyledString();
+}
+
+std::string FFmpegWriter::GetFormats() {
+	AV_REGISTER_ALL
+
+	Json::Value formats(Json::arrayValue);
+	std::set<std::string> listed;
+	for_each_muxer([&](const AVOutputFormat* format) {
+		std::stringstream extension_list(format->extensions ? format->extensions : "");
+		std::string extension;
+		while (std::getline(extension_list, extension, ',')) {
+			// Some formats list extensions with stray spaces (i.e. " A64")
+			extension.erase(0, extension.find_first_not_of(" \t"));
+			extension.erase(extension.find_last_not_of(" \t") + 1);
+			// Extensions match without case, so list each once, in lower case
+			std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+			if (extension.empty() || listed.count(extension))
+				continue;
+			// The writer picks its format from the file extension, so only list extensions
+			// that pick this format (several formats can claim the same extension)
+			if (av_guess_format(NULL, ("file." + extension).c_str(), NULL) != format)
+				continue;
+			listed.insert(extension);
+			Json::Value row;
+			row["extension"] = extension;
+			row["name"] = format->name;
+			row["long_name"] = format->long_name ? format->long_name : "";
+			row["default_audio_codec"] = default_encoder_name(format->audio_codec);
+			row["default_video_codec"] = default_encoder_name(format->video_codec);
+			formats.append(row);
+		}
+	});
+	return formats.toStyledString();
 }
 
 std::string FFmpegWriter::GetEncoders(std::string media_type, std::string format_name) {

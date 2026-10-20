@@ -136,6 +136,8 @@ TEST_CASE("Encoder info reports video pixel formats",
     const Json::Value mjpeg = openshot::stringToJson(FFmpegWriter::GetEncoderInfo("mjpeg"));
     REQUIRE(mjpeg["found"].asBool());
     CHECK(mjpeg["intra_only"].asBool());
+    CHECK(mjpeg["image"].asBool());
+    CHECK_FALSE(mpeg4["image"].asBool());
 }
 
 TEST_CASE("Format info matches formats by extension and by name",
@@ -151,6 +153,32 @@ TEST_CASE("Format info matches formats by extension and by name",
     CHECK(dotted["default_audio_codec"].asString() == "pcm_s16le");
     const Json::Value missing = openshot::stringToJson(FFmpegWriter::GetFormatInfo("not-a-format"));
     CHECK_FALSE(missing["found"].asBool());
+}
+
+TEST_CASE("Formats list the extensions the writer can export to",
+          "[libopenshot][ffmpegwriter][codec-capabilities]")
+{
+    const Json::Value formats = openshot::stringToJson(FFmpegWriter::GetFormats());
+    REQUIRE(formats.isArray());
+    bool has_mkv = false;
+    bool has_wav = false;
+    for (const auto& format : formats) {
+        if (format["extension"].asString() == "mkv") {
+            has_mkv = true;
+            CHECK(format["name"].asString() == "matroska");
+        }
+        if (format["extension"].asString() == "wav") {
+            has_wav = true;
+            CHECK(format["default_audio_codec"].asString() == "pcm_s16le");
+            CHECK(format["default_video_codec"].asString().empty());
+        }
+        // Each listed extension picks its own format, as the writer would
+        const Json::Value info = openshot::stringToJson(
+            FFmpegWriter::GetFormatInfo(format["extension"].asString()));
+        CHECK(info["name"].asString() == format["name"].asString());
+    }
+    CHECK(has_mkv);
+    CHECK(has_wav);
 }
 
 TEST_CASE("Formats report which codecs they can store",
