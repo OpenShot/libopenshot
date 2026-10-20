@@ -129,6 +129,13 @@ TEST_CASE("Encoder info reports video pixel formats",
     REQUIRE(mpeg4["pixel_formats"].isArray());
     CHECK(mpeg4["pixel_formats"][0].asString() == "yuv420p");
     CHECK(mpeg4["sample_rates"].isNull());
+    CHECK(mpeg4["codec"].asString() == "mpeg4");
+    CHECK_FALSE(mpeg4["intra_only"].asBool());
+
+    // MJPEG stores every frame as a picture
+    const Json::Value mjpeg = openshot::stringToJson(FFmpegWriter::GetEncoderInfo("mjpeg"));
+    REQUIRE(mjpeg["found"].asBool());
+    CHECK(mjpeg["intra_only"].asBool());
 }
 
 TEST_CASE("Format info matches formats by extension and by name",

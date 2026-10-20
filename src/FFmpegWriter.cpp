@@ -686,6 +686,10 @@ std::string FFmpegWriter::GetEncoderInfo(std::string codec_name) {
 	const AVCodecDescriptor* descriptor = avcodec_descriptor_get(codec->id);
 	root["lossless"] = descriptor && (descriptor->props & AV_CODEC_PROP_LOSSLESS);
 	root["lossy"] = descriptor && (descriptor->props & AV_CODEC_PROP_LOSSY);
+	// Every frame is a picture (i.e. ProRes, DNxHD, MJPEG), which suits editing over delivery
+	root["intra_only"] = descriptor && (descriptor->props & AV_CODEC_PROP_INTRA_ONLY);
+	// The codec this encoder writes (i.e. "h264" for libx264 and h264_nvenc)
+	root["codec"] = avcodec_get_name(codec->id);
 
 	Json::Value quality_options(Json::arrayValue);
 	for (const char* option : {"crf", "qp", "cq", "global_quality"})

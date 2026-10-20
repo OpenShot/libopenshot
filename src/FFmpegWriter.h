@@ -220,7 +220,10 @@ namespace openshot {
 
 		/// @brief Describe an encoder's capabilities as JSON.
 		///
-		/// Lists are null when the encoder accepts any value. Unknown encoders return {"found": false}.
+		/// Includes the codec it writes ("codec", i.e. h264), whether it's hardware, lossless,
+		/// lossy, or intra-only, its quality options, and the sample rates, channel layouts, and
+		/// formats it accepts. Lists are null when the encoder accepts any value. Unknown encoders
+		/// return {"found": false}.
 		/// @param codec_name The encoder name (i.e. aac, libmp3lame, libx264)
 		static std::string GetEncoderInfo(std::string codec_name);
 
