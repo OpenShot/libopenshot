@@ -110,6 +110,27 @@ namespace openshot
 		}
 	};
 
+	class AudioRecorderInputMapper
+	{
+	public:
+		/// Number of device channels to open for a requested channel count. Stereo
+		/// devices are opened as stereo (even for mono recordings), since some
+		/// drivers convert badly when asked for fewer channels than the device has.
+		/// Devices with fewer channels are clamped by the audio backend.
+		static int DeviceChannels(int requested_channels);
+
+#ifndef SWIG
+		/// Copy device input into a block with the requested channel count. Extra
+		/// channels repeat the first input channel (i.e. a mono device recorded as stereo).
+		static void FillBlock(
+			AudioRecorderBlock& block,
+			int channels,
+			const float* const* input_channel_data,
+			int num_input_channels,
+			int num_samples);
+#endif
+	};
+
 	class AudioRecorderLevelMeter
 	{
 	public:
@@ -190,6 +211,7 @@ namespace openshot
 
 	private:
 		void ValidateSettings() const;
+		juce::String OpenDevice(int device_channels);
 		void OpenWriter();
 		void WriterLoop();
 		bool PopBlock(AudioRecorderBlock& block);

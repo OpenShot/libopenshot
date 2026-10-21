@@ -38,10 +38,27 @@ jobs:
           # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
           fetch-depth: 0
 
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout OpenShotAudio
         uses: actions/checkout@v3
         with:
           repository: OpenShot/libopenshot-audio
+          ref: ${{ steps.audio-branch.outputs.ref }}
           path: audio
 
       - name: Checkout Resvg
@@ -149,3 +166,157 @@ jobs:
         if: ${{ steps.coverage.outputs.value }}
         with:
           file: build/coverage.info
+
+  windows-arm64:
+    name: Windows ARM64 build and tests
+    runs-on: windows-11-arm
+    steps:
+      - name: Preserve repository line endings
+        run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v4
+
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout OpenShotAudio
+        uses: actions/checkout@v4
+        with:
+          repository: OpenShot/libopenshot-audio
+          ref: ${{ steps.audio-branch.outputs.ref }}
+          path: audio
+
+      - name: Checkout Catch2
+        uses: actions/checkout@v4
+        with:
+          repository: catchorg/Catch2
+          ref: v3.8.1
+          path: Catch2
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+
+      - name: Install CLANGARM64 packages
+        shell: msys2 {0}
+        run: |
+          mapfile -t packages < <(sed -n '/^[^#[:space:]][^=]*=/s/=.*//p' ci/windows-arm64-packages.lock)
+          pacman --noconfirm -S --needed -- "${packages[@]}"
+
+      - name: Build (CLANGARM64, ARM64)
+        shell: msys2 {0}
+        run: |
+          cmake -B Catch2/build -S Catch2 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/catch2-install" \
+            -DCATCH_BUILD_TESTING=OFF \
+            -DCATCH_INSTALL_DOCS=OFF
+          cmake --build Catch2/build
+          cmake --install Catch2/build
+          cmake -B audio/build -S audio -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_INSTALL_PREFIX="$PWD/audio/install-arm64" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_AUDIO_DOCS=OFF
+          cmake --build audio/build
+          cmake --install audio/build
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DUSE_QT6=ON \
+            -DENABLE_MAGICK=OFF \
+            -DOpenShotAudio_ROOT="$PWD/audio/install-arm64" \
+            -DCatch2_DIR="$PWD/catch2-install/lib/cmake/Catch2" \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install-arm64" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_LIB_DOCS=OFF
+          if ! cmake --build build; then
+            # Keep generated rules available in logs when Ninja rejects them.
+            grep -n -E '\$[^$ :{a-zA-Z_]' build/build.ninja build/CMakeFiles/rules.ninja || true
+            exit 1
+          fi
+          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error
+          # Show known upstream warnings even when CTest succeeds.
+          grep -A 8 'Skipping spherical reader angle assertions:' build/Testing/Temporary/LastTest.log || true
+          cmake --install build
+          python -m unittest discover -s ci -p "test_*.py" -v
+          python ci/validate_arm64_architecture.py \
+            --require-native-arm64 \
+            --package-baseline ci/windows-arm64-packages.lock \
+            --payload-root install-arm64 \
+            --require-payload \
+            --json-report build/arm64-report.json
+
+  linux-arm64:
+    name: Linux ARM64 build and tests
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select audio branch
+        id: audio-branch
+        shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=develop
+          if git ls-remote --exit-code --heads https://github.com/OpenShot/libopenshot-audio.git "refs/heads/$SOURCE_BRANCH" > /dev/null; then
+            ref="$SOURCE_BRANCH"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check out audio dependency
+        uses: actions/checkout@v4
+        with:
+          repository: OpenShot/libopenshot-audio
+          ref: ${{ steps.audio-branch.outputs.ref }}
+          path: audio
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build swig python3-dev catch2 \
+            libasound2-dev qtbase5-dev libqt5svg5-dev libavcodec-dev libavdevice-dev \
+            libavformat-dev libavutil-dev libswscale-dev libswresample-dev \
+            libbabl-dev libopencv-dev libprotobuf-dev protobuf-compiler libjsoncpp-dev
+      - name: Build audio and libopenshot
+        run: |
+          test "$(uname -m)" = aarch64
+          prefix="$RUNNER_TEMP/openshot-arm64"
+          cmake -S audio -B audio/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$prefix" -DENABLE_AUDIO_DOCS=OFF
+          cmake --build audio/build --parallel 2
+          cmake --install audio/build
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$prefix" -DCMAKE_INSTALL_PREFIX="$prefix" \
+            -DPYTHON_MODULE_PATH=python -DPYTHON_EXECUTABLE=/usr/bin/python3 \
+            -DENABLE_LIB_DOCS=OFF -DUSE_QT6=OFF
+          cmake --build build --parallel 2
+          cmake --install build
+          readelf -h "$prefix/lib/libopenshot.so" | grep -Eq 'Machine:.*AArch64'
+          echo "PYTHONPATH=$prefix/python" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$prefix/lib" >> "$GITHUB_ENV"
+      - name: Run library and Python tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ctest --test-dir build --output-on-failure --timeout 180 --no-tests=error -j2
+          python3 -c "import openshot; print(openshot.OPENSHOT_VERSION_FULL)"
+          python3 -m unittest discover -s ci -p 'test_*.py' -v

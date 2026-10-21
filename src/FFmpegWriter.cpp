@@ -1140,15 +1140,15 @@ AVStream *FFmpegWriter::add_audio_stream() {
 #endif
 
 	// Set valid sample rate (or throw error)
-	if (codec->supported_samplerates) {
+	if (const int* supported_rates = ffmpeg_codec_sample_rates(codec, c)) {
 		int i;
-		for (i = 0; codec->supported_samplerates[i] != 0; i++)
-			if (info.sample_rate == codec->supported_samplerates[i]) {
+		for (i = 0; supported_rates[i] != 0; i++)
+			if (info.sample_rate == supported_rates[i]) {
 				// Set the valid sample rate
 				c->sample_rate = info.sample_rate;
 				break;
 			}
-		if (codec->supported_samplerates[i] == 0)
+		if (supported_rates[i] == 0)
 			throw InvalidSampleRate("An invalid sample rate was detected for this codec.", path);
 	} else
 		// Set sample rate
@@ -1160,43 +1160,40 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	uint64_t channel_layout = info.channel_layout;
 #if HAVE_CH_LAYOUT
 	// Set a valid number of channels (or throw error)
-	AVChannelLayout ch_layout;
-	av_channel_layout_from_mask(&ch_layout, info.channel_layout);
-	if (codec->ch_layouts) {
+	AVChannelLayout ch_layout = {};
+	if (av_channel_layout_from_mask(&ch_layout, info.channel_layout) < 0)
+		throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
+	if (const AVChannelLayout* codec_layouts = ffmpeg_codec_ch_layouts(codec, c)) {
 		int i;
-		for (i = 0; av_channel_layout_check(&codec->ch_layouts[i]); i++)
-			if (av_channel_layout_compare(&ch_layout, &codec->ch_layouts[i])) {
+		for (i = 0; av_channel_layout_check(&codec_layouts[i]); i++)
+			if (av_channel_layout_compare(&ch_layout, &codec_layouts[i]) == 0) {
 				// Set valid channel layout
 				av_channel_layout_copy(&c->ch_layout, &ch_layout);
 				break;
 			}
-		if (!av_channel_layout_check(&codec->ch_layouts[i]))
+		if (!av_channel_layout_check(&codec_layouts[i]))
 			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-	} else
+	} else {
 		// Set valid channel layout
 		av_channel_layout_copy(&c->ch_layout, &ch_layout);
+	}
 #else
-	// Set a valid number of channels (or throw error)
+	// Preserve validation on FFmpeg versions using legacy channel masks.
 	if (codec->channel_layouts) {
-		int i;
-		for (i = 0; codec->channel_layouts[i] != 0; i++)
-			if (channel_layout == codec->channel_layouts[i]) {
-				// Set valid channel layout
-				c->channel_layout = channel_layout;
-				break;
-			}
-		if (codec->channel_layouts[i] == 0)
+		const uint64_t* layout = codec->channel_layouts;
+		while (*layout != 0 && *layout != channel_layout)
+			++layout;
+		if (*layout == 0)
 			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-		} else
-			// Set valid channel layout
-			c->channel_layout = channel_layout;
+	}
+	c->channel_layout = channel_layout;
 #endif
 
 	// Choose a valid sample_fmt
-	if (codec->sample_fmts) {
-		for (int i = 0; codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
+	if (const AVSampleFormat* codec_fmts = ffmpeg_codec_sample_fmts(codec, c)) {
+		for (int i = 0; codec_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
 			// Set sample format to 1st valid format (and then exit loop)
-			c->sample_fmt = codec->sample_fmts[i];
+			c->sample_fmt = codec_fmts[i];
 			break;
 		}
 	}
@@ -1399,12 +1396,13 @@ AVStream *FFmpegWriter::add_video_stream() {
 #endif
 
 	// Find all supported pixel formats for this codec
-	const PixelFormat *supported_pixel_formats = codec->pix_fmts;
-	while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
-		// Assign the 1st valid pixel format (if one is missing)
-		if (c->pix_fmt == PIX_FMT_NONE)
-			c->pix_fmt = *supported_pixel_formats;
-		++supported_pixel_formats;
+	if (const PixelFormat* supported_pixel_formats = ffmpeg_codec_pix_fmts(codec, c)) {
+		while (*supported_pixel_formats != PIX_FMT_NONE) {
+			// Assign the 1st valid pixel format (if one is missing)
+			if (c->pix_fmt == PIX_FMT_NONE)
+				c->pix_fmt = *supported_pixel_formats;
+			++supported_pixel_formats;
+		}
 	}
 
 	// Codec doesn't have any pix formats?
@@ -1688,9 +1686,9 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 	int samples_in_frame = 0;
 	ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
-	// Create a new array (to hold all S16 audio samples, for the current queued frames
-	unsigned int all_queued_samples_size = sizeof(int16_t) * AVCODEC_MAX_AUDIO_FRAME_SIZE;
-	int16_t *all_queued_samples = (int16_t *) av_malloc(all_queued_samples_size);
+	// Create a new array (to hold all float audio samples, for the current queued frames
+	unsigned int all_queued_samples_size = sizeof(float) * AVCODEC_MAX_AUDIO_FRAME_SIZE;
+	float *all_queued_samples = (float *) av_malloc(all_queued_samples_size);
 	int16_t *all_resampled_samples = NULL;
 	int16_t *final_samples_planar = NULL;
 	int16_t *final_samples = NULL;
@@ -1712,23 +1710,10 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
 
-	// Translate audio sample values back to 16 bit integers with saturation
-	const int16_t max16 = 32767;
-	const int16_t min16 = -32768;
-	for (int s = 0; s < total_frame_samples; s++, frame_position++) {
-		float valF = frame_samples_float[s] * (1 << 15);
-		int16_t conv;
-		if (valF > max16) {
-			conv = max16;
-		} else if (valF < min16) {
-			conv = min16;
-		} else {
-			conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
-		}
-
-		// Copy into buffer
-		all_queued_samples[frame_position] = conv;
-	}
+	// Keep samples as floats, so float codecs (such as AAC) are not limited to
+	// 16 bits or clipped early. Integer codecs are converted by the resampler.
+	for (int s = 0; s < total_frame_samples; s++, frame_position++)
+		all_queued_samples[frame_position] = frame_samples_float[s];
 
 	// Deallocate float array
 	delete[] frame_samples_float;
@@ -1760,7 +1745,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 		// Fill input frame with sample data
-		int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
+		int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_FLT, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
 		if (error_code < 0) {
 			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_audio_packets ERROR ["
@@ -1804,7 +1789,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 
 		Logger::Instance()->AppendDebugMethod(
 			"FFmpegWriter::write_audio_packets (1st resampling)",
-			"in_sample_fmt", AV_SAMPLE_FMT_S16,
+			"in_sample_fmt", AV_SAMPLE_FMT_FLT,
 			"out_sample_fmt", output_sample_fmt,
 			"in_sample_rate", sample_rate_in_frame,
 			"out_sample_rate", info.sample_rate,
@@ -1831,10 +1816,20 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			av_opt_set_int(avr, "in_channels", channels_in_frame, 0);
 			av_opt_set_int(avr, "out_channels", info.channels, 0);
 #endif
-			av_opt_set_int(avr, "in_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+			av_opt_set_int(avr, "in_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
 			av_opt_set_int(avr, "out_sample_fmt", output_sample_fmt, 0); // planar not allowed here
 			av_opt_set_int(avr, "in_sample_rate", sample_rate_in_frame, 0);
 			av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
+			if (channels_in_frame == 1 && info.channels == 2) {
+				// FFmpeg's default mono to stereo mix lowers each side by 3 dB. Copy
+				// mono to both sides at full level, like media players do.
+				const double mono_to_stereo[2] = { 1.0, 1.0 };
+#if USE_SW
+				swr_set_matrix(avr, mono_to_stereo, 1);
+#else
+				avresample_set_matrix(avr, mono_to_stereo, 1);
+#endif
+			}
 			SWR_INIT(avr);
 		}
 		// Convert audio samples
@@ -2554,7 +2549,18 @@ void FFmpegWriter::AddSphericalMetadata(const std::string& projection, float yaw
 	map->pitch = static_cast<int32_t>(pitch_deg * (1 << 16));
 	map->roll  = static_cast<int32_t>(roll_deg  * (1 << 16));
 
-	ffmpeg_stream_add_side_data(video_st, AV_PKT_DATA_SPHERICAL,
-		reinterpret_cast<uint8_t*>(map), sd_size);
+#if LIBAVFORMAT_VERSION_MAJOR >= 61
+	// Encoder initialization copies coded side data into the stream parameters.
+	// Keep the mapping on the context so that copy does not discard it.
+	AVPacketSideData* side_data = av_packet_side_data_add(
+		&video_codec_ctx->coded_side_data, &video_codec_ctx->nb_coded_side_data,
+		AV_PKT_DATA_SPHERICAL, reinterpret_cast<uint8_t*>(map), sd_size, 0);
+	if (!side_data)
+		av_free(map);
+#else
+	if (ffmpeg_stream_add_side_data(video_st, AV_PKT_DATA_SPHERICAL,
+			reinterpret_cast<uint8_t*>(map), sd_size) < 0)
+		av_free(map);
+#endif
 #endif
 }

@@ -905,26 +905,10 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
 
-	// Create a new array (to hold all S16 audio samples for the current queued frames)
- 	int16_t* frame_samples = (int16_t*) av_malloc(sizeof(int16_t)*total_frame_samples);
-
-	// Translate audio sample values back to 16 bit integers with saturation
-	float valF;
-	int16_t conv;
-	const int16_t max16 = 32767;
-	const int16_t min16 = -32768;
-	for (int s = 0; s < total_frame_samples; s++) {
-		valF = frame_samples_float[s] * (1 << 15);
-		if (valF > max16)
-			conv = max16;
-		else if (valF < min16)
-			conv = min16;
-		else
-			conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
-
-		// Copy into buffer
-		frame_samples[s] = conv;
-	}
+	// Copy samples into a FFmpeg buffer. Keep them as floats, so loud sources
+	// (above 0 dBFS) are not clipped before clip volume and mixing are applied.
+	float* frame_samples = (float*) av_malloc(sizeof(float) * total_frame_samples);
+	memcpy(frame_samples, frame_samples_float, sizeof(float) * total_frame_samples);
 
 	// Deallocate float array
 	delete[] frame_samples_float;
@@ -935,9 +919,9 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	AV_RESET_FRAME(audio_frame);
 	audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
-	int buf_size = audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame;
+	int buf_size = audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_FLT) * channels_in_frame;
 	int error_code = avcodec_fill_audio_frame(
-		audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16,
+		audio_frame, channels_in_frame, AV_SAMPLE_FMT_FLT,
 		(uint8_t *) frame_samples, buf_size, 1);
 
 	if (error_code < 0)
@@ -955,7 +939,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
 	AV_RESET_FRAME(audio_converted);
 	audio_converted->nb_samples = total_frame_samples;
-	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, total_frame_samples, AV_SAMPLE_FMT_S16, 0);
+	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, total_frame_samples, AV_SAMPLE_FMT_FLT, 0);
 
 	int nb_samples = 0;
 
@@ -979,14 +963,24 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		av_opt_set_int(avr, "in_channel_layout",  channel_layout_in_frame, 0);
 		av_opt_set_int(avr, "out_channel_layout", info.channel_layout,	 0);
 #endif
-		av_opt_set_int(avr, "in_sample_fmt",	  AV_SAMPLE_FMT_S16,	   0);
-		av_opt_set_int(avr, "out_sample_fmt",	 AV_SAMPLE_FMT_S16,	   0);
+		av_opt_set_int(avr, "in_sample_fmt",	  AV_SAMPLE_FMT_FLT,	   0);
+		av_opt_set_int(avr, "out_sample_fmt",	 AV_SAMPLE_FMT_FLT,	   0);
 		av_opt_set_int(avr, "in_sample_rate",	 sample_rate_in_frame,	0);
 		av_opt_set_int(avr, "out_sample_rate",	info.sample_rate,		0);
 #if !HAVE_CH_LAYOUT
 		av_opt_set_int(avr, "in_channels",		channels_in_frame,	   0);
 		av_opt_set_int(avr, "out_channels",	   info.channels,		   0);
 #endif
+		if (channels_in_frame == 1 && info.channels == 2) {
+			// FFmpeg's default mono to stereo mix lowers each side by 3 dB. Copy
+			// mono to both sides at full level, like media players do.
+			const double mono_to_stereo[2] = { 1.0, 1.0 };
+#if USE_SW
+			swr_set_matrix(avr, mono_to_stereo, 1);
+#else
+			avresample_set_matrix(avr, mono_to_stereo, 1);
+#endif
+		}
 		int swr_init_err = SWR_INIT(avr);
 #if HAVE_CH_LAYOUT
 		av_channel_layout_uninit(&input_layout);
@@ -1012,11 +1006,11 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		audio_frame->linesize[0],	  // input plane size, in bytes (0 if unknown)
 		audio_frame->nb_samples);	  // number of input samples to convert
 
-	// Create a new array (to hold all resampled S16 audio samples)
-	int16_t* resampled_samples = new int16_t[(nb_samples * info.channels)];
+	// Create a new array (to hold all resampled audio samples)
+	float* resampled_samples = new float[(nb_samples * info.channels)];
 
 	// Copy audio samples over original samples
-	memcpy(resampled_samples, audio_converted->data[0], (nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels));
+	memcpy(resampled_samples, audio_converted->data[0], (nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_FLT) * info.channels));
 
 	// Free frames
 	av_freep(&audio_frame->data[0]);
@@ -1057,8 +1051,8 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 			// Only add samples for current channel
 			if (channel_filter == channel)
 			{
-				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
-				channel_buffer[position] = resampled_samples[sample] * (1.0f / (1 << 15));
+				// Add sample
+				channel_buffer[position] = resampled_samples[sample];
 
 				// Increment audio position
 				position++;

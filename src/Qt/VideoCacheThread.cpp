@@ -73,7 +73,7 @@ namespace openshot
         if (readiness_physical_capacity == 0 && processed_generation.load() == request_generation.load())
             return true;
         const int64_t now = monotonicUs();
-        const bool current_request = processed_generation.load() == request_generation.load()
+        const bool current_request = readiness_generation == request_generation.load()
             && !timeline->CacheRefreshPending();
         const int dir = computeDirection();
         const int64_t playhead = clampToTimelineRange(requested_display_frame.load(), readiness_timeline_end);
@@ -99,7 +99,8 @@ namespace openshot
 
     void VideoCacheThread::updateReadiness(CacheBase* cache, int64_t playhead, int dir)
     {
-        // Called by the worker under seek_state_mutex, never while decoding.
+        // Called under seek_state_mutex by the worker or a cached seek.
+        readiness_generation = request_generation.load();
         readiness_playhead = playhead;
         readiness_direction = dir;
         contiguous_ahead = 0;
@@ -354,6 +355,17 @@ namespace openshot
         }
         resetReadiness();
         acknowledgeRequest(started);
+        // A position-only seek can use existing decoded frames immediately.
+        // Do not wait for an unrelated in-flight decoder to acknowledge it.
+        // Keep processed_generation unchanged so the worker still reschedules
+        // prefetch at the new position when that decode completes.
+        auto* timeline = dynamic_cast<Timeline*>(reader);
+        if (!same_frame_refresh && speed.load() != 0 && cache_contains
+            && !should_clear_cache && readiness_physical_capacity > 0
+            && timeline && !timeline->CacheRefreshPending()
+            && timeline->CacheEpoch() == readiness_epoch) {
+            updateReadiness(cache, clamped_new_position, computeDirection());
+        }
     }
 
     void VideoCacheThread::Seek(int64_t new_position)
