@@ -73,7 +73,10 @@ namespace openshot
 	{
 	private:
         // Opt-in document layout keeps existing readers' drawText behavior intact.
-        // These settings round-trip through JSON; dimensions and padding are pixels.
+        // These settings round-trip through JSON; sizes are pixels. Style names match
+        // the Caption effect where they mean the same thing (stroke, background_padding).
+        // text_animation keyframes only the styles that keep the image size: color,
+        // background, stroke, border, stroke_width and border_width.
         Json::Value text_animation;
         Json::Value rendered_style;
         int64_t render_frame = 1;
@@ -87,11 +90,11 @@ namespace openshot
         void UpdateInfo();
         Json::Value EvaluateStyle(int64_t frame) const;
         bool document_layout = false;
-        double padding = 12.0;
-        double stroke_width = 0.0;
-        std::string stroke_color = "#000000";
-        double border_width = 0.0;
-        std::string border_color = "#ffffff";
+        double background_padding = 12.0; ///< Space between the text and the box edge
+        double stroke_width = 0.0; ///< Text outline width
+        std::string stroke = "#000000"; ///< Text outline color
+        double border_width = 0.0; ///< Box border width
+        std::string border = "#ffffff"; ///< Box border color
         double letter_spacing = 0.0; ///< Extra pixels between letters (negative tightens)
 		int width;
 		int height;

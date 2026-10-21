@@ -60,11 +60,11 @@ TEST_CASE("Text source survives clip JSON round trip without a path", "[libopens
     data["background_color"] = "transparent";
     data["gravity"] = GRAVITY_TOP_LEFT;
     data["document_layout"] = true;
-    data["padding"] = 12;
+    data["background_padding"] = 12;
     data["stroke_width"] = 1.0;
-    data["stroke_color"] = "#000000";
+    data["stroke"] = "#000000";
     data["border_width"] = 0.0;
-    data["border_color"] = "#ffffff";
+    data["border"] = "#ffffff";
     source.SetJsonValue(data);
     Clip clip;
     Json::Value json = clip.JsonValue();
@@ -309,7 +309,7 @@ TEST_CASE("Text letter spacing widens text and borders keep square corners", "[l
     data["background_color"] = "transparent";
     data["gravity"] = GRAVITY_TOP_LEFT;
     data["document_layout"] = true;
-    data["padding"] = 0;
+    data["background_padding"] = 0;
     const auto ink_width = [](const std::shared_ptr<QImage>& image) {
         int left = image->width(), right = -1;
         for (int y = 0; y < image->height(); ++y)
@@ -333,7 +333,7 @@ TEST_CASE("Text letter spacing widens text and borders keep square corners", "[l
     data["letter_spacing"] = 0.0;
     data["text"] = "";
     data["border_width"] = 20.0;
-    data["border_color"] = "#ff0000";
+    data["border"] = "#ff0000";
     reader.SetJsonValue(data);
     auto image = reader.GetFrame(1)->GetImage();
     CHECK(image->pixelColor(0, 0).alpha() == 255);

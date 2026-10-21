@@ -58,7 +58,7 @@ void QtTextReader::SetTextBackgroundColor(std::string color) {
 Json::Value QtTextReader::EvaluateStyle(int64_t frame) const {
     Json::Value result(Json::objectValue);
     for (const auto& key : text_animation.getMemberNames()) {
-        if (key == "color" || key == "background" || key == "stroke_color" || key == "border_color") {
+        if (key == "color" || key == "background" || key == "stroke" || key == "border") {
             Color color("#ffffff");
             color.SetJsonValue(text_animation[key]);
             auto rgba = color.GetColorRGBA(frame);
@@ -95,8 +95,8 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
         };
         const auto text_color = color_at("color", this->text_color);
         const auto background_color = color_at("background", this->background_color);
-        const auto stroke_color = color_at("stroke_color", this->stroke_color);
-        const auto border_color = color_at("border_color", this->border_color);
+        const auto stroke = color_at("stroke", this->stroke);
+        const auto border = color_at("border", this->border);
         const auto stroke_width = number_at("stroke_width", this->stroke_width);
         const auto border_width = number_at("border_width", this->border_width);
 
@@ -164,7 +164,7 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
 		if (document_layout) {
             QTextDocument document;
             document.setDefaultFont(text_font);
-            document.setDocumentMargin(padding);
+            document.setDocumentMargin(background_padding);
             QTextOption option;
             option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
             option.setAlignment(Qt::Alignment(align_flag & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter)));
@@ -176,7 +176,7 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
             QTextCharFormat format;
             format.setForeground(QColor(QString::fromStdString(text_color)));
             if (stroke_width > 0)
-                format.setTextOutline(QPen(QColor(QString::fromStdString(stroke_color)), stroke_width));
+                format.setTextOutline(QPen(QColor(QString::fromStdString(stroke)), stroke_width));
             cursor.mergeCharFormat(format);
             QAbstractTextDocumentLayout::PaintContext context;
             context.palette.setColor(QPalette::Text, QColor(QString::fromStdString(text_color)));
@@ -186,7 +186,7 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
             painter.restore();
             if (border_width > 0) {
                 // Square corners at any width (the default bevel cuts them off).
-                QPen border_pen(QColor(QString::fromStdString(border_color)), border_width);
+                QPen border_pen(QColor(QString::fromStdString(border)), border_width);
                 border_pen.setJoinStyle(Qt::MiterJoin);
                 painter.setPen(border_pen);
                 painter.setBrush(Qt::NoBrush);
@@ -357,11 +357,11 @@ Json::Value QtTextReader::JsonValue() const {
 	root["type"] = "QtTextReader";
     root["document_layout"] = document_layout;
     root["text_animation"] = text_animation;
-    root["padding"] = padding;
+    root["background_padding"] = background_padding;
     root["stroke_width"] = stroke_width;
-    root["stroke_color"] = stroke_color;
+    root["stroke"] = stroke;
     root["border_width"] = border_width;
-    root["border_color"] = border_color;
+    root["border"] = border;
     root["letter_spacing"] = letter_spacing;
 	root["width"] = width;
 	root["height"] = height;
@@ -425,11 +425,11 @@ void QtTextReader::SetJsonValue(const Json::Value root) {
 
 	if (root.isMember("text_animation")) text_animation = root["text_animation"];
     if (!root["document_layout"].isNull()) document_layout = root["document_layout"].asBool();
-    if (!root["padding"].isNull()) padding = std::max(0.0, root["padding"].asDouble());
+    if (!root["background_padding"].isNull()) background_padding = std::max(0.0, root["background_padding"].asDouble());
     if (!root["stroke_width"].isNull()) stroke_width = std::max(0.0, root["stroke_width"].asDouble());
-    if (!root["stroke_color"].isNull()) stroke_color = root["stroke_color"].asString();
+    if (!root["stroke"].isNull()) stroke = root["stroke"].asString();
     if (!root["border_width"].isNull()) border_width = std::max(0.0, root["border_width"].asDouble());
-    if (!root["border_color"].isNull()) border_color = root["border_color"].asString();
+    if (!root["border"].isNull()) border = root["border"].asString();
     if (!root["letter_spacing"].isNull()) letter_spacing = root["letter_spacing"].asDouble();
     width = std::max(1, width);
     height = std::max(1, height);
