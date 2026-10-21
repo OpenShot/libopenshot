@@ -340,3 +340,106 @@ TEST_CASE("Text letter spacing widens text and borders keep square corners", "[l
     CHECK(image->pixelColor(image->width() - 1, image->height() - 1).alpha() == 255);
     reader.Close();
 }
+
+TEST_CASE("Text outline is drawn behind the letters", "[libopenshot][qttextreader]")
+{
+    TextTestApplication application;
+    QFont font("DejaVu Sans");
+    font.setPixelSize(120);
+    Json::Value data = QtTextReader().JsonValue();
+    data["width"] = 400;
+    data["height"] = 200;
+    data["text"] = "Il";
+    data["font"] = font.toString().toStdString();
+    data["text_color"] = "#ffffff";
+    data["background_color"] = "transparent";
+    data["gravity"] = GRAVITY_CENTER;
+    data["document_layout"] = true;
+    const auto fill_pixels = [](const std::shared_ptr<QImage>& image) {
+        int count = 0;
+        for (int y = 0; y < image->height(); ++y)
+            for (int x = 0; x < image->width(); ++x) {
+                const QColor c = image->pixelColor(x, y);
+                count += c.alpha() == 255 && c.red() > 250 && c.green() > 250 && c.blue() > 250;
+            }
+        return count;
+    };
+    QtTextReader reader;
+    reader.SetJsonValue(data);
+    reader.Open();
+    const int plain = fill_pixels(reader.GetFrame(1)->GetImage());
+    data["stroke_width"] = 16.0;
+    data["stroke"] = "#ff0000";
+    reader.SetJsonValue(data);
+    // A wide outline grows outward; it no longer eats the fill.
+    CHECK(plain > 1000);
+    CHECK(fill_pixels(reader.GetFrame(1)->GetImage()) >= plain * 9 / 10);
+    reader.Close();
+}
+
+TEST_CASE("Text rounds background corners and spaces lines", "[libopenshot][qttextreader]")
+{
+    TextTestApplication application;
+    QFont font("DejaVu Sans");
+    font.setPixelSize(32);
+    Json::Value data = QtTextReader().JsonValue();
+    data["width"] = 300;
+    data["height"] = 160;
+    data["text"] = "One\nTwo";
+    data["font"] = font.toString().toStdString();
+    data["text_color"] = "#ffffff";
+    data["background_color"] = "#ff0000ff";
+    data["gravity"] = GRAVITY_TOP;
+    data["document_layout"] = true;
+    QtTextReader reader;
+    reader.SetJsonValue(data);
+    reader.Open();
+    CHECK(reader.JsonValue()["background_corner"].asDouble() == 0.0);
+    CHECK(reader.JsonValue()["line_spacing"].asDouble() == 1.0);
+    CHECK(reader.GetFrame(1)->GetImage()->pixelColor(0, 0).alpha() == 255);
+
+    // Rounded corners clear the box corners; the border follows the curve.
+    data["background_corner"] = 30.0;
+    data["border_width"] = 4.0;
+    data["border"] = "#ffff0000";
+    reader.SetJsonValue(data);
+    CHECK(reader.JsonValue()["background_corner"].asDouble() == 30.0);
+    auto image = reader.GetFrame(1)->GetImage();
+    CHECK(image->pixelColor(1, 1).alpha() == 0);
+    CHECK(image->pixelColor(image->width() - 2, image->height() - 2).alpha() == 0);
+    CHECK(image->pixelColor(1, 80).red() == 255);   // Straight edge: border
+    CHECK(image->pixelColor(150, 80).alpha() == 255); // Inside: background or text
+
+    // A larger radius than the box allows is limited to a half-height curve.
+    data["background_corner"] = 1000.0;
+    reader.SetJsonValue(data);
+    CHECK(reader.GetFrame(1)->GetImage()->pixelColor(150, 2).alpha() > 0);
+
+    // Line spacing moves the second line down; it round-trips through JSON.
+    const auto ink_bottom = [](const std::shared_ptr<QImage>& image) {
+        int bottom = -1;
+        for (int y = 0; y < image->height(); ++y)
+            for (int x = 40; x < image->width() - 40; ++x)
+                if (image->pixelColor(x, y).green() > 200)
+                    bottom = y;
+        return bottom;
+    };
+    data["background_corner"] = 0.0;
+    data["border_width"] = 0.0;
+    reader.SetJsonValue(data);
+    const int normal = ink_bottom(reader.GetFrame(1)->GetImage());
+    data["line_spacing"] = 1.5;
+    reader.SetJsonValue(data);
+    CHECK(reader.JsonValue()["line_spacing"].asDouble() == 1.5);
+    CHECK(ink_bottom(reader.GetFrame(1)->GetImage()) >= normal + 15);
+
+    // The corner radius animates like the other box styles.
+    Keyframe corner;
+    corner.AddPoint(1, 0.0);
+    corner.AddPoint(11, 40.0);
+    data["text_animation"]["background_corner"] = corner.JsonValue();
+    reader.SetJsonValue(data);
+    CHECK(reader.GetFrame(1)->GetImage()->pixelColor(1, 1).alpha() == 255);
+    CHECK(reader.GetFrame(11)->GetImage()->pixelColor(1, 1).alpha() == 0);
+    reader.Close();
+}

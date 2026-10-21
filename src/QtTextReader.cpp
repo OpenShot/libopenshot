@@ -63,7 +63,7 @@ Json::Value QtTextReader::EvaluateStyle(int64_t frame) const {
             color.SetJsonValue(text_animation[key]);
             auto rgba = color.GetColorRGBA(frame);
             result[key] = QColor(rgba[0], rgba[1], rgba[2], rgba[3]).name(QColor::HexArgb).toStdString();
-        } else if (key == "stroke_width" || key == "border_width") {
+        } else if (key == "stroke_width" || key == "border_width" || key == "background_corner") {
             Keyframe value;
             value.SetJsonValue(text_animation[key]);
             result[key] = std::max(0.0, value.GetValue(frame));
@@ -99,18 +99,29 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
         const auto border = color_at("border", this->border);
         const auto stroke_width = number_at("stroke_width", this->stroke_width);
         const auto border_width = number_at("border_width", this->border_width);
+        // A radius past half the box would only distort the curve.
+        const double corner = std::min(std::max(0.0, number_at("background_corner", this->background_corner)),
+                                       std::min(width, height) / 2.0);
 
 		// create image (layout stays in project pixels; only the raster is scaled)
 		const int image_width = std::max(1, int(std::round(width * render_scale)));
 		const int image_height = std::max(1, int(std::round(height * render_scale)));
 		auto image = std::make_shared<QImage>(image_width, image_height, QImage::Format_RGBA8888_Premultiplied);
-		image->fill(QColor(background_color.c_str()));
+		image->fill(corner > 0 ? QColor(Qt::transparent) : QColor(background_color.c_str()));
 
 		QPainter painter;
 		if (!painter.begin(image.get())) {
 			return nullptr;
 		}
 		painter.scale(image_width / double(width), image_height / double(height));
+		if (corner > 0) {
+			painter.save();
+			painter.setRenderHint(QPainter::Antialiasing);
+			painter.setPen(Qt::NoPen);
+			painter.setBrush(QColor(background_color.c_str()));
+			painter.drawRoundedRect(QRectF(0, 0, width, height), corner, corner);
+			painter.restore();
+		}
 
 		// set background
 		if (!text_background_color.empty()) {
@@ -173,15 +184,27 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
             document.setTextWidth(width);
             QTextCursor cursor(&document);
             cursor.select(QTextCursor::Document);
-            QTextCharFormat format;
-            format.setForeground(QColor(QString::fromStdString(text_color)));
-            if (stroke_width > 0)
-                format.setTextOutline(QPen(QColor(QString::fromStdString(stroke)), stroke_width));
-            cursor.mergeCharFormat(format);
+            if (line_spacing != 1.0) {
+                QTextBlockFormat block;
+                block.setLineHeight(line_spacing * 100.0, QTextBlockFormat::ProportionalHeight);
+                cursor.mergeBlockFormat(block);
+            }
             QAbstractTextDocumentLayout::PaintContext context;
             context.palette.setColor(QPalette::Text, QColor(QString::fromStdString(text_color)));
             painter.save();
             painter.translate(x_offset, y_offset);
+            QTextCharFormat format;
+            if (stroke_width > 0) {
+                // Outline first, then the fill on top, so a wide outline
+                // grows outward instead of covering the letters (as Caption).
+                format.setForeground(Qt::transparent);
+                format.setTextOutline(QPen(QColor(QString::fromStdString(stroke)), stroke_width));
+                cursor.mergeCharFormat(format);
+                document.documentLayout()->draw(&painter, context);
+                format.setTextOutline(QPen(Qt::transparent, 0));  // Fill as a path, like the outline.
+            }
+            format.setForeground(QColor(QString::fromStdString(text_color)));
+            cursor.mergeCharFormat(format);
             document.documentLayout()->draw(&painter, context);
             painter.restore();
             if (border_width > 0) {
@@ -190,8 +213,16 @@ std::shared_ptr<QImage> QtTextReader::Render(const Json::Value& style)
                 border_pen.setJoinStyle(Qt::MiterJoin);
                 painter.setPen(border_pen);
                 painter.setBrush(Qt::NoBrush);
-                painter.drawRect(QRectF(border_width / 2, border_width / 2,
-                                       width - border_width, height - border_width));
+                const QRectF border_rect(border_width / 2, border_width / 2,
+                                         width - border_width, height - border_width);
+                if (corner > 0) {
+                    // The border's outer edge follows the background's curve.
+                    const double radius = std::max(0.0, corner - border_width / 2);
+                    painter.setRenderHint(QPainter::Antialiasing);
+                    painter.drawRoundedRect(border_rect, radius, radius);
+                } else {
+                    painter.drawRect(border_rect);
+                }
             }
         } else {
             painter.drawText(x_offset, y_offset, width, height, align_flag, text.c_str());
@@ -363,6 +394,8 @@ Json::Value QtTextReader::JsonValue() const {
     root["border_width"] = border_width;
     root["border"] = border;
     root["letter_spacing"] = letter_spacing;
+    root["line_spacing"] = line_spacing;
+    root["background_corner"] = background_corner;
 	root["width"] = width;
 	root["height"] = height;
 	root["x_offset"] = x_offset;
@@ -431,6 +464,8 @@ void QtTextReader::SetJsonValue(const Json::Value root) {
     if (!root["border_width"].isNull()) border_width = std::max(0.0, root["border_width"].asDouble());
     if (!root["border"].isNull()) border = root["border"].asString();
     if (!root["letter_spacing"].isNull()) letter_spacing = root["letter_spacing"].asDouble();
+    if (!root["line_spacing"].isNull()) line_spacing = std::max(0.1, root["line_spacing"].asDouble());
+    if (!root["background_corner"].isNull()) background_corner = std::max(0.0, root["background_corner"].asDouble());
     width = std::max(1, width);
     height = std::max(1, height);
     if (root["fps"].isObject() && root["fps"]["num"].asInt() > 0 && root["fps"]["den"].asInt() > 0)
