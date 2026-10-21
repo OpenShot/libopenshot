@@ -1686,9 +1686,9 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 	int samples_in_frame = 0;
 	ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
-	// Create a new array (to hold all S16 audio samples, for the current queued frames
-	unsigned int all_queued_samples_size = sizeof(int16_t) * AVCODEC_MAX_AUDIO_FRAME_SIZE;
-	int16_t *all_queued_samples = (int16_t *) av_malloc(all_queued_samples_size);
+	// Create a new array (to hold all float audio samples, for the current queued frames
+	unsigned int all_queued_samples_size = sizeof(float) * AVCODEC_MAX_AUDIO_FRAME_SIZE;
+	float *all_queued_samples = (float *) av_malloc(all_queued_samples_size);
 	int16_t *all_resampled_samples = NULL;
 	int16_t *final_samples_planar = NULL;
 	int16_t *final_samples = NULL;
@@ -1710,23 +1710,10 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
 
-	// Translate audio sample values back to 16 bit integers with saturation
-	const int16_t max16 = 32767;
-	const int16_t min16 = -32768;
-	for (int s = 0; s < total_frame_samples; s++, frame_position++) {
-		float valF = frame_samples_float[s] * (1 << 15);
-		int16_t conv;
-		if (valF > max16) {
-			conv = max16;
-		} else if (valF < min16) {
-			conv = min16;
-		} else {
-			conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
-		}
-
-		// Copy into buffer
-		all_queued_samples[frame_position] = conv;
-	}
+	// Keep samples as floats, so float codecs (such as AAC) are not limited to
+	// 16 bits or clipped early. Integer codecs are converted by the resampler.
+	for (int s = 0; s < total_frame_samples; s++, frame_position++)
+		all_queued_samples[frame_position] = frame_samples_float[s];
 
 	// Deallocate float array
 	delete[] frame_samples_float;
@@ -1758,7 +1745,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 		audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 		// Fill input frame with sample data
-		int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
+		int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_FLT, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
 		if (error_code < 0) {
 			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_audio_packets ERROR ["
@@ -1802,7 +1789,7 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 
 		Logger::Instance()->AppendDebugMethod(
 			"FFmpegWriter::write_audio_packets (1st resampling)",
-			"in_sample_fmt", AV_SAMPLE_FMT_S16,
+			"in_sample_fmt", AV_SAMPLE_FMT_FLT,
 			"out_sample_fmt", output_sample_fmt,
 			"in_sample_rate", sample_rate_in_frame,
 			"out_sample_rate", info.sample_rate,
@@ -1829,10 +1816,20 @@ void FFmpegWriter::write_audio_packets(bool is_final, std::shared_ptr<openshot::
 			av_opt_set_int(avr, "in_channels", channels_in_frame, 0);
 			av_opt_set_int(avr, "out_channels", info.channels, 0);
 #endif
-			av_opt_set_int(avr, "in_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+			av_opt_set_int(avr, "in_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
 			av_opt_set_int(avr, "out_sample_fmt", output_sample_fmt, 0); // planar not allowed here
 			av_opt_set_int(avr, "in_sample_rate", sample_rate_in_frame, 0);
 			av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
+			if (channels_in_frame == 1 && info.channels == 2) {
+				// FFmpeg's default mono to stereo mix lowers each side by 3 dB. Copy
+				// mono to both sides at full level, like media players do.
+				const double mono_to_stereo[2] = { 1.0, 1.0 };
+#if USE_SW
+				swr_set_matrix(avr, mono_to_stereo, 1);
+#else
+				avresample_set_matrix(avr, mono_to_stereo, 1);
+#endif
+			}
 			SWR_INIT(avr);
 		}
 		// Convert audio samples

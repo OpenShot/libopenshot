@@ -22,6 +22,28 @@
 
 using namespace openshot;
 
+int AudioRecorderInputMapper::DeviceChannels(int requested_channels)
+{
+	return std::max(requested_channels, 2);
+}
+
+void AudioRecorderInputMapper::FillBlock(
+	AudioRecorderBlock& block,
+	int channels,
+	const float* const* input_channel_data,
+	int num_input_channels,
+	int num_samples)
+{
+	block.channels.resize(channels);
+	for (int channel = 0; channel < channels; ++channel) {
+		block.channels[channel].assign(num_samples, 0.0f);
+		const int source = channel < num_input_channels ? channel : 0;
+		if (source < num_input_channels && input_channel_data[source]) {
+			std::copy(input_channel_data[source], input_channel_data[source] + num_samples, block.channels[channel].begin());
+		}
+	}
+}
+
 AudioLevelData AudioRecorderLevelMeter::ProcessBlock(const AudioRecorderBlock& block) const
 {
 	AudioLevelData result;
@@ -216,23 +238,14 @@ void AudioRecorder::Open()
 		device_manager.setCurrentAudioDeviceType(settings.device_type, true);
 	}
 
-	juce::AudioDeviceManager::AudioDeviceSetup setup;
-	setup.inputChannels.clear();
-	for (int channel = 0; channel < settings.channels; ++channel) {
-		setup.inputChannels.setBit(channel);
+	// Open stereo devices as stereo, and pick the requested channels ourselves.
+	// If a driver refuses that, fall back to the requested channel count.
+	const int device_channels = AudioRecorderInputMapper::DeviceChannels(settings.channels);
+	juce::String error = OpenDevice(device_channels);
+	if (error.isNotEmpty() && device_channels != settings.channels) {
+		device_manager.closeAudioDevice();
+		error = OpenDevice(settings.channels);
 	}
-	setup.outputChannels.clear();
-	setup.sampleRate = settings.sample_rate;
-	setup.bufferSize = settings.buffer_size;
-	setup.inputDeviceName = settings.device_name;
-
-	const juce::String error = device_manager.initialise(
-		settings.channels,
-		0,
-		nullptr,
-		true,
-		settings.device_name,
-		&setup);
 	if (error.isNotEmpty()) {
 		throw InvalidOptions(error.toStdString(), settings.path);
 	}
@@ -249,6 +262,25 @@ void AudioRecorder::Open()
 		settings.waveform_samples_per_second);
 
 	is_open = true;
+}
+
+juce::String AudioRecorder::OpenDevice(int device_channels)
+{
+	juce::AudioDeviceManager::AudioDeviceSetup setup;
+	setup.inputChannels.clear();
+	setup.inputChannels.setRange(0, device_channels, true);
+	setup.outputChannels.clear();
+	setup.sampleRate = settings.sample_rate;
+	setup.bufferSize = settings.buffer_size;
+	setup.inputDeviceName = settings.device_name;
+
+	return device_manager.initialise(
+		device_channels,
+		0,
+		nullptr,
+		true,
+		settings.device_name,
+		&setup);
 }
 
 void AudioRecorder::OpenWriter()
@@ -433,14 +465,7 @@ void AudioRecorder::audioDeviceIOCallbackWithContext(
 	AudioRecorderBlock block;
 	block.sample_rate = settings.sample_rate;
 	block.first_sample = samples_recorded.load();
-	block.channels.resize(settings.channels);
-
-	for (int channel = 0; channel < settings.channels; ++channel) {
-		block.channels[channel].assign(numSamples, 0.0f);
-		if (channel < numInputChannels && inputChannelData[channel]) {
-			std::copy(inputChannelData[channel], inputChannelData[channel] + numSamples, block.channels[channel].begin());
-		}
-	}
+	AudioRecorderInputMapper::FillBlock(block, settings.channels, inputChannelData, numInputChannels, numSamples);
 
 	AudioLevelData level = level_meter.ProcessBlock(block);
 	std::function<void(const AudioLevelData&)> level_cb;
