@@ -23,20 +23,23 @@
 
 #include "CacheMemory.h"
 #include "Clip.h"
-#include "CVObjectDetection.h"
 #include "DummyReader.h"
 #include "effects/Blur.h"
 #include "effects/Brightness.h"
 #include "effects/Hue.h"
-#include "effects/ObjectDetection.h"
 #include "effects/Pixelate.h"
 #include "effects/Saturation.h"
 #include "effects/Sharpen.h"
-#include "effects/Tracker.h"
-#include "TrackedObjectBBox.h"
-#include "ProcessingController.h"
 #include "QtImageReader.h"
 #include "openshot_catch.h"
+
+#ifdef USE_OPENCV
+#include "CVObjectDetection.h"
+#include "effects/ObjectDetection.h"
+#include "effects/Tracker.h"
+#include "ProcessingController.h"
+#include "TrackedObjectBBox.h"
+#endif
 
 using namespace openshot;
 
@@ -47,6 +50,7 @@ static std::string temp_png_path(const std::string& base) {
 	return path.str();
 }
 
+#ifdef USE_OPENCV
 TEST_CASE("CVObjectDetection normalizes saved track classes", "[libopenshot][opencv][objectdetection]")
 {
 	const std::string protobuf_path = temp_png_path("objdetector_class_normalize") + ".data";
@@ -73,6 +77,7 @@ TEST_CASE("CVObjectDetection normalizes saved track classes", "[libopenshot][ope
 
 	std::remove(protobuf_path.c_str());
 }
+#endif
 
 static std::string create_source_png(int w, int h, const QColor& color) {
 	const std::string path = temp_png_path("source");
@@ -164,6 +169,7 @@ static std::shared_ptr<Frame> make_input_frame(int64_t number, int width = 2, in
 	return frame;
 }
 
+#ifdef USE_OPENCV
 static void append_varint(std::string& output, uint32_t value) {
 	while (value > 0x7f) {
 		output.push_back(static_cast<char>((value & 0x7f) | 0x80));
@@ -229,6 +235,7 @@ static std::string create_object_detection_data_with_mask() {
 	REQUIRE(output.good());
 	return path;
 }
+#endif
 
 TEST_CASE("EffectBase common mask blend applies to ProcessFrame", "[effect][mask][base]") {
 	auto frame = std::make_shared<Frame>(1, 4, 1, "#000000");
@@ -249,6 +256,7 @@ TEST_CASE("EffectBase common mask blend applies to ProcessFrame", "[effect][mask
 	CHECK(out_image->pixelColor(3, 0).red() == 80);
 }
 
+#ifdef USE_OPENCV
 TEST_CASE("ObjectDetection all object update applies sparse style keys", "[effect][object_detection]") {
 	ObjectDetection effect;
 	auto first = std::make_shared<TrackedObjectBBox>(10, 20, 30, 255);
@@ -461,6 +469,7 @@ TEST_CASE("ObjectDetection all object properties keep explicit all values", "[ef
 	CHECK(first_props["objects"]["effect-1"]["stroke_width"]["value"].asDouble() == Approx(3.0));
 	CHECK(first_props["objects"]["effect-1"]["stroke_alpha"]["value"].asDouble() == Approx(0.75));
 }
+#endif
 
 TEST_CASE("EffectBase mask fields serialize and deserialize", "[effect][mask][json]") {
 	const std::string mask_path = create_mask_png({255, 0});
@@ -483,6 +492,7 @@ TEST_CASE("EffectBase mask fields serialize and deserialize", "[effect][mask][js
 	CHECK(copy.MaskReader() != nullptr);
 }
 
+#ifdef USE_OPENCV
 TEST_CASE("EffectBase can use tracker effect bbox as generated mask source", "[effect][mask][tracker]") {
 	Clip parent_clip;
 	Tracker tracker;
@@ -556,6 +566,7 @@ TEST_CASE("EffectBase tracker mask source with no visible bbox preserves origina
 	for (int x = 0; x < 4; ++x)
 		CHECK(out_image->pixelColor(x, 0).red() == 80);
 }
+#endif
 
 TEST_CASE("Blur mask mode drive amount differs from post blend", "[effect][mask][blur]") {
 	const int width = 20;

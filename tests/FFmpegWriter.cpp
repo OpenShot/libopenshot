@@ -19,6 +19,7 @@
 
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
+#include "CacheMemory.h"
 #include "DummyReader.h"
 #include "FFmpegReader.h"
 #include "Fraction.h"
@@ -516,4 +517,45 @@ TEST_CASE("AAC export preserves delayed packet timestamps through flush",
     // conversion can also retain a short filter tail in the resampler.
     CHECK(av_rescale_q(stream->duration, stream->time_base, AVRational{1, 48000})
           == Approx(expected_samples).margin(source_rate == 48000 ? 48 : 96));
+}
+
+TEST_CASE( "Mono audio export keeps full level and loud samples",
+           "[libopenshot][ffmpegwriter][audio]" )
+{
+	QTemporaryDir temp_dir;
+	REQUIRE(temp_dir.isValid());
+	const std::string path = temp_dir.filePath("mono-to-stereo.wav").toStdString();
+
+	CacheMemory cache;
+	const Fraction fps(30, 1);
+	for (int number = 1; number <= 10; ++number) {
+		const int samples = Frame::GetSamplesPerFrame(number, fps, 48000, 1);
+		auto frame = std::make_shared<Frame>(number, 1, 1, "#000000", samples, 1);
+		frame->SampleRate(48000);
+		frame->ChannelsLayout(LAYOUT_MONO);
+		std::vector<float> buffer(samples, 1.5f);
+		frame->AddAudio(true, 0, 0, buffer.data(), samples, 1.0f);
+		cache.Add(frame);
+	}
+	DummyReader reader(fps, 1, 1, 48000, 1, 10.0 / fps.ToDouble(), &cache);
+	reader.info.has_audio = true;
+	reader.info.channel_layout = LAYOUT_MONO;
+	reader.Open();
+
+	FFmpegWriter writer(path);
+	writer.SetAudioOptions(true, "pcm_f32le", 48000, 2, LAYOUT_STEREO, 3072000);
+	writer.Open();
+	writer.WriteFrame(&reader, 1, 10);
+	writer.Close();
+	reader.Close();
+
+	// Mono is copied to both sides at full level, and float output is not clipped
+	FFmpegReader result(path);
+	result.Open();
+	REQUIRE(result.info.channels == 2);
+	auto frame = result.GetFrame(5);
+	const int middle = frame->GetAudioSamplesCount() / 2;
+	CHECK(frame->GetAudioSample(0, middle, 1.0) == Approx(1.5f).margin(0.001f));
+	CHECK(frame->GetAudioSample(1, middle, 1.0) == Approx(1.5f).margin(0.001f));
+	result.Close();
 }
