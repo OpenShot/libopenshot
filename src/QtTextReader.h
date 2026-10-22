@@ -17,7 +17,10 @@
 
 #include "ReaderBase.h"
 
+#include <list>
 #include <memory>
+#include <string>
+#include <utility>
 
 #include "Enums.h"
 
@@ -69,6 +72,33 @@ namespace openshot
 	class QtTextReader : public ReaderBase
 	{
 	private:
+        // Opt-in document layout keeps existing readers' drawText behavior intact.
+        // These settings round-trip through JSON; sizes are pixels. Style names match
+        // the Caption effect where they mean the same thing (stroke, background_padding,
+        // background_corner, line_spacing). text_animation keyframes only the styles that
+        // keep the image size: color, background, stroke, border, stroke_width,
+        // border_width and background_corner.
+        Json::Value text_animation;
+        Json::Value rendered_style;
+        int64_t render_frame = 1;
+        double render_scale = 1.0; ///< Raster scale for a SCALE_NONE clip in a resized preview
+        double PreviewScale();
+        openshot::Fraction source_fps = openshot::Fraction(30, 1); ///< Frame rate that style curves are keyed to
+        /// Recently rendered animated styles, newest first (bounded by count and bytes)
+        std::list<std::pair<std::string, std::shared_ptr<QImage>>> render_cache;
+        std::shared_ptr<QImage> Render(const Json::Value& style);
+        void UseStyle(const Json::Value& style);
+        void UpdateInfo();
+        Json::Value EvaluateStyle(int64_t frame) const;
+        bool document_layout = false;
+        double background_padding = 12.0; ///< Space between the text and the box edge
+        double stroke_width = 0.0; ///< Text outline width
+        std::string stroke = "#000000"; ///< Text outline color
+        double border_width = 0.0; ///< Box border width
+        std::string border = "#ffffff"; ///< Box border color
+        double letter_spacing = 0.0; ///< Extra pixels between letters (negative tightens)
+        double line_spacing = 1.0; ///< Line height as a multiple of the font's (1 = normal)
+        double background_corner = 0.0; ///< Corner radius of the background and border
 		int width;
 		int height;
 		int x_offset;

@@ -62,6 +62,7 @@ set(OPENSHOT_TESTS
   Profiles
   QtPlayer
   QtImageReader
+  QtTextReader
   ReaderBase
   NativeArm64ProcessOracle
   Settings
@@ -179,7 +180,10 @@ foreach(tname ${OPENSHOT_TESTS})
       SKIP_REGULAR_EXPRESSION "Skipping VAAPI test:"
     )
   endif()
-  if(tname STREQUAL "Caption" OR tname STREQUAL "Timer")
+  if(tname STREQUAL "QtTextReader")
+    # Pixel assertions need a font engine; Qt's minimal plugin has no font database.
+    list(APPEND test_properties ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+  elseif(tname STREQUAL "Caption" OR tname STREQUAL "Timer")
     list(APPEND test_properties
       ENVIRONMENT "QT_QPA_PLATFORM=minimal"
     )
