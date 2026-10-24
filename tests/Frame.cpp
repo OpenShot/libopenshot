@@ -3,6 +3,7 @@
  * @brief Unit tests for openshot::Frame
  * @author Jonathan Thomas <jonathan@openshot.org>
  * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
+ * @author HaiVQ <me@haivq.com>
  *
  * @ref License
  */
@@ -275,5 +276,27 @@ TEST_CASE( "Convert_Image", "[libopenshot][opencv][frame]" )
 	CHECK(f1->GetWidth() == cvimage.cols);
 	CHECK(f1->GetHeight() == cvimage.rows);
 	CHECK(cvimage.channels() == 3);
+}
+
+TEST_CASE( "Convert_Image_Alpha", "[libopenshot][opencv][frame]" )
+{
+	// Create a video clip
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	Clip c1(path.str());
+	c1.Open();
+
+	// Get first frame
+	auto f1 = c1.GetFrame(1);
+
+	// Get first Mat image
+	cv::Mat cvimage = f1->GetBGRACvMat();
+
+	CHECK_FALSE(cvimage.empty());
+
+	CHECK(f1->number == 1);
+	CHECK(f1->GetWidth() == cvimage.cols);
+	CHECK(f1->GetHeight() == cvimage.rows);
+	CHECK(cvimage.channels() == 4);
 }
 #endif
