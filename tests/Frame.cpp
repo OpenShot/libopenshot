@@ -277,3 +277,45 @@ TEST_CASE( "Convert_Image", "[libopenshot][opencv][frame]" )
 	CHECK(cvimage.channels() == 3);
 }
 #endif
+
+TEST_CASE("Frame source color metadata", "[Frame][ColorMetadata]")
+{
+    openshot::Frame original;
+
+    CHECK(original.source_color_metadata.primaries == 2);
+    CHECK(original.source_color_metadata.transfer == 2);
+    CHECK(original.source_color_metadata.matrix == 2);
+    CHECK(original.source_color_metadata.range == 0);
+    CHECK(original.source_color_metadata.chroma_location == 0);
+
+    original.source_color_metadata.primaries = 9;
+    original.source_color_metadata.transfer = 16;
+    original.source_color_metadata.matrix = 9;
+    original.source_color_metadata.range = 1;
+    original.source_color_metadata.chroma_location = 2;
+
+    auto verify = [](const openshot::Frame& frame) {
+        CHECK(frame.source_color_metadata.primaries == 9);
+        CHECK(frame.source_color_metadata.transfer == 16);
+        CHECK(frame.source_color_metadata.matrix == 9);
+        CHECK(frame.source_color_metadata.range == 1);
+        CHECK(frame.source_color_metadata.chroma_location == 2);
+    };
+
+    SECTION("Copy constructor") {
+        openshot::Frame copied(original);
+        verify(copied);
+    }
+
+    SECTION("Assignment") {
+        openshot::Frame assigned;
+        assigned = original;
+        verify(assigned);
+    }
+
+    SECTION("DeepCopy") {
+        openshot::Frame copied;
+        copied.DeepCopy(original);
+        verify(copied);
+    }
+}

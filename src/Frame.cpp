@@ -88,6 +88,7 @@ void Frame::DeepCopy(const Frame& other)
 {
 	number = other.number;
 	capture_timestamp = other.capture_timestamp;
+	source_color_metadata = other.source_color_metadata;
 	channels = other.channels;
 	width = other.width;
 	height = other.height;

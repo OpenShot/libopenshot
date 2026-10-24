@@ -256,6 +256,7 @@ typedef struct OpenShotByteBuffer {
 #endif
 
 %include "Fraction.h"
+%include "ColorSpace.h"
 %include "Frame.h"
 %include "FrameMapper.h"
 %include "PlayerBase.h"
