@@ -72,16 +72,34 @@ Json::Value QtTextReader::EvaluateStyle(int64_t frame) const {
     return result;
 }
 
-// SCALE_NONE draws a source at its pixel size, so match QtImageReader and
-// rasterize at the preview-to-project ratio rather than full project pixels.
-double QtTextReader::PreviewScale() {
+// Raster scale that keeps this text sharp at the parent clip's largest size,
+// like QtImageReader does for SVGs. SCALE_NONE draws a source at its pixel
+// size, so it also follows the preview-to-project ratio, and `detail` is the
+// extra scale that Clip shrinks back out (see DetailScale).
+double QtTextReader::RasterScale(double& detail) {
+    detail = 1.0;
     Clip* parent = (Clip*) ParentClip();
-    if (!parent || parent->scale != SCALE_NONE || !parent->ParentTimeline())
+    if (!parent || !parent->ParentTimeline())
         return 1.0;
     Timeline* timeline = (Timeline*) parent->ParentTimeline();
-    if (timeline->preview_width <= 0 || timeline->info.width <= 0)
+    if (timeline->preview_width <= 0 || timeline->preview_height <= 0 || timeline->info.width <= 0)
         return 1.0;
-    return timeline->preview_width / double(timeline->info.width);
+    const double clip_scale = std::max({1.0, double(parent->scale_x.GetMaxPoint().co.Y),
+                                        double(parent->scale_y.GetMaxPoint().co.Y)});
+    // Bound the raster (a 16x scale of a full-frame box would need gigabytes)
+    const double max_scale = std::max(1.0, 8192.0 / std::max(width, height));
+    if (parent->scale == SCALE_NONE) {
+        const double preview = timeline->preview_width / double(timeline->info.width);
+        detail = std::max(1.0, std::min(clip_scale, max_scale / preview));
+        return preview * detail;
+    }
+    // Other modes resize the image to the preview, so only its pixel count matters
+    QSizeF size(width, height);
+    size.scale(timeline->preview_width, timeline->preview_height,
+               parent->scale == SCALE_CROP ? Qt::KeepAspectRatioByExpanding :
+               parent->scale == SCALE_STRETCH ? Qt::IgnoreAspectRatio : Qt::KeepAspectRatio);
+    const double fit = std::max(size.width() / width, size.height() / height);
+    return std::min(fit * clip_scale, max_scale);
 }
 
 // Render one style into a new image (layout in project pixels, raster at render_scale)
@@ -339,9 +357,11 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 
 	auto sample_count = Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels);
 
-    const double preview_scale = PreviewScale();
-    if (std::abs(preview_scale - render_scale) > 1e-6) {
-        render_scale = preview_scale;
+    double detail = 1.0;
+    const double raster_scale = RasterScale(detail);
+    if (std::abs(raster_scale - render_scale) > 1e-6 || std::abs(detail - detail_scale) > 1e-6) {
+        render_scale = raster_scale;
+        detail_scale = detail;
         render_frame = requested_frame;
         Close();
         Open();
