@@ -156,3 +156,172 @@ TEST_CASE( "Max_Decode_Size_SVG_QtImageReader", "[libopenshot][qtimagereader]" )
 
 	r.Close();
 }
+
+
+TEST_CASE( "Memory_QImage_Constructor", "[libopenshot][qtimagereader]" )
+{
+    QImage source(64, 48, QImage::Format_ARGB32);
+    source.fill(Qt::red);
+
+    QtImageReader reader(source);
+    reader.Open();
+
+    auto frame = reader.GetFrame(1);
+    REQUIRE(frame != nullptr);
+
+    auto image = frame->GetImage();
+    REQUIRE(image != nullptr);
+
+    CHECK(image->width() == 64);
+    CHECK(image->height() == 48);
+    CHECK(image->pixelColor(10, 10) == QColor(Qt::red));
+
+    reader.Close();
+}
+
+TEST_CASE( "Memory_QImage_Transparency", "[libopenshot][qtimagereader]" )
+{
+    QImage source(32, 32, QImage::Format_ARGB32);
+    source.fill(Qt::transparent);
+    source.setPixelColor(10, 10, QColor(255, 0, 0, 128));
+
+    QtImageReader reader(source);
+    reader.Open();
+
+    auto frame = reader.GetFrame(1);
+    REQUIRE(frame != nullptr);
+
+    auto image = frame->GetImage();
+    REQUIRE(image != nullptr);
+
+    QColor pixel = image->pixelColor(10, 10);
+
+    CHECK(pixel.red() == 255);
+    CHECK(pixel.green() == 0);
+    CHECK(pixel.blue() == 0);
+    CHECK(pixel.alpha() == 128);
+
+    CHECK(image->pixelColor(0, 0).alpha() == 0);
+
+    reader.Close();
+}
+
+TEST_CASE( "Memory_QImage_Source_Independence", "[libopenshot][qtimagereader]" )
+{
+    QImage source(32, 32, QImage::Format_ARGB32);
+    source.fill(Qt::red);
+
+    QtImageReader reader(source);
+
+    source.fill(Qt::blue);
+
+    reader.Open();
+
+    auto frame = reader.GetFrame(1);
+    REQUIRE(frame != nullptr);
+
+    auto image = frame->GetImage();
+    REQUIRE(image != nullptr);
+
+    CHECK(image->pixelColor(5, 5) == QColor(Qt::red));
+
+    reader.Close();
+}
+
+TEST_CASE( "Memory_QImage_Repeated_Frames", "[libopenshot][qtimagereader]" )
+{
+    QImage source(32, 32, QImage::Format_ARGB32);
+    source.fill(Qt::green);
+
+    QtImageReader reader(source);
+    reader.Open();
+
+    auto first = reader.GetFrame(1);
+    auto second = reader.GetFrame(2);
+
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+
+    REQUIRE(first->GetImage() != nullptr);
+    REQUIRE(second->GetImage() != nullptr);
+
+    CHECK(first->GetImage()->pixelColor(5, 5) == QColor(Qt::green));
+    CHECK(second->GetImage()->pixelColor(5, 5) == QColor(Qt::green));
+
+    reader.Close();
+}
+
+TEST_CASE( "Memory_QImage_Close_Reopen", "[libopenshot][qtimagereader]" )
+{
+    QImage source(40, 30, QImage::Format_ARGB32);
+    source.fill(Qt::yellow);
+
+    QtImageReader reader(source);
+
+    reader.Open();
+    auto first = reader.GetFrame(1);
+
+    REQUIRE(first != nullptr);
+    REQUIRE(first->GetImage() != nullptr);
+
+    reader.Close();
+    reader.Open();
+
+    auto second = reader.GetFrame(2);
+
+    REQUIRE(second != nullptr);
+    REQUIRE(second->GetImage() != nullptr);
+
+    CHECK(second->GetImage()->width() == 40);
+    CHECK(second->GetImage()->height() == 30);
+    CHECK(second->GetImage()->pixelColor(5, 5) == QColor(Qt::yellow));
+
+    reader.Close();
+}
+
+TEST_CASE( "Memory_QImage_Null_Input", "[libopenshot][qtimagereader]" )
+{
+    QImage empty;
+
+    CHECK_THROWS_AS(QtImageReader(empty), InvalidFile);
+}
+
+TEST_CASE( "Memory_QImage_Frame_Isolation", "[libopenshot][qtimagereader]" )
+{
+    QImage source(32, 32, QImage::Format_ARGB32);
+    source.fill(Qt::green);
+
+    QtImageReader reader(source);
+    reader.Open();
+
+    auto first = reader.GetFrame(1);
+    auto second = reader.GetFrame(2);
+
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+
+    auto first_image = first->GetImage();
+    auto second_image = second->GetImage();
+
+    REQUIRE(first_image != nullptr);
+    REQUIRE(second_image != nullptr);
+
+    // Each frame must own a distinct QImage object.
+    CHECK(first_image.get() != second_image.get());
+
+    // Modifying one frame must not affect another.
+    first_image->setPixelColor(5, 5, QColor(Qt::red));
+
+    CHECK(first_image->pixelColor(5, 5) == QColor(Qt::red));
+    CHECK(second_image->pixelColor(5, 5) == QColor(Qt::green));
+
+    // The reader's cached image must also remain unchanged.
+    auto third = reader.GetFrame(3);
+
+    REQUIRE(third != nullptr);
+    REQUIRE(third->GetImage() != nullptr);
+
+    CHECK(third->GetImage()->pixelColor(5, 5) == QColor(Qt::green));
+
+    reader.Close();
+}
