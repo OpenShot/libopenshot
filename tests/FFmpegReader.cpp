@@ -802,6 +802,81 @@ TEST_CASE( "HardwareDecodeSuccessful_IsFalse_WhenHardwareDecodeIsDisabled", "[li
 	r.Close();
 }
 
+
+#if defined(__linux__) && USE_HW_ACCEL
+static int forced_hw_device_create_calls = 0;
+
+static int ForceHardwareDeviceCreationFailure(
+    AVBufferRef **device,
+    enum AVHWDeviceType,
+    const char *,
+    AVDictionary *,
+    int)
+{
+    ++forced_hw_device_create_calls;
+    if (device)
+        *device = nullptr;
+    return AVERROR(ENODEV);
+}
+#endif
+
+TEST_CASE("CUDA initialization failure falls back to software decoding",
+          "[libopenshot][ffmpegreader][hardware][cuda-fallback]")
+{
+#if !defined(__linux__) || !USE_HW_ACCEL
+    WARN("Skipping CUDA fallback test: requires Linux hardware decode support");
+    return;
+#else
+    if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
+        WARN("Skipping CUDA fallback test: ffmpeg executable unavailable");
+        return;
+    }
+
+    std::stringstream fixture_path;
+    fixture_path << "libopenshot-cuda-fallback-"
+                 << std::chrono::steady_clock::now().time_since_epoch().count()
+                 << ".mp4";
+    TemporaryFileGuard fixture_cleanup(fixture_path.str());
+
+    std::stringstream command;
+    command << "ffmpeg -y -hide_banner -loglevel error "
+            << "-f lavfi -i \"testsrc2=size=128x72:rate=30\" "
+            << "-t 1 -c:v libx264 -pix_fmt yuv420p "
+            << "\"" << fixture_path.str() << "\"";
+
+    REQUIRE(std::system(command.str().c_str()) == 0);
+
+    HardwareDecoderSettingsGuard settings_guard;
+    Settings::Instance()->HARDWARE_DECODER = 2;
+    Settings::Instance()->HW_DE_DEVICE_SET = 0;
+
+    FFmpegReader reader(fixture_path.str(), DurationStrategy::VideoPreferred);
+
+    forced_hw_device_create_calls = 0;
+    reader.hardware_device_create = &ForceHardwareDeviceCreationFailure;
+
+    reader.Open();
+
+    REQUIRE(forced_hw_device_create_calls > 0);
+    REQUIRE(reader.info.has_video);
+    CHECK_FALSE(reader.HardwareDecodeSuccessful());
+
+    auto frame = reader.GetFrame(1);
+    REQUIRE(frame != nullptr);
+    REQUIRE(frame->has_image_data);
+    CHECK(frame->GetWidth() == 128);
+    CHECK(frame->GetHeight() == 72);
+
+    // Hardware device creation is deliberately forced to fail.
+    // Software decoding must still return a valid frame.
+    if (!reader.HardwareDecodeSuccessful()) {
+        INFO("CUDA unavailable or unused; frame decoded successfully");
+    }
+
+    reader.Close();
+#endif
+}
+
 TEST_CASE( "VAAPI_H264_420_Reports_HardwareDecodeSuccess", "[libopenshot][ffmpegreader][hardware]" )
 {
 #if !defined(__linux__) || !USE_HW_ACCEL
