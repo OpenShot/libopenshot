@@ -199,6 +199,59 @@ TEST_CASE("Unscaled text keeps its project size in a smaller preview", "[libopen
     reader.Close();
 }
 
+TEST_CASE("Scaled-up text renders sharp detail at the same size", "[libopenshot][qttextreader]")
+{
+    TextTestApplication application;
+    QtTextReader reader;
+    Json::Value data = reader.JsonValue();
+    data["width"] = 320;
+    data["height"] = 60;
+    data["text"] = "Sharp";
+    QFont font("DejaVu Sans");
+    font.setPixelSize(40);
+    data["font"] = font.toString().toStdString();
+    data["document_layout"] = true;
+    data["background_color"] = "transparent";
+    reader.SetJsonValue(data);
+    struct Result { QRect bounds; double soft; int raster_width; };
+    const auto render = [&](double scale) {
+        Clip clip(&reader);
+        clip.scale = SCALE_NONE;
+        clip.scale_x = Keyframe(scale);
+        clip.scale_y = Keyframe(scale);
+        Timeline timeline(1280, 720, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+        timeline.AddClip(&clip);
+        timeline.SetMaxSize(1280, 720);
+        timeline.Open();
+        const auto image = timeline.GetFrame(1)->GetImage();
+        QRect bounds;
+        int ink = 0, soft = 0;
+        for (int y = 0; y < image->height(); ++y)
+            for (int x = 0; x < image->width(); ++x) {
+                const int red = qRed(image->pixel(x, y));
+                if (red > 16) {
+                    bounds |= QRect(x, y, 1, 1);
+                    ++ink;
+                    soft += red < 240;
+                }
+            }
+        Result result{bounds, ink ? soft / double(ink) : 1.0, reader.GetFrame(1)->GetWidth()};
+        timeline.Close();
+        return result;
+    };
+    const Result normal = render(1.0);
+    const Result scaled = render(3.0);
+    REQUIRE_FALSE(normal.bounds.isNull());
+    CHECK(normal.raster_width == 320);
+    // The text box is rasterized at 3x, but still drawn 3x (not 9x) its size
+    CHECK(scaled.raster_width == 960);
+    CHECK(scaled.bounds.width() == Approx(normal.bounds.width() * 3).margin(6));
+    CHECK(scaled.bounds.height() == Approx(normal.bounds.height() * 3).margin(6));
+    // An upscaled 1x raster would be mostly blurred edge pixels
+    CHECK(scaled.soft < normal.soft * 0.6);
+    reader.Close();
+}
+
 namespace {
 // A solid background animated from red at frame 1 to blue at frame 61.
 Json::Value animated_background(QtTextReader& reader, const Fraction& fps)

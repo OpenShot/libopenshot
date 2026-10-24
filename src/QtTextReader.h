@@ -17,6 +17,7 @@
 
 #include "ReaderBase.h"
 
+#include <atomic>
 #include <list>
 #include <memory>
 #include <string>
@@ -81,8 +82,9 @@ namespace openshot
         Json::Value text_animation;
         Json::Value rendered_style;
         int64_t render_frame = 1;
-        double render_scale = 1.0; ///< Raster scale for a SCALE_NONE clip in a resized preview
-        double PreviewScale();
+        double render_scale = 1.0; ///< Raster pixels per layout pixel
+        std::atomic<double> detail_scale{1.0}; ///< Part of render_scale a SCALE_NONE clip draws back down
+        double RasterScale(double& detail);
         openshot::Fraction source_fps = openshot::Fraction(30, 1); ///< Frame rate that style curves are keyed to
         /// Recently rendered animated styles, newest first (bounded by count and bytes)
         std::list<std::pair<std::string, std::shared_ptr<QImage>>> render_cache;
@@ -128,6 +130,10 @@ namespace openshot
 		/// @param text_color The color of the text (valid values are a color string in \#RRGGBB or \#AARRGGBB notation or a CSS color name)
 		/// @param background_color The background color of the frame image (valid values are a color string in \#RRGGBB or \#AARRGGBB notation, a CSS color name, or 'transparent')
 		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color);
+
+		/// Extra raster detail rendered for a scaled-up SCALE_NONE clip. Clip
+		/// divides the image size by this, so it stays sharp without growing.
+		double DetailScale() const { return detail_scale; }
 
 		/// Draw a box under rendered text using the specified color.
 		/// @param color The background color behind the text (valid values are a color string in \#RRGGBB or \#AARRGGBB notation or a CSS color name)

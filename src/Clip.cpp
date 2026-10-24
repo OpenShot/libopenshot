@@ -1570,6 +1570,18 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = scale_size(source_image->size(), scale, layout_width, layout_height);
 
+	// Text rasterizes extra detail for a scaled-up SCALE_NONE clip; draw it at its layout size
+	if (scale == SCALE_NONE) {
+		ReaderBase* source = reader;
+		if (auto* mapper = dynamic_cast<FrameMapper*>(source))
+			source = mapper->Reader();
+		if (auto* text = dynamic_cast<QtTextReader*>(source)) {
+			const double detail = text->DetailScale();
+			source_size = QSize(std::max(1, int(std::round(source_size.width() / detail))),
+			                    std::max(1, int(std::round(source_size.height() / detail))));
+		}
+	}
+
 	// Initialize parent object's properties (Clip or Tracked Object)
 	float parentObject_location_x = 0.0;
 	float parentObject_location_y = 0.0;
