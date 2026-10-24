@@ -40,6 +40,8 @@ set(OPENSHOT_TESTS
   AudioReaderSource
   AudioPlaybackThread
   AnimatedCurve
+  QtJsonCompatibility
+  ChunkReaderJson
   AudioWaveformer
   CameraCaptureReader
   CacheDisk
@@ -169,6 +171,18 @@ foreach(tname ${OPENSHOT_TESTS})
     openshot_catch2
     openshot
   )
+
+  if(tname STREQUAL "QtJsonCompatibility")
+    target_sources(openshot-${tname}-test PRIVATE
+      "${PROJECT_SOURCE_DIR}/src/QtJsonAdapter.cpp"
+    )
+    if(TARGET Qt6::Core)
+      target_link_libraries(openshot-${tname}-test Qt6::Core)
+    else()
+      find_package(Qt5 REQUIRED COMPONENTS Core)
+      target_link_libraries(openshot-${tname}-test Qt5::Core)
+    endif()
+  endif()
 
   set(test_properties
     LABELS ${tname}
