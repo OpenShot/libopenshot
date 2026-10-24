@@ -52,6 +52,7 @@ set(OPENSHOT_SOURCES
   AudioDevices.cpp
   AudioReaderSource.cpp
   AudioResampler.cpp
+  AudioReactiveKeyframes.cpp
   AudioWaveformer.cpp
   CameraCaptureReader.cpp
   CacheBase.cpp
