@@ -55,7 +55,7 @@ struct CameraOpenGate {
 thread_local CameraOpenGate* CameraOpenGate::active = nullptr;
 }
 
-TEST_CASE("Camera close waits for in-flight FFmpeg initialization",
+TEST_CASE("Camera cancellation does not clean up in-flight FFmpeg initialization",
 	"[libopenshot][cameracapturereader][lifecycle]")
 {
 	CameraCaptureSettings settings;
@@ -63,6 +63,9 @@ TEST_CASE("Camera close waits for in-flight FFmpeg initialization",
 	// /dev/null is a file, so this path cannot accidentally name a real camera.
 	settings.device = "/dev/null/openshot-test-camera";
 	CameraCaptureReader reader(settings);
+	bool request_only = false;
+	SECTION("Close waits for initialization before freeing resources") {}
+	SECTION("RequestClose returns without waiting for initialization") { request_only = true; }
 	CameraOpenGate gate;
 	std::exception_ptr open_error;
 	av_log_set_callback(CameraOpenGate::Log);
@@ -81,7 +84,8 @@ TEST_CASE("Camera close waits for in-flight FFmpeg initialization",
 	auto done = close_done.get_future();
 	std::thread closer([&] {
 		close_started.set_value();
-		reader.Close();
+		if (request_only) reader.RequestClose();
+		else reader.Close();
 		close_done.set_value();
 	});
 	close_started.get_future().wait();
@@ -95,7 +99,7 @@ TEST_CASE("Camera close waits for in-flight FFmpeg initialization",
 	closer.join();
 	av_log_set_callback(av_log_default_callback);
 	REQUIRE(entered);
-	CHECK(cleanup_waited);
+	CHECK(cleanup_waited == !request_only);
 	CHECK(open_error != nullptr);
 	CHECK_FALSE(reader.IsOpen());
 	CHECK_NOTHROW(reader.Close());

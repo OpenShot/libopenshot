@@ -79,6 +79,8 @@ namespace openshot
 		~ScreenCaptureReader() override;
 
 		void Close() override;
+		/// Signal FFmpeg capture reads to stop; the opening thread must call Close().
+		void RequestClose();
 		CacheBase* GetCache() override { return NULL; };
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t number) override;
 		bool IsOpen() override;

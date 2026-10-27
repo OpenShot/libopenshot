@@ -930,6 +930,11 @@ void ScreenCaptureReader::OpenDevice()
 	}
 	format_context->interrupt_callback.callback = capture_interrupt_callback;
 	format_context->interrupt_callback.opaque = &close_requested;
+	if (InputFormatName() == "dshow") {
+		// DirectShow's blocking packet wait does not check the interrupt callback.
+		// Poll through DecodeNextFrame instead so the owning thread can clean up COM.
+		format_context->flags |= AVFMT_FLAG_NONBLOCK;
+	}
 
 	AVDictionary* options = nullptr;
 	const bool use_device_defaults = settings.options.count("use_device_defaults") > 0;
@@ -1190,6 +1195,11 @@ std::shared_ptr<Frame> ScreenCaptureReader::DecodeNextFrame(int64_t number)
 	}
 
 	throw ReaderClosed("The ScreenCaptureReader was closed.");
+}
+
+void ScreenCaptureReader::RequestClose()
+{
+	close_requested = true;
 }
 
 void ScreenCaptureReader::Close()
