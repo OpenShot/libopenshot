@@ -800,6 +800,7 @@ void FFmpegReader::Close() {
 		seek_audio_frame_found = 0;
 		seek_video_frame_found = 0;
 		current_video_frame = 0;
+		first_video_frame = 0;
 		last_video_frame.reset();
 		last_final_video_frame.reset();
 	}
@@ -2098,6 +2099,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888, buffer);
 	}
 	ApplyFrameOrientation(f);
+	if (first_video_frame == 0 && !is_seeking) {
+		first_video_frame = current_frame;
+	}
 
 	// Update working cache
 	working_cache.Add(f);
@@ -2397,6 +2401,8 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	hold_packet = false;
 	last_frame = 0;
 	current_video_frame = 0;
+	// A seek landing is not the beginning. Close/Open below resets this for a restart.
+	first_video_frame = -1;
 	largest_frame_processed = 0;
 	last_final_video_frame.reset();
 	bool has_audio_override = info.has_audio;
@@ -2918,6 +2924,14 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					&& last_video_frame->number <= f->number) {
 					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
 				}
+			}
+
+			// A decoded picture from the start establishes the initial gap. Fill only
+			// that gap, after the normal audio readiness check, rather than reading
+			// to EOF waiting for an image that cannot arrive. Do not use seek landings.
+			if (!f->has_image_data && is_video_ready && is_audio_ready
+				&& !is_seeking && first_video_frame > f->number) {
+				f->AddColor("#000000");
 			}
 
 			// Do not finalize non-EOF video frames without decoded image data.
