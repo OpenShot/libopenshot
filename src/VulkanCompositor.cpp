@@ -29,6 +29,37 @@ struct FrameDelete { void operator()(AVFrame* f) const { av_frame_free(&f); } };
 using FramePtr=std::unique_ptr<AVFrame,FrameDelete>;
 // Submissions in flight per pipeline before Render waits for the oldest one.
 constexpr int kSlots=4;
+// Output pools are shared by every thread so ReleaseVulkanMemory() can drop them.
+// A pool keeps freed frames for reuse; FFmpeg frees a dropped pool's memory once
+// its last frame is released.
+struct OutputPools {
+    std::mutex mutex;
+    std::map<std::tuple<AVHWDeviceContext*,int,int,bool>,AVBufferRef*> pools;
+    ~OutputPools(){ for(auto& item:pools) av_buffer_unref(&item.second); }
+};
+OutputPools& SharedPools(){ static OutputPools pools; return pools; }
+// Returns a new reference the caller must release.
+AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
+    auto& shared=SharedPools();
+    const std::lock_guard<std::mutex> lock(shared.mutex);
+    auto& pool=shared.pools[{reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12}];
+    if(!pool){
+        AVBufferRef* frames=av_hwframe_ctx_alloc(device_ref);
+        if(!frames) throw std::bad_alloc();
+        auto* fc=reinterpret_cast<AVHWFramesContext*>(frames->data);
+        fc->format=AV_PIX_FMT_VULKAN; fc->sw_format=encode_nv12?AV_PIX_FMT_NV12:AV_PIX_FMT_RGBA;
+        fc->width=w; fc->height=h;
+        auto* vc=reinterpret_cast<AVVulkanFramesContext*>(fc->hwctx);
+        if(encode_nv12) vc->flags=AV_VK_FRAME_FLAG_DISABLE_MULTIPLANE;
+        vc->usage=static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+        const int status=av_hwframe_ctx_init(frames);
+        if(status<0){ av_buffer_unref(&frames); AvCheck(status,"Initialize Vulkan compositor output"); }
+        pool=frames;
+    }
+    AVBufferRef* ref=av_buffer_ref(pool);
+    if(!ref) throw std::bad_alloc();
+    return ref;
+}
 struct Parameters {
     float matrix_x[4], matrix_y[4], coeffs[4], extra[4], clear[4];
     int sizes[4], modes[4];
@@ -46,7 +77,7 @@ struct LockedFrame {
     ~LockedFrame(){vkcontext->unlock_frame(context,frame);}
 };
 class Pipeline {
-    AVBufferRef* frames=nullptr;
+    AVBufferRef* device_ref=nullptr;
     AVHWDeviceContext* device_context=nullptr;
     AVVulkanDeviceContext* vkcontext=nullptr;
     VkDevice device=VK_NULL_HANDLE;
@@ -59,36 +90,29 @@ class Pipeline {
     VkPipeline pipeline=VK_NULL_HANDLE;
     VkSampler sampler=VK_NULL_HANDLE;
     // One in-flight submission. Consumers order themselves through the frames'
-    // timeline semaphores; the slot only keeps resources alive until it retires.
+    // timeline semaphores, and FFmpeg waits on them before freeing a frame, so
+    // the slot only keeps its own commands and views until it retires.
     struct Slot {
         VkDescriptorSet set=VK_NULL_HANDLE;
         VkCommandBuffer cmd=VK_NULL_HANDLE;
         VkFence fence=VK_NULL_HANDLE;
         bool busy=false;
         std::vector<VkImageView> views;
-        std::vector<FramePtr> frames;
     };
     std::array<Slot,kSlots> ring;
     int next_slot=0;
     int width,height;
     bool encode_nv12;
 public:
-    Pipeline(AVBufferRef* device_ref,int w,int h,bool encode=false):width(w),height(h),encode_nv12(encode) {
+    Pipeline(AVBufferRef* device_owner,int w,int h,bool encode=false):width(w),height(h),encode_nv12(encode) {
+        device_ref=av_buffer_ref(device_owner);
+        if(!device_ref) throw std::bad_alloc();
         device_context=reinterpret_cast<AVHWDeviceContext*>(device_ref->data);
         vkcontext=reinterpret_cast<AVVulkanDeviceContext*>(device_context->hwctx);
         device=vkcontext->act_dev;
         queue_family=vkcontext->queue_family_comp_index;
         if(queue_family<0) throw std::runtime_error("No Vulkan compute queue");
         try {
-            frames=av_hwframe_ctx_alloc(device_ref);
-            if(!frames) throw std::bad_alloc();
-            auto* fc=reinterpret_cast<AVHWFramesContext*>(frames->data);
-            fc->format=AV_PIX_FMT_VULKAN; fc->sw_format=encode_nv12?AV_PIX_FMT_NV12:AV_PIX_FMT_RGBA;
-            fc->width=w; fc->height=h;
-            auto* vc=reinterpret_cast<AVVulkanFramesContext*>(fc->hwctx);
-            if(encode_nv12) vc->flags=AV_VK_FRAME_FLAG_DISABLE_MULTIPLANE;
-            vc->usage=static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-            AvCheck(av_hwframe_ctx_init(frames),"Initialize Vulkan compositor output");
             vkGetDeviceQueue(device,queue_family,0,&queue);
             VkCommandPoolCreateInfo ci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
             ci.queueFamilyIndex=queue_family; ci.flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -149,9 +173,9 @@ public:
         if(layout) vkDestroyPipelineLayout(device,layout,nullptr);
         if(descriptors) vkDestroyDescriptorSetLayout(device,descriptors,nullptr);
         if(commands) vkDestroyCommandPool(device,commands,nullptr);
-        av_buffer_unref(&frames);
+        av_buffer_unref(&device_ref);
     }
-    // Wait for a slot's previous submission, then release what it kept alive.
+    // Wait for a slot's previous submission, then release its views.
     void Retire(Slot& slot){
         if(slot.busy){
             vkWaitForFences(device,1,&slot.fence,VK_TRUE,UINT64_MAX);
@@ -160,7 +184,6 @@ public:
         }
         for(auto view:slot.views) vkDestroyImageView(device,view,nullptr);
         slot.views.clear();
-        slot.frames.clear();
     }
     VkImageView View(VkImage image,VkFormat format,VkImageAspectFlags aspect){
         VkImageViewCreateInfo vi{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -183,7 +206,10 @@ public:
         }
         FramePtr output(av_frame_alloc());
         if(!output) throw std::bad_alloc();
-        AvCheck(av_hwframe_get_buffer(frames,output.get(),0),"Allocate compositor output");
+        AVBufferRef* pool=OutputPool(device_ref,width,height,encode_nv12);
+        const int allocated=av_hwframe_get_buffer(pool,output.get(),0);
+        av_buffer_unref(&pool);
+        AvCheck(allocated,"Allocate compositor output");
         AvCheck(av_frame_copy_props(output.get(),src),"Copy compositor metadata");
         output->colorspace=encode_nv12?AVCOL_SPC_SMPTE170M:AVCOL_SPC_RGB; output->color_range=encode_nv12?AVCOL_RANGE_MPEG:AVCOL_RANGE_JPEG;
         if(encode_nv12 && src_fc->sw_format!=AV_PIX_FMT_RGBA) throw std::runtime_error("Encoder conversion requires RGBA");
@@ -304,15 +330,9 @@ public:
                 item.first->sem_value[item.second]++;
             }
             // Publish semaphore values before releasing frame locks. Do not wait here:
-            // later readers wait on those semaphores, and the slot keeps the frames alive.
+            // later readers wait on those semaphores.
             locks.clear();
-            auto result_image=std::make_shared<VulkanFrameImage>(output.get(),!encode_nv12);
-            for(auto* f:all){
-                FramePtr ref(av_frame_clone(f));
-                if(!ref) throw std::bad_alloc();
-                slot.frames.push_back(std::move(ref));
-            }
-            return result_image;
+            return std::make_shared<VulkanFrameImage>(output.get(),!encode_nv12);
         }catch(...){
             Retire(slot);
             throw;
@@ -361,6 +381,13 @@ std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const Fram
         key=requested;
     }
     return pipeline->Render(*src,nullptr,QTransform(),1.0,Qt::black);
+}
+
+void ReleaseVulkanMemory() {
+    auto& shared=SharedPools();
+    const std::lock_guard<std::mutex> lock(shared.mutex);
+    for(auto& item:shared.pools) av_buffer_unref(&item.second);
+    shared.pools.clear();
 }
 
 }

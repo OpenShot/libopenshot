@@ -14,5 +14,8 @@ std::shared_ptr<const FrameImage> RenderVulkanImage(
     std::shared_ptr<const FrameImage> source, std::shared_ptr<const FrameImage> background,
     int width, int height, const QTransform& source_to_output, double opacity,
     const QColor& clear = Qt::transparent, bool high_quality = false);
+/// Return pooled GPU frame memory once its frames are released, i.e. after
+/// clearing caches. Later renders create new pools as needed.
+void ReleaseVulkanMemory();
 }
 #endif
