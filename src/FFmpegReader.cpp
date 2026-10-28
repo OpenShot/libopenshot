@@ -3004,8 +3004,10 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			}
 		}
 
+		// Every frame waiting for its audio keeps a decoded image, so keep this margin
+		// small: 0.25 sec covers partial and delayed audio packets.
 		double audio_pts_diff = audio_pts_seconds - frame_pts_seconds;
-		if ((frame_pts_seconds < audio_pts_seconds && audio_pts_diff > 1.0)
+		if ((frame_pts_seconds < audio_pts_seconds && audio_pts_diff > 0.25)
 		   || (recent_pts_diff > 1.5)
 		   || packet_status.audio_eof || packet_status.end_of_file) {
 			// Audio stream is past this frame (so it must be done)
