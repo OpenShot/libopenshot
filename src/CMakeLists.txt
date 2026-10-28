@@ -457,22 +457,20 @@ if(ENABLE_GPU_FRAME)
   if(NOT GLSLANG_VALIDATOR)
     message(FATAL_ERROR "ENABLE_GPU_FRAME requires glslangValidator")
   endif()
-  set(VULKAN_AFFINE_SHADER "${CMAKE_CURRENT_BINARY_DIR}/affine.comp.spv")
-  add_custom_command(OUTPUT "${VULKAN_AFFINE_SHADER}"
-    COMMAND "${GLSLANG_VALIDATOR}" -V -S comp -o "${VULKAN_AFFINE_SHADER}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/affine.comp"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/affine.comp" VERBATIM)
-  add_custom_target(openshot-vulkan-shaders DEPENDS "${VULKAN_AFFINE_SHADER}")
-  set(VULKAN_ENCODE_SHADER "${CMAKE_CURRENT_BINARY_DIR}/encode_nv12.comp.spv")
-  add_custom_command(OUTPUT "${VULKAN_ENCODE_SHADER}"
-    COMMAND "${GLSLANG_VALIDATOR}" -V -S comp -o "${VULKAN_ENCODE_SHADER}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/encode_nv12.comp"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/encode_nv12.comp" VERBATIM)
-  add_custom_target(openshot-vulkan-encode-shaders DEPENDS "${VULKAN_ENCODE_SHADER}")
-  add_dependencies(openshot openshot-vulkan-encode-shaders)
-  target_compile_definitions(openshot PRIVATE OPENSHOT_VULKAN_ENCODE_SHADER_PATH="${VULKAN_ENCODE_SHADER}")
+  # Embed SPIR-V in the library so installed builds need no shader files.
+  set(VULKAN_SHADER_HEADERS)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vulkan")
+  foreach(shader affine encode_nv12)
+    set(shader_header "${CMAKE_CURRENT_BINARY_DIR}/vulkan/${shader}.comp.h")
+    add_custom_command(OUTPUT "${shader_header}"
+      COMMAND "${GLSLANG_VALIDATOR}" -V -S comp --vn "openshot_${shader}_spv"
+              -o "${shader_header}" "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp"
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp" VERBATIM)
+    list(APPEND VULKAN_SHADER_HEADERS "${shader_header}")
+  endforeach()
+  add_custom_target(openshot-vulkan-shaders DEPENDS ${VULKAN_SHADER_HEADERS})
   add_dependencies(openshot openshot-vulkan-shaders)
-  target_compile_definitions(openshot PRIVATE OPENSHOT_VULKAN_AFFINE_SHADER_PATH="${VULKAN_AFFINE_SHADER}")
+  target_include_directories(openshot PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/vulkan")
   target_link_libraries(openshot PRIVATE Vulkan::Vulkan)
   find_package(PkgConfig QUIET)
   if(PKG_CONFIG_FOUND)

@@ -5,7 +5,7 @@
 #include "VulkanFrameImage.h"
 #include <algorithm>
 #include <array>
-#include <fstream>
+#include <cstdint>
 #include <map>
 #include <mutex>
 #include <stdexcept>
@@ -14,6 +14,9 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vulkan.h>
 }
+// SPIR-V generated from src/vulkan/*.comp at build time.
+#include "affine.comp.h"
+#include "encode_nv12.comp.h"
 namespace openshot {
 namespace {
 void VkCheck(VkResult r, const char* operation) {
@@ -101,14 +104,9 @@ public:
             si.magFilter=si.minFilter=VK_FILTER_LINEAR;
             si.addressModeU=si.addressModeV=si.addressModeW=VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             VkCheck(vkCreateSampler(device,&si,nullptr,&sampler),"Create sampler");
-            std::ifstream shader(encode_nv12?OPENSHOT_VULKAN_ENCODE_SHADER_PATH:OPENSHOT_VULKAN_AFFINE_SHADER_PATH,std::ios::binary|std::ios::ate);
-            if(!shader) throw std::runtime_error("Vulkan affine shader unavailable");
-            const auto bytes=shader.tellg();
-            if(bytes<=0 || bytes%4) throw std::runtime_error("Invalid Vulkan affine shader");
-            std::vector<uint32_t> code(static_cast<size_t>(bytes)/4);
-            shader.seekg(0); shader.read(reinterpret_cast<char*>(code.data()),bytes);
             VkShaderModuleCreateInfo mi{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-            mi.codeSize=code.size()*4; mi.pCode=code.data();
+            mi.codeSize=encode_nv12?sizeof(openshot_encode_nv12_spv):sizeof(openshot_affine_spv);
+            mi.pCode=encode_nv12?openshot_encode_nv12_spv:openshot_affine_spv;
             VkShaderModule module;
             VkCheck(vkCreateShaderModule(device,&mi,nullptr,&module),"Create shader module");
             VkComputePipelineCreateInfo pci{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
