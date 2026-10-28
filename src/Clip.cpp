@@ -522,6 +522,12 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Apply effects BEFORE applying keyframes (if any local or global effects are used)
 		apply_effects(frame, timeline_frame_number, options, true);
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		// Timeline layers only need the composited result, so skip the separate transform pass
+		if (options && background_frame && apply_vulkan_layer(frame, background_frame, timeline_size))
+			return frame;
+#endif
+
 		// Apply keyframe / transforms to current clip image
 		apply_keyframes(frame, timeline_size);
 
@@ -1434,6 +1440,36 @@ bool Clip::isNear(double a, double b)
 {
 	return fabs(a - b) < 0.000001;
 }
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+bool Clip::apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame, QSize timeline_size)
+{
+	if (!frame->has_image_data || composite != COMPOSITE_SOURCE_OVER ||
+		corner_radius.GetValue(frame->number) != 0.0 || display != FRAME_DISPLAY_NONE)
+		return false;
+	// Effects applied after keyframes (and timeline transitions/masks) need the transformed layer
+	for (auto effect : effects)
+		if (!effect->info.apply_before_clip)
+			return false;
+	if (timeline && !static_cast<Timeline*>(timeline)->Effects().empty())
+		return false;
+
+	auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage());
+	auto background = background_frame->GetDeferredImage();
+	QColor clear;
+	if (!source || !(std::dynamic_pointer_cast<const VulkanFrameImage>(background) || background_frame->GetBlankColor(clear)))
+		return false;
+	try {
+		background_frame->AddDeferredImage(RenderVulkanImage(source, background, timeline_size.width(),
+			timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
+			alpha.GetValue(frame->number), clear));
+		return true;
+	} catch (const std::exception& error) {
+		Logger::Instance()->Log(std::string("Vulkan layer CPU fallback: ") + error.what());
+		return false;
+	}
+}
+#endif
 
 // Apply keyframes to the source frame (if any)
 void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {

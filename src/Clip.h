@@ -145,6 +145,12 @@ namespace openshot {
 		/// Apply keyframes to an openshot::Frame and use an existing background frame (if any)
 		void apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size);
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		/// Transform and composite onto the background in one Vulkan pass. Returns false
+		/// when an effect needs the transformed layer by itself, or the pass is unavailable.
+		bool apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame, QSize timeline_size);
+#endif
+
 		/// Apply waveform image to an openshot::Frame and use an existing background frame (if any)
 		void apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size);
 
