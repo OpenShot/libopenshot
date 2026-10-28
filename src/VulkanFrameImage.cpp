@@ -4,6 +4,8 @@
 #include "VulkanCompositor.h"
 #include <mutex>
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -37,6 +39,10 @@ void Validate(const AVFrame* frame) {
         !frame->data[0] || frame->width <= 0 || frame->height <= 0)
         throw std::invalid_argument("Expected an FFmpeg Vulkan hardware frame");
 }
+}
+bool VulkanRenderingEnabled() {
+    const char* backend = std::getenv("OPENSHOT_RENDER_BACKEND");
+    return !(backend && std::strcmp(backend, "cpu") == 0);
 }
 struct VulkanFrameImage::Impl {
     OwnedFrame frame;

@@ -95,6 +95,28 @@ struct HardwareDecoderSettingsGuard {
 	}
 };
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+struct RenderBackendGuard {
+	std::string previous;
+	bool had_previous = false;
+
+	explicit RenderBackendGuard(const char* backend) {
+		if (const char* value = std::getenv("OPENSHOT_RENDER_BACKEND")) {
+			previous = value;
+			had_previous = true;
+		}
+		setenv("OPENSHOT_RENDER_BACKEND", backend, 1);
+	}
+
+	~RenderBackendGuard() {
+		if (had_previous)
+			setenv("OPENSHOT_RENDER_BACKEND", previous.c_str(), 1);
+		else
+			unsetenv("OPENSHOT_RENDER_BACKEND");
+	}
+};
+#endif
+
 struct TemporaryFileGuard {
 	std::string path;
 
@@ -916,6 +938,10 @@ TEST_CASE( "HardwareDecodeSuccessful_IsFalse_WhenHardwareDecodeIsDisabled", "[li
 	HardwareDecoderSettingsGuard guard;
 	Settings::Instance()->HARDWARE_DECODER = 0;
 	Settings::Instance()->HW_DE_DEVICE_SET = 0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// GPU builds select Vulkan decoding by render backend, not by decoder setting.
+	RenderBackendGuard backend("cpu");
+#endif
 
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
@@ -926,6 +952,9 @@ TEST_CASE( "HardwareDecodeSuccessful_IsFalse_WhenHardwareDecodeIsDisabled", "[li
 	auto frame = r.GetFrame(1);
 	REQUIRE(frame->has_image_data);
 	CHECK_FALSE(r.HardwareDecodeSuccessful());
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	CHECK_FALSE(frame->GetDeferredImage());
+#endif
 
 	r.Close();
 }

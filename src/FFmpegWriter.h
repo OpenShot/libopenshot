@@ -140,6 +140,9 @@ namespace openshot {
 		AVFrame *persistent_dst_frame = nullptr;
 		uint8_t *persistent_dst_buffer = nullptr;
 		int persistent_dst_size = 0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		bool gpu_export_failed = false; ///< Encode remaining frames from CPU pixels
+#endif
 
 		int audio_outbuf_size;
 		int audio_input_frame_size;

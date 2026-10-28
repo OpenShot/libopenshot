@@ -279,7 +279,9 @@ void FFmpegReader::Open() {
 		{
 			hw_de_on = (!force_sw_decode && openshot::Settings::Instance()->HARDWARE_DECODER != 0 ? 1 : 0);
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-			hw_de_on = !force_sw_decode;
+			// GPU builds decode through Vulkan unless the CPU backend is selected
+			// at runtime. Decode failures reopen this reader in software.
+			hw_de_on = !force_sw_decode && VulkanRenderingEnabled();
 			vulkan_processor.reset();
 #endif
 			hw_decode_failed = false;
@@ -469,7 +471,7 @@ void FFmpegReader::Open() {
 #endif
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
-					#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
 					if (CreateVulkanDecodeDevice(&hw_device_ctx) >= 0) {
 #else
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
@@ -1730,7 +1732,7 @@ bool FFmpegReader::GetAVFrame() {
 #if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported) {
 				int err;
-				#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
 				if (next_frame2->format == AV_PIX_FMT_VULKAN) {
 					decoded_frame = next_frame2;
 				} else

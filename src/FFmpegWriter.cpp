@@ -106,6 +106,9 @@ void FFmpegWriter::Open() {
 	if (!is_open) {
 		// Open the writer
 		is_open = true;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		gpu_export_failed = false;
+#endif
 
 		// Prepare streams (if needed)
 		if (!prepare_streams)
@@ -2621,7 +2624,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 #if defined(OPENSHOT_ENABLE_GPU_FRAME) && USE_HW_ACCEL
 	// NVENC accepts encoder-owned CUDA surfaces. Preserve GPU residency through
 	// RGB->NV12 conversion and the Vulkan/CUDA device-to-device transfer.
-	if (hw_en_on && hw_en_supported && video_codec_ctx->hw_frames_ctx &&
+	if (!gpu_export_failed && hw_en_on && hw_en_supported && video_codec_ctx->hw_frames_ctx &&
 		video_codec_ctx->pix_fmt == AV_PIX_FMT_CUDA) {
 		auto surface = frame->GetDeferredImage();
 		if (surface) {
@@ -2644,11 +2647,13 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 				add_avframe(frame, encoded);
 				Logger::Instance()->AppendDebugMethod("Vulkan export GPU transfer to NVENC", "frame", frame->number);
 				return;
-			} catch (...) {
+			} catch (const std::exception& error) {
 				av_frame_free(&encoded);
-				// Failed interop may leave external semaphore ownership uncertain.
-				// Surface the error instead of attempting CPU readback on that surface.
-				throw;
+				// Interop only touches the temporary scaled/NV12 surfaces, and every
+				// compute pass reading the frame's own surface has completed. Read
+				// back that surface below and keep this export on the CPU path.
+				gpu_export_failed = true;
+				Logger::Instance()->Log(std::string("Vulkan export CPU fallback: ") + error.what());
 			}
 		}
 	}
@@ -2872,7 +2877,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 	#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
-			#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
 			ret = avcodec_send_frame(video_codec_ctx, frame_final->hw_frames_ctx ? frame_final : hw_frame);
 #else
 			ret = avcodec_send_frame(video_codec_ctx, hw_frame);

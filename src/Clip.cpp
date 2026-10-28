@@ -1375,7 +1375,7 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
 		}
 		return;
 	}
-	if (composite == QPainter::CompositionMode_SourceOver) {
+	if (composite == COMPOSITE_SOURCE_OVER) {
 		auto source = frame->GetDeferredImage();
 		auto background = background_frame->GetDeferredImage();
 		QColor clear;
@@ -1444,7 +1444,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	}
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	if (composite == QPainter::CompositionMode_SourceOver &&
+	if (composite == COMPOSITE_SOURCE_OVER &&
 		corner_radius.GetValue(frame->number) == 0.0 && display == FRAME_DISPLAY_NONE) {
 		if (auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage())) {
 			try {
