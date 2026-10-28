@@ -5,6 +5,7 @@
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 #include "Qt/VideoRenderer.h"
 #include <QApplication>
+#include <QDeadlineTimer>
 #include <QWidget>
 #endif
 
@@ -90,7 +91,10 @@ TEST_CASE("Qt presenter queues owned frames without materializing pixels", "[ren
     frame.reset();
     CHECK_FALSE(lifetime.expired());
     CHECK_FALSE(widget.received);
-    QCoreApplication::processEvents();
+    // Platform plugins may need several passes to deliver the queued frame.
+    QDeadlineTimer deadline(1000);
+    while (!widget.received && !deadline.hasExpired())
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
     REQUIRE(widget.received);
     CHECK(surface->reads == 0);
     CHECK(widget.received->GetDeferredImage() == surface);

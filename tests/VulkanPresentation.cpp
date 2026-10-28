@@ -6,6 +6,7 @@
 #include "Qt/VideoRenderer.h"
 #include "Qt/VulkanOpenGLPresenter.h"
 #include <QApplication>
+#include <QOpenGLContext>
 #include <QOpenGLWidget>
 #include <QPainter>
 #include <QThread>
@@ -40,16 +41,26 @@ struct Frames {
 };
 }
 TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[vulkan][presentation]") {
-    if (!qEnvironmentVariableIsSet("OPENSHOT_TEST_VULKAN_PRESENTATION")) {
-        WARN("Set OPENSHOT_TEST_VULKAN_PRESENTATION=1 to run GPU presentation oracle");
+    // CTest reports "Skipping Vulkan test:" as skipped; see tests/CMakeLists.txt.
+    if (!openshot::VulkanRenderingEnabled()) {
+        WARN("Skipping Vulkan test: OPENSHOT_RENDER_BACKEND=cpu");
+        return;
+    }
+    const QByteArray platform = qgetenv("QT_QPA_PLATFORM");
+    if ((platform.isEmpty() || platform.startsWith("xcb")) && !qEnvironmentVariableIsSet("DISPLAY") &&
+        !qEnvironmentVariableIsSet("WAYLAND_DISPLAY")) {
+        WARN("Skipping Vulkan test: presentation needs a display with OpenGL");
+        return;
+    }
+    Frames data;
+    if (av_hwdevice_ctx_create(&data.device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0) < 0) {
+        WARN("Skipping Vulkan test: no Vulkan device is available");
         return;
     }
     int argc = 1;
     char name[] = "vulkan-presentation";
     char* argv[] = {name, nullptr};
     QApplication app(argc, argv);
-    Frames data;
-    REQUIRE(av_hwdevice_ctx_create(&data.device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0) >= 0);
     data.pool = av_hwframe_ctx_alloc(data.device);
     REQUIRE(data.pool);
     auto pool = reinterpret_cast<AVHWFramesContext*>(data.pool->data);
@@ -75,6 +86,13 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     VideoRenderer renderer;
     renderer.OverrideWidget(reinterpret_cast<uintptr_t>(&widget));
     widget.show();
+    QCoreApplication::processEvents();
+    auto* context = widget.context();
+    if (!context || !context->hasExtension("GL_EXT_memory_object_fd") ||
+        !context->hasExtension("GL_EXT_semaphore_fd")) {
+        WARN("Skipping Vulkan test: OpenGL lacks Vulkan memory/semaphore interop");
+        return;
+    }
     renderer.paint(frame);
     for (int i = 0; i < 20; ++i) {
         QCoreApplication::processEvents();

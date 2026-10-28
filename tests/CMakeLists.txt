@@ -185,7 +185,13 @@ foreach(tname ${OPENSHOT_TESTS})
       SKIP_REGULAR_EXPRESSION "Skipping VAAPI test:"
     )
   endif()
-  if(tname STREQUAL "QtTextReader")
+  if(tname MATCHES "^Vulkan")
+    # Report missing GPU, display or interop support as skipped, not passed.
+    list(APPEND test_properties
+      SKIP_REGULAR_EXPRESSION "Skipping Vulkan test:"
+    )
+  endif()
+  if(tname STREQUAL "QtTextReader" OR tname STREQUAL "RendererBase")
     # Pixel assertions need a font engine; Qt's minimal plugin has no font database.
     list(APPEND test_properties ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
   elseif(tname STREQUAL "Caption" OR tname STREQUAL "Timer")

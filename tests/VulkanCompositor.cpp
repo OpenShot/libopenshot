@@ -19,6 +19,20 @@ struct BufferDelete { void operator()(AVBufferRef* p) const { av_buffer_unref(&p
 struct FrameDelete { void operator()(AVFrame* p) const { av_frame_free(&p); } };
 using Buffer=std::unique_ptr<AVBufferRef,BufferDelete>;
 using Frame=std::unique_ptr<AVFrame,FrameDelete>;
+// CTest reports this message as skipped; see tests/CMakeLists.txt.
+bool VulkanAvailable() {
+    if(!openshot::VulkanRenderingEnabled()) {
+        WARN("Skipping Vulkan test: OPENSHOT_RENDER_BACKEND=cpu");
+        return false;
+    }
+    AVBufferRef* device=nullptr;
+    if(av_hwdevice_ctx_create(&device,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)<0) {
+        WARN("Skipping Vulkan test: no Vulkan device is available");
+        return false;
+    }
+    av_buffer_unref(&device);
+    return true;
+}
 class PatternReader : public openshot::DummyReader {
     std::shared_ptr<const openshot::FrameImage> surface;
     QImage pixels;
@@ -35,11 +49,7 @@ public:
 };
 }
 TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan][hardware]") {
-    const char* enabled=std::getenv("OPENSHOT_TEST_VULKAN");
-    if(!enabled || std::string(enabled)!="1") {
-        WARN("Hardware test not run: set OPENSHOT_TEST_VULKAN=1 and select a Vulkan device");
-        return;
-    }
+    if(!VulkanAvailable()) return;
     AVBufferRef* device_ptr=nullptr;
     REQUIRE(av_hwdevice_ctx_create(&device_ptr,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)>=0);
     Buffer device(device_ptr);
@@ -141,12 +151,11 @@ TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan]
 }
 
 TEST_CASE("Vulkan sequential decoding preserves pending audio video frames", "[vulkan][hardware][reader]") {
-    const char* enabled=std::getenv("OPENSHOT_TEST_VULKAN");
-    const char* video=std::getenv("OPENSHOT_VULKAN_TEST_VIDEO");
-    if(!enabled || std::string(enabled)!="1" || !video || !*video) {
-        WARN("Set OPENSHOT_TEST_VULKAN=1 and OPENSHOT_VULKAN_TEST_VIDEO to a 4K audio/video clip of at least 120 frames");
-        return;
-    }
+    if(!VulkanAvailable()) return;
+    // OPENSHOT_VULKAN_TEST_VIDEO may select a larger (e.g. 4K) audio/video clip
+    // of at least 120 frames; the bundled trailer covers the same cache paths.
+    std::string video=TEST_MEDIA_PATH "sintel_trailer-720p.mp4";
+    if(const char* custom=std::getenv("OPENSHOT_VULKAN_TEST_VIDEO"); custom && *custom) video=custom;
     // Full-resolution RGBA frames exceed a small working-cache byte cap before
     // their audio arrives. Evicting those pending frames silently produced black
     // images and incorrect audio; compare sequential reads against direct seeks.
@@ -186,11 +195,7 @@ TEST_CASE("Vulkan sequential decoding preserves pending audio video frames", "[v
 }
 
 TEST_CASE("Vulkan high quality reader resizing uses bicubic antialiasing", "[vulkan][hardware][quality]") {
-    const char* enabled=std::getenv("OPENSHOT_TEST_VULKAN");
-    if(!enabled || std::string(enabled)!="1") {
-        WARN("Set OPENSHOT_TEST_VULKAN=1 to compare GPU bicubic scaling against libswscale");
-        return;
-    }
+    if(!VulkanAvailable()) return;
     AVBufferRef* raw_device=nullptr;
     REQUIRE(av_hwdevice_ctx_create(&raw_device,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)>=0);
     Buffer device(raw_device),pool(av_hwframe_ctx_alloc(raw_device));
