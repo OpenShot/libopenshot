@@ -185,6 +185,9 @@ set(CMAKE_MACOSX_RPATH 0)
 ############### CREATE LIBRARY #################
 # Create shared openshot library
 add_library(openshot SHARED)
+if(ENABLE_GPU_FRAME)
+  target_compile_definitions(openshot PUBLIC OPENSHOT_ENABLE_GPU_FRAME=1)
+endif()
 
 target_sources(openshot PRIVATE
   ${OPENSHOT_SOURCES}
@@ -441,6 +444,42 @@ find_package(FFmpeg REQUIRED
 )
 
 set(all_comps avcodec avdevice avformat avutil swscale)
+if(ENABLE_GPU_FRAME)
+  find_package(FFmpeg REQUIRED COMPONENTS avfilter)
+  list(APPEND all_comps avfilter)
+  target_sources(openshot PRIVATE VulkanFrameImage.cpp)
+  target_sources(openshot PRIVATE VulkanCompositor.cpp)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(openshot PRIVATE Qt/VulkanOpenGLPresenter.cpp Qt/VulkanOpenGLPresenter.h)
+  endif()
+  find_package(Vulkan REQUIRED)
+  find_program(GLSLANG_VALIDATOR glslangValidator)
+  if(NOT GLSLANG_VALIDATOR)
+    message(FATAL_ERROR "ENABLE_GPU_FRAME requires glslangValidator")
+  endif()
+  set(VULKAN_AFFINE_SHADER "${CMAKE_CURRENT_BINARY_DIR}/affine.comp.spv")
+  add_custom_command(OUTPUT "${VULKAN_AFFINE_SHADER}"
+    COMMAND "${GLSLANG_VALIDATOR}" -V -S comp -o "${VULKAN_AFFINE_SHADER}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/affine.comp"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/affine.comp" VERBATIM)
+  add_custom_target(openshot-vulkan-shaders DEPENDS "${VULKAN_AFFINE_SHADER}")
+  set(VULKAN_ENCODE_SHADER "${CMAKE_CURRENT_BINARY_DIR}/encode_nv12.comp.spv")
+  add_custom_command(OUTPUT "${VULKAN_ENCODE_SHADER}"
+    COMMAND "${GLSLANG_VALIDATOR}" -V -S comp -o "${VULKAN_ENCODE_SHADER}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/encode_nv12.comp"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/encode_nv12.comp" VERBATIM)
+  add_custom_target(openshot-vulkan-encode-shaders DEPENDS "${VULKAN_ENCODE_SHADER}")
+  add_dependencies(openshot openshot-vulkan-encode-shaders)
+  target_compile_definitions(openshot PRIVATE OPENSHOT_VULKAN_ENCODE_SHADER_PATH="${VULKAN_ENCODE_SHADER}")
+  add_dependencies(openshot openshot-vulkan-shaders)
+  target_compile_definitions(openshot PRIVATE OPENSHOT_VULKAN_AFFINE_SHADER_PATH="${VULKAN_AFFINE_SHADER}")
+  target_link_libraries(openshot PRIVATE Vulkan::Vulkan)
+  find_package(PkgConfig QUIET)
+  if(PKG_CONFIG_FOUND)
+    pkg_check_modules(VULKAN_FRAME_PC QUIET vulkan)
+    target_include_directories(openshot PRIVATE ${VULKAN_FRAME_PC_INCLUDE_DIRS})
+  endif()
+endif()
 set(version_comps avcodec avformat avutil)
 
 # Pick a resampler.  Prefer swresample if possible

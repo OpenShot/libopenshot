@@ -43,6 +43,10 @@ namespace openshot
 	virtual ~RendererBase();
 
 	virtual void render(std::shared_ptr<QImage> image) = 0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	/// Override to consume retained surfaces before CPU materialization.
+	virtual void renderFrame(const std::shared_ptr<Frame>& frame);
+#endif
     };
 
 }

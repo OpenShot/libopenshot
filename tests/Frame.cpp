@@ -277,3 +277,79 @@ TEST_CASE( "Convert_Image", "[libopenshot][opencv][frame]" )
 	CHECK(cvimage.channels() == 3);
 }
 #endif
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace {
+class TestFrameImage : public FrameImage {
+public:
+	mutable int reads = 0;
+	int GetWidth() const override { return 8; }
+	int GetHeight() const override { return 6; }
+	int64_t GetBytes() const override { return 512; }
+	QImage Materialize() const override {
+		++reads;
+		QImage result(8, 6, QImage::Format_RGBA8888_Premultiplied);
+		result.fill(Qt::red);
+		return result;
+	}
+};
+}
+
+TEST_CASE("Deferred frame images preserve ownership and materialize lazily", "[Frame]") {
+	auto surface = std::make_shared<TestFrameImage>();
+	Frame frame;
+	const auto baseline_bytes = frame.GetBytes();
+	frame.AddDeferredImage(surface);
+	CHECK(frame.GetWidth() == 8);
+	CHECK(frame.GetHeight() == 6);
+	CHECK(frame.has_image_data);
+	CHECK(frame.GetBytes() == baseline_bytes + 512);
+	Frame copy(frame);
+	CHECK(copy.GetDeferredImage() == surface);
+	CHECK(surface->reads == 0);
+	auto pixels = frame.GetImage();
+	CHECK(surface->reads == 1);
+	CHECK_FALSE(frame.GetDeferredImage());
+	CHECK(frame.GetImage() == pixels);
+	CHECK(surface->reads == 1);
+	pixels->fill(Qt::blue);
+	CHECK(copy.GetImage()->pixelColor(0, 0) == QColor(Qt::red));
+	CHECK(surface->reads == 2);
+}
+
+TEST_CASE("Replacing deferred frame images does not read discarded pixels", "[Frame]") {
+	auto surface = std::make_shared<TestFrameImage>();
+	Frame frame;
+	frame.AddDeferredImage(surface);
+	frame.AddColor(Qt::green);
+	CHECK_FALSE(frame.GetDeferredImage());
+	CHECK(surface->reads == 0);
+	frame.AddDeferredImage(surface);
+	auto image = std::make_shared<QImage>(4, 4, QImage::Format_RGBA8888_Premultiplied);
+	image->fill(Qt::blue);
+	frame.AddImage(image);
+	CHECK_FALSE(frame.GetDeferredImage());
+	CHECK(surface->reads == 0);
+	frame.AddDeferredImage(surface);
+	Frame empty;
+	frame = empty;
+	CHECK_FALSE(frame.GetDeferredImage());
+	CHECK(surface->reads == 0);
+	CHECK(frame.GetImage()->pixelColor(0, 0) == QColor(Qt::black));
+}
+
+TEST_CASE("Deferred frame pixel access and field writes materialize correctly", "[Frame]") {
+	auto surface = std::make_shared<TestFrameImage>();
+	Frame frame;
+	frame.AddDeferredImage(surface);
+	CHECK(frame.GetPixels()[0] == 255);
+	CHECK(surface->reads == 1);
+	frame.AddDeferredImage(surface);
+	auto field = std::make_shared<QImage>(8, 6, QImage::Format_RGBA8888_Premultiplied);
+	field->fill(Qt::blue);
+	frame.AddImage(field, true);
+	CHECK(surface->reads == 2);
+	CHECK(frame.GetImage()->pixelColor(0, 0) == QColor(Qt::red));
+	CHECK(frame.GetImage()->pixelColor(0, 1) == QColor(Qt::blue));
+}
+#endif

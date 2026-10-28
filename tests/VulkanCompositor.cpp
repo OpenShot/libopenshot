@@ -1,0 +1,238 @@
+// Copyright (c) 2026 OpenShot Studios, LLC
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include "openshot_catch.h"
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "VulkanEncodeConverter.h"
+#include "FFmpegReader.h"
+#include "Clip.h"
+#include "DummyReader.h"
+#include <map>
+#include <cstdlib>
+#include <memory>
+extern "C" {
+#include <libavutil/hwcontext.h>
+#include <libswscale/swscale.h>
+}
+namespace {
+struct BufferDelete { void operator()(AVBufferRef* p) const { av_buffer_unref(&p); } };
+struct FrameDelete { void operator()(AVFrame* p) const { av_frame_free(&p); } };
+using Buffer=std::unique_ptr<AVBufferRef,BufferDelete>;
+using Frame=std::unique_ptr<AVFrame,FrameDelete>;
+class PatternReader : public openshot::DummyReader {
+    std::shared_ptr<const openshot::FrameImage> surface;
+    QImage pixels;
+public:
+    PatternReader(std::shared_ptr<const openshot::FrameImage> image, bool gpu)
+        : DummyReader(openshot::Fraction(24,1),image->GetWidth(),image->GetHeight(),48000,2,5.0),
+          surface(gpu?image:nullptr),pixels(gpu?QImage():image->Materialize()) {}
+    std::shared_ptr<openshot::Frame> GetFrame(int64_t n) override {
+        auto frame=std::make_shared<openshot::Frame>(n,info.width,info.height,"#00000000");
+        if(surface) frame->AddDeferredImage(surface);
+        else frame->AddImage(std::make_shared<QImage>(pixels));
+        return frame;
+    }
+};
+}
+TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan][hardware]") {
+    const char* enabled=std::getenv("OPENSHOT_TEST_VULKAN");
+    if(!enabled || std::string(enabled)!="1") {
+        WARN("Hardware test not run: set OPENSHOT_TEST_VULKAN=1 and select a Vulkan device");
+        return;
+    }
+    AVBufferRef* device_ptr=nullptr;
+    REQUIRE(av_hwdevice_ctx_create(&device_ptr,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)>=0);
+    Buffer device(device_ptr);
+    Buffer pool(av_hwframe_ctx_alloc(device.get()));
+    REQUIRE(pool);
+    auto* context=reinterpret_cast<AVHWFramesContext*>(pool->data);
+    context->format=AV_PIX_FMT_VULKAN;context->sw_format=AV_PIX_FMT_RGBA;
+    context->width=16;context->height=16;
+    REQUIRE(av_hwframe_ctx_init(pool.get())>=0);
+    Frame cpu(av_frame_alloc()),gpu(av_frame_alloc());
+    REQUIRE(cpu);REQUIRE(gpu);
+    cpu->format=AV_PIX_FMT_RGBA;cpu->width=16;cpu->height=16;
+    REQUIRE(av_frame_get_buffer(cpu.get(),0)>=0);
+    for(int y=0;y<16;++y)for(int x=0;x<16;++x){
+        auto* p=cpu->data[0]+y*cpu->linesize[0]+x*4;
+        p[0]=255;p[1]=0;p[2]=0;p[3]=255;
+    }
+    REQUIRE(av_hwframe_get_buffer(pool.get(),gpu.get(),0)>=0);
+    REQUIRE(av_hwframe_transfer_data(gpu.get(),cpu.get(),0)>=0);
+    auto source=std::make_shared<openshot::VulkanFrameImage>(gpu.get());
+    CHECK(source->GetBytes() >= 16 * 16 * 4);
+    QTransform transform;transform.translate(8,8);
+    auto first=openshot::RenderVulkanImage(source,nullptr,32,32,transform,0.5,Qt::blue);
+    // A second render must not overwrite the first cached frame's GPU storage.
+    auto second=openshot::RenderVulkanImage(source,nullptr,32,32,QTransform(),1.0,Qt::green);
+    gpu.reset();cpu.reset();pool.reset();device.reset();source.reset();
+    CHECK(first->GetBytes() >= 32 * 32 * 4);
+    QImage image=first->Materialize();
+    const auto blended=image.pixelColor(12,12);
+    CHECK(blended.red()>=126);CHECK(blended.red()<=129);
+    CHECK(blended.green()==0);
+    CHECK(blended.blue()>=126);CHECK(blended.blue()<=129);
+    CHECK(blended.alpha()==255);
+    CHECK(image.pixelColor(0,0)==QColor(Qt::blue));
+    CHECK(second->Materialize().pixelColor(0,0)==QColor(Qt::red));
+    // Export conversion remains on the GPU and produces limited-range BT.601 NV12.
+    auto encoded = openshot::ConvertVulkanToNV12(second);
+    auto encoded_surface = std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(encoded);
+    REQUIRE(encoded_surface);
+    Frame downloaded(av_frame_alloc());
+    REQUIRE(downloaded);
+    REQUIRE(av_hwframe_transfer_data(downloaded.get(), encoded_surface->GetFrame(), 0) >= 0);
+    REQUIRE(downloaded->format == AV_PIX_FMT_NV12);
+    const int y = downloaded->data[0][4 * downloaded->linesize[0] + 4];
+    const int u = downloaded->data[1][2 * downloaded->linesize[1] + 4];
+    const int v = downloaded->data[1][2 * downloaded->linesize[1] + 5];
+    CHECK(y >= 80); CHECK(y <= 83);
+    CHECK(u >= 89); CHECK(u <= 92);
+    CHECK(v >= 238); CHECK(v <= 241);
+    const auto converted_red = encoded->Materialize().pixelColor(4, 4);
+    CHECK(converted_red.red() >= 252);
+    CHECK(converted_red.green() <= 3);
+    CHECK(converted_red.blue() <= 3);
+    // Exercise the actual Clip transform path against its QPainter fallback.
+    // Compare flat interior pixels; edge resampling intentionally differs.
+    for(auto mode : {openshot::SCALE_FIT,openshot::SCALE_CROP,openshot::SCALE_STRETCH,openshot::SCALE_NONE}) {
+        for(int gravity=openshot::GRAVITY_TOP_LEFT;gravity<=openshot::GRAVITY_BOTTOM_RIGHT;++gravity) {
+            PatternReader cpu_reader(second,false),gpu_reader(second,true);
+            openshot::Clip cpu_clip(&cpu_reader),gpu_clip(&gpu_reader);
+            for(auto* clip : {&cpu_clip,&gpu_clip}) {
+                clip->scale=mode;
+                clip->gravity=static_cast<openshot::GravityType>(gravity);
+                clip->scale_x=openshot::Keyframe(0.7);clip->scale_y=openshot::Keyframe(0.6);
+                clip->shear_x=openshot::Keyframe(0.12);clip->shear_y=openshot::Keyframe(-0.08);
+                clip->rotation=openshot::Keyframe(13.0);clip->alpha=openshot::Keyframe(0.6);
+                clip->Open();
+            }
+            auto cpu_background=std::make_shared<openshot::Frame>(1,80,60,"#00000000");
+            auto gpu_background=std::make_shared<openshot::Frame>(1,80,60,"#00000000");
+            auto cpu_frame=cpu_clip.GetFrame(cpu_background,1);
+            auto gpu_frame=gpu_clip.GetFrame(gpu_background,1);
+            REQUIRE(gpu_frame->GetDeferredImage());
+            auto expected=cpu_frame->GetImage();auto actual=gpu_frame->GetImage();
+            REQUIRE(expected->size()==actual->size());
+            int compared=0,max_error=0;
+            for(int y=2;y<expected->height()-2;++y)for(int x=2;x<expected->width()-2;++x) {
+                const auto pixel=expected->pixel(x,y);
+                if(qAlpha(pixel)==0) continue;
+                bool interior=true;
+                for(int dy=-2;dy<=2;++dy)for(int dx=-2;dx<=2;++dx)
+                    interior &= expected->pixel(x+dx,y+dy)==pixel;
+                if(!interior) continue;
+                const auto* a=actual->constScanLine(y)+4*x;
+                const auto* b=expected->constScanLine(y)+4*x;
+                for(int channel=0;channel<4;++channel)max_error=std::max(max_error,std::abs(int(a[channel])-int(b[channel])));
+                ++compared;
+            }
+            INFO("scale=" << mode << " gravity=" << gravity << " compared=" << compared << " max_error=" << max_error);
+            CHECK(compared>8);CHECK(max_error<=3);
+            cpu_clip.Close();gpu_clip.Close();
+        }
+    }
+    // Premultiplied output is not multiplied twice when materialized.
+    auto transparent=openshot::RenderVulkanImage(second,nullptr,32,32,QTransform(),0.5);
+    auto rgba=transparent->Materialize();
+    const auto red=rgba.pixelColor(0,0);
+    CHECK(red.red()>=253);
+    CHECK(red.alpha()>=126);CHECK(red.alpha()<=129);
+}
+
+TEST_CASE("Vulkan sequential decoding preserves pending audio video frames", "[vulkan][hardware][reader]") {
+    const char* enabled=std::getenv("OPENSHOT_TEST_VULKAN");
+    const char* video=std::getenv("OPENSHOT_VULKAN_TEST_VIDEO");
+    if(!enabled || std::string(enabled)!="1" || !video || !*video) {
+        WARN("Set OPENSHOT_TEST_VULKAN=1 and OPENSHOT_VULKAN_TEST_VIDEO to a 4K audio/video clip of at least 120 frames");
+        return;
+    }
+    // Full-resolution RGBA frames exceed a small working-cache byte cap before
+    // their audio arrives. Evicting those pending frames silently produced black
+    // images and incorrect audio; compare sequential reads against direct seeks.
+    std::map<int,std::shared_ptr<QImage>> reference;
+    {
+        openshot::FFmpegReader reader(video);
+        reader.Open();
+        for(int n : {12,120}) {
+            auto frame=reader.GetFrame(n);
+            REQUIRE(frame->GetDeferredImage());
+            reference[n]=frame->GetImage();
+        }
+        reader.Close();
+    }
+    openshot::FFmpegReader reader(video);
+    reader.Open();
+    for(int n=1;n<=120;++n) {
+        auto frame=reader.GetFrame(n);
+        REQUIRE(frame->GetDeferredImage());
+        if(reference.count(n)) {
+            auto actual=frame->GetImage();
+            const auto expected=reference[n];
+            REQUIRE(actual->size()==expected->size());
+            REQUIRE(actual->format()==expected->format());
+            uint64_t error=0;
+            for(int y=0;y<actual->height();++y) {
+                const auto* a=actual->constScanLine(y);
+                const auto* b=expected->constScanLine(y);
+                for(int x=0;x<actual->width()*4;++x) error+=std::abs(int(a[x])-int(b[x]));
+            }
+            const double mae=double(error)/(actual->width()*actual->height()*4.0);
+            INFO("frame=" << n << " sequential/direct MAE=" << mae);
+            CHECK(mae<=3.0);
+        }
+    }
+    reader.Close();
+}
+
+TEST_CASE("Vulkan high quality reader resizing uses bicubic antialiasing", "[vulkan][hardware][quality]") {
+    const char* enabled=std::getenv("OPENSHOT_TEST_VULKAN");
+    if(!enabled || std::string(enabled)!="1") {
+        WARN("Set OPENSHOT_TEST_VULKAN=1 to compare GPU bicubic scaling against libswscale");
+        return;
+    }
+    AVBufferRef* raw_device=nullptr;
+    REQUIRE(av_hwdevice_ctx_create(&raw_device,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)>=0);
+    Buffer device(raw_device),pool(av_hwframe_ctx_alloc(raw_device));
+    REQUIRE(pool);
+    auto* context=reinterpret_cast<AVHWFramesContext*>(pool->data);
+    context->format=AV_PIX_FMT_VULKAN;context->sw_format=AV_PIX_FMT_RGBA;
+    context->width=context->height=32;
+    REQUIRE(av_hwframe_ctx_init(pool.get())>=0);
+    Frame cpu(av_frame_alloc()),gpu(av_frame_alloc());
+    REQUIRE(cpu);REQUIRE(gpu);
+    cpu->format=AV_PIX_FMT_RGBA;cpu->width=cpu->height=32;
+    REQUIRE(av_frame_get_buffer(cpu.get(),0)>=0);
+    for(int y=0;y<32;++y)for(int x=0;x<32;++x){
+        auto* pixel=cpu->data[0]+y*cpu->linesize[0]+x*4;
+        pixel[0]=32+192*((x/4+y/4)%2);pixel[1]=y*8;pixel[2]=x*8;pixel[3]=255;
+    }
+    REQUIRE(av_hwframe_get_buffer(pool.get(),gpu.get(),0)>=0);
+    REQUIRE(av_hwframe_transfer_data(gpu.get(),cpu.get(),0)>=0);
+    openshot::VulkanFrameProcessor processor;
+    for(const auto size : {QSize(12,10),QSize(61,47),QSize(32,32)}) {
+        QImage reference(size,QImage::Format_RGBA8888);
+        auto* scaler=sws_getContext(32,32,AV_PIX_FMT_RGBA,size.width(),size.height(),AV_PIX_FMT_RGBA,
+                                   SWS_BICUBIC,nullptr,nullptr,nullptr);
+        REQUIRE(scaler);
+        std::unique_ptr<SwsContext,decltype(&sws_freeContext)> owner(scaler,sws_freeContext);
+        uint8_t* output[]={reference.bits(),nullptr,nullptr,nullptr};
+        int strides[]={reference.bytesPerLine(),0,0,0};
+        REQUIRE(sws_scale(scaler,cpu->data,cpu->linesize,0,32,output,strides)==size.height());
+        auto high=processor.Process(gpu.get(),size.width(),size.height(),true);
+        REQUIRE(std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(high));
+        auto high_image=high->Materialize();
+        auto low_image=processor.Process(gpu.get(),size.width(),size.height(),false)->Materialize();
+        double high_error=0,low_error=0;
+        for(int y=0;y<size.height();++y)for(int x=0;x<size.width();++x)for(int channel=0;channel<3;++channel){
+            const int expected=reference.constScanLine(y)[4*x+channel];
+            high_error+=std::abs(int(high_image.constScanLine(y)[4*x+channel])-expected);
+            low_error+=std::abs(int(low_image.constScanLine(y)[4*x+channel])-expected);
+        }
+        high_error/=size.width()*size.height()*3.0;
+        low_error/=size.width()*size.height()*3.0;
+        INFO("size=" << size.width() << "x" << size.height() << " bicubicMAE=" << high_error << " bilinearMAE=" << low_error);
+        CHECK(high_error<4.0);
+        if(size!=QSize(32,32)) CHECK(high_error<low_error);
+    }
+}

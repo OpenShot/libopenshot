@@ -29,6 +29,11 @@
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
 #include "Frame.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanFrameImage.h"
+#include "VulkanCompositor.h"
+#include "VulkanEncodeConverter.h"
+#endif
 #include "OpenMPUtilities.h"
 #include "Settings.h"
 #include "Logger.h"
@@ -1145,6 +1150,9 @@ void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
 			}
 
 			// Deallocate buffer and AVFrame
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			if (!frame_final->hw_frames_ctx)
+#endif
 			av_freep(&(frame_final->data[0]));
 			AV_FREE_FRAME(&frame_final);
 			av_frames.erase(frame);
@@ -2610,6 +2618,42 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 	if (src_w == 1 && src_h == 1)
 		return;
 
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && USE_HW_ACCEL
+	// NVENC accepts encoder-owned CUDA surfaces. Preserve GPU residency through
+	// RGB->NV12 conversion and the Vulkan/CUDA device-to-device transfer.
+	if (hw_en_on && hw_en_supported && video_codec_ctx->hw_frames_ctx &&
+		video_codec_ctx->pix_fmt == AV_PIX_FMT_CUDA) {
+		auto surface = frame->GetDeferredImage();
+		if (surface) {
+			AVFrame* encoded = nullptr;
+			try {
+				auto native = std::dynamic_pointer_cast<const VulkanFrameImage>(surface);
+				const auto* context = native ? reinterpret_cast<const AVHWFramesContext*>(native->GetFrame()->hw_frames_ctx->data) : nullptr;
+				if (src_w != info.width || src_h != info.height || !context || context->sw_format != AV_PIX_FMT_RGBA) {
+					QTransform scale;
+					scale.scale(double(info.width) / src_w, double(info.height) / src_h);
+					surface = RenderVulkanImage(surface, nullptr, info.width, info.height, scale, 1.0, Qt::black);
+				}
+				auto nv12 = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface));
+				encoded = av_frame_alloc();
+				if (!encoded) throw std::bad_alloc();
+				int status = av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, encoded, 0);
+				if (status >= 0) status = av_hwframe_transfer_data(encoded, nv12->GetFrame(), 0);
+				if (status < 0) throw std::runtime_error("Vulkan/CUDA export transfer failed: " + av_err2string(status));
+				av_frame_copy_props(encoded, nv12->GetFrame());
+				add_avframe(frame, encoded);
+				Logger::Instance()->AppendDebugMethod("Vulkan export GPU transfer to NVENC", "frame", frame->number);
+				return;
+			} catch (...) {
+				av_frame_free(&encoded);
+				// Failed interop may leave external semaphore ownership uncertain.
+				// Surface the error instead of attempting CPU readback on that surface.
+				throw;
+			}
+		}
+	}
+#endif
+
 	// Point persistent_src_frame->data to RGBA pixels
 	const uchar* pixels = frame->GetPixels();
 	if (!persistent_src_frame) {
@@ -2798,7 +2842,11 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = video_timestamp;
 #if USE_HW_ACCEL
-		if (hw_en_on && hw_en_supported) {
+		if (hw_en_on && hw_en_supported
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			&& !frame_final->hw_frames_ctx
+#endif
+		) {
 			if (!(hw_frame = av_frame_alloc())) {
 				std::clog << "Error code: av_hwframe_alloc\n";
 			}
@@ -2824,7 +2872,11 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 	#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
-			ret = avcodec_send_frame(video_codec_ctx, hw_frame);  //hw_frame!!!
+			#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			ret = avcodec_send_frame(video_codec_ctx, frame_final->hw_frames_ctx ? frame_final : hw_frame);
+#else
+			ret = avcodec_send_frame(video_codec_ctx, hw_frame);
+#endif
 		} else
 	#endif // USE_HW_ACCEL
 		{

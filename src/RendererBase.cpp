@@ -24,5 +24,16 @@ RendererBase::~RendererBase()
 void RendererBase::paint(const std::shared_ptr<Frame> & frame)
 {
 	if (frame)
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		this->renderFrame(frame);
+#else
 		this->render(frame->GetImage());
+#endif
 }
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+void RendererBase::renderFrame(const std::shared_ptr<Frame>& frame)
+{
+	render(frame->GetImage());
+}
+#endif

@@ -75,6 +75,7 @@ option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)"
 option(ENABLE_WAYLAND_CAPTURE "Build Wayland screen capture support with xdg-desktop-portal and PipeWire (Linux only)" ON)
 option(USE_HW_ACCEL "Enable hardware-accelerated encoding-decoding with FFmpeg 3.4+" ON)
 option(ENABLE_VULKAN_BENCHMARK "Build the experimental Vulkan benchmark example" OFF)
+option(ENABLE_GPU_FRAME "Build experimental deferred GPU frame storage" OFF)
 
 # Legacy commandline override
 if (DISABLE_TESTS)

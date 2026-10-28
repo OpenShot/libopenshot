@@ -17,6 +17,10 @@
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#endif
 #include "QtImageReader.h"
 #include "QtTextReader.h"
 #include "ChunkReader.h"
@@ -502,6 +506,15 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 
 		// Get time mapped frame object (used to increase speed, change direction, etc...)
 		apply_timemapping(frame);
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		// Audio-only/disabled-video layers have nothing to paint in the basic
+		// pipeline. Keep their audio, without manufacturing a CPU canvas.
+		if (options && (!reader->info.has_video || has_video.GetInt(frame->number) == 0) &&
+			!Waveform() && effects.empty() &&
+			(!timeline || static_cast<Timeline*>(timeline)->Effects().empty()))
+			return frame;
+#endif
 
 		// Apply waveform image (if any)
 		apply_waveform(frame, timeline_size);
@@ -1352,6 +1365,34 @@ void Clip::RemoveEffect(EffectBase* effect)
 void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
                             std::shared_ptr<openshot::Frame> background_frame,
                             bool update_frame_image) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// Audio-only frames contribute audio in Timeline::add_layer, but have no
+	// image to composite. Do not materialize the GPU canvas for an empty layer.
+	if (!frame->has_image_data) {
+		if (update_frame_image) {
+			if (auto background = background_frame->GetDeferredImage()) frame->AddDeferredImage(background);
+			else frame->AddImage(background_frame->GetImage());
+		}
+		return;
+	}
+	if (composite == QPainter::CompositionMode_SourceOver) {
+		auto source = frame->GetDeferredImage();
+		auto background = background_frame->GetDeferredImage();
+		QColor clear;
+		if (std::dynamic_pointer_cast<const VulkanFrameImage>(source) &&
+			(std::dynamic_pointer_cast<const VulkanFrameImage>(background) || background_frame->GetBlankColor(clear))) {
+			try {
+				auto result = RenderVulkanImage(source, background, background_frame->GetWidth(),
+					background_frame->GetHeight(), QTransform(), 1.0, clear);
+				background_frame->AddDeferredImage(result);
+				if (update_frame_image) frame->AddDeferredImage(result);
+				return;
+			} catch (const std::exception& error) {
+				Logger::Instance()->Log(std::string("Vulkan composite CPU fallback: ") + error.what());
+			}
+		}
+	}
+#endif
 	// Add background canvas
 	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
 	QPainter painter(background_canvas.get());
@@ -1401,6 +1442,22 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 		// Skip the rest of the image processing for performance reasons
 		return;
 	}
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (composite == QPainter::CompositionMode_SourceOver &&
+		corner_radius.GetValue(frame->number) == 0.0 && display == FRAME_DISPLAY_NONE) {
+		if (auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage())) {
+			try {
+				frame->AddDeferredImage(RenderVulkanImage(source, nullptr, timeline_size.width(),
+					timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
+					alpha.GetValue(frame->number)));
+				return;
+			} catch (const std::exception& error) {
+				Logger::Instance()->Log(std::string("Vulkan transform CPU fallback: ") + error.what());
+			}
+		}
+	}
+#endif
 
 	// Get image from clip, and create transparent background image
 	std::shared_ptr<QImage> source_image = frame->GetImage();
@@ -1557,8 +1614,12 @@ QSize Clip::scale_size(QSize source_size, ScaleType source_scale, int target_wid
 // Get QTransform from keyframes
 QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int height)
 {
-	// Get image from clip
-	std::shared_ptr<QImage> source_image = frame->GetImage();
+	// Transform geometry does not require CPU pixels for a deferred surface.
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	const QSize source_dimensions(frame->GetWidth(), frame->GetHeight());
+#else
+	const QSize source_dimensions = frame->GetImage()->size();
+#endif
 
 	const double margin_value = std::max(0.0, std::min(0.5, margin.GetValue(frame->number)));
 	const double margin_pixels = margin_value * std::min(width, height);
@@ -1568,7 +1629,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	const double layout_height = std::max(1.0, height - (margin_pixels * 2.0));
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
-	QSize source_size = scale_size(source_image->size(), scale, layout_width, layout_height);
+	QSize source_size = scale_size(source_dimensions, scale, layout_width, layout_height);
 
 	// Text rasterizes extra detail for a scaled-up SCALE_NONE clip; draw it at its layout size
 	if (scale == SCALE_NONE) {
@@ -1758,8 +1819,8 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		transform.translate(-origin_x_offset,-origin_y_offset);
 	}
 	// SCALE CLIP (if needed)
-	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
-	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
+	float source_width_scale = (float(source_size.width()) / float(source_dimensions.width())) * sx;
+	float source_height_scale = (float(source_size.height()) / float(source_dimensions.height())) * sy;
 	if (!isNear(source_width_scale, 1.0) || !isNear(source_height_scale, 1.0)) {
 		transform.scale(source_width_scale, source_height_scale);
 	}

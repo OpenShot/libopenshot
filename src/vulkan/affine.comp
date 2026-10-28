@@ -1,0 +1,72 @@
+#version 450
+layout(local_size_x=16, local_size_y=16) in;
+layout(binding=0) uniform sampler2D plane_y;
+layout(binding=1) uniform sampler2D plane_u;
+layout(binding=2) uniform sampler2D plane_v;
+layout(binding=3) uniform sampler2D background_tex;
+layout(binding=4, rgba8) uniform writeonly image2D output_img;
+layout(push_constant) uniform Parameters {
+    vec4 matrix_x;
+    vec4 matrix_y;
+    vec4 color_coeffs; // Y multiplier, V->R, U->G, V->G
+    vec4 extra; // U->B, Y offset, chroma offset, opacity
+    vec4 clear;
+    ivec4 sizes; // output width/height, source width/height
+    ivec4 modes; // 0 planar, 1 NV12, 2 premult RGBA, 3 straight RGBA; background enabled
+} p;
+// Mitchell/Netravali family B=0, C=0.6 matches libswscale's default
+// SWS_BICUBIC kernel. Expand the footprint on minification to suppress aliasing.
+float cubic(float value) {
+    float x=abs(value);
+    if(x<1.0) return ((1.4*x-2.4)*x)*x+1.0;
+    if(x<2.0) return ((-0.6*x+3.0)*x-4.8)*x+2.4;
+    return 0.0;
+}
+vec4 sample_source(sampler2D image, vec2 uv) {
+    if(p.modes.z==0) return texture(image,uv);
+    ivec2 size=textureSize(image,0);
+    vec2 pos=uv*vec2(size)-0.5;
+    vec2 footprint=max(vec2(1.0),vec2(length(p.matrix_x.xy),length(p.matrix_y.xy))
+        *vec2(size)/vec2(p.sizes.zw));
+    ivec2 first=ivec2(ceil(pos-2.0*footprint));
+    ivec2 last=ivec2(floor(pos+2.0*footprint));
+    vec4 result=vec4(0);
+    float total=0.0;
+    for(int y=first.y;y<=last.y;++y) {
+        float wy=cubic((float(y)-pos.y)/footprint.y);
+        if(abs(wy)<0.000001) continue;
+        for(int x=first.x;x<=last.x;++x) {
+            float weight=wy*cubic((float(x)-pos.x)/footprint.x);
+            if(abs(weight)<0.000001) continue;
+            result+=texelFetch(image,clamp(ivec2(x,y),ivec2(0),size-1),0)*weight;
+            total+=weight;
+        }
+    }
+    return result/total;
+}
+void main() {
+    ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
+    if(any(greaterThanEqual(pixel,p.sizes.xy))) return;
+    vec2 center=vec2(pixel)+0.5;
+    vec2 src=vec2(dot(p.matrix_x.xyz,vec3(center,1)),dot(p.matrix_y.xyz,vec3(center,1)));
+    vec4 front=vec4(0);
+    if(all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)))) {
+        vec2 uv=src/vec2(p.sizes.zw);
+        if(p.modes.x>=2) {
+            front=sample_source(plane_y,uv);
+            front=clamp(front,0.0,1.0);
+            if(p.modes.x==3) front.rgb*=front.a;
+            else front.rgb=min(front.rgb,vec3(front.a));
+        } else {
+            float y=(sample_source(plane_y,uv).r-p.extra.y)*p.color_coeffs.x;
+            vec2 chroma=p.modes.x==1 ? sample_source(plane_u,uv).rg : vec2(sample_source(plane_u,uv).r,sample_source(plane_v,uv).r);
+            chroma-=p.extra.z;
+            front=vec4(clamp(vec3(y+p.color_coeffs.y*chroma.y,
+                y+p.color_coeffs.z*chroma.x+p.color_coeffs.w*chroma.y,
+                y+p.extra.x*chroma.x),0,1),1);
+        }
+        front*=p.extra.w;
+    }
+    vec4 back=p.modes.y==1 ? texture(background_tex,center/vec2(p.sizes.xy)) : p.clear;
+    imageStore(output_img,pixel,front+back*(1-front.a));
+}

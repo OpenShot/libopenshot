@@ -36,6 +36,9 @@
 
 
 namespace openshot {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	class VulkanFrameProcessor;
+#endif
 	/**
 	 * @brief This struct holds the packet counts and end-of-file detection for an openshot::FFmpegReader.
 	 *
@@ -103,6 +106,10 @@ namespace openshot {
 	class FFmpegReader : public ReaderBase {
 	private:
 		std::string path;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		std::shared_ptr<VulkanFrameProcessor> vulkan_processor;
+		int hw_de_on = 0; // Per-reader state for concurrent Vulkan/CPU readers.
+#endif
 
 		AVFormatContext *pFormatCtx;
 		int videoStream, audioStream;

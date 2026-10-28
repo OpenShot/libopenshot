@@ -76,6 +76,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	final_cache = new CacheMemory();
 	const int cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 4);
 	final_cache->SetMaxBytesFromInfo(cache_frames, info.width, info.height, info.sample_rate, info.channels);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	final_cache->SetMaxBytes(std::min<int64_t>(final_cache->GetMaxBytes(), 256LL * 1024 * 1024));
+#endif
 }
 
 // Delegating constructor that copies parameters from a provided ReaderInfo
@@ -209,6 +212,9 @@ Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) 
 	final_cache = new CacheMemory();
 	const int cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 4);
 	final_cache->SetMaxBytesFromInfo(cache_frames, info.width, info.height, info.sample_rate, info.channels);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	final_cache->SetMaxBytes(std::min<int64_t>(final_cache->GetMaxBytes(), 256LL * 1024 * 1024));
+#endif
 }
 
 Timeline::~Timeline() {

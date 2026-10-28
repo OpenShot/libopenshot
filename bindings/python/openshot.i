@@ -110,6 +110,9 @@ class QWidget;
 #include "QtTextReader.h"
 #include "KeyFrame.h"
 #include "RendererBase.h"
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(LINUX)
+#include "Qt/VulkanOpenGLPresenter.h"
+#endif
 #include "Settings.h"
 #include "TimelineBase.h"
 #include "Timeline.h"
@@ -520,6 +523,9 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "KeyFrame.h"
 %include "AnimatedCurve.h"
 %include "RendererBase.h"
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(LINUX)
+%include "Qt/VulkanOpenGLPresenter.h"
+#endif
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"

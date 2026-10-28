@@ -13,6 +13,8 @@
 #ifndef OPENSHOT_FRAME_H
 #define OPENSHOT_FRAME_H
 
+#include "OpenShotVersion.h"
+
 #ifdef USE_OPENCV
 	#define int64 opencv_broken_int
 	#define uint64 opencv_broken_uint
@@ -27,6 +29,9 @@
 #include "ChannelLayouts.h"
 #include "Enums.h"
 #include "Fraction.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "FrameImage.h"
+#endif
 
 #include <QColor>
 #include <QImage>
@@ -90,10 +95,13 @@ namespace openshot
 	{
 	private:
 		std::shared_ptr<QImage> image;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		std::shared_ptr<const FrameImage> deferred_image;
+#endif
 		std::shared_ptr<QImage> wave_image;
 
 		std::shared_ptr<QApplication> previewApp;
-		std::recursive_mutex addingImageMutex;
+		mutable std::recursive_mutex addingImageMutex;
 		std::recursive_mutex addingAudioMutex;
 		openshot::Fraction pixel_ratio;
 		int channels;
@@ -119,6 +127,15 @@ namespace openshot
 		bool has_audio_data; ///< This frame has been loaded with audio data
 		bool has_image_data; ///< This frame has been loaded with pixel data
 
+
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && !defined(SWIG)
+		/// Attach an immutable deferred image without materializing CPU pixels.
+		void AddDeferredImage(std::shared_ptr<const FrameImage> new_image);
+		/// Returns the surface only while it remains authoritative.
+		std::shared_ptr<const FrameImage> GetDeferredImage() const;
+		/// Report an unmaterialized solid canvas without allocating CPU pixels.
+		bool GetBlankColor(QColor& result) const;
+#endif
 
 		/// Constructor - blank frame
 		Frame();

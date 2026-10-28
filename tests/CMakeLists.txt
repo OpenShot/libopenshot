@@ -64,6 +64,7 @@ set(OPENSHOT_TESTS
   QtImageReader
   QtTextReader
   ReaderBase
+  RendererBase
   NativeArm64ProcessOracle
   Settings
   ScreenCaptureReader
@@ -96,6 +97,10 @@ set(OPENSHOT_TESTS
   DenoiseImage
   WaveEffect
 )
+
+if(ENABLE_GPU_FRAME AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  list(APPEND OPENSHOT_TESTS VulkanPresentation VulkanCompositor)
+endif()
 
 # The SIGPIPE crash-handler test is POSIX-only. Do not create an empty
 # Catch2 executable on Windows, where discovery registers a NOT_BUILT test.

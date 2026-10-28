@@ -52,6 +52,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	// Adjust cache size based on size of frame and audio
 	const int initial_cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS);
 	final_cache.SetMaxBytesFromInfo(initial_cache_frames, info.width, info.height, info.sample_rate, info.channels);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	final_cache.SetMaxBytes(std::min<int64_t>(final_cache.GetMaxBytes(), 128LL * 1024 * 1024));
+#endif
 }
 
 // Destructor
@@ -548,8 +551,17 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		// Copy the image from the odd field
 		std::shared_ptr<Frame> odd_frame = mapped_frame;
 
-		if (odd_frame && odd_frame->has_image_data)
-			frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()), true);
+		if (odd_frame && odd_frame->has_image_data) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			// Progressive mapping needs no pixel access. Preserve immutable GPU
+			// storage while remapping the frame number and audio independently.
+			auto surface = odd_frame->GetDeferredImage();
+			if (surface && mapped.Odd.Frame == mapped.Even.Frame)
+				frame->AddDeferredImage(std::move(surface));
+			else
+#endif
+				frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()), true);
+		}
 		if (mapped.Odd.Frame != mapped.Even.Frame) {
 			// Add even lines (if different than the previous image)
 			std::shared_ptr<Frame> even_frame;
@@ -858,6 +870,9 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	// Adjust cache size based on size of frame and audio
 	const int reset_cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 4);
 	final_cache.SetMaxBytesFromInfo(reset_cache_frames, info.width, info.height, info.sample_rate, info.channels);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	final_cache.SetMaxBytes(std::min<int64_t>(final_cache.GetMaxBytes(), 128LL * 1024 * 1024));
+#endif
 
 	// Deallocate resample buffer
 	if (avr) {

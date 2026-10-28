@@ -14,6 +14,7 @@
 #include <chrono>	// for std::chrono::milliseconds
 #include <iomanip>
 #include <limits>
+#include <stdexcept>
 
 #include "Frame.h"
 #include "AudioBufferSource.h"
@@ -86,6 +87,13 @@ Frame& Frame::operator= (const Frame& other)
 // Copy data and pointers from another Frame instance
 void Frame::DeepCopy(const Frame& other)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (this == &other)
+		return;
+	std::scoped_lock lock(addingImageMutex, other.addingImageMutex);
+	deferred_image = other.deferred_image;
+	image.reset();
+#endif
 	number = other.number;
 	capture_timestamp = other.capture_timestamp;
 	channels = other.channels;
@@ -381,11 +389,18 @@ juce::AudioBuffer<float> *Frame::GetAudioSampleBuffer()
 // Get the size in bytes of this frame (rough estimate)
 int64_t Frame::GetBytes()
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+#endif
 	int64_t total_bytes = 0;
 	if (image) {
 		total_bytes += static_cast<int64_t>(
 			width * height * sizeof(char) * 4);
 	}
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (deferred_image)
+		total_bytes += deferred_image->GetBytes();
+#endif
 	if (audio) {
 		// approximate audio size (sample rate / 24 fps)
 		total_bytes += (sample_rate / 24.0) * sizeof(float);
@@ -398,6 +413,9 @@ int64_t Frame::GetBytes()
 // Get pixel data (as packets)
 const unsigned char* Frame::GetPixels()
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	GetImage();
+#endif
 	// Check for blank image
 	if (!image)
 		// Fill with black
@@ -410,6 +428,9 @@ const unsigned char* Frame::GetPixels()
 // Get pixel data (for only a single scan-line)
 const unsigned char* Frame::GetPixels(int row)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	GetImage();
+#endif
 	// Check for blank image
 	if (!image)
 		// Fill with black
@@ -421,6 +442,9 @@ const unsigned char* Frame::GetPixels(int row)
 
 // Check a specific pixel color value (returns True/False)
 bool Frame::CheckPixel(int row, int col, int red, int green, int blue, int alpha, int threshold) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (deferred_image) GetImage();
+#endif
 	int col_pos = col * 4; // Find column array position
 	if (!image || row < 0 || row >= (height - 1) ||
 		col_pos < 0 || col_pos >= (width - 1) ) {
@@ -703,6 +727,9 @@ void Frame::AddColor(const QColor& new_color)
 {
 	// Create new image object, and fill with pixel data
 	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	deferred_image.reset();
+#endif
 	image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 
 	// Fill with solid color
@@ -741,6 +768,9 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 
 	// assign image data
 	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	deferred_image.reset();
+#endif
 	image = new_image;
 
 	// Always convert to Format_RGBA8888_Premultiplied (if different)
@@ -760,6 +790,9 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 	if (!new_image)
 		return;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (deferred_image) GetImage();
+#endif
 	// Check for blank source image
 	if (!image) {
 		// Replace the blank source image
@@ -871,6 +904,17 @@ void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, 
 // Get pointer to Magick++ image object
 std::shared_ptr<QImage> Frame::GetImage()
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+	if (deferred_image) {
+		auto materialized = deferred_image->Materialize();
+		if (materialized.isNull() || materialized.width() != width || materialized.height() != height)
+			throw std::runtime_error("Deferred frame image returned invalid dimensions");
+		// GetImage exposes mutable pixels. Make CPU storage authoritative so a
+		// later GPU consumer cannot accidentally reuse stale surface contents.
+		AddImage(std::make_shared<QImage>(std::move(materialized)));
+	}
+#endif
 	// Check for blank image
 	if (!image)
 		// Fill with black
@@ -895,6 +939,9 @@ cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
 // Get pointer to OpenCV image object
 cv::Mat Frame::GetImageCV()
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	GetImage();
+#endif
 	// Check for blank image
 	if (!image)
 		// Fill with black
@@ -924,7 +971,11 @@ std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
 void Frame::SetImageCV(cv::Mat _image)
 {
 	imagecv = _image;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	AddImage(Mat2Qimage(_image));
+#else
 	image = Mat2Qimage(_image);
+#endif
 }
 #endif
 
@@ -1015,3 +1066,33 @@ void Frame::AddAudioSilence(int numSamples)
 	// Reset audio direction
 	audio_is_increasing = true;
 }
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+void Frame::AddDeferredImage(std::shared_ptr<const FrameImage> new_image)
+{
+	if (!new_image)
+		return;
+	if (new_image->GetWidth() <= 0 || new_image->GetHeight() <= 0 || new_image->GetBytes() < 0)
+		throw std::invalid_argument("Invalid deferred frame image");
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+	width = new_image->GetWidth();
+	height = new_image->GetHeight();
+	image.reset();
+	deferred_image = std::move(new_image);
+	has_image_data = true;
+}
+
+std::shared_ptr<const FrameImage> Frame::GetDeferredImage() const
+{
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+	return deferred_image;
+}
+
+bool Frame::GetBlankColor(QColor& result) const
+{
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+	if (image || deferred_image) return false;
+	result = QColor(QString::fromStdString(color));
+	return result.isValid();
+}
+#endif
