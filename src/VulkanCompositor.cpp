@@ -27,6 +27,8 @@ void AvCheck(int r, const char* operation) {
 }
 struct FrameDelete { void operator()(AVFrame* f) const { av_frame_free(&f); } };
 using FramePtr=std::unique_ptr<AVFrame,FrameDelete>;
+// Submissions in flight per pipeline before Render waits for the oldest one.
+constexpr int kSlots=4;
 struct Parameters {
     float matrix_x[4], matrix_y[4], coeffs[4], extra[4], clear[4];
     int sizes[4], modes[4];
@@ -56,7 +58,18 @@ class Pipeline {
     VkPipelineLayout layout=VK_NULL_HANDLE;
     VkPipeline pipeline=VK_NULL_HANDLE;
     VkSampler sampler=VK_NULL_HANDLE;
-    VkDescriptorSet set=VK_NULL_HANDLE;
+    // One in-flight submission. Consumers order themselves through the frames'
+    // timeline semaphores; the slot only keeps resources alive until it retires.
+    struct Slot {
+        VkDescriptorSet set=VK_NULL_HANDLE;
+        VkCommandBuffer cmd=VK_NULL_HANDLE;
+        VkFence fence=VK_NULL_HANDLE;
+        bool busy=false;
+        std::vector<VkImageView> views;
+        std::vector<FramePtr> frames;
+    };
+    std::array<Slot,kSlots> ring;
+    int next_slot=0;
     int width,height;
     bool encode_nv12;
 public:
@@ -93,13 +106,20 @@ public:
             VkPipelineLayoutCreateInfo li{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
             li.setLayoutCount=1; li.pSetLayouts=&descriptors; li.pushConstantRangeCount=1; li.pPushConstantRanges=&range;
             VkCheck(vkCreatePipelineLayout(device,&li,nullptr,&layout),"Create pipeline layout");
-            std::array<VkDescriptorPoolSize,2> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2}}};
+            std::array<VkDescriptorPoolSize,2> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots}}};
             VkDescriptorPoolCreateInfo pi{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-            pi.maxSets=1; pi.poolSizeCount=2; pi.pPoolSizes=sizes.data();
+            pi.maxSets=kSlots; pi.poolSizeCount=2; pi.pPoolSizes=sizes.data();
             VkCheck(vkCreateDescriptorPool(device,&pi,nullptr,&pool),"Create descriptor pool");
-            VkDescriptorSetAllocateInfo ai{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-            ai.descriptorPool=pool; ai.descriptorSetCount=1; ai.pSetLayouts=&descriptors;
-            VkCheck(vkAllocateDescriptorSets(device,&ai,&set),"Allocate descriptors");
+            for(auto& slot:ring){
+                VkDescriptorSetAllocateInfo ai{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+                ai.descriptorPool=pool; ai.descriptorSetCount=1; ai.pSetLayouts=&descriptors;
+                VkCheck(vkAllocateDescriptorSets(device,&ai,&slot.set),"Allocate descriptors");
+                VkCommandBufferAllocateInfo ci{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+                ci.commandPool=commands; ci.level=VK_COMMAND_BUFFER_LEVEL_PRIMARY; ci.commandBufferCount=1;
+                VkCheck(vkAllocateCommandBuffers(device,&ci,&slot.cmd),"Allocate affine commands");
+                VkFenceCreateInfo fi{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+                VkCheck(vkCreateFence(device,&fi,nullptr,&slot.fence),"Create affine fence");
+            }
             VkSamplerCreateInfo si{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
             si.magFilter=si.minFilter=VK_FILTER_LINEAR;
             si.addressModeU=si.addressModeV=si.addressModeW=VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -119,6 +139,10 @@ public:
     }
     ~Pipeline(){Destroy();}
     void Destroy(){
+        for(auto& slot:ring){
+            Retire(slot);
+            if(slot.fence) vkDestroyFence(device,slot.fence,nullptr);
+        }
         if(pipeline) vkDestroyPipeline(device,pipeline,nullptr);
         if(sampler) vkDestroySampler(device,sampler,nullptr);
         if(pool) vkDestroyDescriptorPool(device,pool,nullptr);
@@ -126,6 +150,17 @@ public:
         if(descriptors) vkDestroyDescriptorSetLayout(device,descriptors,nullptr);
         if(commands) vkDestroyCommandPool(device,commands,nullptr);
         av_buffer_unref(&frames);
+    }
+    // Wait for a slot's previous submission, then release what it kept alive.
+    void Retire(Slot& slot){
+        if(slot.busy){
+            vkWaitForFences(device,1,&slot.fence,VK_TRUE,UINT64_MAX);
+            vkResetFences(device,1,&slot.fence);
+            slot.busy=false;
+        }
+        for(auto view:slot.views) vkDestroyImageView(device,view,nullptr);
+        slot.views.clear();
+        slot.frames.clear();
     }
     VkImageView View(VkImage image,VkFormat format,VkImageAspectFlags aspect){
         VkImageViewCreateInfo vi{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -188,10 +223,12 @@ public:
         const bool separate_nv12 = p.modes[0]==1 && sf->img[1]!=VK_NULL_HANDLE && sf->img[1]!=sf->img[0];
         if(separate_nv12) plane_count=2;
         const auto* svc=reinterpret_cast<const AVVulkanFramesContext*>(src_fc->hwctx);
-        std::vector<VkImageView> owned_views;
-        VkCommandBuffer cmd=VK_NULL_HANDLE;
-        VkFence fence=VK_NULL_HANDLE;
-        bool submitted=false;
+        Slot& slot=ring[next_slot];
+        next_slot=(next_slot+1)%kSlots;
+        Retire(slot);
+        auto& owned_views=slot.views;
+        VkCommandBuffer cmd=slot.cmd;
+        const VkDescriptorSet set=slot.set;
         try {
             std::array<VkImageView,5> views{};
             auto make_view=[&](VkImage image,VkFormat format,VkImageAspectFlags aspect){
@@ -219,9 +256,6 @@ public:
                 writes[i].descriptorType=(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;writes[i].pImageInfo=&images[i];
             }
             vkUpdateDescriptorSets(device,5,writes.data(),0,nullptr);
-            VkCommandBufferAllocateInfo ai{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-            ai.commandPool=commands;ai.level=VK_COMMAND_BUFFER_LEVEL_PRIMARY;ai.commandBufferCount=1;
-            VkCheck(vkAllocateCommandBuffers(device,&ai,&cmd),"Allocate affine commands");
             VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};bi.flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             VkCheck(vkBeginCommandBuffer(cmd,&bi),"Begin affine commands");
             std::vector<VkSemaphore> semaphores;
@@ -252,7 +286,6 @@ public:
             vkCmdPushConstants(cmd,layout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(p),&p);
             vkCmdDispatch(cmd,(width+15)/16,(height+15)/16,1);
             VkCheck(vkEndCommandBuffer(cmd),"End affine commands");
-            VkFenceCreateInfo fi{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};VkCheck(vkCreateFence(device,&fi,nullptr,&fence),"Create affine fence");
             VkTimelineSemaphoreSubmitInfo ti{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
             ti.waitSemaphoreValueCount=waits.size();ti.pWaitSemaphoreValues=waits.data();ti.signalSemaphoreValueCount=signal_values.size();ti.pSignalSemaphoreValues=signal_values.data();
             std::vector<VkPipelineStageFlags> stages(waits.size(),VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
@@ -260,9 +293,9 @@ public:
             si.waitSemaphoreCount=semaphores.size();si.pWaitSemaphores=semaphores.data();si.pWaitDstStageMask=stages.data();
             si.signalSemaphoreCount=semaphores.size();si.pSignalSemaphores=semaphores.data();si.commandBufferCount=1;si.pCommandBuffers=&cmd;
             vkcontext->lock_queue(device_context,queue_family,0);
-            auto result=vkQueueSubmit(queue,1,&si,fence);
+            auto result=vkQueueSubmit(queue,1,&si,slot.fence);
             vkcontext->unlock_queue(device_context,queue_family,0);
-            VkCheck(result,"Submit affine renderer");submitted=true;
+            VkCheck(result,"Submit affine renderer");slot.busy=true;
             for(size_t changed_index=0;changed_index<changed.size();++changed_index){
                 auto item=changed[changed_index];
                 item.first->layout[item.second]=VK_IMAGE_LAYOUT_GENERAL;
@@ -270,20 +303,18 @@ public:
                 item.first->queue_family[item.second]=barriers[changed_index].dstQueueFamilyIndex;
                 item.first->sem_value[item.second]++;
             }
-            // Publish semaphore values before releasing frame locks. Never hold a queue lock while waiting.
+            // Publish semaphore values before releasing frame locks. Do not wait here:
+            // later readers wait on those semaphores, and the slot keeps the frames alive.
             locks.clear();
-            VkCheck(vkWaitForFences(device,1,&fence,VK_TRUE,UINT64_MAX),"Wait affine renderer");
-            submitted=false;
-            vkDestroyFence(device,fence,nullptr);fence=VK_NULL_HANDLE;
-            vkFreeCommandBuffers(device,commands,1,&cmd);cmd=VK_NULL_HANDLE;
-            for(auto view:owned_views) vkDestroyImageView(device,view,nullptr);
-            owned_views.clear(); // A later allocation failure must not destroy views twice.
-            return std::make_shared<VulkanFrameImage>(output.get(),!encode_nv12);
+            auto result_image=std::make_shared<VulkanFrameImage>(output.get(),!encode_nv12);
+            for(auto* f:all){
+                FramePtr ref(av_frame_clone(f));
+                if(!ref) throw std::bad_alloc();
+                slot.frames.push_back(std::move(ref));
+            }
+            return result_image;
         }catch(...){
-            if(submitted && fence) vkWaitForFences(device,1,&fence,VK_TRUE,UINT64_MAX);
-            if(fence) vkDestroyFence(device,fence,nullptr);
-            if(cmd) vkFreeCommandBuffers(device,commands,1,&cmd);
-            for(auto view:owned_views) vkDestroyImageView(device,view,nullptr);
+            Retire(slot);
             throw;
         }
     }

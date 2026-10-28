@@ -2649,9 +2649,9 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 				return;
 			} catch (const std::exception& error) {
 				av_frame_free(&encoded);
-				// Interop only touches the temporary scaled/NV12 surfaces, and every
-				// compute pass reading the frame's own surface has completed. Read
-				// back that surface below and keep this export on the CPU path.
+				// Interop only touches the temporary scaled/NV12 surfaces. The readback
+				// below waits on the frame surface's semaphores, so it sees finished
+				// pixels; keep this export on the CPU path.
 				gpu_export_failed = true;
 				Logger::Instance()->Log(std::string("Vulkan export CPU fallback: ") + error.what());
 			}
