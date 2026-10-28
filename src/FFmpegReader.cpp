@@ -2151,7 +2151,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			video_pts_seconds = (double(video_pts) * info.video_timebase.ToDouble()) + pts_offset_seconds;
 			return;
 		} catch (const std::exception& error) {
-			Logger::Instance()->Log(std::string("Vulkan processing failed; retrying software decode: ") + error.what());
+			Logger::Instance()->Log(std::string("Vulkan processing failed; retrying software decode: ") + error.what(), Logger::LevelWarning);
 			hw_decode_failed = true;
 			RemoveAVFrame(pFrame);
 			pFrame = nullptr;

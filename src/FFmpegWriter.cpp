@@ -108,6 +108,9 @@ void FFmpegWriter::Open() {
 		is_open = true;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 		gpu_export_failed = false;
+		// FFmpeg binds a GPU frame to the first CUDA context it is sent to. Start
+		// each export with fresh pools, so no frame is tied to an old encoder.
+		ReleaseVulkanMemory();
 #endif
 
 		// Prepare streams (if needed)
@@ -1477,6 +1480,10 @@ void FFmpegWriter::Close() {
 		close_video(oc, video_st);
 	if (audio_st)
 		close_audio(oc, audio_st);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// Free pooled frames still tied to this encoder's CUDA context
+	ReleaseVulkanMemory();
+#endif
 
 	// Remove single software scaler
 	if (img_convert_ctx)
@@ -2653,7 +2660,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 				// below waits on the frame surface's semaphores, so it sees finished
 				// pixels; keep this export on the CPU path.
 				gpu_export_failed = true;
-				Logger::Instance()->Log(std::string("Vulkan export CPU fallback: ") + error.what());
+				Logger::Instance()->Log(std::string("Vulkan export CPU fallback: ") + error.what(), Logger::LevelWarning);
 			}
 		}
 	}
