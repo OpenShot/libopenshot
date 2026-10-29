@@ -208,7 +208,9 @@ void FFmpegWriter::initialize_streams() {
 // Set video export options
 void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	if (IsVulkanEncoder(codec) && (!USE_HW_ACCEL || !VulkanRenderingEnabled() || !avcodec_find_encoder_by_name(codec.c_str()))) {
+	// Only encoders the probe opened are safe; some drivers and loaders crash.
+	const auto gpu_encoders = IsVulkanEncoder(codec) ? GpuEncoders() : std::vector<std::string>();
+	if (IsVulkanEncoder(codec) && (!USE_HW_ACCEL || std::find(gpu_encoders.begin(), gpu_encoders.end(), codec) == gpu_encoders.end())) {
 		const auto fallback = SoftwareEncoder(codec);
 		if (!fallback.empty()) {
 			Logger::Instance()->Log("Vulkan encoder unavailable; using CPU encoder " + fallback, Logger::LevelWarning);

@@ -253,8 +253,15 @@ std::vector<std::string> GpuEncoders() {
     av_log_set_level(AV_LOG_QUIET);
     // Prefer the same Vulkan device/API for every vendor, when its driver and
     // this FFmpeg build support the requested codec. Probe, never assume.
-    for (const char* name : {"h264_vulkan", "hevc_vulkan", "av1_vulkan"})
-        if (EncoderOpens(name, vulkan, AV_PIX_FMT_VULKAN)) encoders.push_back(name);
+    // Old loaders (1.2.131 on Ubuntu 20.04) return a stub without a driver
+    // function for the encode queries, and FFmpeg crashes calling it.
+    // 1.3.270 is the oldest loader verified to fail cleanly instead.
+    uint32_t loader_version = 0;
+    if (vkEnumerateInstanceVersion(&loader_version) == VK_SUCCESS &&
+        loader_version >= VK_MAKE_API_VERSION(0, 1, 3, 270)) {
+        for (const char* name : {"h264_vulkan", "hevc_vulkan", "av1_vulkan"})
+            if (EncoderOpens(name, vulkan, AV_PIX_FMT_VULKAN)) encoders.push_back(name);
+    }
     // CUDA derived from Vulkan is the same card (matched by UUID)
     AVBufferRef* cuda = nullptr;
     if (av_hwdevice_ctx_create_derived(&cuda, AV_HWDEVICE_TYPE_CUDA, vulkan, 0) >= 0) {
