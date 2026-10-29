@@ -30,6 +30,11 @@
 #include "FFmpegReader.h"
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 #include "VulkanFrameImage.h"
+extern "C" {
+#include <libavutil/hwcontext_vulkan.h>
+}
+#include <cstdlib>
+#include <utility>
 #endif
 #include "Exceptions.h"
 #include "MemoryTrim.h"
@@ -143,6 +148,49 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 #if USE_HW_ACCEL
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
+// FFmpeg uses the first Vulkan device, which can be a software driver such as
+// lavapipe. List real GPUs instead, discrete before integrated. Software (CPU)
+// devices are skipped: they cannot decode video and are slower than our CPU path.
+// OPENSHOT_VULKAN_DEVICE (an index or a name) overrides the choice.
+static std::vector<std::string> VulkanDeviceCandidates()
+{
+	const char* chosen = std::getenv("OPENSHOT_VULKAN_DEVICE");
+	if (chosen && chosen[0])
+		return {chosen};
+
+	std::vector<std::pair<int, std::string>> ranked;
+	VkApplicationInfo app = {};
+	app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	app.apiVersion = VK_API_VERSION_1_1;
+	VkInstanceCreateInfo create = {};
+	create.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	create.pApplicationInfo = &app;
+	VkInstance instance = VK_NULL_HANDLE;
+	if (vkCreateInstance(&create, nullptr, &instance) != VK_SUCCESS)
+		return {""};  // Let FFmpeg report why Vulkan is unavailable
+	uint32_t count = 0;
+	vkEnumeratePhysicalDevices(instance, &count, nullptr);
+	std::vector<VkPhysicalDevice> devices(count);
+	vkEnumeratePhysicalDevices(instance, &count, devices.data());
+	for (uint32_t i = 0; i < count; ++i) {
+		VkPhysicalDeviceProperties props;
+		vkGetPhysicalDeviceProperties(devices[i], &props);
+		if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU)
+			continue;
+		const int rank = props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 0
+			: props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? 1 : 2;
+		// Select by name: FFmpeg's device indices can be in a different order
+		ranked.emplace_back(rank, props.deviceName);
+	}
+	vkDestroyInstance(instance, nullptr);
+	std::stable_sort(ranked.begin(), ranked.end(),
+		[](const auto& a, const auto& b) { return a.first < b.first; });
+	std::vector<std::string> candidates;
+	for (const auto& device : ranked)
+		candidates.push_back(device.second);
+	return candidates;
+}
+
 // All readers share one device so their surfaces can be composed without interop.
 // Keep an owning reference for the process lifetime; each reader receives its own ref.
 static int CreateVulkanDecodeDevice(AVBufferRef** output)
@@ -150,13 +198,32 @@ static int CreateVulkanDecodeDevice(AVBufferRef** output)
 	struct SharedDevice {
 		std::mutex mutex;
 		AVBufferRef* device = nullptr;
+		bool tried = false;
 		~SharedDevice() { av_buffer_unref(&device); }
 	};
 	static SharedDevice shared;
 	const std::lock_guard<std::mutex> lock(shared.mutex);
 	if (!shared.device) {
-		int result = av_hwdevice_ctx_create(&shared.device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0);
-		if (result < 0) return result;
+		// Only search once; without a usable GPU every reader decodes on the CPU.
+		if (shared.tried)
+			return AVERROR(ENODEV);
+		shared.tried = true;
+		int result = AVERROR(ENODEV);
+		for (const auto& device : VulkanDeviceCandidates()) {
+			result = av_hwdevice_ctx_create(&shared.device, AV_HWDEVICE_TYPE_VULKAN,
+				device.empty() ? nullptr : device.c_str(), nullptr, 0);
+			if (result >= 0)
+				break;
+		}
+		if (result < 0) {
+			Logger::Instance()->Log("No usable Vulkan GPU; decoding on the CPU", Logger::LevelWarning);
+			return result;
+		}
+		auto* hwctx = static_cast<AVVulkanDeviceContext*>(
+			reinterpret_cast<AVHWDeviceContext*>(shared.device->data)->hwctx);
+		VkPhysicalDeviceProperties props;
+		vkGetPhysicalDeviceProperties(hwctx->phys_dev, &props);
+		Logger::Instance()->Log(std::string("Vulkan device: ") + props.deviceName, Logger::LevelInfo);
 	}
 	*output = av_buffer_ref(shared.device);
 	return *output ? 0 : AVERROR(ENOMEM);
