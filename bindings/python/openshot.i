@@ -113,6 +113,7 @@ class QWidget;
 #if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(LINUX)
 #include "Qt/VulkanOpenGLPresenter.h"
 #include "VulkanCompositor.h"
+#include "GpuDevices.h"
 #endif
 #include "Settings.h"
 #include "TimelineBase.h"
@@ -527,6 +528,9 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 #if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(LINUX)
 %include "Qt/VulkanOpenGLPresenter.h"
 namespace openshot { void ReleaseVulkanMemory(); }
+%include "GpuDevices.h"
+%template(GpuDeviceVector) std::vector<openshot::GpuDevice>;
+%template(StringVector) std::vector<std::string>;
 #endif
 %include "Settings.h"
 %include "TimelineBase.h"

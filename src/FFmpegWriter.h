@@ -142,6 +142,7 @@ namespace openshot {
 		int persistent_dst_size = 0;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 		bool gpu_export_failed = false; ///< Encode remaining frames from CPU pixels
+		bool gpu_export_logged = false; ///< The GPU export path was reported once
 #endif
 
 		int audio_outbuf_size;

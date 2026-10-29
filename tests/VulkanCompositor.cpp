@@ -4,6 +4,7 @@
 #include "VulkanCompositor.h"
 #include "VulkanFrameImage.h"
 #include "VulkanEncodeConverter.h"
+#include "GpuDevices.h"
 #include "FFmpegReader.h"
 #include "Clip.h"
 #include "DummyReader.h"
@@ -11,7 +12,10 @@
 #include <cstdlib>
 #include <memory>
 extern "C" {
+#include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_drm.h>
+#include <libavutil/hwcontext_vulkan.h>
 #include <libswscale/swscale.h>
 }
 namespace {
@@ -26,7 +30,7 @@ bool VulkanAvailable() {
         return false;
     }
     AVBufferRef* device=nullptr;
-    if(av_hwdevice_ctx_create(&device,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)<0) {
+    if(openshot::CreateSharedVulkanDevice(&device)<0) {
         WARN("Skipping Vulkan test: no Vulkan device is available");
         return false;
     }
@@ -48,10 +52,84 @@ public:
     }
 };
 }
+TEST_CASE("Vulkan GPU listing reports the card OpenShot renders with", "[vulkan][hardware]") {
+    if(!VulkanAvailable()) return;
+    const auto active=openshot::ActiveGpuDevice();
+    REQUIRE(!active.name.empty());
+    CHECK(active.active);
+    CHECK(active.type!="software");
+    CHECK(active.uuid.size()==32);
+    int active_count=0;
+    for(const auto& gpu : openshot::ListGpuDevices()) {
+        CHECK(!gpu.name.empty());
+        if(gpu.active) { ++active_count; CHECK(gpu.uuid==active.uuid); }
+    }
+    CHECK(active_count==1);
+    // Every reported encoder exists in this FFmpeg build; the list is cached.
+    const auto encoders=openshot::GpuEncoders();
+    for(const auto& name : encoders) CHECK(avcodec_find_encoder_by_name(name.c_str()));
+    CHECK(openshot::GpuEncoders()==encoders);
+}
+TEST_CASE("Vulkan shareable NV12 export frames match and export as DMA-BUF", "[vulkan][hardware]") {
+    if(!VulkanAvailable()) return;
+    AVBufferRef* device_ptr=nullptr;
+    REQUIRE(openshot::CreateSharedVulkanDevice(&device_ptr)>=0);
+    Buffer device(device_ptr);
+    Buffer pool(av_hwframe_ctx_alloc(device.get()));
+    REQUIRE(pool);
+    auto* context=reinterpret_cast<AVHWFramesContext*>(pool->data);
+    context->format=AV_PIX_FMT_VULKAN;context->sw_format=AV_PIX_FMT_RGBA;
+    context->width=32;context->height=32;
+    REQUIRE(av_hwframe_ctx_init(pool.get())>=0);
+    Frame cpu(av_frame_alloc()),gpu(av_frame_alloc());
+    cpu->format=AV_PIX_FMT_RGBA;cpu->width=32;cpu->height=32;
+    REQUIRE(av_frame_get_buffer(cpu.get(),0)>=0);
+    for(int y=0;y<32;++y)for(int x=0;x<32;++x){
+        auto* p=cpu->data[0]+y*cpu->linesize[0]+x*4;
+        p[0]=255;p[1]=0;p[2]=0;p[3]=255;
+    }
+    REQUIRE(av_hwframe_get_buffer(pool.get(),gpu.get(),0)>=0);
+    REQUIRE(av_hwframe_transfer_data(gpu.get(),cpu.get(),0)>=0);
+    auto red=std::make_shared<openshot::VulkanFrameImage>(gpu.get());
+    std::shared_ptr<const openshot::FrameImage> shared;
+    try {
+        shared=openshot::ConvertVulkanToNV12(red,true);
+    } catch(const std::exception& error) {
+        WARN("Skipping Vulkan test: no DMA-BUF export on this device: " << error.what());
+        return;
+    }
+    // Same pixels as the regular NV12 pool, in linear images.
+    auto surface=std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(shared);
+    REQUIRE(surface);
+    CHECK(reinterpret_cast<const AVVkFrame*>(surface->GetFrame()->data[0])->tiling==VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT);
+    Frame downloaded(av_frame_alloc());
+    REQUIRE(av_hwframe_transfer_data(downloaded.get(),surface->GetFrame(),0)>=0);
+    REQUIRE(downloaded->format==AV_PIX_FMT_NV12);
+    const int y=downloaded->data[0][4*downloaded->linesize[0]+4];
+    const int u=downloaded->data[1][2*downloaded->linesize[1]+4];
+    const int v=downloaded->data[1][2*downloaded->linesize[1]+5];
+    CHECK(y>=80);CHECK(y<=83);
+    CHECK(u>=89);CHECK(u<=92);
+    CHECK(v>=238);CHECK(v<=241);
+    // The frames map to DMA-BUF (Y and UV planes, linear) for VA-API.
+    Frame drm(av_frame_alloc());
+    drm->format=AV_PIX_FMT_DRM_PRIME;
+    const int mapped=av_hwframe_map(drm.get(),surface->GetFrame(),AV_HWFRAME_MAP_READ);
+    if(mapped==AVERROR(ENOSYS)) {
+        WARN("FFmpeg was built without libdrm; DMA-BUF mapping not checked");
+        return;
+    }
+    REQUIRE(mapped>=0);
+    const auto* desc=reinterpret_cast<const AVDRMFrameDescriptor*>(drm->data[0]);
+    CHECK(desc->nb_objects==2);
+    CHECK(desc->nb_layers==2);
+    CHECK(desc->objects[0].format_modifier==0);
+    CHECK(desc->objects[0].fd>=0);
+}
 TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan][hardware]") {
     if(!VulkanAvailable()) return;
     AVBufferRef* device_ptr=nullptr;
-    REQUIRE(av_hwdevice_ctx_create(&device_ptr,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)>=0);
+    REQUIRE(openshot::CreateSharedVulkanDevice(&device_ptr)>=0);
     Buffer device(device_ptr);
     Buffer pool(av_hwframe_ctx_alloc(device.get()));
     REQUIRE(pool);
@@ -197,7 +275,7 @@ TEST_CASE("Vulkan sequential decoding preserves pending audio video frames", "[v
 TEST_CASE("Vulkan high quality reader resizing uses bicubic antialiasing", "[vulkan][hardware][quality]") {
     if(!VulkanAvailable()) return;
     AVBufferRef* raw_device=nullptr;
-    REQUIRE(av_hwdevice_ctx_create(&raw_device,AV_HWDEVICE_TYPE_VULKAN,nullptr,nullptr,0)>=0);
+    REQUIRE(openshot::CreateSharedVulkanDevice(&raw_device)>=0);
     Buffer device(raw_device),pool(av_hwframe_ctx_alloc(raw_device));
     REQUIRE(pool);
     auto* context=reinterpret_cast<AVHWFramesContext*>(pool->data);

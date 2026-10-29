@@ -30,6 +30,7 @@
 #include "Exceptions.h"
 #include "Frame.h"
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "GpuDevices.h"
 #include "VulkanFrameImage.h"
 #include "VulkanCompositor.h"
 #include "VulkanEncodeConverter.h"
@@ -108,6 +109,7 @@ void FFmpegWriter::Open() {
 		is_open = true;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 		gpu_export_failed = false;
+		gpu_export_logged = false;
 		// FFmpeg binds a GPU frame to the first CUDA context it is sent to. Start
 		// each export with fresh pools, so no frame is tied to an old encoder.
 		ReleaseVulkanMemory();
@@ -1972,7 +1974,20 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 			Logger::Instance()->AppendDebugMethod(
 				"Encode Device not present, using default");
 		}
-		if (av_hwdevice_ctx_create(&hw_device_ctx,
+		// Encode on the card that renders, so VA-API can share its frames. That card
+		// may have no VA-API driver (e.g. NVIDIA in a hybrid laptop); then use the
+		// device chosen above.
+		bool device_created = false;
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__linux__)
+		if (hw_en_av_device_type == AV_HWDEVICE_TYPE_VAAPI && VulkanRenderingEnabled()) {
+			const std::string render_node = ActiveGpuDevice().render_node;
+			device_created = !render_node.empty() &&
+				av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type, render_node.c_str(), NULL, 0) >= 0;
+			if (!render_node.empty() && !device_created)
+				Logger::Instance()->Log("No VA-API on " + render_node + "; encoding on the default VA-API device", Logger::LevelWarning);
+		}
+#endif
+		if (!device_created && av_hwdevice_ctx_create(&hw_device_ctx,
 				hw_en_av_device_type, adapter_ptr, NULL, 0) < 0)
 		{
 			Logger::Instance()->AppendDebugMethod(
@@ -2629,10 +2644,11 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 		return;
 
 #if defined(OPENSHOT_ENABLE_GPU_FRAME) && USE_HW_ACCEL
-	// NVENC accepts encoder-owned CUDA surfaces. Preserve GPU residency through
-	// RGB->NV12 conversion and the Vulkan/CUDA device-to-device transfer.
+	// Keep frames on the GPU through RGB->NV12 conversion. NVENC takes a
+	// Vulkan/CUDA device-to-device copy; VA-API imports the NV12 images as DMA-BUF.
+	const bool vaapi_export = video_codec_ctx->pix_fmt == AV_PIX_FMT_VAAPI;
 	if (!gpu_export_failed && hw_en_on && hw_en_supported && video_codec_ctx->hw_frames_ctx &&
-		video_codec_ctx->pix_fmt == AV_PIX_FMT_CUDA) {
+		(video_codec_ctx->pix_fmt == AV_PIX_FMT_CUDA || vaapi_export)) {
 		auto surface = frame->GetDeferredImage();
 		if (surface) {
 			AVFrame* encoded = nullptr;
@@ -2644,15 +2660,29 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 					scale.scale(double(info.width) / src_w, double(info.height) / src_h);
 					surface = RenderVulkanImage(surface, nullptr, info.width, info.height, scale, 1.0, Qt::black);
 				}
-				auto nv12 = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface));
+				auto nv12 = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface, vaapi_export));
 				encoded = av_frame_alloc();
 				if (!encoded) throw std::bad_alloc();
-				int status = av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, encoded, 0);
-				if (status >= 0) status = av_hwframe_transfer_data(encoded, nv12->GetFrame(), 0);
-				if (status < 0) throw std::runtime_error("Vulkan/CUDA export transfer failed: " + av_err2string(status));
+				int status;
+				if (vaapi_export) {
+					// The mapped VA-API surface keeps the Vulkan image until the encoder is done
+					encoded->format = AV_PIX_FMT_VAAPI;
+					encoded->hw_frames_ctx = av_buffer_ref(video_codec_ctx->hw_frames_ctx);
+					if (!encoded->hw_frames_ctx) throw std::bad_alloc();
+					status = av_hwframe_map(encoded, nv12->GetFrame(), AV_HWFRAME_MAP_READ);
+					if (status < 0) throw std::runtime_error("Vulkan/VA-API frame sharing failed: " + av_err2string(status));
+				} else {
+					status = av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, encoded, 0);
+					if (status >= 0) status = av_hwframe_transfer_data(encoded, nv12->GetFrame(), 0);
+					if (status < 0) throw std::runtime_error("Vulkan/CUDA export transfer failed: " + av_err2string(status));
+				}
 				av_frame_copy_props(encoded, nv12->GetFrame());
 				add_avframe(frame, encoded);
-				Logger::Instance()->AppendDebugMethod("Vulkan export GPU transfer to NVENC", "frame", frame->number);
+				if (!gpu_export_logged) {
+					gpu_export_logged = true;
+					Logger::Instance()->Log(vaapi_export ? "Vulkan export: sharing GPU frames with VA-API (no copy)"
+						: "Vulkan export: GPU transfer to NVENC", Logger::LevelInfo);
+				}
 				return;
 			} catch (const std::exception& error) {
 				av_frame_free(&encoded);

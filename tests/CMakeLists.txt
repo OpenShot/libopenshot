@@ -186,6 +186,8 @@ foreach(tname ${OPENSHOT_TESTS})
     )
   endif()
   if(tname MATCHES "^Vulkan")
+    # Same Vulkan headers as the library (newer than some system packages)
+    target_include_directories(openshot-${tname}-test PRIVATE ${Vulkan_INCLUDE_DIR})
     # Report missing GPU, display or interop support as skipped, not passed.
     list(APPEND test_properties
       SKIP_REGULAR_EXPRESSION "Skipping Vulkan test:"

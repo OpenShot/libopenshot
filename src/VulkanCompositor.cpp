@@ -34,15 +34,81 @@ constexpr int kSlots=4;
 // its last frame is released.
 struct OutputPools {
     std::mutex mutex;
-    std::map<std::tuple<AVHWDeviceContext*,int,int,bool>,AVBufferRef*> pools;
+    std::map<std::tuple<AVHWDeviceContext*,int,int,bool,bool>,AVBufferRef*> pools;
     ~OutputPools(){ for(auto& item:pools) av_buffer_unref(&item.second); }
 };
 OutputPools& SharedPools(){ static OutputPools pools; return pools; }
+constexpr VkImageUsageFlags kOutputUsage=VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+// Shareable NV12 frames for VA-API: linear images in memory exported as DMA-BUF.
+// FFmpeg 7.1 only exports opaque FDs (enough for CUDA), so these come from our pool.
+const uint64_t kLinearModifier=0; // DRM_FORMAT_MOD_LINEAR, importable by every VA-API driver
+VkImageDrmFormatModifierListCreateInfoEXT kLinearModifiers{VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_LIST_CREATE_INFO_EXT,nullptr,1,&kLinearModifier};
+struct ShareablePool { AVVulkanDeviceContext* vk; int width,height; std::vector<uint32_t> families; };
+void FreeShareableFrame(void* opaque,uint8_t* data){
+    auto* pool=static_cast<ShareablePool*>(opaque);
+    auto* f=reinterpret_cast<AVVkFrame*>(data);
+    VkDevice device=pool->vk->act_dev;
+    for(int i=0;i<2;++i){
+        // Encoders and mappings may still use the image; wait like FFmpeg does
+        if(f->sem[i]){
+            VkSemaphoreWaitInfo wait{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+            wait.semaphoreCount=1;wait.pSemaphores=&f->sem[i];wait.pValues=&f->sem_value[i];
+            vkWaitSemaphores(device,&wait,UINT64_MAX);
+            vkDestroySemaphore(device,f->sem[i],nullptr);
+        }
+        if(f->img[i]) vkDestroyImage(device,f->img[i],nullptr);
+        if(f->mem[i]) vkFreeMemory(device,f->mem[i],nullptr);
+    }
+    av_freep(&f->internal);
+    av_free(f);
+}
+AVBufferRef* AllocShareableFrame(void* opaque,size_t){
+    auto* pool=static_cast<ShareablePool*>(opaque);
+    AVVkFrame* f=av_vk_frame_alloc();
+    if(!f) return nullptr;
+    AVBufferRef* buffer=av_buffer_create(reinterpret_cast<uint8_t*>(f),sizeof(AVVkFrame),FreeShareableFrame,pool,0);
+    if(!buffer){ av_freep(&f->internal); av_free(f); return nullptr; }
+    VkDevice device=pool->vk->act_dev;
+    VkPhysicalDeviceMemoryProperties memory;
+    vkGetPhysicalDeviceMemoryProperties(pool->vk->phys_dev,&memory);
+    f->tiling=VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+    for(int i=0;i<2;++i){
+        VkExternalMemoryImageCreateInfo external{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,&kLinearModifiers,VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT};
+        VkImageCreateInfo ci{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,&external};
+        ci.imageType=VK_IMAGE_TYPE_2D;ci.format=i?VK_FORMAT_R8G8_UNORM:VK_FORMAT_R8_UNORM;
+        ci.extent={uint32_t(i?pool->width/2:pool->width),uint32_t(i?pool->height/2:pool->height),1};
+        ci.mipLevels=1;ci.arrayLayers=1;ci.samples=VK_SAMPLE_COUNT_1_BIT;ci.tiling=VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+        ci.usage=kOutputUsage;ci.initialLayout=VK_IMAGE_LAYOUT_UNDEFINED;
+        ci.sharingMode=pool->families.size()>1?VK_SHARING_MODE_CONCURRENT:VK_SHARING_MODE_EXCLUSIVE;
+        ci.queueFamilyIndexCount=pool->families.size()>1?pool->families.size():0;ci.pQueueFamilyIndices=pool->families.data();
+        VkMemoryRequirements req;
+        uint32_t type=UINT32_MAX;
+        if(vkCreateImage(device,&ci,nullptr,&f->img[i])!=VK_SUCCESS){ av_buffer_unref(&buffer); return nullptr; }
+        vkGetImageMemoryRequirements(device,f->img[i],&req);
+        for(uint32_t t=0;t<memory.memoryTypeCount && type==UINT32_MAX;++t)
+            if((req.memoryTypeBits&(1u<<t)) && (memory.memoryTypes[t].propertyFlags&VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) type=t;
+        VkMemoryDedicatedAllocateInfo dedicated{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,nullptr,f->img[i]};
+        VkExportMemoryAllocateInfo exported{VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO,&dedicated,VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT};
+        VkMemoryAllocateInfo ai{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,&exported,req.size,type};
+        VkSemaphoreTypeCreateInfo timeline{VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,nullptr,VK_SEMAPHORE_TYPE_TIMELINE,0};
+        VkSemaphoreCreateInfo si{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,&timeline};
+        if(type==UINT32_MAX || vkAllocateMemory(device,&ai,nullptr,&f->mem[i])!=VK_SUCCESS ||
+           vkBindImageMemory(device,f->img[i],f->mem[i],0)!=VK_SUCCESS ||
+           vkCreateSemaphore(device,&si,nullptr,&f->sem[i])!=VK_SUCCESS){ av_buffer_unref(&buffer); return nullptr; }
+        f->size[i]=req.size;f->layout[i]=VK_IMAGE_LAYOUT_UNDEFINED;f->queue_family[i]=VK_QUEUE_FAMILY_IGNORED;
+    }
+    return buffer;
+}
+void FreeShareablePool(void* opaque){ delete static_cast<ShareablePool*>(opaque); }
+bool HasDeviceExtension(const AVVulkanDeviceContext* vk,const char* name){
+    for(int i=0;i<vk->nb_enabled_dev_extensions;++i) if(std::string(vk->enabled_dev_extensions[i])==name) return true;
+    return false;
+}
 // Returns a new reference the caller must release.
-AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
+AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12,bool shareable){
     auto& shared=SharedPools();
     const std::lock_guard<std::mutex> lock(shared.mutex);
-    auto& pool=shared.pools[{reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12}];
+    auto& pool=shared.pools[{reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12,shareable}];
     if(!pool){
         AVBufferRef* frames=av_hwframe_ctx_alloc(device_ref);
         if(!frames) throw std::bad_alloc();
@@ -51,9 +117,30 @@ AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
         fc->width=w; fc->height=h;
         auto* vc=reinterpret_cast<AVVulkanFramesContext*>(fc->hwctx);
         if(encode_nv12) vc->flags=AV_VK_FRAME_FLAG_DISABLE_MULTIPLANE;
-        vc->usage=static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+        vc->usage=static_cast<VkImageUsageFlagBits>(kOutputUsage);
+        if(shareable){
+            auto* vk=reinterpret_cast<AVVulkanDeviceContext*>(reinterpret_cast<AVHWDeviceContext*>(device_ref->data)->hwctx);
+            if(!encode_nv12 || !HasDeviceExtension(vk,VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME) ||
+               !HasDeviceExtension(vk,VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME)){
+                av_buffer_unref(&frames); shared.pools.erase({reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12,shareable});
+                throw std::runtime_error("Vulkan device cannot export DMA-BUF images");
+            }
+            auto* opaque=new ShareablePool{vk,w,h,{}};
+            for(int i=0;i<vk->nb_qf;++i)
+                if(std::find(opaque->families.begin(),opaque->families.end(),uint32_t(vk->qf[i].idx))==opaque->families.end())
+                    opaque->families.push_back(vk->qf[i].idx);
+            vc->tiling=VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+            vc->create_pnext=&kLinearModifiers;
+            fc->pool=av_buffer_pool_init2(sizeof(AVVkFrame),opaque,AllocShareableFrame,FreeShareablePool);
+            if(!fc->pool){ delete opaque; av_buffer_unref(&frames); throw std::bad_alloc(); }
+            // FFmpeg leaves a caller's pool to the caller; free it while the device lives
+            fc->free=[](AVHWFramesContext* context){ av_buffer_pool_uninit(&context->pool); };
+        }
         const int status=av_hwframe_ctx_init(frames);
-        if(status<0){ av_buffer_unref(&frames); AvCheck(status,"Initialize Vulkan compositor output"); }
+        if(status<0){
+            av_buffer_unref(&frames); shared.pools.erase({reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12,shareable});
+            AvCheck(status,"Initialize Vulkan compositor output");
+        }
         pool=frames;
     }
     AVBufferRef* ref=av_buffer_ref(pool);
@@ -103,8 +190,9 @@ class Pipeline {
     int next_slot=0;
     int width,height;
     bool encode_nv12;
+    bool shareable;
 public:
-    Pipeline(AVBufferRef* device_owner,int w,int h,bool encode=false):width(w),height(h),encode_nv12(encode) {
+    Pipeline(AVBufferRef* device_owner,int w,int h,bool encode=false,bool share=false):width(w),height(h),encode_nv12(encode),shareable(share) {
         device_ref=av_buffer_ref(device_owner);
         if(!device_ref) throw std::bad_alloc();
         device_context=reinterpret_cast<AVHWDeviceContext*>(device_ref->data);
@@ -206,7 +294,7 @@ public:
         }
         FramePtr output(av_frame_alloc());
         if(!output) throw std::bad_alloc();
-        AVBufferRef* pool=OutputPool(device_ref,width,height,encode_nv12);
+        AVBufferRef* pool=OutputPool(device_ref,width,height,encode_nv12,shareable);
         const int allocated=av_hwframe_get_buffer(pool,output.get(),0);
         av_buffer_unref(&pool);
         AvCheck(allocated,"Allocate compositor output");
@@ -366,18 +454,18 @@ std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameI
     auto& pipeline=found->second.pipeline;
     return pipeline->Render(*src,back.get(),matrix,opacity,clear,high_quality);
 }
-std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const FrameImage> source) {
+std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const FrameImage> source, bool shareable) {
     auto src=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
     if(!src) throw std::invalid_argument("NV12 conversion requires a Vulkan surface");
     const auto* frame=src->GetFrame();
     if(frame->width%2 || frame->height%2) throw std::invalid_argument("NV12 export requires even dimensions");
     auto* fc=reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data);
-    using Key=std::tuple<AVHWDeviceContext*,int,int>;
+    using Key=std::tuple<AVHWDeviceContext*,int,int,bool>;
     thread_local std::unique_ptr<Pipeline> pipeline;
     thread_local Key key{};
-    Key requested{fc->device_ctx,frame->width,frame->height};
+    Key requested{fc->device_ctx,frame->width,frame->height,shareable};
     if(!pipeline || key!=requested){
-        pipeline=std::make_unique<Pipeline>(fc->device_ref,frame->width,frame->height,true);
+        pipeline=std::make_unique<Pipeline>(fc->device_ref,frame->width,frame->height,true,shareable);
         key=requested;
     }
     return pipeline->Render(*src,nullptr,QTransform(),1.0,Qt::black);

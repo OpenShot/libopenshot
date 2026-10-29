@@ -3,6 +3,7 @@
 #include "openshot_catch.h"
 #include "Frame.h"
 #include "VulkanFrameImage.h"
+#include "GpuDevices.h"
 #include "Qt/VideoRenderer.h"
 #include "Qt/VulkanOpenGLPresenter.h"
 #include <QApplication>
@@ -53,7 +54,7 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
         return;
     }
     Frames data;
-    if (av_hwdevice_ctx_create(&data.device, AV_HWDEVICE_TYPE_VULKAN, nullptr, nullptr, 0) < 0) {
+    if (openshot::CreateSharedVulkanDevice(&data.device) < 0) {
         WARN("Skipping Vulkan test: no Vulkan device is available");
         return;
     }
