@@ -317,6 +317,8 @@ void FFmpegReader::Open() {
 
 			// Get codec and codec context from stream
 			const AVCodec *pCodec = avcodec_find_decoder(codecId);
+			if (!pCodec)
+				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			AVDictionary *opts = NULL;
 			int retry_decode_open = 2;
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
@@ -342,10 +344,6 @@ void FFmpegReader::Open() {
 
 				// Set number of threads equal to number of processors (not to exceed 16)
 				pCodecCtx->thread_count = std::min(FF_VIDEO_NUM_PROCESSORS, 16);
-
-				if (pCodec == NULL) {
-					throw InvalidCodec("A valid video codec could not be found for this file.", path);
-				}
 
 				// Init options
 				av_dict_set(&opts, "strict", "experimental", 0);

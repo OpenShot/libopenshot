@@ -6,7 +6,11 @@
 #include "VulkanEncodeConverter.h"
 #include "GpuDevices.h"
 #include "FFmpegReader.h"
+#include "FFmpegWriter.h"
+#include <QTemporaryDir>
+#include <algorithm>
 #include "Clip.h"
+#include "Timeline.h"
 #include "DummyReader.h"
 #include <map>
 #include <cstdlib>
@@ -14,7 +18,6 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext.h>
-#include <libavutil/hwcontext_drm.h>
 #include <libavutil/hwcontext_vulkan.h>
 #include <libswscale/swscale.h>
 }
@@ -70,61 +73,162 @@ TEST_CASE("Vulkan GPU listing reports the card OpenShot renders with", "[vulkan]
     for(const auto& name : encoders) CHECK(avcodec_find_encoder_by_name(name.c_str()));
     CHECK(openshot::GpuEncoders()==encoders);
 }
-TEST_CASE("Vulkan shareable NV12 export frames match and export as DMA-BUF", "[vulkan][hardware]") {
+TEST_CASE("VA-API AV1 export accepts a requested bitrate", "[vulkan][hardware][writer]") {
     if(!VulkanAvailable()) return;
-    AVBufferRef* device_ptr=nullptr;
-    REQUIRE(openshot::CreateSharedVulkanDevice(&device_ptr)>=0);
-    Buffer device(device_ptr);
-    Buffer pool(av_hwframe_ctx_alloc(device.get()));
+    const auto encoders=openshot::GpuEncoders();
+    if(std::find(encoders.begin(),encoders.end(),"av1_vaapi")==encoders.end()){
+        WARN("Skipping Vulkan test: no VA-API AV1 encoder");
+        return;
+    }
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const auto path=directory.filePath("av1.mp4").toStdString();
+    openshot::FFmpegWriter writer(path);
+    writer.SetVideoOptions(true,"av1_vaapi",openshot::Fraction(24,1),256,256,openshot::Fraction(1,1),false,false,1000000);
+    REQUIRE_NOTHROW(writer.Open());
+    for(int n=1;n<=3;++n) writer.WriteFrame(std::make_shared<openshot::Frame>(n,256,256,"red"));
+    writer.Close();
+    openshot::FFmpegReader reader(path);
+    reader.Open();
+    const auto* decoder=avcodec_find_decoder_by_name(reader.info.vcodec.c_str());
+    REQUIRE(decoder);
+    CHECK(decoder->id==AV_CODEC_ID_AV1);
+    auto image=reader.GetFrame(1)->GetImage();
+    REQUIRE(image);
+    CHECK(image->pixelColor(128,128).red()>200);
+    CHECK(image->pixelColor(128,128).blue()<30);
+    reader.Close();
+}
+TEST_CASE("Native Vulkan export keeps decoded and composited frames on the GPU", "[vulkan][hardware][writer]") {
+    if(!VulkanAvailable()) return;
+    const auto encoders=openshot::GpuEncoders();
+    if(std::find(encoders.begin(),encoders.end(),"h264_vulkan")==encoders.end()){
+        WARN("Skipping Vulkan test: no native Vulkan H.264 encoder");
+        return;
+    }
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    // Repeat exports to exercise encoder surface reuse and owner cleanup.
+    for(int pass=0;pass<2;++pass){
+        const int width=pass?640:256,height=pass?360:256;
+        openshot::FFmpegReader base_reader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+        openshot::FFmpegReader overlay_reader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+        openshot::Clip base(&base_reader),overlay(&overlay_reader);
+        openshot::Timeline timeline(width,height,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+        timeline.SetMaxSize(width,height);
+        base.Layer(0);overlay.Layer(1);
+        overlay.scale_x=openshot::Keyframe(0.7);overlay.rotation=openshot::Keyframe(12.0);
+        overlay.alpha=openshot::Keyframe(0.6);
+        timeline.AddClip(&base);timeline.AddClip(&overlay);timeline.Open();
+        const auto path=directory.filePath(QString("native-%1.mp4").arg(pass)).toStdString();
+        openshot::FFmpegWriter writer(path);
+        writer.SetVideoOptions(true,"h264_vulkan",openshot::Fraction(24,1),width,height,openshot::Fraction(1,1),false,false,1000000);
+        writer.Open();
+        REQUIRE(writer.info.vcodec=="h264_vulkan"); // CPU fallback must not pass this test.
+        const auto readbacks=openshot::VulkanFrameReadbackCount();
+        for(int n=1;n<=24;++n){
+            auto frame=timeline.GetFrame(n);
+            REQUIRE(frame->GetDeferredImage());
+            writer.WriteFrame(frame);
+            REQUIRE(frame->GetDeferredImage());
+        }
+        writer.Close();
+        CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+        CHECK(base_reader.HardwareDecodeSuccessful());
+        CHECK(overlay_reader.HardwareDecodeSuccessful());
+        timeline.Close();
+        // Decode the finished bitstream on the CPU only after measuring export.
+        openshot::FFmpegReader reader(path);
+        reader.Open();
+        CHECK(reader.info.width==width);CHECK(reader.info.height==height);
+        CHECK(reader.info.video_length==24);
+        auto image=reader.GetFrame(12)->GetImage();
+        REQUIRE(image);CHECK(image->width()==width);CHECK(image->height()==height);
+        reader.Close();
+    }
+}
+TEST_CASE("Vulkan export accepts CPU frames and keeps writers independent", "[vulkan][writer][fallback]") {
+    // Run this with OPENSHOT_RENDER_BACKEND=cpu, an invalid Vulkan device, or
+    // an older FFmpeg too: the requested codec must fall back before the header.
+    if(!avcodec_find_encoder_by_name("libx264")){
+        WARN("Skipping Vulkan test: CPU fallback test requires libx264");
+        return;
+    }
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const auto gpu_path=directory.filePath("gpu-or-fallback.mp4").toStdString();
+    const auto cpu_path=directory.filePath("cpu.mp4").toStdString();
+    openshot::FFmpegWriter gpu(gpu_path),cpu(cpu_path);
+    gpu.SetVideoOptions(true,"h264_vulkan",openshot::Fraction(24,1),256,256,openshot::Fraction(1,1),false,false,1000000);
+    cpu.SetVideoOptions(true,"libx264",openshot::Fraction(24,1),256,256,openshot::Fraction(1,1),false,false,1000000);
+    gpu.Open();cpu.Open();
+    if(!openshot::VulkanRenderingEnabled()) CHECK(gpu.info.vcodec!="h264_vulkan");
+    for(int n=1;n<=3;++n){
+        gpu.WriteFrame(std::make_shared<openshot::Frame>(n,256,256,"red"));
+        cpu.WriteFrame(std::make_shared<openshot::Frame>(n,256,256,"blue"));
+    }
+    gpu.Close();cpu.Close();
+    for(const auto& item:std::vector<std::pair<std::string,QColor>>{{gpu_path,Qt::red},{cpu_path,Qt::blue}}){
+        openshot::FFmpegReader reader(item.first);
+        reader.Open();
+        CHECK(reader.info.video_length==3);
+        auto image=reader.GetFrame(2)->GetImage();
+        REQUIRE(image);
+        const auto actual=image->pixelColor(128,128);
+        CHECK(std::abs(actual.red()-item.second.red())<25);
+        CHECK(std::abs(actual.blue()-item.second.blue())<25);
+        reader.Close();
+    }
+}
+TEST_CASE("Vulkan export recovers from an incompatible GPU surface", "[vulkan][hardware][fallback]") {
+    if(!VulkanAvailable()) return;
+    const auto encoders=openshot::GpuEncoders();
+    if(std::find(encoders.begin(),encoders.end(),"h264_vulkan")==encoders.end()){
+        WARN("Skipping Vulkan test: no native Vulkan H.264 encoder");
+        return;
+    }
+    // A different logical device cannot write into the encoder's pool. The
+    // original frame is still readable, so this failure can use CPU pixels.
+    AVBufferRef* other=nullptr;
+    const auto name=openshot::ActiveGpuDevice().name;
+    REQUIRE(av_hwdevice_ctx_create(&other,AV_HWDEVICE_TYPE_VULKAN,name.c_str(),nullptr,0)>=0);
+    Buffer device(other),pool(av_hwframe_ctx_alloc(other));
     REQUIRE(pool);
     auto* context=reinterpret_cast<AVHWFramesContext*>(pool->data);
     context->format=AV_PIX_FMT_VULKAN;context->sw_format=AV_PIX_FMT_RGBA;
-    context->width=32;context->height=32;
+    context->width=256;context->height=256;
     REQUIRE(av_hwframe_ctx_init(pool.get())>=0);
     Frame cpu(av_frame_alloc()),gpu(av_frame_alloc());
-    cpu->format=AV_PIX_FMT_RGBA;cpu->width=32;cpu->height=32;
+    cpu->format=AV_PIX_FMT_RGBA;cpu->width=256;cpu->height=256;
     REQUIRE(av_frame_get_buffer(cpu.get(),0)>=0);
-    for(int y=0;y<32;++y)for(int x=0;x<32;++x){
-        auto* p=cpu->data[0]+y*cpu->linesize[0]+x*4;
-        p[0]=255;p[1]=0;p[2]=0;p[3]=255;
+    for(int y=0;y<256;++y)for(int x=0;x<256;++x){
+        auto* pixel=cpu->data[0]+y*cpu->linesize[0]+x*4;
+        pixel[0]=255;pixel[1]=0;pixel[2]=0;pixel[3]=255;
     }
     REQUIRE(av_hwframe_get_buffer(pool.get(),gpu.get(),0)>=0);
     REQUIRE(av_hwframe_transfer_data(gpu.get(),cpu.get(),0)>=0);
-    auto red=std::make_shared<openshot::VulkanFrameImage>(gpu.get());
-    std::shared_ptr<const openshot::FrameImage> shared;
-    try {
-        shared=openshot::ConvertVulkanToNV12(red,true);
-    } catch(const std::exception& error) {
-        WARN("Skipping Vulkan test: no DMA-BUF export on this device: " << error.what());
-        return;
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const auto path=directory.filePath("fallback.mp4").toStdString();
+    openshot::FFmpegWriter writer(path);
+    writer.SetVideoOptions(true,"h264_vulkan",openshot::Fraction(24,1),256,256,openshot::Fraction(1,1),false,false,1000000);
+    writer.Open();
+    const auto before=openshot::VulkanFrameReadbackCount();
+    for(int n=1;n<=3;++n){
+        auto frame=std::make_shared<openshot::Frame>(n,256,256,"black");
+        frame->AddDeferredImage(std::make_shared<openshot::VulkanFrameImage>(gpu.get()));
+        REQUIRE_NOTHROW(writer.WriteFrame(frame));
+        CHECK_FALSE(frame->GetDeferredImage());
     }
-    // Same pixels as the regular NV12 pool, in linear images.
-    auto surface=std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(shared);
-    REQUIRE(surface);
-    CHECK(reinterpret_cast<const AVVkFrame*>(surface->GetFrame()->data[0])->tiling==VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT);
-    Frame downloaded(av_frame_alloc());
-    REQUIRE(av_hwframe_transfer_data(downloaded.get(),surface->GetFrame(),0)>=0);
-    REQUIRE(downloaded->format==AV_PIX_FMT_NV12);
-    const int y=downloaded->data[0][4*downloaded->linesize[0]+4];
-    const int u=downloaded->data[1][2*downloaded->linesize[1]+4];
-    const int v=downloaded->data[1][2*downloaded->linesize[1]+5];
-    CHECK(y>=80);CHECK(y<=83);
-    CHECK(u>=89);CHECK(u<=92);
-    CHECK(v>=238);CHECK(v<=241);
-    // The frames map to DMA-BUF (Y and UV planes, linear) for VA-API.
-    Frame drm(av_frame_alloc());
-    drm->format=AV_PIX_FMT_DRM_PRIME;
-    const int mapped=av_hwframe_map(drm.get(),surface->GetFrame(),AV_HWFRAME_MAP_READ);
-    if(mapped==AVERROR(ENOSYS)) {
-        WARN("FFmpeg was built without libdrm; DMA-BUF mapping not checked");
-        return;
-    }
-    REQUIRE(mapped>=0);
-    const auto* desc=reinterpret_cast<const AVDRMFrameDescriptor*>(drm->data[0]);
-    CHECK(desc->nb_objects==2);
-    CHECK(desc->nb_layers==2);
-    CHECK(desc->objects[0].format_modifier==0);
-    CHECK(desc->objects[0].fd>=0);
+    writer.Close();
+    CHECK(openshot::VulkanFrameReadbackCount()==before+3);
+    openshot::FFmpegReader reader(path);
+    reader.Open();
+    CHECK(reader.info.video_length==3);
+    const auto image=reader.GetFrame(2)->GetImage();
+    REQUIRE(image);CHECK(image->pixelColor(128,128).red()>220);
+    CHECK(image->pixelColor(128,128).blue()<25);
+    reader.Close();
 }
 TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan][hardware]") {
     if(!VulkanAvailable()) return;
@@ -167,6 +271,11 @@ TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan]
     auto encoded = openshot::ConvertVulkanToNV12(second);
     auto encoded_surface = std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(encoded);
     REQUIRE(encoded_surface);
+    // NVENC still receives separate Y/UV Vulkan images for CUDA interop.
+    const auto* planes=reinterpret_cast<const AVVkFrame*>(encoded_surface->GetFrame()->data[0]);
+    REQUIRE(planes->img[0]!=VK_NULL_HANDLE);
+    CHECK(planes->img[1]!=VK_NULL_HANDLE);
+    CHECK(planes->img[0]!=planes->img[1]);
     Frame downloaded(av_frame_alloc());
     REQUIRE(downloaded);
     REQUIRE(av_hwframe_transfer_data(downloaded.get(), encoded_surface->GetFrame(), 0) >= 0);

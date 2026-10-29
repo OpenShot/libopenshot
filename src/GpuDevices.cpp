@@ -154,16 +154,16 @@ bool EncoderOpens(const char* name, AVBufferRef* device, AVPixelFormat hw_format
     context->framerate = {30, 1};
     context->bit_rate = 1000000;
     bool opened = false;
-    if (hw_format == AV_PIX_FMT_VAAPI) {
+    if (hw_format == AV_PIX_FMT_VAAPI || hw_format == AV_PIX_FMT_VULKAN) {
         AVBufferRef* frames = av_hwframe_ctx_alloc(device);
         if (frames) {
             auto* fc = reinterpret_cast<AVHWFramesContext*>(frames->data);
-            fc->format = AV_PIX_FMT_VAAPI;
+            fc->format = hw_format;
             fc->sw_format = AV_PIX_FMT_NV12;
             fc->width = context->width;
             fc->height = context->height;
             if (av_hwframe_ctx_init(frames) >= 0) {
-                context->pix_fmt = AV_PIX_FMT_VAAPI;
+                context->pix_fmt = hw_format;
                 context->hw_frames_ctx = av_buffer_ref(frames);
             }
             av_buffer_unref(&frames);
@@ -251,6 +251,10 @@ std::vector<std::string> GpuEncoders() {
     // Encoders that cannot open print errors; this is only a capability test.
     const int log_level = av_log_get_level();
     av_log_set_level(AV_LOG_QUIET);
+    // Prefer the same Vulkan device/API for every vendor, when its driver and
+    // this FFmpeg build support the requested codec. Probe, never assume.
+    for (const char* name : {"h264_vulkan", "hevc_vulkan", "av1_vulkan"})
+        if (EncoderOpens(name, vulkan, AV_PIX_FMT_VULKAN)) encoders.push_back(name);
     // CUDA derived from Vulkan is the same card (matched by UUID)
     AVBufferRef* cuda = nullptr;
     if (av_hwdevice_ctx_create_derived(&cuda, AV_HWDEVICE_TYPE_CUDA, vulkan, 0) >= 0) {

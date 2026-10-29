@@ -3,11 +3,14 @@
 #ifndef OPENSHOT_VULKAN_FRAME_IMAGE_H
 #define OPENSHOT_VULKAN_FRAME_IMAGE_H
 #include "FrameImage.h"
+#include <cstdint>
 #include <memory>
 struct AVFrame;
 namespace openshot {
 /// False when OPENSHOT_RENDER_BACKEND=cpu selects the CPU pipeline at runtime.
 bool VulkanRenderingEnabled();
+/// Process-wide count of GPU images materialized as CPU pixels (diagnostics).
+uint64_t VulkanFrameReadbackCount();
 /// A retained FFmpeg Vulkan image. CPU pixels are created only by Materialize().
 class VulkanFrameImage final : public FrameImage {
 public:

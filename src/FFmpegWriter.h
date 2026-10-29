@@ -136,6 +136,15 @@ namespace openshot {
 		uint8_t *audio_outbuf;
 		uint8_t *audio_encoder_buffer;
 
+#if USE_HW_ACCEL
+		// Hardware encoder ownership belongs to this export, never another writer.
+		bool hw_en_on = false;
+		bool hw_en_supported = false;
+		AVPixelFormat hw_en_av_pix_fmt = AV_PIX_FMT_NONE;
+		AVHWDeviceType hw_en_av_device_type = AV_HWDEVICE_TYPE_NONE;
+		AVBufferRef* hw_device_ctx = nullptr;
+		AVFrame* hw_frame = nullptr;
+#endif
 		AVFrame *persistent_src_frame = nullptr;
 		AVFrame *persistent_dst_frame = nullptr;
 		uint8_t *persistent_dst_buffer = nullptr;
@@ -167,7 +176,7 @@ namespace openshot {
 		AVStream *add_audio_stream();
 
 		/// Add a video output stream
-		AVStream *add_video_stream();
+		AVStream *add_video_stream(AVStream* existing = nullptr);
 
 		/// Allocate an AVFrame object
 		AVFrame *allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer);

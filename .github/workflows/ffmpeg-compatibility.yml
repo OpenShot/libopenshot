@@ -3,10 +3,16 @@
 
 name: FFmpeg compatibility
 on:
+  push:
+    branches: [vulkan-mvp]
   pull_request:
     paths:
       - 'src/FFmpeg*'
+      - 'src/Vulkan*'
+      - 'src/GpuDevices*'
+      - 'src/Qt/Vulkan*'
       - 'tests/FFmpeg*'
+      - 'tests/Vulkan*'
       - 'tests/CMakeLists.txt'
       - '.github/workflows/ffmpeg-compatibility.yml'
   workflow_dispatch:
@@ -57,7 +63,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build pkg-config nasm catch2 \
             libasound2-dev qtbase5-dev libqt5svg5-dev libbabl-dev libjsoncpp-dev \
-            libx264-dev libvpx-dev libvorbis-dev
+            libx264-dev libvpx-dev libvorbis-dev libvulkan-dev glslang-tools
       - name: Build isolated FFmpeg and audio dependencies
         run: |
           prefix="$RUNNER_TEMP/ffmpeg-dependencies"
@@ -83,9 +89,11 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/ffmpeg-dependencies" \
             -DENABLE_LIB_DOCS=OFF -DENABLE_PYTHON=OFF -DENABLE_OPENCV=OFF \
-            -DENABLE_MAGICK=OFF -DUSE_QT6=OFF
+            -DENABLE_MAGICK=OFF -DUSE_QT6=OFF -DENABLE_GPU_FRAME=ON
           cmake --build build --parallel 2 --target \
-            openshot-FFmpegCapabilities-test openshot-FFmpegWriter-test
+            openshot-FFmpegCapabilities-test openshot-FFmpegWriter-test \
+            openshot-VulkanCompositor-test openshot-VulkanPresentation-test
       - name: Test capability validation and audio/video exports
         working-directory: build
-        run: ctest -L '^(FFmpegCapabilities|FFmpegWriter)$' --output-on-failure --timeout 180 -j2
+        # Hardware cases skip without Vulkan support; the CPU fallback still runs.
+        run: ctest -L '^(FFmpegCapabilities|FFmpegWriter|VulkanCompositor|VulkanPresentation)$' --output-on-failure --timeout 180 -j2

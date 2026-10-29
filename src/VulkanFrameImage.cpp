@@ -1,6 +1,7 @@
 // Copyright (c) 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "VulkanFrameImage.h"
+#include <atomic>
 #include "VulkanCompositor.h"
 #include <mutex>
 #include <algorithm>
@@ -40,6 +41,8 @@ void Validate(const AVFrame* frame) {
         throw std::invalid_argument("Expected an FFmpeg Vulkan hardware frame");
 }
 }
+namespace { std::atomic<uint64_t> readback_count{0}; }
+uint64_t VulkanFrameReadbackCount() { return readback_count.load(std::memory_order_relaxed); }
 bool VulkanRenderingEnabled() {
     const char* backend = std::getenv("OPENSHOT_RENDER_BACKEND");
     return !(backend && std::strcmp(backend, "cpu") == 0);
@@ -81,6 +84,7 @@ QImage VulkanFrameImage::Materialize() const {
     std::lock_guard<std::mutex> lock(impl->mutex);
     auto cpu = AllocateFrame();
     Check(av_hwframe_transfer_data(cpu.get(), impl->frame.get(), 0), "Read back Vulkan frame");
+    readback_count.fetch_add(1,std::memory_order_relaxed);
     Check(av_frame_copy_props(cpu.get(), impl->frame.get()), "Copy Vulkan frame metadata");
     QImage result(GetWidth(), GetHeight(), QImage::Format_RGBA8888);
     if (result.isNull()) throw std::bad_alloc();
