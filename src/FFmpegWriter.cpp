@@ -428,6 +428,9 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 #if USE_HW_ACCEL
 			if (hw_en_on) {
 				av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
+				// av1_vaapi has no "qp" option: its CQP quality comes from global_quality
+				if (hw_en_av_pix_fmt == AV_PIX_FMT_VAAPI)
+					c->global_quality = std::stoi(value);
 			} else
 #endif // USE_HW_ACCEL
 			{
@@ -1996,7 +1999,11 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		// which is ffmpeg version-specific.
 		if (hw_en_av_pix_fmt == AV_PIX_FMT_VAAPI) {
 			int64_t qp;
-			if (av_opt_get_int(video_codec_ctx->priv_data, "qp", 0, &qp) != 0 || qp == 0) {
+			bool has_qp = av_opt_get_int(video_codec_ctx->priv_data, "qp", 0, &qp) == 0 && qp != 0;
+			if (!has_qp && video_codec_ctx->global_quality > 0) {
+				// encoders without a "qp" option (e.g. av1_vaapi) take CQP quality from global_quality
+				av_opt_set(video_codec_ctx->priv_data, "rc_mode", "CQP", 0);
+			} else if (!has_qp) {
 				// unless "qp" was set for CQP, switch to VBR RC mode
 				av_opt_set(video_codec_ctx->priv_data, "rc_mode", "VBR", 0);
 
