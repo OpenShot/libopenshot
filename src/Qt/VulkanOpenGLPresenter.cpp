@@ -13,8 +13,16 @@
 #include <QVariant>
 #include <QDebug>
 #include <QThread>
-#include <GL/glext.h>
+#include "ExternalOpenGL.h"
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#define VK_USE_PLATFORM_WIN32_KHR
+#else
 #include <unistd.h>
+#endif
 #include <stdexcept>
 #include <cstring>
 #include <chrono>
@@ -99,7 +107,11 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         // Multi-plane decode surfaces must first go through the RGBA compositor.
         if (fc->sw_format != AV_PIX_FMT_RGBA || vfc->format[0] != VK_FORMAT_R8G8B8A8_UNORM || image->img[1])
             return false;
+#ifdef _WIN32
+        if (!context->hasExtension("GL_EXT_memory_object_win32") || !context->hasExtension("GL_EXT_semaphore_win32"))
+#else
         if (!context->hasExtension("GL_EXT_memory_object_fd") || !context->hasExtension("GL_EXT_semaphore_fd"))
+#endif
             return false;
         auto gl = context->functions();
         auto extra = context->extraFunctions();
@@ -119,16 +131,30 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         auto createMemory = glFunction<PFNGLCREATEMEMORYOBJECTSEXTPROC>(context, "glCreateMemoryObjectsEXT");
         auto deleteMemory = glFunction<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context, "glDeleteMemoryObjectsEXT");
         auto memoryParameter = glFunction<PFNGLMEMORYOBJECTPARAMETERIVEXTPROC>(context, "glMemoryObjectParameterivEXT");
+#ifdef _WIN32
+        auto importMemory = glFunction<PFNGLIMPORTMEMORYWIN32HANDLEEXTPROC>(context, "glImportMemoryWin32HandleEXT");
+#else
         auto importMemory = glFunction<PFNGLIMPORTMEMORYFDEXTPROC>(context, "glImportMemoryFdEXT");
+#endif
         auto textureMemory = glFunction<PFNGLTEXSTORAGEMEM2DEXTPROC>(context, "glTexStorageMem2DEXT");
         auto createSemaphore = glFunction<PFNGLGENSEMAPHORESEXTPROC>(context, "glGenSemaphoresEXT");
         auto deleteSemaphore = glFunction<PFNGLDELETESEMAPHORESEXTPROC>(context, "glDeleteSemaphoresEXT");
+#ifdef _WIN32
+        auto importSemaphore = glFunction<PFNGLIMPORTSEMAPHOREWIN32HANDLEEXTPROC>(context, "glImportSemaphoreWin32HandleEXT");
+#else
         auto importSemaphore = glFunction<PFNGLIMPORTSEMAPHOREFDEXTPROC>(context, "glImportSemaphoreFdEXT");
+#endif
         auto waitSemaphore = glFunction<PFNGLWAITSEMAPHOREEXTPROC>(context, "glWaitSemaphoreEXT");
         auto signalSemaphore = glFunction<PFNGLSIGNALSEMAPHOREEXTPROC>(context, "glSignalSemaphoreEXT");
+#ifdef _WIN32
+        auto getMemoryHandle = reinterpret_cast<PFN_vkGetMemoryWin32HandleKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetMemoryWin32HandleKHR"));
+        auto getSemaphoreHandle = reinterpret_cast<PFN_vkGetSemaphoreWin32HandleKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetSemaphoreWin32HandleKHR"));
+        if (!getMemoryHandle || !getSemaphoreHandle || vk->queue_family_comp_index < 0) return false;
+#else
         auto getMemoryFd = reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetMemoryFdKHR"));
         auto getSemaphoreFd = reinterpret_cast<PFN_vkGetSemaphoreFdKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetSemaphoreFdKHR"));
         if (!getMemoryFd || !getSemaphoreFd || vk->queue_family_comp_index < 0) return false;
+#endif
         // Construct all fallible GL resources before transferring image ownership.
         QOpenGLShaderProgram program;
         if (!program.addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -143,7 +169,11 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         VkSemaphore handoff[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
         VkCommandPool pool = VK_NULL_HANDLE;
         VkFence fence = VK_NULL_HANDLE;
+#ifdef _WIN32
+        HANDLE memoryHandle = nullptr, semaphoreHandle = nullptr;
+#else
         int memoryFd = -1, semaphoreFd = -1;
+#endif
         auto cleanup = [&]() {
             if (vertexArray) {
                 extra->glBindVertexArray(previousVertexArray);
@@ -161,15 +191,27 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             for (auto semaphore : handoff)
                 if (semaphore) vkDestroySemaphore(device, semaphore, nullptr);
             stage("delete Vulkan resources");
+#ifdef _WIN32
+            if (memoryHandle) CloseHandle(memoryHandle);
+            if (semaphoreHandle) CloseHandle(semaphoreHandle);
+#else
             if (memoryFd >= 0) close(memoryFd);
             if (semaphoreFd >= 0) close(semaphoreFd);
+#endif
         };
         bool locked = false;
         try {
+#ifdef _WIN32
+            VkMemoryGetWin32HandleInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR};
+            memoryInfo.memory = image->mem[0];
+            memoryInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+            check(getMemoryHandle(device, &memoryInfo, &memoryHandle), "Export Vulkan image memory");
+#else
             VkMemoryGetFdInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR};
             memoryInfo.memory = image->mem[0];
             memoryInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
             check(getMemoryFd(device, &memoryInfo, &memoryFd), "Export Vulkan image memory");
+#endif
             createMemory(1, &memory);
             VkMemoryDedicatedRequirements dedicated{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS};
             VkMemoryRequirements2 requirements{VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, &dedicated};
@@ -178,8 +220,16 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             vkGetImageMemoryRequirements2(device, &requirementInfo, &requirements);
             GLint useDedicated = dedicated.prefersDedicatedAllocation || dedicated.requiresDedicatedAllocation;
             memoryParameter(memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &useDedicated);
+#ifdef _WIN32
+            importMemory(memory, image->size[0], GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, memoryHandle);
+            // Unlike file descriptors, Win32 imports retain the resource, not
+            // ownership of the application's handle.
+            CloseHandle(memoryHandle);
+            memoryHandle = nullptr;
+#else
             importMemory(memory, image->size[0], GL_HANDLE_TYPE_OPAQUE_FD_EXT, memoryFd);
             memoryFd = -1; // GL consumes imported descriptors.
+#endif
             stage("import memory");
             gl->glGenTextures(1, &texture);
             gl->glBindTexture(GL_TEXTURE_2D, texture);
@@ -190,19 +240,33 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             textureMemory(GL_TEXTURE_2D, 1, GL_RGBA8, source->width, source->height, memory, image->offset[0]);
             stage("texture storage");
             VkExportSemaphoreCreateInfo exportInfo{VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO};
+#ifdef _WIN32
+            exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#else
             exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
             VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &exportInfo};
             // Separate directions: reusing one binary semaphore lets Vulkan's
             // acquire consume its own release signal before GL can wait on it.
             createSemaphore(2, semaphores);
             for (int direction = 0; direction < 2; ++direction) {
                 check(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &handoff[direction]), "Create presentation semaphore");
+#ifdef _WIN32
+                VkSemaphoreGetWin32HandleInfoKHR handleInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR};
+                handleInfo.semaphore = handoff[direction];
+                handleInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+                check(getSemaphoreHandle(device, &handleInfo, &semaphoreHandle), "Export presentation semaphore");
+                importSemaphore(semaphores[direction], GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, semaphoreHandle);
+                CloseHandle(semaphoreHandle);
+                semaphoreHandle = nullptr;
+#else
                 VkSemaphoreGetFdInfoKHR fdInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR};
                 fdInfo.semaphore = handoff[direction];
                 fdInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
                 check(getSemaphoreFd(device, &fdInfo, &semaphoreFd), "Export presentation semaphore");
                 importSemaphore(semaphores[direction], GL_HANDLE_TYPE_OPAQUE_FD_EXT, semaphoreFd);
                 semaphoreFd = -1;
+#endif
             }
             if (gl->glGetError() != GL_NO_ERROR) throw std::runtime_error("OpenGL external memory import failed");
             const uint32_t family = vk->queue_family_comp_index;

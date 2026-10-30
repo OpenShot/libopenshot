@@ -3,6 +3,9 @@
 #include "VulkanCompositor.h"
 #include "VulkanEncodeConverter.h"
 #include "VulkanFrameImage.h"
+#ifdef __APPLE__
+#include "MacVulkanInterop.h"
+#endif
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -102,6 +105,7 @@ class Pipeline {
         bool busy=false;
         std::vector<VkImageView> views;
         FramePtr target;
+        std::vector<FramePtr> inputs;
     };
     std::array<Slot,kSlots> ring;
     int next_slot=0;
@@ -189,6 +193,7 @@ public:
         for(auto view:slot.views) vkDestroyImageView(device,view,nullptr);
         slot.views.clear();
         slot.target.reset();
+        slot.inputs.clear();
     }
     VkImageView View(VkImage image,VkFormat format,VkImageAspectFlags aspect){
         VkImageViewCreateInfo vi{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -222,10 +227,14 @@ public:
                 throw std::runtime_error("Encoder target cannot be written by a Vulkan shader");
             AvCheck(av_frame_ref(output.get(),target),"Retain encoder target");
         }else{
+#ifdef __APPLE__
+            output.reset(AllocateMacVulkanFrame(device_ref,width,height,encode_nv12));
+#else
             AVBufferRef* pool=OutputPool(device_ref,width,height,encode_nv12);
             const int allocated=av_hwframe_get_buffer(pool,output.get(),0);
             av_buffer_unref(&pool);
             AvCheck(allocated,"Allocate compositor output");
+#endif
         }
         AvCheck(av_frame_copy_props(output.get(),src),"Copy compositor metadata");
         output->colorspace=encode_nv12?AVCOL_SPC_SMPTE170M:AVCOL_SPC_RGB; output->color_range=encode_nv12?AVCOL_RANGE_MPEG:AVCOL_RANGE_JPEG;
@@ -255,6 +264,11 @@ public:
         p.coeffs[0]=full?1.0:255.0/219.0;p.extra[1]=full?0.0:16.0/255.0;p.extra[2]=128.0/255.0;
         p.coeffs[1]=2*(1-kr)*cscale;p.coeffs[2]=-2*kb*(1-kb)/(1-kr-kb)*cscale;
         p.coeffs[3]=-2*kr*(1-kr)/(1-kr-kb)*cscale;p.extra[0]=2*(1-kb)*cscale;
+        // Retire before locking inputs: releasing the last imported surface can
+        // wait on that frame's synchronization mutex.
+        Slot& slot=ring[next_slot];
+        next_slot=(next_slot+1)%kSlots;
+        Retire(slot);
         // Lock in stable address order, avoiding deadlocks when frames are shared.
         std::vector<const AVFrame*> all{src,output.get()};
         if(back && back->data[0]!=src->data[0]) all.push_back(back);
@@ -266,18 +280,19 @@ public:
         const bool separate_nv12 = p.modes[0]==1 && sf->img[1]!=VK_NULL_HANDLE && sf->img[1]!=sf->img[0];
         if(separate_nv12) plane_count=2;
         const auto* svc=reinterpret_cast<const AVVulkanFramesContext*>(src_fc->hwctx);
-        Slot& slot=ring[next_slot];
-        next_slot=(next_slot+1)%kSlots;
-        Retire(slot);
         auto& owned_views=slot.views;
         VkCommandBuffer cmd=slot.cmd;
         const VkDescriptorSet set=slot.set;
         try {
             // Ordinary outputs use our shared pools. An encoder's pool can
             // disappear when its writer closes, before this cached pipeline.
-            if(target){
-                slot.target.reset(av_frame_clone(output.get()));
-                if(!slot.target) throw std::bad_alloc();
+            slot.target.reset(av_frame_clone(output.get()));
+            if(!slot.target) throw std::bad_alloc();
+            for(const AVFrame* input_frame : {src, back}) {
+                if (!input_frame) continue;
+                FramePtr retained(av_frame_clone(input_frame));
+                if (!retained) throw std::bad_alloc();
+                slot.inputs.push_back(std::move(retained));
             }
             std::array<VkImageView,5> views{};
             auto make_view=[&](VkImage image,VkFormat format,VkImageAspectFlags aspect){
@@ -357,6 +372,8 @@ public:
             locks.clear();
             return std::make_shared<VulkanFrameImage>(output.get(),!encode_nv12);
         }catch(...){
+            // Imported surface destructors acquire the same frame mutexes.
+            locks.clear();
             Retire(slot);
             throw;
         }
@@ -407,6 +424,9 @@ std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const Fram
 }
 
 void ReleaseVulkanMemory() {
+#ifdef __APPLE__
+    ReleaseMacVulkanPools();
+#endif
     auto& shared=SharedPools();
     const std::lock_guard<std::mutex> lock(shared.mutex);
     for(auto& item:shared.pools) av_buffer_unref(&item.second);

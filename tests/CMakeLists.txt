@@ -99,10 +99,7 @@ set(OPENSHOT_TESTS
 )
 
 if(ENABLE_GPU_FRAME)
-  list(APPEND OPENSHOT_TESTS VulkanCompositor)
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND OPENSHOT_TESTS VulkanPresentation)
-  endif()
+  list(APPEND OPENSHOT_TESTS VulkanCompositor VulkanPresentation)
 endif()
 
 # The SIGPIPE crash-handler test is POSIX-only. Do not create an empty

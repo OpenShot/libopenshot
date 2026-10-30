@@ -48,9 +48,15 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
         return;
     }
     const QByteArray platform = qgetenv("QT_QPA_PLATFORM");
+#ifdef __linux__
     if ((platform.isEmpty() || platform.startsWith("xcb")) && !qEnvironmentVariableIsSet("DISPLAY") &&
         !qEnvironmentVariableIsSet("WAYLAND_DISPLAY")) {
         WARN("Skipping Vulkan test: presentation needs a display with OpenGL");
+        return;
+    }
+#endif
+    if (platform == "offscreen" || platform == "minimal") {
+        WARN("Skipping Vulkan test: presentation needs a native OpenGL display");
         return;
     }
     Frames data;
@@ -89,11 +95,17 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     widget.show();
     QCoreApplication::processEvents();
     auto* context = widget.context();
-    if (!context || !context->hasExtension("GL_EXT_memory_object_fd") ||
-        !context->hasExtension("GL_EXT_semaphore_fd")) {
+    if (!context
+#ifdef _WIN32
+        || !context->hasExtension("GL_EXT_memory_object_win32") || !context->hasExtension("GL_EXT_semaphore_win32")
+#elif !defined(__APPLE__)
+        || !context->hasExtension("GL_EXT_memory_object_fd") || !context->hasExtension("GL_EXT_semaphore_fd")
+#endif
+    ) {
         WARN("Skipping Vulkan test: OpenGL lacks Vulkan memory/semaphore interop");
         return;
     }
+    const auto readbacks = openshot::VulkanFrameReadbackCount();
     renderer.paint(frame);
     for (int i = 0; i < 20; ++i) {
         QCoreApplication::processEvents();
@@ -109,6 +121,9 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
         REQUIRE(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
     }
     REQUIRE(widget.nativeDraw);
+    CHECK(widget.presenter.NativeDraws() >= 64);
+    CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
     REQUIRE(frame->GetDeferredImage());
     REQUIRE_FALSE(image.isNull());
     if (qEnvironmentVariableIsSet("OPENSHOT_PRESENTATION_CAPTURE"))

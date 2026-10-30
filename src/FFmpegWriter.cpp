@@ -34,6 +34,9 @@
 #include "VulkanFrameImage.h"
 #include "VulkanCompositor.h"
 #include "VulkanEncodeConverter.h"
+#ifdef __APPLE__
+#include "MacVulkanInterop.h"
+#endif
 #endif
 #include "OpenMPUtilities.h"
 #include "Settings.h"
@@ -2702,6 +2705,49 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 	if (src_w == 1 && src_h == 1)
 		return;
 
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__) && USE_HW_ACCEL
+    if (!gpu_export_failed && hw_en_on && hw_en_supported &&
+        video_codec_ctx->pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX && video_codec_ctx->hw_frames_ctx) {
+        auto surface = frame->GetDeferredImage();
+        if (surface) {
+            AVFrame* encoded = av_frame_alloc();
+            try {
+                if (!encoded) throw std::bad_alloc();
+                auto native = std::dynamic_pointer_cast<const VulkanFrameImage>(surface);
+                const auto* context = native ? reinterpret_cast<const AVHWFramesContext*>(native->GetFrame()->hw_frames_ctx->data) : nullptr;
+                if (src_w != info.width || src_h != info.height || !context || context->sw_format != AV_PIX_FMT_RGBA) {
+                    QTransform scale;
+                    scale.scale(double(info.width) / src_w, double(info.height) / src_h);
+                    surface = RenderVulkanImage(surface, nullptr, info.width, info.height, scale, 1.0, Qt::black);
+                }
+                // Render directly into the encoder's own Core Video pixel buffer.
+                // No CPU download, upload, or separate NV12 image copy is needed.
+                const int allocated = av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, encoded, 0);
+                if (allocated < 0) throw std::runtime_error("Allocate VideoToolbox encoder frame: " + av_err2string(allocated));
+                std::unique_ptr<AVFrame, void(*)(AVFrame*)> target(ImportVideoToolboxFrame(encoded, true),
+                    [](AVFrame* value) { av_frame_free(&value); });
+                auto converted = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface, target.get()));
+                if (!converted) throw std::runtime_error("No shared VideoToolbox conversion result");
+                // VideoToolbox does not consume Vulkan timeline semaphores. Retire
+                // GPU writes before handing the same IOSurface to its encoder.
+                WaitMacVulkanFrame(converted->GetFrame());
+                const int copied = av_frame_copy_props(encoded, converted->GetFrame());
+                if (copied < 0) throw std::bad_alloc();
+                add_avframe(frame, encoded);
+                encoded = nullptr; // add_avframe owns the retained encoder frame.
+                if (!gpu_export_logged) {
+                    gpu_export_logged = true;
+                    Logger::Instance()->Log("Vulkan export: encoder-owned VideoToolbox IOSurface (no CPU copy)", Logger::LevelInfo);
+                }
+                return;
+            } catch (const std::exception& error) {
+                av_frame_free(&encoded);
+                gpu_export_failed = true;
+                Logger::Instance()->Log(std::string("VideoToolbox GPU export CPU fallback: ") + error.what(), Logger::LevelWarning);
+            }
+        }
+    }
+#endif
 #if defined(OPENSHOT_ENABLE_GPU_FRAME) && USE_HW_ACCEL
 	// Native Vulkan writes directly into encoder-owned NV12. NVENC retains its
 	// device-to-device transfer path; other encoders use the established CPU path.

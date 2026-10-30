@@ -1,3 +1,6 @@
+#ifdef __APPLE__
+#include "MacVulkanInterop.h"
+#endif
 // Copyright (c) 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "openshot_catch.h"
@@ -125,12 +128,14 @@ TEST_CASE("Native Vulkan export keeps decoded and composited frames on the GPU",
         writer.SetVideoOptions(true,"h264_vulkan",openshot::Fraction(24,1),width,height,openshot::Fraction(1,1),false,false,1000000);
         writer.Open();
         REQUIRE(writer.info.vcodec=="h264_vulkan"); // CPU fallback must not pass this test.
+        std::shared_ptr<openshot::Frame> expected_frame;
         const auto readbacks=openshot::VulkanFrameReadbackCount();
         for(int n=1;n<=24;++n){
             auto frame=timeline.GetFrame(n);
             REQUIRE(frame->GetDeferredImage());
             writer.WriteFrame(frame);
             REQUIRE(frame->GetDeferredImage());
+            if (n == 12) expected_frame = frame;
         }
         writer.Close();
         CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
@@ -278,7 +283,11 @@ TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan]
     CHECK(planes->img[0]!=planes->img[1]);
     Frame downloaded(av_frame_alloc());
     REQUIRE(downloaded);
+#ifdef __APPLE__
+    REQUIRE(openshot::ReadMacVulkanFrame(downloaded.get(), encoded_surface->GetFrame()) >= 0);
+#else
     REQUIRE(av_hwframe_transfer_data(downloaded.get(), encoded_surface->GetFrame(), 0) >= 0);
+#endif
     REQUIRE(downloaded->format == AV_PIX_FMT_NV12);
     const int y = downloaded->data[0][4 * downloaded->linesize[0] + 4];
     const int u = downloaded->data[1][2 * downloaded->linesize[1] + 4];
@@ -428,3 +437,67 @@ TEST_CASE("Vulkan high quality reader resizing uses bicubic antialiasing", "[vul
         if(size!=QSize(32,32)) CHECK(high_error<low_error);
     }
 }
+
+#ifdef __APPLE__
+TEST_CASE("VideoToolbox export shares decoder compositor and encoder surfaces", "[vulkan][hardware][writer][apple]") {
+    if (!VulkanAvailable()) return;
+    const auto encoders = openshot::GpuEncoders();
+    if (std::find(encoders.begin(), encoders.end(), "h264_videotoolbox") == encoders.end()) {
+        WARN("Skipping Vulkan test: no hardware VideoToolbox H.264 encoder");
+        return;
+    }
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    for (int pass = 0; pass < 2; ++pass) {
+        const int width = pass ? 1280 : 640, height = pass ? 720 : 360;
+        openshot::FFmpegReader base_reader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+        openshot::FFmpegReader overlay_reader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+        openshot::Clip base(&base_reader), overlay(&overlay_reader);
+        openshot::Timeline timeline(width,height,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+        timeline.SetMaxSize(width,height);
+        base.Layer(0); overlay.Layer(1);
+        base.Start(5.0); overlay.Start(8.0);
+        overlay.scale_x=openshot::Keyframe(0.7); overlay.rotation=openshot::Keyframe(12.0);
+        overlay.alpha=openshot::Keyframe(0.6);
+        timeline.AddClip(&base); timeline.AddClip(&overlay); timeline.Open();
+        const auto path=directory.filePath(QString("videotoolbox-%1.mp4").arg(pass)).toStdString();
+        openshot::FFmpegWriter writer(path);
+        writer.SetVideoOptions(true,"h264_videotoolbox",openshot::Fraction(24,1),width,height,openshot::Fraction(1,1),false,false,1000000);
+        writer.Open();
+        std::shared_ptr<openshot::Frame> expected_frame;
+        const auto readbacks=openshot::VulkanFrameReadbackCount();
+        for(int n=1;n<=24;++n){
+            auto frame=timeline.GetFrame(n);
+            REQUIRE(frame->GetDeferredImage());
+            writer.WriteFrame(frame);
+            REQUIRE(frame->GetDeferredImage());
+            if (n == 12) expected_frame = frame;
+        }
+        writer.Close();
+        CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+        CHECK(base_reader.HardwareDecodeSuccessful());
+        CHECK(overlay_reader.HardwareDecodeSuccessful());
+        timeline.Close();
+        openshot::FFmpegReader verify(path);
+        verify.Open();
+        CHECK(verify.info.width==width); CHECK(verify.info.height==height);
+        CHECK(verify.info.video_length==24);
+        auto image=verify.GetFrame(12)->GetImage();
+        REQUIRE(image); CHECK(image->width()==width); CHECK(image->height()==height);
+        const auto expected = expected_frame->GetImage();
+        double error = 0, brightness = 0;
+        int samples = 0;
+        for (int y = 8; y < height; y += 16) {
+            for (int x = 8; x < width; x += 16) {
+                const auto a = expected->pixelColor(x, y), b = image->pixelColor(x, y);
+                error += std::abs(a.red()-b.red()) + std::abs(a.green()-b.green()) + std::abs(a.blue()-b.blue());
+                brightness += a.red() + a.green() + a.blue();
+                samples += 3;
+            }
+        }
+        CHECK(brightness / samples > 10);
+        CHECK(error / samples < 20);
+        verify.Close();
+    }
+}
+#endif

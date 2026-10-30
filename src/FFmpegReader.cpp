@@ -146,6 +146,13 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 // Get hardware pix format
 static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__)
+    if (ctx->hw_device_ctx && reinterpret_cast<AVHWDeviceContext*>(ctx->hw_device_ctx->data)->type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX) {
+        for (auto format = pix_fmts; *format != AV_PIX_FMT_NONE; ++format)
+            if (*format == AV_PIX_FMT_VIDEOTOOLBOX) return *format;
+        return avcodec_default_get_format(ctx, pix_fmts);
+    }
+#endif
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 	if (ctx->hw_device_ctx && reinterpret_cast<AVHWDeviceContext*>(ctx->hw_device_ctx->data)->type == AV_HWDEVICE_TYPE_VULKAN) {
 		for (auto format = pix_fmts; *format != AV_PIX_FMT_NONE; ++format)
@@ -331,7 +338,12 @@ void FFmpegReader::Open() {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 					hw_de_supported = 0;
 					for (int index = 0; const AVCodecHWConfig* config = avcodec_get_hw_config(pCodec, index); ++index) {
-						if (config->device_type == AV_HWDEVICE_TYPE_VULKAN &&
+						if (config->device_type ==
+#ifdef __APPLE__
+                            AV_HWDEVICE_TYPE_VIDEOTOOLBOX &&
+#else
+                            AV_HWDEVICE_TYPE_VULKAN &&
+#endif
 							(config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) {
 							hw_de_supported = 1;
 							break;
@@ -444,12 +456,16 @@ void FFmpegReader::Open() {
 					}
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
+#ifdef __APPLE__
+                    hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+#else
 					hw_de_av_device_type = AV_HWDEVICE_TYPE_VULKAN;
+#endif
 					adapter_ptr = nullptr;
 #endif
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
-#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && !defined(__APPLE__)
 					if (CreateSharedVulkanDevice(&hw_device_ctx) >= 0) {
 #else
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
@@ -1636,7 +1652,10 @@ bool FFmpegReader::GetAVFrame() {
 
 	#if USE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
-#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__)
+        hw_de_av_pix_fmt = AV_PIX_FMT_VIDEOTOOLBOX;
+        hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+#elif defined(OPENSHOT_ENABLE_GPU_FRAME)
 		hw_de_av_pix_fmt = AV_PIX_FMT_VULKAN;
 		hw_de_av_device_type = AV_HWDEVICE_TYPE_VULKAN;
 #else
@@ -1711,7 +1730,11 @@ bool FFmpegReader::GetAVFrame() {
 			if (hw_de_on && hw_de_supported) {
 				int err;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-				if (next_frame2->format == AV_PIX_FMT_VULKAN) {
+				if ((next_frame2->format == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+                     || next_frame2->format == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+                    )) {
 					decoded_frame = next_frame2;
 				} else
 #endif
@@ -1753,7 +1776,11 @@ bool FFmpegReader::GetAVFrame() {
 				decoded_frame = next_frame2;
 			}
 
-			if (!decoded_frame->data[0]) {
+			if (!decoded_frame->data[0]
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__)
+                && !(decoded_frame->format == AV_PIX_FMT_VIDEOTOOLBOX && decoded_frame->data[3])
+#endif
+            ) {
 				Logger::Instance()->AppendDebugMethod(
 					"FFmpegReader::GetAVFrame (Decoded frame missing image data)",
 					"format", decoded_frame->format,
@@ -1770,7 +1797,11 @@ bool FFmpegReader::GetAVFrame() {
 #if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported && !force_sw_decode) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-				hw_decode_succeeded = hw_decode_succeeded || next_frame2->format == AV_PIX_FMT_VULKAN;
+				hw_decode_succeeded = hw_decode_succeeded || (next_frame2->format == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+                     || next_frame2->format == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+                    );
 #else
 				hw_decode_succeeded = true;
 #endif
@@ -1785,7 +1816,11 @@ bool FFmpegReader::GetAVFrame() {
 			const int decoded_width = decoded_frame->width > 0 ? decoded_frame->width : info.width;
 			const int decoded_height = decoded_frame->height > 0 ? decoded_frame->height : info.height;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-			if (decoded_pix_fmt == AV_PIX_FMT_VULKAN) {
+			if (decoded_pix_fmt == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+                || decoded_pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+            ) {
 				if (av_frame_ref(pFrame, decoded_frame) < 0)
 					throw OutOfMemory("Failed to retain Vulkan frame", path);
 			} else {
@@ -2113,7 +2148,11 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	}
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	if (pFrame && pFrame->format == AV_PIX_FMT_VULKAN) {
+	if (pFrame && (pFrame->format == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+        || pFrame->format == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+    )) {
 		try {
 			if (!vulkan_processor) vulkan_processor = std::make_shared<VulkanFrameProcessor>();
 			auto f = CreateFrame(current_frame);

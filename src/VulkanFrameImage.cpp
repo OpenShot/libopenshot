@@ -3,6 +3,9 @@
 #include "VulkanFrameImage.h"
 #include <atomic>
 #include "VulkanCompositor.h"
+#ifdef __APPLE__
+#include "MacVulkanInterop.h"
+#endif
 #include <mutex>
 #include <algorithm>
 #include <cstdlib>
@@ -63,6 +66,9 @@ int VulkanFrameImage::GetWidth() const { return impl->frame->width; }
 int VulkanFrameImage::GetHeight() const { return impl->frame->height; }
 const AVFrame* VulkanFrameImage::GetFrame() const { return impl->frame.get(); }
 int64_t VulkanFrameImage::GetBytes() const {
+#ifdef __APPLE__
+    if (IsMacVulkanFrame(impl->frame.get())) return MacVulkanFrameBytes(impl->frame.get());
+#endif
     const auto* frame = reinterpret_cast<const AVVkFrame*>(impl->frame->data[0]);
     int64_t bytes = 0;
     for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i) {
@@ -83,7 +89,12 @@ int64_t VulkanFrameImage::GetBytes() const {
 QImage VulkanFrameImage::Materialize() const {
     std::lock_guard<std::mutex> lock(impl->mutex);
     auto cpu = AllocateFrame();
-    Check(av_hwframe_transfer_data(cpu.get(), impl->frame.get(), 0), "Read back Vulkan frame");
+#ifdef __APPLE__
+    if (IsMacVulkanFrame(impl->frame.get()))
+        Check(ReadMacVulkanFrame(cpu.get(), impl->frame.get()), "Read back Mac Vulkan frame");
+    else
+#endif
+        Check(av_hwframe_transfer_data(cpu.get(), impl->frame.get(), 0), "Read back Vulkan frame");
     readback_count.fetch_add(1,std::memory_order_relaxed);
     Check(av_frame_copy_props(cpu.get(), impl->frame.get()), "Copy Vulkan frame metadata");
     QImage result(GetWidth(), GetHeight(), QImage::Format_RGBA8888);
@@ -113,6 +124,13 @@ VulkanFrameProcessor::VulkanFrameProcessor() : impl(new Impl) {}
 VulkanFrameProcessor::~VulkanFrameProcessor() = default;
 void VulkanFrameProcessor::Reset() {}
 std::shared_ptr<const FrameImage> VulkanFrameProcessor::Process(const AVFrame* frame, int width, int height, bool high_quality) {
+#ifdef __APPLE__
+    OwnedFrame imported;
+    if (frame && frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+        imported.reset(ImportVideoToolboxFrame(frame));
+        frame = imported.get();
+    }
+#endif
     Validate(frame);
     if (width <= 0 || height <= 0) throw std::invalid_argument("Invalid Vulkan output dimensions");
     // Preserve the existing FFmpegReader conversion matrix (SWS_CS_DEFAULT / BT.601).

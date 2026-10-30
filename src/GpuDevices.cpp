@@ -148,13 +148,13 @@ bool EncoderOpens(const char* name, AVBufferRef* device, AVPixelFormat hw_format
     if (!codec) return false;
     AVCodecContext* context = avcodec_alloc_context3(codec);
     if (!context) return false;
-    context->width = 256;
-    context->height = 256;
+    context->width = 640;
+    context->height = 360;
     context->time_base = {1, 30};
     context->framerate = {30, 1};
     context->bit_rate = 1000000;
     bool opened = false;
-    if (hw_format == AV_PIX_FMT_VAAPI || hw_format == AV_PIX_FMT_VULKAN) {
+    if (hw_format == AV_PIX_FMT_VAAPI || hw_format == AV_PIX_FMT_VULKAN || hw_format == AV_PIX_FMT_VIDEOTOOLBOX) {
         AVBufferRef* frames = av_hwframe_ctx_alloc(device);
         if (frames) {
             auto* fc = reinterpret_cast<AVHWFramesContext*>(frames->data);
@@ -196,10 +196,20 @@ int CreateSharedVulkanDevice(AVBufferRef** output) {
         if (shared.tried)
             return AVERROR(ENODEV);
         shared.tried = true;
+#ifdef __APPLE__
+        // Work around imported-texture argument-buffer writes on older Intel
+        // Metal drivers. An explicit user setting still takes precedence.
+        setenv("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", "0", 0);
+#endif
         int result = AVERROR(ENODEV);
         for (const auto& device : VulkanDeviceCandidates()) {
+            AVDictionary* options = nullptr;
+#ifdef __APPLE__
+            av_dict_set(&options, "device_extensions", "VK_EXT_metal_objects", 0);
+#endif
             result = av_hwdevice_ctx_create(&shared.device, AV_HWDEVICE_TYPE_VULKAN,
-                device.empty() ? nullptr : device.c_str(), nullptr, 0);
+                device.empty() ? nullptr : device.c_str(), options, 0);
+            av_dict_free(&options);
             if (result >= 0)
                 break;
         }
@@ -269,6 +279,14 @@ std::vector<std::string> GpuEncoders() {
             if (EncoderOpens(name, cuda, AV_PIX_FMT_CUDA)) encoders.push_back(name);
         av_buffer_unref(&cuda);
     }
+#ifdef __APPLE__
+    AVBufferRef* videotoolbox = nullptr;
+    if (av_hwdevice_ctx_create(&videotoolbox, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0) >= 0) {
+        for (const char* name : {"h264_videotoolbox", "hevc_videotoolbox"})
+            if (EncoderOpens(name, videotoolbox, AV_PIX_FMT_VIDEOTOOLBOX)) encoders.push_back(name);
+        av_buffer_unref(&videotoolbox);
+    }
+#endif
     AVBufferRef* vaapi = nullptr;
     if (!gpu.render_node.empty() &&
         av_hwdevice_ctx_create(&vaapi, AV_HWDEVICE_TYPE_VAAPI, gpu.render_node.c_str(), nullptr, 0) >= 0) {
