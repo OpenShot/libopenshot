@@ -98,8 +98,11 @@ set(OPENSHOT_TESTS
   WaveEffect
 )
 
-if(ENABLE_GPU_FRAME AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  list(APPEND OPENSHOT_TESTS VulkanPresentation VulkanCompositor)
+if(ENABLE_GPU_FRAME)
+  list(APPEND OPENSHOT_TESTS VulkanCompositor)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND OPENSHOT_TESTS VulkanPresentation)
+  endif()
 endif()
 
 # The SIGPIPE crash-handler test is POSIX-only. Do not create an empty

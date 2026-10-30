@@ -17,6 +17,11 @@
 #include <array>
 #include <cstdio>
 #include <cstdlib>
+// Windows CRT equivalents for these tests (all calls overwrite).
+#ifdef _WIN32
+#define setenv(name, value, overwrite) _putenv_s(name, value)
+#define unsetenv(name) _putenv_s(name, "")
+#endif
 #include <ctime>
 #include <chrono>
 #include <future>
