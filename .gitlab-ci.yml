@@ -17,6 +17,7 @@ init-builders:
   tags:
     - gitlab
   script:
+    - echo "GitLab server version $CI_SERVER_VERSION"
     - send-ci-sqs linux
     - send-ci-sqs windows
 
