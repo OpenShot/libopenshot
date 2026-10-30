@@ -89,6 +89,11 @@ if (CMAKE_VERSION VERSION_GREATER 3.20)
 endif()
 
 ### Add the SWIG interface file (which defines all the SWIG methods)
+# Older UseSWIG versions do not track transitive %include headers. Regenerate
+# the wrapper when GPU diagnostics change, including in incremental builds.
+set(SWIG_MODULE_pyopenshot_EXTRA_DEPS
+  "${PROJECT_SOURCE_DIR}/src/GpuDevices.h"
+  "${PROJECT_SOURCE_DIR}/src/Qt/VulkanOpenGLPresenter.h")
 swig_add_library(pyopenshot LANGUAGE python SOURCES openshot.i)
 
 if (POLICY CMP0078)

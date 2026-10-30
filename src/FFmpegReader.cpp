@@ -1797,17 +1797,27 @@ bool FFmpegReader::GetAVFrame() {
 #if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported && !force_sw_decode) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
+				const bool previously_decoded_on_gpu = hw_decode_succeeded;
 				hw_decode_succeeded = hw_decode_succeeded || (next_frame2->format == AV_PIX_FMT_VULKAN
 #ifdef __APPLE__
                      || next_frame2->format == AV_PIX_FMT_VIDEOTOOLBOX
 #endif
                     );
+				if (!previously_decoded_on_gpu && hw_decode_succeeded)
+					Logger::Instance()->Log("GPU decode confirmed: " + info.vcodec + "; " +
+						(next_frame2->format == AV_PIX_FMT_VULKAN ? "Vulkan" : "VideoToolbox") + "; " + path,
+						Logger::LevelInfo);
 #else
 				hw_decode_succeeded = true;
 #endif
 			}
 #endif
 			packet_status.video_decoded++;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			if (packet_status.video_decoded == 1 && !hw_decode_succeeded)
+				Logger::Instance()->Log("GPU decode not observed: CPU video frame received; codec=" +
+					info.vcodec + "; " + path, Logger::LevelInfo);
+#endif
 
 			// Allocate image (align 32 for simd)
 			AVPixelFormat decoded_pix_fmt = (AVPixelFormat)(decoded_frame->format);

@@ -151,6 +151,11 @@ void FFmpegWriter::Open() {
 #else
 			open_video(oc, video_st);
 #endif
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			Logger::Instance()->Log("GPU export setup: encoder=" + info.vcodec +
+				"; hardware encoding configured=" + (hw_en_on && hw_en_supported ? "yes" : "no") +
+				"; frame interop is checked when frames arrive", Logger::LevelInfo);
+#endif
 		}
 		if (info.has_audio && audio_st)
 			open_audio(oc, audio_st);

@@ -51,6 +51,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     std::shared_ptr<const VulkanFrameImage> display_surface;
     bool fallback_delivered = false;
     uint64_t native_draws = 0, fallback_frames = 0;
+    std::string last_failure;
+    bool unavailable(const std::string& reason) { last_failure = reason; return false; }
     explicit Impl(QWidget* value) : widget(value) {
         value->setProperty("openshot_gpu_presenter", QVariant::fromValue(static_cast<QObject*>(this)));
     }
@@ -64,7 +66,10 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     }
     void PresentFrame(const std::shared_ptr<Frame>& value) override {
         frame = value; display_surface.reset(); fallback_delivered = false;
-        if (frame && !frame->GetDeferredImage()) fallback();
+        if (frame && !frame->GetDeferredImage()) {
+            last_failure = "Frame is CPU-backed (decode, rendering, or an effect required CPU pixels)";
+            fallback();
+        }
         if (widget) {
             if (frame && frame->GetDeferredImage() && widget->metaObject()->indexOfMethod("gpu_presented(int)") >= 0)
                 QMetaObject::invokeMethod(widget, "gpu_presented", Qt::DirectConnection,
@@ -75,22 +80,26 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     bool draw(int x, int y, int width, int height) {
         auto* context = QOpenGLContext::currentContext();
         auto cgl = CGLGetCurrentContext();
-        if (!context || !cgl || !frame || !widget || fallback_delivered) return false;
+        if (!context || !cgl) return unavailable("No current Qt/CGL OpenGL context");
+        if (!frame || !widget) return unavailable("No video frame or preview widget");
+        if (fallback_delivered) return false;
         auto surface = display_surface ? display_surface : std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage());
-        if (!surface) return false;
+        if (!surface) return unavailable("Frame cannot be presented as a shared Mac Vulkan surface");
         auto* fc = reinterpret_cast<const AVHWFramesContext*>(surface->GetFrame()->hw_frames_ctx->data);
         if (fc->sw_format != AV_PIX_FMT_RGBA || !IsMacVulkanFrame(surface->GetFrame())) {
             surface = std::dynamic_pointer_cast<const VulkanFrameImage>(RenderVulkanImage(
                 surface, nullptr, surface->GetWidth(), surface->GetHeight(), QTransform(), 1.0, Qt::black));
-            if (!surface) return false;
+            if (!surface) return unavailable("Frame cannot be presented as a shared Mac Vulkan surface");
         }
         const AVFrame* source = surface->GetFrame();
         auto pixel = static_cast<CVPixelBufferRef>(MacVulkanPixelBuffer(source));
-        if (!pixel || !SameDevice(cgl, MacVulkanDeviceRegistryID(source))) return false;
+        if (!pixel) return unavailable("Vulkan frame has no shared Core Video pixel buffer");
+        if (!SameDevice(cgl, MacVulkanDeviceRegistryID(source)))
+            return unavailable("Qt/OpenGL and Vulkan/Metal selected different GPUs");
         display_surface = surface;
         WaitMacVulkanFrame(source);
         auto io = CVPixelBufferGetIOSurface(pixel);
-        if (!io) return false;
+        if (!io) return unavailable("Core Video pixel buffer has no IOSurface");
         auto* gl = context->functions();
         auto* extra = context->extraFunctions();
         const bool core = context->format().profile() == QSurfaceFormat::CoreProfile;
@@ -156,8 +165,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
 VulkanOpenGLPresenter::VulkanOpenGLPresenter(uintptr_t widget) : impl(new Impl(reinterpret_cast<QWidget*>(widget))) {}
 VulkanOpenGLPresenter::~VulkanOpenGLPresenter() = default;
 bool VulkanOpenGLPresenter::Draw(int x, int y, int width, int height) {
-    try { if (impl->draw(x,y,width,height)) { ++impl->native_draws; return true; } }
-    catch (const std::exception& error) { qWarning() << "Mac Vulkan presentation fallback:" << error.what(); }
+    try { if (impl->draw(x,y,width,height)) { impl->last_failure.clear(); ++impl->native_draws; return true; } }
+    catch (const std::exception& error) { impl->last_failure = error.what(); qWarning() << "Mac Vulkan presentation fallback:" << error.what(); }
     impl->fallback(); return false;
 }
 int VulkanOpenGLPresenter::Width() const { return impl->frame ? impl->frame->GetWidth() : 0; }
@@ -165,6 +174,7 @@ int VulkanOpenGLPresenter::Height() const { return impl->frame ? impl->frame->Ge
 void VulkanOpenGLPresenter::Clear() { impl->frame.reset(); impl->display_surface.reset(); }
 uint64_t VulkanOpenGLPresenter::NativeDraws() const { return impl->native_draws; }
 uint64_t VulkanOpenGLPresenter::FallbackFrames() const { return impl->fallback_frames; }
+std::string VulkanOpenGLPresenter::FallbackReason() const { return impl->last_failure; }
 void VulkanOpenGLPresenter::Present(std::shared_ptr<Frame> frame) {
     if (QThread::currentThread() == impl->thread()) impl->PresentFrame(frame);
     else QMetaObject::invokeMethod(impl.get(), [receiver=impl.get(), frame]() { receiver->PresentFrame(frame); }, Qt::QueuedConnection);

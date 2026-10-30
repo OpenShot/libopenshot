@@ -48,6 +48,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     bool fallback_delivered = false;
     uint64_t native_draws = 0;
     uint64_t fallback_frames = 0;
+    std::string last_failure;
+    bool unavailable(const std::string& reason) { last_failure = reason; return false; }
     explicit Impl(QWidget* value) : widget(value) {
         value->setProperty("openshot_gpu_presenter", QVariant::fromValue(static_cast<QObject*>(this)));
     }
@@ -58,7 +60,10 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         frame = value;
         display_surface.reset();
         fallback_delivered = false;
-        if (frame && !frame->GetDeferredImage()) fallback();
+        if (frame && !frame->GetDeferredImage()) {
+            last_failure = "Frame is CPU-backed (decode, rendering, or an effect required CPU pixels)";
+            fallback();
+        }
         if (widget) {
             if (frame && frame->GetDeferredImage() && widget->metaObject()->indexOfMethod("gpu_presented(int)") >= 0)
                 QMetaObject::invokeMethod(widget, "gpu_presented", Qt::DirectConnection,
@@ -85,16 +90,18 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             lastStage = now;
         };
         auto context = QOpenGLContext::currentContext();
-        if (!context || !frame || !widget || fallback_delivered) return false;
+        if (!context) return unavailable("No current Qt OpenGL context");
+        if (!frame || !widget) return unavailable("No video frame or preview widget");
+        if (fallback_delivered) return false;
         auto authoritative = frame->GetDeferredImage();
-        if (!authoritative) return false;
+        if (!authoritative) return unavailable("Frame has no deferred GPU surface");
         auto surface = display_surface ? display_surface : std::dynamic_pointer_cast<const VulkanFrameImage>(authoritative);
-        if (!surface) return false;
+        if (!surface) return unavailable("Frame cannot be presented as a Vulkan RGBA surface");
         auto inputContext = reinterpret_cast<AVHWFramesContext*>(surface->GetFrame()->hw_frames_ctx->data);
         if (inputContext->sw_format != AV_PIX_FMT_RGBA) {
             surface = std::dynamic_pointer_cast<const VulkanFrameImage>(RenderVulkanImage(
                 surface, nullptr, surface->GetWidth(), surface->GetHeight(), QTransform(), 1.0, Qt::black));
-            if (!surface) return false;
+            if (!surface) return unavailable("Frame cannot be presented as a Vulkan RGBA surface");
         }
         display_surface = surface;
         stage("surface");
@@ -106,13 +113,13 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         auto image = reinterpret_cast<AVVkFrame*>(source->data[0]);
         // Multi-plane decode surfaces must first go through the RGBA compositor.
         if (fc->sw_format != AV_PIX_FMT_RGBA || vfc->format[0] != VK_FORMAT_R8G8B8A8_UNORM || image->img[1])
-            return false;
+            return unavailable("Unsupported Vulkan image format for OpenGL sharing");
 #ifdef _WIN32
         if (!context->hasExtension("GL_EXT_memory_object_win32") || !context->hasExtension("GL_EXT_semaphore_win32"))
 #else
         if (!context->hasExtension("GL_EXT_memory_object_fd") || !context->hasExtension("GL_EXT_semaphore_fd"))
 #endif
-            return false;
+            return unavailable("OpenGL driver lacks external memory or semaphore sharing extensions");
         auto gl = context->functions();
         auto extra = context->extraFunctions();
         auto getUuid = glFunction<PFNGLGETUNSIGNEDBYTEI_VEXTPROC>(context, "glGetUnsignedBytei_vEXT");
@@ -127,7 +134,12 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             getUuid(GL_DEVICE_UUID_EXT, i, uuid);
             sameDevice = sameDevice || std::memcmp(uuid, identity.deviceUUID, VK_UUID_SIZE) == 0;
         }
-        if (!sameDevice) return false;
+        if (!sameDevice) {
+            const auto* renderer = gl->glGetString(GL_RENDERER);
+            return unavailable(std::string("Qt/OpenGL and Vulkan selected different GPUs (OpenGL: ") +
+                (renderer ? reinterpret_cast<const char*>(renderer) : "unknown") +
+                "; Vulkan: " + properties.properties.deviceName + ")");
+        }
         auto createMemory = glFunction<PFNGLCREATEMEMORYOBJECTSEXTPROC>(context, "glCreateMemoryObjectsEXT");
         auto deleteMemory = glFunction<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context, "glDeleteMemoryObjectsEXT");
         auto memoryParameter = glFunction<PFNGLMEMORYOBJECTPARAMETERIVEXTPROC>(context, "glMemoryObjectParameterivEXT");
@@ -149,18 +161,20 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
 #ifdef _WIN32
         auto getMemoryHandle = reinterpret_cast<PFN_vkGetMemoryWin32HandleKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetMemoryWin32HandleKHR"));
         auto getSemaphoreHandle = reinterpret_cast<PFN_vkGetSemaphoreWin32HandleKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetSemaphoreWin32HandleKHR"));
-        if (!getMemoryHandle || !getSemaphoreHandle || vk->queue_family_comp_index < 0) return false;
+        if (!getMemoryHandle || !getSemaphoreHandle || vk->queue_family_comp_index < 0)
+            return unavailable("Vulkan device lacks Win32 memory/semaphore export or a compute queue");
 #else
         auto getMemoryFd = reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetMemoryFdKHR"));
         auto getSemaphoreFd = reinterpret_cast<PFN_vkGetSemaphoreFdKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetSemaphoreFdKHR"));
-        if (!getMemoryFd || !getSemaphoreFd || vk->queue_family_comp_index < 0) return false;
+        if (!getMemoryFd || !getSemaphoreFd || vk->queue_family_comp_index < 0)
+            return unavailable("Vulkan device lacks file-descriptor memory/semaphore export or a compute queue");
 #endif
         // Construct all fallible GL resources before transferring image ownership.
         QOpenGLShaderProgram program;
         if (!program.addShaderFromSourceCode(QOpenGLShader::Vertex,
             "attribute vec2 vertex; varying vec2 uv; void main(){uv=vec2((vertex.x+1.0)*0.5,(1.0-vertex.y)*0.5);gl_Position=vec4(vertex,0,1);}") ||
             !program.addShaderFromSourceCode(QOpenGLShader::Fragment,
-            "uniform sampler2D video; varying vec2 uv; void main(){gl_FragColor=texture2D(video,uv);}") || !program.link()) return false;
+            "uniform sampler2D video; varying vec2 uv; void main(){gl_FragColor=texture2D(video,uv);}") || !program.link()) return unavailable("OpenGL presentation shader: " + program.log().toStdString());
         stage("shader");
         VkDevice device = vk->act_dev;
         GLuint memory = 0, texture = 0, semaphores[2] = {0, 0}, buffer = 0, vertexArray = 0;
@@ -382,8 +396,9 @@ VulkanOpenGLPresenter::VulkanOpenGLPresenter(uintptr_t widget)
 VulkanOpenGLPresenter::~VulkanOpenGLPresenter() = default;
 bool VulkanOpenGLPresenter::Draw(int x, int y, int width, int height) {
     try {
-        if (impl->draw(x, y, width, height)) { ++impl->native_draws; return true; }
+        if (impl->draw(x, y, width, height)) { impl->last_failure.clear(); ++impl->native_draws; return true; }
     } catch (const std::exception& error) {
+        impl->last_failure = error.what();
         qWarning() << "Vulkan presentation fallback:" << error.what();
     }
     impl->fallback();
@@ -397,6 +412,7 @@ void VulkanOpenGLPresenter::Clear() {
 }
 uint64_t VulkanOpenGLPresenter::NativeDraws() const { return impl->native_draws; }
 uint64_t VulkanOpenGLPresenter::FallbackFrames() const { return impl->fallback_frames; }
+std::string VulkanOpenGLPresenter::FallbackReason() const { return impl->last_failure; }
 void VulkanOpenGLPresenter::Present(std::shared_ptr<Frame> frame) {
     if (QThread::currentThread() == impl->thread()) {
         impl->PresentFrame(frame);

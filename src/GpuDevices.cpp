@@ -14,6 +14,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vulkan.h>
+#include <libavutil/error.h>
 }
 namespace openshot {
 namespace {
@@ -72,6 +73,9 @@ GpuDevice Describe(VkPhysicalDevice device) {
 
     GpuDevice gpu;
     gpu.name = basic.deviceName;
+    gpu.vulkan_api = std::to_string(VK_API_VERSION_MAJOR(basic.apiVersion)) + "." +
+        std::to_string(VK_API_VERSION_MINOR(basic.apiVersion)) + "." +
+        std::to_string(VK_API_VERSION_PATCH(basic.apiVersion));
     switch (basic.vendorID) {
         case 0x10DE: gpu.vendor = "NVIDIA"; break;
         case 0x1002: gpu.vendor = "AMD"; break;
@@ -105,6 +109,8 @@ GpuDevice Describe(VkPhysicalDevice device) {
     vkGetPhysicalDeviceQueueFamilyProperties(device, &families, queues.data());
     gpu.video_decode = std::any_of(queues.begin(), queues.end(),
         [](const VkQueueFamilyProperties& q) { return q.queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR; });
+    gpu.video_encode = std::any_of(queues.begin(), queues.end(),
+        [](const VkQueueFamilyProperties& q) { return q.queueFlags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR; });
     return gpu;
 }
 
@@ -145,7 +151,10 @@ VkPhysicalDevice PhysicalDevice(AVBufferRef* device) {
 // Try opening an encoder at a tiny size on the given hardware device.
 bool EncoderOpens(const char* name, AVBufferRef* device, AVPixelFormat hw_format) {
     const AVCodec* codec = avcodec_find_encoder_by_name(name);
-    if (!codec) return false;
+    if (!codec) {
+        Logger::Instance()->Log(std::string("GPU encoder probe: ") + name + " is not compiled into FFmpeg", Logger::LevelDebug);
+        return false;
+    }
     AVCodecContext* context = avcodec_alloc_context3(codec);
     if (!context) return false;
     context->width = 640;
@@ -173,8 +182,15 @@ bool EncoderOpens(const char* name, AVBufferRef* device, AVPixelFormat hw_format
         context->pix_fmt = AV_PIX_FMT_NV12;
         context->hw_device_ctx = av_buffer_ref(device);
     }
-    if (context->hw_frames_ctx || context->hw_device_ctx)
-        opened = avcodec_open2(context, codec, nullptr) >= 0;
+    if (context->hw_frames_ctx || context->hw_device_ctx) {
+        const int result = avcodec_open2(context, codec, nullptr);
+        opened = result >= 0;
+        if (result < 0) {
+            char message[AV_ERROR_MAX_STRING_SIZE];
+            av_strerror(result, message, sizeof(message));
+            Logger::Instance()->Log(std::string("GPU encoder probe failed: ") + name + ": " + message, Logger::LevelDebug);
+        }
+    }
     avcodec_free_context(&context);
     return opened;
 }
@@ -203,6 +219,7 @@ int CreateSharedVulkanDevice(AVBufferRef** output) {
 #endif
         int result = AVERROR(ENODEV);
         for (const auto& device : VulkanDeviceCandidates()) {
+            Logger::Instance()->Log("Vulkan device initialization: " + (device.empty() ? std::string("default") : device), Logger::LevelInfo);
             AVDictionary* options = nullptr;
 #ifdef __APPLE__
             av_dict_set(&options, "device_extensions", "VK_EXT_metal_objects", 0);
@@ -212,6 +229,10 @@ int CreateSharedVulkanDevice(AVBufferRef** output) {
             av_dict_free(&options);
             if (result >= 0)
                 break;
+            char message[AV_ERROR_MAX_STRING_SIZE];
+            av_strerror(result, message, sizeof(message));
+            Logger::Instance()->Log("Vulkan device initialization failed: " + device + ": " + message +
+                                   " (" + std::to_string(result) + ")", Logger::LevelWarning);
         }
         if (result < 0) {
             Logger::Instance()->Log("No usable Vulkan GPU; decoding on the CPU", Logger::LevelWarning);

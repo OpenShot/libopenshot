@@ -4,6 +4,7 @@
 #define OPENSHOT_VULKAN_OPENGL_PRESENTER_H
 #include <cstdint>
 #include <memory>
+#include <string>
 namespace openshot {
 class Frame;
 /// GUI-thread adapter for a QOpenGLWidget. Draw requires its current GL context.
@@ -17,6 +18,8 @@ public:
     void Clear();
     uint64_t NativeDraws() const;
     uint64_t FallbackFrames() const;
+    /// Most recent native presentation failure; empty after a successful draw.
+    std::string FallbackReason() const;
     void Present(std::shared_ptr<Frame> frame);
 private:
     struct Impl;

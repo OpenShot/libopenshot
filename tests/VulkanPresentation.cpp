@@ -123,6 +123,7 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     REQUIRE(widget.nativeDraw);
     CHECK(widget.presenter.NativeDraws() >= 64);
     CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(widget.presenter.FallbackReason().empty());
     CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
     REQUIRE(frame->GetDeferredImage());
     REQUIRE_FALSE(image.isNull());
@@ -133,4 +134,7 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
     CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
     CHECK(image.pixelColor(5, 5) == QColor(Qt::green));
+    widget.presenter.Clear();
+    CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
+    CHECK_FALSE(widget.presenter.FallbackReason().empty());
 }
