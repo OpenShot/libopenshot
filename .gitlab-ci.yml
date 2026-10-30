@@ -118,14 +118,17 @@ windows-builder-x64:
     - "if ($CI_COMMIT_REF_NAME -eq \"arm64-support\" -and -not (Select-String -Path \"build/install-x64/share/libopenshot-audio.env\" -Pattern \"^CI_COMMIT_REF_NAME:arm64-support$\" -Quiet)) { throw \"Matching arm64-support audio artifacts are required\" }"
     - $env:OPENCV_ROOT = "C:\msys64\mingw64\opencv-4.13.0"
     - $env:OpenCV_DIR = "$env:OPENCV_ROOT\lib\cmake\opencv4"
-    - $env:Path = "$env:OPENCV_ROOT\x64\mingw\bin;$env:OPENCV_ROOT\bin;C:\msys64\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
+    - $env:Path = "$CI_PROJECT_DIR\build\install-x64\bin;$CI_PROJECT_DIR\build\src;$env:OPENCV_ROOT\x64\mingw\bin;$env:OPENCV_ROOT\bin;C:\msys64\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
     - $env:MSYSTEM = "MINGW64"
     - $env:FFMPEGDIR = "C:/msys64/mingw64"
     - if ((& "$env:FFMPEGDIR/bin/ffmpeg.exe" -version | Select-Object -First 1) -notmatch "^ffmpeg version 7[.]1[.]") { throw "FFmpeg 7.1 is required" }
     - ffmpeg -hide_banner -devices | findstr /I "gdigrab"
     - ffmpeg -hide_banner -devices | findstr /I "dshow"
-    - cmake -B build -S . -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"babl_DIR=C:/msys64/mingw64" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-x64" -D"OpenCV_DIR:PATH=$env:OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -DENABLE_GPU_FRAME=ON
-    - cmake --build build --parallel $([Environment]::ProcessorCount)
+    - cmake -B build -S . -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"babl_DIR=C:/msys64/mingw64" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-x64" -D"OpenCV_DIR:PATH=$env:OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_AUTOGEN_PARALLEL=1 -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -DENABLE_GPU_FRAME=ON
+    - cmake --build build --parallel 4
+    - $testList = ctest --test-dir build --show-only=json-v1 | ConvertFrom-Json
+    - if ($LASTEXITCODE -ne 0 -or @($testList.tests).Count -lt 400) { throw "Incomplete unit test discovery; check runtime DLL paths" }
+    - Write-Host "Discovered $(@($testList.tests).Count) unit tests"
     - ctest --test-dir build --output-on-failure -VV
     - cmake --install build
     - $PROJECT_VERSION = (Select-String -Path "CMakeLists.txt" -Pattern '^set\(PROJECT_VERSION_FULL "(.*)\"' | %{$_.Matches.Groups[1].value})
@@ -190,14 +193,17 @@ windows-builder-x86:
     - "if ($CI_COMMIT_REF_NAME -eq \"arm64-support\" -and -not (Select-String -Path \"build/install-x86/share/libopenshot-audio.env\" -Pattern \"^CI_COMMIT_REF_NAME:arm64-support$\" -Quiet)) { throw \"Matching arm64-support audio artifacts are required\" }"
     - $env:OPENCV_ROOT = "C:\msys64\mingw32\opencv-4.13.0"
     - $env:OpenCV_DIR = "$env:OPENCV_ROOT\lib\cmake\opencv4"
-    - $env:Path = "$env:OPENCV_ROOT\bin;C:\msys64\mingw32\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
+    - $env:Path = "$CI_PROJECT_DIR\build\install-x86\bin;$CI_PROJECT_DIR\build\src;$env:OPENCV_ROOT\x64\mingw\bin;$env:OPENCV_ROOT\bin;C:\msys64\mingw32\bin;C:\msys64\usr\bin;C:\msys64\usr\local\bin;" + $env:Path;
     - $env:MSYSTEM = "MINGW32"
     - $env:FFMPEGDIR = "C:/msys64/mingw32"
     - if ((& "$env:FFMPEGDIR/bin/ffmpeg.exe" -version | Select-Object -First 1) -notmatch "^ffmpeg version 7[.]1[.]") { throw "FFmpeg 7.1 is required" }
     - ffmpeg -hide_banner -devices | findstr /I "gdigrab"
     - ffmpeg -hide_banner -devices | findstr /I "dshow"
-    - cmake -B build -S . -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"babl_DIR=C:/msys64/mingw32" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-x86" -D"OpenCV_DIR:PATH=$env:OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32 -msse2 -mfpmath=sse" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32 -msse2 -mfpmath=sse" -DENABLE_GPU_FRAME=ON
-    - cmake --build build --parallel $([Environment]::ProcessorCount)
+    - cmake -B build -S . -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"babl_DIR=C:/msys64/mingw32" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-x86" -D"OpenCV_DIR:PATH=$env:OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_AUTOGEN_PARALLEL=1 -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32 -msse2 -mfpmath=sse" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32 -msse2 -mfpmath=sse" -DENABLE_GPU_FRAME=ON
+    - cmake --build build --parallel 4
+    - $testList = ctest --test-dir build --show-only=json-v1 | ConvertFrom-Json
+    - if ($LASTEXITCODE -ne 0 -or @($testList.tests).Count -lt 400) { throw "Incomplete unit test discovery; check runtime DLL paths" }
+    - Write-Host "Discovered $(@($testList.tests).Count) unit tests"
     - ctest --test-dir build --output-on-failure -VV
     - cmake --install build
     - $PROJECT_VERSION = (Select-String -Path "CMakeLists.txt" -Pattern '^set\(PROJECT_VERSION_FULL "(.*)\"' | %{$_.Matches.Groups[1].value})
