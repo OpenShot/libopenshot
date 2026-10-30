@@ -93,9 +93,9 @@ static void check_written_orientation(const std::string& path,
 static bool has_ffmpeg_orientation_bug(float yaw, float pitch, float roll)
 {
     const auto major = avformat_version() >> 16;
-    // libavformat 62 and 63 correspond to FFmpeg 8 and 9.
-    if ((major == 62 || major == 63) && yaw == 0 && pitch == 0 && roll == 0) {
-        WARN("Skipping spherical reader angle assertions: FFmpeg 8/9 returned 0,0,0. "
+    // libavformat 61, 62 and 63 correspond to FFmpeg 7, 8 and 9.
+    if (major >= 61 && major <= 63 && yaw == 0 && pitch == 0 && roll == 0) {
+        WARN("Skipping spherical reader angle assertions: FFmpeg 7-9 returned 0,0,0. "
              "Written MP4 angles were verified independently. Upstream patch submitted "
              "to ffmpeg-devel: avformat/mov: preserve spherical orientation when reading vexu. "
              "FFmpeg version: " << av_version_info());

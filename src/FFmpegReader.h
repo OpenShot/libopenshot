@@ -143,6 +143,8 @@ namespace openshot {
 		int64_t last_frame;
 		int64_t largest_frame_processed;
 		int64_t current_video_frame;
+		// First decoded picture from the beginning: 0 unknown, -1 after a mid-file seek.
+		int64_t first_video_frame = 0;
 
 		int64_t audio_pts;
 		int64_t video_pts;
