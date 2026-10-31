@@ -190,6 +190,7 @@ target_sources(openshot PRIVATE
   ${OPENSHOT_SOURCES}
   ${EFFECTS_SOURCES}
   ${QT_PLAYER_SOURCES}
+  PitchProcessor.cpp
   )
 
 # Set SONAME and other library properties
@@ -240,6 +241,25 @@ if(NOT TARGET OpenShot::Audio)
   find_package(OpenShotAudio 1.0.2 REQUIRED)
 endif()
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
+
+# Optional Rubber Band support for independent pitch and speed processing
+option(ENABLE_RUBBERBAND "Enable Rubber Band pitch processing" ON)
+
+if(ENABLE_RUBBERBAND)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    pkg_check_modules(RUBBERBAND QUIET IMPORTED_TARGET rubberband)
+  endif()
+endif()
+
+if(ENABLE_RUBBERBAND AND TARGET PkgConfig::RUBBERBAND)
+  target_link_libraries(openshot PRIVATE PkgConfig::RUBBERBAND)
+  target_compile_definitions(openshot PRIVATE OPENSHOT_HAVE_RUBBERBAND=1)
+  message(STATUS "Rubber Band audio processing enabled")
+else()
+  message(STATUS "Rubber Band audio processing disabled or unavailable")
+endif()
+
 
 ###
 ### ImageMagick
