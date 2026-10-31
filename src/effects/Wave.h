@@ -46,6 +46,9 @@ namespace openshot
 		Keyframe multiplier;	///< Amount to multiply the wave (make it bigger)
 		Keyframe shift_x;		///< Amount to shift X-axis
 		Keyframe speed_y;		///< Speed of the wave on the Y-axis
+		Keyframe direction;		///< 0=legacy, 1=horizontal, 2=vertical, 3=custom angle
+		Keyframe warp_angle;		///< Wave pattern orientation in degrees
+		Keyframe displacement_angle;	///< Displacement direction in degrees
 
 		/// Default constructor, useful when using Json to load the effect properties
 		Wave();
