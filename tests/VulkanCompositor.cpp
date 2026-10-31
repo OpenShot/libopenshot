@@ -513,6 +513,11 @@ TEST_CASE("CPU image uploads cache pixels and preserve alpha ownership", "[vulka
     {
         openshot::gpu_metrics::Scope scope(false);
         first = openshot::UploadVulkanImage(image);
+#ifdef __APPLE__
+        auto mac_surface = std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(first);
+        REQUIRE(mac_surface);
+        CHECK(openshot::IsMacVulkanFrame(mac_surface->GetFrame()));
+#endif
         CHECK(openshot::UploadVulkanImage(image) == first);
         image.fill(QColor(0, 255, 0, 255));
         second = openshot::UploadVulkanImage(image);
@@ -529,7 +534,10 @@ TEST_CASE("CPU image uploads cache pixels and preserve alpha ownership", "[vulka
     CHECK(std::abs(pixel.green() - 60) <= 2);
     CHECK(std::abs(pixel.alpha() - 128) <= 1);
     openshot::ReleaseVulkanUploads();
-    CHECK(second->Materialize().pixelColor(8,8) == QColor(Qt::green));
+    const auto second_pixel = second->Materialize().pixelColor(8,8);
+    INFO("Uploaded opaque RGBA: " << second_pixel.red() << "," << second_pixel.green()
+         << "," << second_pixel.blue() << "," << second_pixel.alpha());
+    CHECK(second_pixel == QColor(Qt::green));
     CHECK(openshot::UploadVulkanImage(image) != second);
 }
 

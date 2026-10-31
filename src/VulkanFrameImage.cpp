@@ -191,7 +191,13 @@ std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image) {
     Check(av_hwframe_get_buffer(pool.get(), gpu.get(), 0), "Allocate uploaded image");
     Check(av_hwframe_transfer_data(gpu.get(), cpu.get(), 0), "Upload CPU image");
     gpu_metrics::Record(gpu_metrics::Upload);
-    auto surface = std::make_shared<VulkanFrameImage>(gpu.get(), true);
+    std::shared_ptr<const FrameImage> surface = std::make_shared<VulkanFrameImage>(gpu.get(), true);
+#ifdef __APPLE__
+    // Cache an IOSurface-backed image, so CPU fallback uses the synchronized
+    // Metal bridge instead of FFmpeg's generic MoltenVK staging-buffer readback.
+    surface = RenderVulkanImage(surface, nullptr, image.width(), image.height(),
+                               QTransform(), 1.0, Qt::transparent);
+#endif
     const int64_t size = surface->GetBytes();
     constexpr int64_t budget = 64 * 1024 * 1024;
     if (size <= budget) {
