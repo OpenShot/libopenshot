@@ -8,6 +8,7 @@
 #include "VulkanFrameImage.h"
 #include "VulkanEncodeConverter.h"
 #include "GpuDevices.h"
+#include "GpuMetrics.h"
 #include "FFmpegReader.h"
 #include "FFmpegWriter.h"
 #include <QTemporaryDir>
@@ -501,3 +502,89 @@ TEST_CASE("VideoToolbox export shares decoder compositor and encoder surfaces", 
     }
 }
 #endif
+
+TEST_CASE("CPU image uploads cache pixels and preserve alpha ownership", "[vulkan][hardware][upload]") {
+    if (!VulkanAvailable()) return;
+    openshot::ReleaseVulkanUploads();
+    QImage image(16, 16, QImage::Format_ARGB32_Premultiplied);
+    image.fill(QColor(200, 60, 20, 128));
+    openshot::ResetGpuMetrics();
+    std::shared_ptr<const openshot::FrameImage> first, second;
+    {
+        openshot::gpu_metrics::Scope scope(false);
+        first = openshot::UploadVulkanImage(image);
+        CHECK(openshot::UploadVulkanImage(image) == first);
+        image.fill(QColor(0, 255, 0, 255));
+        second = openshot::UploadVulkanImage(image);
+        CHECK(second != first);
+    }
+    Json::Reader reader;
+    Json::Value metrics;
+    REQUIRE(reader.parse(openshot::GpuMetricsSnapshot(), metrics));
+    CHECK(metrics["uploads"].asUInt64() == 2);
+    QTransform identity;
+    auto rendered = openshot::RenderVulkanImage(first, nullptr, 16, 16, identity, 1.0, Qt::transparent);
+    auto pixel = rendered->Materialize().pixelColor(8,8);
+    CHECK(std::abs(pixel.red() - 200) <= 2);
+    CHECK(std::abs(pixel.green() - 60) <= 2);
+    CHECK(std::abs(pixel.alpha() - 128) <= 1);
+    openshot::ReleaseVulkanUploads();
+    CHECK(second->Materialize().pixelColor(8,8) == QColor(Qt::green));
+    CHECK(openshot::UploadVulkanImage(image) != second);
+}
+
+TEST_CASE("PNG clips upload once and keep animated transforms on Vulkan", "[vulkan][hardware][upload]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir temporary;
+    REQUIRE(temporary.isValid());
+    const auto path = temporary.filePath("artwork.png");
+    QImage bitmap(64, 64, QImage::Format_ARGB32_Premultiplied);
+    bitmap.fill(QColor(0, 0, 255, 128));
+    REQUIRE(bitmap.save(path));
+    openshot::Clip clip(path.toStdString());
+    clip.scale_x = openshot::Keyframe(0.6);
+    clip.scale_y = openshot::Keyframe(0.6);
+    clip.rotation = openshot::Keyframe(10);
+    openshot::Timeline timeline(128,128,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    openshot::ResetGpuMetrics();
+    std::shared_ptr<openshot::Frame> result;
+    for (int i = 1; i <= 8; ++i) {
+        result = timeline.GetFrame(i);
+        REQUIRE(result->GetDeferredImage());
+    }
+    Json::Reader reader;
+    Json::Value metrics;
+    REQUIRE(reader.parse(openshot::GpuMetricsSnapshot(), metrics));
+    CHECK(metrics["uploads"].asUInt64() == 1);
+    CHECK(metrics["readbacks"].asUInt64() == 0);
+    CHECK(metrics["render_cpu"].asUInt64() == 0);
+    CHECK(metrics["render_gpu"].asUInt64() > 0);
+    CHECK(metrics["image_sources"].asUInt64() == 8);
+    CHECK(metrics["decode_cpu"].asUInt64() == 0);
+    CHECK(metrics["copy_free"].asUInt64() == 8);
+    openshot::Frame copy(*result);
+    const auto pixel = copy.GetImage()->pixelColor(64,64);
+    CHECK(std::abs(pixel.blue() - 128) <= 2);
+    CHECK(pixel.red() == 0);
+    CHECK(pixel.alpha() == 255);
+    timeline.Close();
+}
+
+TEST_CASE("Saved GPU preferences reach the native runtime environment", "[vulkan][settings]") {
+    struct Restore {
+        std::string backend, device;
+        ~Restore() { openshot::ConfigureGpuEnvironment(backend, device); }
+    } restore{std::getenv("OPENSHOT_RENDER_BACKEND") ? std::getenv("OPENSHOT_RENDER_BACKEND") : "",
+              std::getenv("OPENSHOT_VULKAN_DEVICE") ? std::getenv("OPENSHOT_VULKAN_DEVICE") : ""};
+    openshot::ConfigureGpuEnvironment("cpu", "Example GPU");
+    REQUIRE(std::getenv("OPENSHOT_RENDER_BACKEND"));
+    REQUIRE(std::getenv("OPENSHOT_VULKAN_DEVICE"));
+    CHECK(std::string(std::getenv("OPENSHOT_RENDER_BACKEND")) == "cpu");
+    CHECK(std::string(std::getenv("OPENSHOT_VULKAN_DEVICE")) == "Example GPU");
+    CHECK_FALSE(openshot::VulkanRenderingEnabled());
+    openshot::ConfigureGpuEnvironment("vulkan", "");
+    CHECK(openshot::VulkanRenderingEnabled());
+    CHECK(std::getenv("OPENSHOT_VULKAN_DEVICE") == nullptr);
+}

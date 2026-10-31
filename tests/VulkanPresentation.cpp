@@ -3,6 +3,7 @@
 #include "openshot_catch.h"
 #include "Frame.h"
 #include "VulkanFrameImage.h"
+#include "VulkanCompositor.h"
 #include "GpuDevices.h"
 #include "Qt/VideoRenderer.h"
 #include "Qt/VulkanOpenGLPresenter.h"
@@ -134,6 +135,24 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
     CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
     CHECK(image.pixelColor(5, 5) == QColor(Qt::green));
+    // CPU-origin artwork follows upload -> compositor -> native presentation.
+    QImage artwork(64, 64, QImage::Format_RGBA8888_Premultiplied);
+    for (int y = 0; y < 64; ++y)
+        for (int x = 0; x < 64; ++x)
+            artwork.setPixelColor(x, y, y < 32 ? Qt::red : Qt::blue);
+    auto uploaded = openshot::UploadVulkanImage(artwork);
+    frame->AddDeferredImage(openshot::RenderVulkanImage(uploaded, nullptr, 64, 64, QTransform(), 1.0, Qt::transparent));
+    renderer.paint(frame);
+    for (int i = 0; i < 20; ++i) {
+        QCoreApplication::processEvents();
+        QThread::msleep(5);
+    }
+    image = widget.grabFramebuffer();
+    CHECK(widget.nativeDraw);
+    CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
+    CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
     widget.presenter.Clear();
     CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
     CHECK_FALSE(widget.presenter.FallbackReason().empty());

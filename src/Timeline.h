@@ -224,6 +224,7 @@ namespace openshot {
 		void InvalidateCacheForClip(const openshot::Clip* clip);
 
 	public:
+        bool gpu_metrics_export = false; // Set once before this timeline starts serving export work.
 
 		/// @brief Constructor for the timeline (which configures the default frame properties)
 		/// @param width The image width of generated openshot::Frame objects

@@ -93,6 +93,9 @@ endif()
 # the wrapper when GPU diagnostics change, including in incremental builds.
 set(SWIG_MODULE_pyopenshot_EXTRA_DEPS
   "${PROJECT_SOURCE_DIR}/src/GpuDevices.h"
+  "${PROJECT_SOURCE_DIR}/src/GpuMetrics.h"
+  "${PROJECT_SOURCE_DIR}/src/Timeline.h"
+  "${PROJECT_SOURCE_DIR}/src/FFmpegWriter.h"
   "${PROJECT_SOURCE_DIR}/src/Qt/VulkanOpenGLPresenter.h")
 swig_add_library(pyopenshot LANGUAGE python SOURCES openshot.i)
 

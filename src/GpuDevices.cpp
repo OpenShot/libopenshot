@@ -10,6 +10,7 @@
 #include <cstring>
 #include <mutex>
 #include <utility>
+#include <stdexcept>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/hwcontext.h>
@@ -254,6 +255,20 @@ GpuDevice ActiveGpuDevice() {
     gpu.active = true;
     av_buffer_unref(&device);
     return gpu;
+}
+
+void ConfigureGpuEnvironment(const std::string& backend, const std::string& device) {
+#ifdef _WIN32
+    if (_putenv_s("OPENSHOT_RENDER_BACKEND", backend.c_str()) != 0 ||
+        _putenv_s("OPENSHOT_VULKAN_DEVICE", device.c_str()) != 0)
+        throw std::runtime_error("Unable to apply native GPU environment");
+#else
+    const auto apply = [](const char* key, const std::string& value) {
+        return value.empty() ? unsetenv(key) : setenv(key, value.c_str(), 1);
+    };
+    if (apply("OPENSHOT_RENDER_BACKEND", backend) != 0 || apply("OPENSHOT_VULKAN_DEVICE", device) != 0)
+        throw std::runtime_error("Unable to apply native GPU environment");
+#endif
 }
 
 std::vector<GpuDevice> ListGpuDevices() {

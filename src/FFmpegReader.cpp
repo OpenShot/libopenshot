@@ -13,6 +13,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include <thread>	// for std::this_thread::sleep_for
 #include <chrono>	// for std::chrono::milliseconds
 #include <algorithm>
@@ -1812,6 +1813,10 @@ bool FFmpegReader::GetAVFrame() {
 #endif
 			}
 #endif
+            const auto* metrics_format = av_pix_fmt_desc_get(static_cast<AVPixelFormat>(next_frame2->format));
+            if (!info.has_single_image)
+                gpu_metrics::Record(metrics_format && (metrics_format->flags & AV_PIX_FMT_FLAG_HWACCEL)
+                    ? gpu_metrics::DecodeGpu : gpu_metrics::DecodeCpu);
 			packet_status.video_decoded++;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 			if (packet_status.video_decoded == 1 && !hw_decode_succeeded)
@@ -2167,6 +2172,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			if (!vulkan_processor) vulkan_processor = std::make_shared<VulkanFrameProcessor>();
 			auto f = CreateFrame(current_frame);
 			f->AddDeferredImage(vulkan_processor->Process(pFrame, width, height, openshot::Settings::Instance()->HIGH_QUALITY_SCALING));
+            gpu_metrics::Record(gpu_metrics::RenderGpu);
 			if (ApplyOrientationMetadata() && std::fabs(source_rotation) >= 0.0001)
 				Logger::Instance()->AppendDebugMethod("Vulkan reader: source orientation requires scaled CPU readback");
 			ApplyFrameOrientation(f);
@@ -2233,6 +2239,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	}
 
 	// Resize / Convert to RGB
+	gpu_metrics::Record(gpu_metrics::RenderCpu);
 	const int scaled_lines = sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0,
 			  original_height, pFrameRGB->data, pFrameRGB->linesize);
 	if (scaled_lines <= 0) {

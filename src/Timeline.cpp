@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include "Timeline.h"
 #include "PreviewSize.h"
 
@@ -605,7 +606,9 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 				"does_effect_intersect", does_effect_intersect);
 
 			// Apply the effect to this frame
+			gpu_metrics::Reason gpu_reason("Effect");
 			frame = effect->ProcessFrame(frame, effect_frame_number);
+			if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
 		}
 
 	} // end effect loop
@@ -985,6 +988,7 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
+    gpu_metrics::Scope gpu_scope(gpu_metrics_export);
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;

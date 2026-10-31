@@ -215,6 +215,7 @@ namespace openshot {
 		void write_frame(std::shared_ptr<Frame> frame);
 
 	public:
+        void WriteMeasuredFrame(ReaderBase* reader, int64_t number);
 
 		/// @brief Constructor for FFmpegWriter.
 		/// Throws an exception on failure to open path.

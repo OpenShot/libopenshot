@@ -424,6 +424,7 @@ std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const Fram
 }
 
 void ReleaseVulkanMemory() {
+    ReleaseVulkanUploads();
 #ifdef __APPLE__
     ReleaseMacVulkanPools();
 #endif

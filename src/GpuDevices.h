@@ -21,6 +21,9 @@ struct GpuDevice {
     bool video_encode = false;  ///< Has a Vulkan video encode queue (not codec-specific support)
     bool active = false;        ///< The card OpenShot renders with
 };
+/// Apply before any device/worker initialization. Keep the native C runtime's
+/// environment consistent with Python when Windows uses different runtimes.
+void ConfigureGpuEnvironment(const std::string& backend, const std::string& device);
 /// Every Vulkan device on this system, including software ones. Empty without Vulkan.
 std::vector<GpuDevice> ListGpuDevices();
 /// The card OpenShot renders with, choosing it on first use. Empty name when

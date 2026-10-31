@@ -29,6 +29,10 @@ private:
     struct Impl;
     std::unique_ptr<Impl> impl;
 };
+/// Upload CPU pixels once per QImage cache key. Bounded cache; returned surfaces
+/// retain their own GPU storage. Mutable QImage access invalidates its cache key.
+std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image);
+void ReleaseVulkanUploads();
 /// Reuses the scaling pipeline across frames. Outputs own independent storage.
 class VulkanFrameProcessor {
 public:

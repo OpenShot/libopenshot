@@ -13,6 +13,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdarg>
@@ -1137,6 +1138,11 @@ void FFmpegWriter::WriteHeader() {
 }
 
 // Add a frame to the queue waiting to be encoded.
+void FFmpegWriter::WriteMeasuredFrame(ReaderBase* reader, int64_t number) {
+    gpu_metrics::Scope scope(true);
+    WriteFrame(reader->GetFrame(number));
+}
+
 void FFmpegWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame) {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -1188,6 +1194,7 @@ void FFmpegWriter::WriteFrameAt(std::shared_ptr<openshot::Frame> frame, int64_t 
 
 // Write all frames in the queue to the video file.
 void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
+    gpu_metrics::Reason gpu_reason("Encoder");
 	// Flip writing flag
 	is_writing = true;
 
@@ -3010,6 +3017,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 				av_frame_free(&hw_frame);
 				throw ErrorEncodingVideo("Could not upload CPU frame to encoder", -1);
 			}
+			gpu_metrics::Record(gpu_metrics::Upload);
 			av_frame_copy_props(hw_frame, frame_final);
 		}
 #endif // USE_HW_ACCEL
@@ -3032,6 +3040,13 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		{
 			ret = avcodec_send_frame(video_codec_ctx, frame_final);
 		}
+        if (ret >= 0) {
+#if USE_HW_ACCEL
+            gpu_metrics::Record(hw_en_on && hw_en_supported ? gpu_metrics::EncodeGpu : gpu_metrics::EncodeCpu);
+#else
+            gpu_metrics::Record(gpu_metrics::EncodeCpu);
+#endif
+        }
 		error_code = ret;
 		if (ret < 0 ) {
 			Logger::Instance()->AppendDebugMethod(

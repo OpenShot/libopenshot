@@ -1,6 +1,9 @@
 // Copyright (c) 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
+#include "GpuMetrics.h"
 #include "VulkanFrameImage.h"
+#include "GpuDevices.h"
+#include <map>
 #include <atomic>
 #include "VulkanCompositor.h"
 #ifdef __APPLE__
@@ -96,6 +99,7 @@ QImage VulkanFrameImage::Materialize() const {
 #endif
         Check(av_hwframe_transfer_data(cpu.get(), impl->frame.get(), 0), "Read back Vulkan frame");
     readback_count.fetch_add(1,std::memory_order_relaxed);
+    gpu_metrics::Record(gpu_metrics::Readback);
     Check(av_frame_copy_props(cpu.get(), impl->frame.get()), "Copy Vulkan frame metadata");
     QImage result(GetWidth(), GetHeight(), QImage::Format_RGBA8888);
     if (result.isNull()) throw std::bad_alloc();
@@ -143,4 +147,69 @@ std::shared_ptr<const FrameImage> VulkanFrameProcessor::Process(const AVFrame* f
     matrix.scale(double(width) / frame->width, double(height) / frame->height);
     return RenderVulkanImage(source, nullptr, width, height, matrix, 1.0, Qt::transparent, high_quality);
 }
+namespace {
+struct UploadCache {
+    struct Entry { std::shared_ptr<const FrameImage> surface; int64_t bytes; uint64_t age; };
+    std::mutex mutex;
+    std::map<qint64, Entry> entries;
+    int64_t bytes = 0;
+    uint64_t clock = 0;
+};
+UploadCache& Uploads() { static UploadCache cache; return cache; }
+struct BufferDeleter { void operator()(AVBufferRef* p) const { av_buffer_unref(&p); } };
+using OwnedBuffer = std::unique_ptr<AVBufferRef, BufferDeleter>;
+}
+std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image) {
+    if (image.isNull()) throw std::invalid_argument("Cannot upload an empty image");
+    auto& cache = Uploads();
+    const std::lock_guard<std::mutex> lock(cache.mutex);
+    const auto key = image.cacheKey();
+    auto found = cache.entries.find(key);
+    if (found != cache.entries.end()) {
+        found->second.age = ++cache.clock;
+        return found->second.surface;
+    }
+    AVBufferRef* device_ptr = nullptr;
+    Check(CreateSharedVulkanDevice(&device_ptr), "Create image upload device");
+    OwnedBuffer device(device_ptr);
+    OwnedBuffer pool(av_hwframe_ctx_alloc(device.get()));
+    if (!pool) throw std::bad_alloc();
+    auto* context = reinterpret_cast<AVHWFramesContext*>(pool->data);
+    context->format = AV_PIX_FMT_VULKAN;
+    context->sw_format = AV_PIX_FMT_RGBA;
+    context->width = image.width(); context->height = image.height();
+    auto* vk = reinterpret_cast<AVVulkanFramesContext*>(context->hwctx);
+    vk->usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT |
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    Check(av_hwframe_ctx_init(pool.get()), "Initialize image upload pool");
+    QImage rgba = image.convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+    auto cpu = AllocateFrame();
+    auto gpu = AllocateFrame();
+    cpu->format = AV_PIX_FMT_RGBA; cpu->width = rgba.width(); cpu->height = rgba.height();
+    cpu->data[0] = const_cast<uint8_t*>(rgba.constBits());
+    cpu->linesize[0] = rgba.bytesPerLine();
+    Check(av_hwframe_get_buffer(pool.get(), gpu.get(), 0), "Allocate uploaded image");
+    Check(av_hwframe_transfer_data(gpu.get(), cpu.get(), 0), "Upload CPU image");
+    gpu_metrics::Record(gpu_metrics::Upload);
+    auto surface = std::make_shared<VulkanFrameImage>(gpu.get(), true);
+    const int64_t size = surface->GetBytes();
+    constexpr int64_t budget = 64 * 1024 * 1024;
+    if (size <= budget) {
+        while (!cache.entries.empty() && (cache.bytes + size > budget || cache.entries.size() >= 16)) {
+            auto oldest = std::min_element(cache.entries.begin(), cache.entries.end(),
+                [](const auto& a, const auto& b) { return a.second.age < b.second.age; });
+            cache.bytes -= oldest->second.bytes;
+            cache.entries.erase(oldest);
+        }
+        cache.entries.emplace(key, UploadCache::Entry{surface, size, ++cache.clock});
+        cache.bytes += size;
+    }
+    return surface;
+}
+void ReleaseVulkanUploads() {
+    auto& cache = Uploads();
+    const std::lock_guard<std::mutex> lock(cache.mutex);
+    cache.entries.clear(); cache.bytes = 0;
+}
+
 }

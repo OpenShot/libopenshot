@@ -116,6 +116,7 @@ class QWidget;
 #include "VulkanFrameImage.h"
 #include "GpuDevices.h"
 #endif
+#include "GpuMetrics.h"
 #include "Settings.h"
 #include "TimelineBase.h"
 #include "Timeline.h"
@@ -533,6 +534,7 @@ namespace openshot { void ReleaseVulkanMemory(); uint64_t VulkanFrameReadbackCou
 %template(GpuDeviceVector) std::vector<openshot::GpuDevice>;
 %template(StringVector) std::vector<std::string>;
 #endif
+%include "GpuMetrics.h"
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"

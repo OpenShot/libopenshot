@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include <utility>
 #include "Clip.h"
 
@@ -30,6 +31,7 @@
 #include "effects/AudioVisualization.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <sstream>
 #include <QPainter>
@@ -792,6 +794,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 				"number", number, "clip_frame_number", clip_frame_number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
+		if (reader->info.has_single_image) gpu_metrics::Record(gpu_metrics::ImageSource);
 		auto reader_frame = reader->GetFrame(clip_frame_number);
 		if (reader_frame) {
 			// Override frame # (due to time-mapping might change it)
@@ -1390,6 +1393,7 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
 			try {
 				auto result = RenderVulkanImage(source, background, background_frame->GetWidth(),
 					background_frame->GetHeight(), QTransform(), 1.0, clear);
+				gpu_metrics::Record(gpu_metrics::RenderGpu);
 				background_frame->AddDeferredImage(result);
 				if (update_frame_image) frame->AddDeferredImage(result);
 				return;
@@ -1399,6 +1403,8 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
 		}
 	}
 #endif
+	gpu_metrics::Record(gpu_metrics::RenderCpu);
+	gpu_metrics::Reason gpu_reason("Composite");
 	// Add background canvas
 	std::shared_ptr<QImage> background_canvas = background_frame->GetImage();
 	QPainter painter(background_canvas.get());
@@ -1421,9 +1427,13 @@ void Clip::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_nu
 	{
 		// Apply the effect to this frame
 		if (effect->info.apply_before_clip && before_keyframes) {
+			gpu_metrics::Reason gpu_reason("Effect");
 			effect->ProcessFrame(frame, frame->number);
+			if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
 		} else if (!effect->info.apply_before_clip && !before_keyframes) {
+			gpu_metrics::Reason gpu_reason("Effect");
 			effect->ProcessFrame(frame, frame->number);
+			if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
 		}
 	}
 
@@ -1442,6 +1452,23 @@ bool Clip::isNear(double a, double b)
 }
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace {
+std::shared_ptr<const VulkanFrameImage> VulkanSource(const std::shared_ptr<Frame>& frame) {
+    if (!VulkanRenderingEnabled()) return {};
+    auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage());
+    if (source || !frame->has_image_data) return source;
+    try {
+        auto uploaded = UploadVulkanImage(*frame->GetImage());
+        frame->AddDeferredImage(uploaded);
+        return std::dynamic_pointer_cast<const VulkanFrameImage>(uploaded);
+    } catch (const std::exception& error) {
+        static std::atomic_flag warned = ATOMIC_FLAG_INIT;
+        if (!warned.test_and_set())
+            Logger::Instance()->Log(std::string("GPU image upload unavailable; using CPU: ") + error.what(), Logger::LevelWarning);
+        return {};
+    }
+}
+}
 bool Clip::apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame, QSize timeline_size)
 {
 	if (!frame->has_image_data || composite != COMPOSITE_SOURCE_OVER ||
@@ -1454,7 +1481,7 @@ bool Clip::apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Fram
 	if (timeline && !static_cast<Timeline*>(timeline)->Effects().empty())
 		return false;
 
-	auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage());
+	auto source = VulkanSource(frame);
 	auto background = background_frame->GetDeferredImage();
 	QColor clear;
 	if (!source || !(std::dynamic_pointer_cast<const VulkanFrameImage>(background) || background_frame->GetBlankColor(clear)))
@@ -1463,6 +1490,7 @@ bool Clip::apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Fram
 		background_frame->AddDeferredImage(RenderVulkanImage(source, background, timeline_size.width(),
 			timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
 			alpha.GetValue(frame->number), clear));
+		gpu_metrics::Record(gpu_metrics::RenderGpu);
 		return true;
 	} catch (const std::exception& error) {
 		Logger::Instance()->Log(std::string("Vulkan layer CPU fallback: ") + error.what());
@@ -1482,11 +1510,12 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 	if (composite == COMPOSITE_SOURCE_OVER &&
 		corner_radius.GetValue(frame->number) == 0.0 && display == FRAME_DISPLAY_NONE) {
-		if (auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage())) {
+		if (auto source = VulkanSource(frame)) {
 			try {
 				frame->AddDeferredImage(RenderVulkanImage(source, nullptr, timeline_size.width(),
 					timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
 					alpha.GetValue(frame->number)));
+				gpu_metrics::Record(gpu_metrics::RenderGpu);
 				return;
 			} catch (const std::exception& error) {
 				Logger::Instance()->Log(std::string("Vulkan transform CPU fallback: ") + error.what());
@@ -1495,6 +1524,8 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	}
 #endif
 
+	gpu_metrics::Record(gpu_metrics::RenderCpu);
+	gpu_metrics::Reason gpu_reason("Transform");
 	// Get image from clip, and create transparent background image
 	std::shared_ptr<QImage> source_image = frame->GetImage();
 	std::shared_ptr<QImage> background_canvas = std::make_shared<QImage>(timeline_size.width(),
