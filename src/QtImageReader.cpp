@@ -39,6 +39,20 @@ QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QStri
     }
 }
 
+
+QtImageReader::QtImageReader(const QImage& source)
+    : is_open(false)
+{
+    if (source.isNull())
+        throw InvalidFile(
+            "QtImageReader cannot open an empty QImage.",
+            "<memory>");
+
+    source_image = std::make_shared<QImage>(source.copy());
+    Open();
+    Close();
+}
+
 QtImageReader::~QtImageReader()
 {
     Close();
@@ -53,8 +67,13 @@ void QtImageReader::Open()
         bool loaded = false;
         QSize default_svg_size;
 
+        if (source_image) {
+            image = std::make_shared<QImage>(source_image->copy());
+            loaded = !image->isNull();
+        }
+
         // Check for SVG files and rasterizing them to QImages
-        if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+        if (!loaded && (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz"))) {
             #if RESVG_VERSION_MIN(0, 11)
                 // Initialize the Resvg options
                 resvg_options.loadSystemFonts();
@@ -67,7 +86,7 @@ void QtImageReader::Open()
             }
         }
 
-        if (!loaded) {
+        if (!loaded && !source_image) {
             // Attempt to open file using Qt's build in image processing capabilities
             // AutoTransform enables exif data to be parsed and auto transform the image
             // to the correct orientation
@@ -166,7 +185,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
     // Scale image smaller (or use a previous scaled image)
     if (!cached_image || max_size != current_max_size) {
         // Check for SVG files and rasterize them to QImages
-        if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+        if (!source_image && (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz"))) {
             load_svg_path(path);
         }
 
@@ -188,7 +207,11 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
     auto image_frame = std::make_shared<Frame>(
             requested_frame, sz.width(), sz.height(), "#000000",
             sample_count, info.channels);
-    image_frame->AddImage(cached_image);
+    if (source_image)
+        image_frame->AddImage(
+            std::make_shared<QImage>(*cached_image));
+    else
+        image_frame->AddImage(cached_image);
 
     // return frame object
     return image_frame;
