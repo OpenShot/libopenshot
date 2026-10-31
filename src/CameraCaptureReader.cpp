@@ -313,6 +313,13 @@ void CameraCaptureReader::Close()
 	}
 }
 
+void CameraCaptureReader::RequestClose()
+{
+	if (reader) {
+		reader->RequestClose();
+	}
+}
+
 openshot::CaptureReaderStats CameraCaptureReader::GetStats() const
 {
 	return reader ? reader->GetStats() : CaptureReaderStats();

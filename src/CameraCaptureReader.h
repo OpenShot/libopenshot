@@ -55,6 +55,8 @@ namespace openshot
 		~CameraCaptureReader() override;
 
 		void Close() override;
+		/// Request cancellation without releasing camera resources on the caller's thread.
+		void RequestClose();
 		CacheBase* GetCache() override { return NULL; };
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t number) override;
 		bool IsOpen() override { return reader && reader->IsOpen(); };

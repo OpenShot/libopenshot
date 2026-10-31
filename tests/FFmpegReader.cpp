@@ -783,6 +783,134 @@ TEST_CASE( "Missing_Image_Frame_Finalizes_Using_Previous_Image", "[libopenshot][
 	CHECK(r.final_cache.GetFrame(58) != nullptr);
 }
 
+TEST_CASE("Initial missing pictures wait for audio but not EOF", "[libopenshot][ffmpegreader][initial-gap]")
+{
+	FFmpegReader r("synthetic-initial-gap", DurationStrategy::VideoPreferred, false);
+	r.info.has_video = true;
+	r.info.has_audio = true;
+	r.info.has_single_image = false;
+	r.info.width = 160;
+	r.info.height = 90;
+	r.info.fps = Fraction(30, 1);
+	r.info.sample_rate = 48000;
+	r.info.channels = 1;
+	r.info.channel_layout = LAYOUT_MONO;
+	r.pts_offset_seconds = 0.0;
+	r.packet_status.reset(false);
+	r.video_pts_seconds = 0.5;
+	r.audio_pts_seconds = 1.1;
+	r.first_video_frame = 16;
+	auto frame = r.CreateFrame(1);
+	const float sample = 0.25f;
+	frame->AddAudio(true, 0, 0, &sample, 1, 1.0f);
+
+	SECTION("Initial gap becomes black without changing its audio") {
+		r.CheckWorkingFrames(1);
+		auto result = r.final_cache.GetFrame(1);
+		REQUIRE(result != nullptr);
+		CHECK(result->CheckPixel(0, 0, 0, 0, 0, 255, 0));
+		CHECK(result->GetAudioSamples(0)[0] == sample);
+		CHECK_FALSE(r.packet_status.end_of_file);
+	}
+	SECTION("Earlier audio packets alone do not make the frame ready") {
+		r.audio_pts_seconds = -0.02;
+		r.CheckWorkingFrames(1);
+		CHECK(r.final_cache.GetFrame(1) == nullptr);
+		CHECK_FALSE(frame->has_image_data);
+	}
+	SECTION("Video-only initial gaps need no audio wait") {
+		r.info.has_audio = false;
+		r.audio_pts_seconds = -0.02;
+		r.CheckWorkingFrames(1);
+		REQUIRE(r.final_cache.GetFrame(1) != nullptr);
+		CHECK(r.final_cache.GetFrame(1)->CheckPixel(0, 0, 0, 0, 0, 255, 0));
+	}
+	SECTION("Wait for actual decoded output, not a later packet timestamp") {
+		r.first_video_frame = 0;
+		r.CheckWorkingFrames(1);
+		CHECK(r.final_cache.GetFrame(1) == nullptr);
+	}
+	SECTION("A missing picture after the first decoded picture is not an initial gap") {
+		r.first_video_frame = 1;
+		r.CheckWorkingFrames(1);
+		CHECK(r.final_cache.GetFrame(1) == nullptr);
+	}
+	SECTION("A completed mid-file seek cannot establish an initial gap") {
+		r.first_video_frame = -1;
+		r.CheckWorkingFrames(1);
+		CHECK(r.final_cache.GetFrame(1) == nullptr);
+	}
+	SECTION("A seek in progress cannot establish an initial gap") {
+		r.is_seeking = true;
+		r.CheckWorkingFrames(1);
+		CHECK(r.final_cache.GetFrame(1) == nullptr);
+	}
+}
+
+TEST_CASE("Initial video gap preserves decoded pictures and survives seeking", "[libopenshot][ffmpegreader][initial-gap]")
+{
+	if (std::system("ffmpeg -hide_banner -version >/dev/null 2>&1") != 0) {
+		WARN("Skipping initial-gap fixture: ffmpeg executable not available");
+		return;
+	}
+	const auto suffix = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+	TemporaryFileGuard source("initial-gap-source-" + suffix + ".mp4");
+	TemporaryFileGuard gap("initial-gap-" + suffix + ".mkv");
+	const std::string encode = "ffmpeg -y -hide_banner -loglevel error "
+		"-f lavfi -i testsrc2=size=160x90:rate=30 "
+		"-f lavfi -i sine=frequency=440:sample_rate=48000 -t 5 "
+		"-c:v libx264 -g 30 -keyint_min 30 -sc_threshold 0 -bf 2 -c:a aac " + source.path;
+	REQUIRE(std::system(encode.c_str()) == 0);
+	// Preserve non-key packets at the start: decoding cannot produce a picture
+	// until the next keyframe. Audio starts earlier, and B-frames require reordering.
+	const std::string trim = "ffmpeg -y -hide_banner -loglevel error -i " + source.path
+		+ " -ss 0.5 -c copy -copyinkf -avoid_negative_ts disabled " + gap.path;
+	REQUIRE(std::system(trim.c_str()) == 0);
+	HardwareDecoderSettingsGuard guard;
+	Settings::Instance()->HARDWARE_DECODER = 0;
+	FFmpegReader normal(source.path);
+	normal.Open();
+	auto normal_first = normal.GetFrame(1);
+	CHECK(normal.first_video_frame == 1);
+	CHECK(SampleAverageLuma(normal_first) > 10.0);
+
+	FFmpegReader r(gap.path);
+	r.Open();
+	CHECK(r.aStream->start_time * av_q2d(r.aStream->time_base)
+		< r.pStream->start_time * av_q2d(r.pStream->time_base));
+	auto first = r.GetFrame(1);
+	REQUIRE(first != nullptr);
+	CHECK(first->CheckPixel(0, 0, 0, 0, 0, 255, 0));
+	CHECK_FALSE(r.packet_status.packets_eof);
+	CHECK(r.packet_status.video_decoded < 60);
+	const int64_t first_picture = r.first_video_frame;
+	REQUIRE(first_picture > 1);
+	REQUIRE(first_picture < 30);
+	REQUIRE(first->GetAudioSamplesCount() > 0);
+	float peak_audio = 0.0f;
+	for (int i = 0; i < first->GetAudioSamplesCount(); ++i)
+		peak_audio = std::max(peak_audio, std::abs(first->GetAudioSamples(0)[i]));
+	CHECK(peak_audio > 0.01f);
+	for (int64_t n = 2; n < first_picture; ++n)
+		CHECK(r.GetFrame(n)->CheckPixel(0, 0, 0, 0, 0, 255, 0));
+	auto picture = r.GetFrame(first_picture);
+	CHECK(SampleAverageLuma(picture) > 10.0);
+	// Stream copy preserves the original picture at 1 second (frame 31).
+	CHECK(*picture->GetImage() == *normal.GetFrame(31)->GetImage());
+	r.GetFrame(100);
+	CHECK(r.first_video_frame == -1); // A mid-file seek must not define a startup gap.
+	r.GetCache()->Clear();
+	CHECK(r.GetFrame(1)->CheckPixel(0, 0, 0, 0, 0, 255, 0));
+	CHECK_FALSE(r.packet_status.packets_eof);
+	CHECK(*r.GetFrame(first_picture)->GetImage() == *picture->GetImage());
+	r.Close();
+	CHECK(r.first_video_frame == 0);
+	r.Open();
+	CHECK(r.GetFrame(1)->CheckPixel(0, 0, 0, 0, 0, 255, 0));
+	r.Close();
+	normal.Close();
+}
+
 TEST_CASE( "HardwareDecodeSuccessful_IsFalse_WhenHardwareDecodeIsDisabled", "[libopenshot][ffmpegreader][hardware]" )
 {
 	HardwareDecoderSettingsGuard guard;
