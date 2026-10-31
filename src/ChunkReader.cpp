@@ -12,14 +12,60 @@
 
 #include <fstream>
 #include <sstream>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
 
 #include "ChunkReader.h"
+#include "QtJsonAdapter.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 
 #include <QDir>
+#include <QJsonObject>
 
 using namespace openshot;
+
+namespace {
+
+// Preserve the JsonCpp scalar conversion behavior used by ChunkReader.
+// JSON null and missing members convert to zero; strings are not numeric.
+double jsonCompatNumber(const QJsonValue& value)
+{
+    if (value.isNull() || value.isUndefined())
+        return 0.0;
+    if (value.isBool())
+        return value.toBool() ? 1.0 : 0.0;
+    if (!value.isDouble())
+        throw std::invalid_argument("Expected a JSON number");
+    return value.toDouble();
+}
+
+int jsonCompatInt(const QJsonValue& value)
+{
+    const double number = jsonCompatNumber(value);
+    if (!std::isfinite(number) ||
+        number < static_cast<double>(std::numeric_limits<int>::min()) ||
+        number > static_cast<double>(std::numeric_limits<int>::max()))
+        throw std::out_of_range("JSON integer is out of range");
+    return static_cast<int>(number);
+}
+
+unsigned int jsonCompatUInt(const QJsonValue& value)
+{
+    const double number = jsonCompatNumber(value);
+    if (!std::isfinite(number) || number < 0.0 ||
+        number > static_cast<double>(std::numeric_limits<unsigned int>::max()))
+        throw std::out_of_range("JSON unsigned integer is out of range");
+    return static_cast<unsigned int>(number);
+}
+
+bool jsonCompatBool(const QJsonValue& value)
+{
+    return jsonCompatNumber(value) != 0.0;
+}
+
+} // namespace
 
 ChunkReader::ChunkReader(std::string path, ChunkVersion chunk_version)
 		: path(path), chunk_size(24 * 3), is_open(false), version(chunk_version), local_reader(NULL)
@@ -65,55 +111,89 @@ void ChunkReader::load_json()
 		myfile.close();
 	}
 
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
+    // Parse chunk metadata using Qt JSON.
+    QJsonObject root;
+    try
+    {
+        root = openshot::detail::parseQtJson(
+            json_string.str()).object();
+    }
+    catch (const InvalidJSON&)
+    {
+        throw InvalidJSON(
+            "Chunk folder could not be opened.", path);
+    }
 
-	std::string errors;
-	bool success = Json::parseFromStream(rbuilder, json_string, &root, &errors);
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("Chunk folder could not be opened.", path);
+    // Populate metadata from the JSON object.
+    try
+    {
+        info.has_video = jsonCompatBool(root.value("has_video"));
+        info.has_audio = jsonCompatBool(root.value("has_audio"));
+        info.duration = jsonCompatNumber(root.value("duration"));
+        info.file_size = std::stoll(
+            root.value("file_size").toString().toStdString());
+        info.height = jsonCompatInt(root.value("height"));
+        info.width = jsonCompatInt(root.value("width"));
+        info.pixel_format = jsonCompatInt(root.value("pixel_format"));
 
+        const QJsonObject fps =
+            root.value("fps").toObject();
+        info.fps.num = jsonCompatInt(fps.value("num"));
+        info.fps.den = jsonCompatInt(fps.value("den"));
 
-	// Set info from the JSON objects
-	try
-	{
-		info.has_video = root["has_video"].asBool();
-		info.has_audio = root["has_audio"].asBool();
-		info.duration = root["duration"].asDouble();
-		info.file_size = std::stoll(root["file_size"].asString());
-		info.height = root["height"].asInt();
-		info.width = root["width"].asInt();
-		info.pixel_format = root["pixel_format"].asInt();
-		info.fps.num = root["fps"]["num"].asInt();
-		info.fps.den = root["fps"]["den"].asInt();
-		info.video_bit_rate = root["video_bit_rate"].asUInt();
-		info.pixel_ratio.num = root["pixel_ratio"]["num"].asInt();
-		info.pixel_ratio.den = root["pixel_ratio"]["den"].asInt();
-		info.display_ratio.num = root["display_ratio"]["num"].asInt();
-		info.display_ratio.den = root["display_ratio"]["den"].asInt();
-		info.vcodec = root["vcodec"].asString();
-		info.video_length = std::stoll(root["video_length"].asString());
-		info.video_stream_index = root["video_stream_index"].asInt();
-		info.video_timebase.num = root["video_timebase"]["num"].asInt();
-		info.video_timebase.den = root["video_timebase"]["den"].asInt();
-		info.interlaced_frame = root["interlaced_frame"].asBool();
-		info.top_field_first = root["top_field_first"].asBool();
-		info.acodec = root["acodec"].asString();
-		info.audio_bit_rate = root["audio_bit_rate"].asUInt();
-		info.sample_rate = root["sample_rate"].asUInt();
-		info.channels = root["channels"].asInt();
-		info.audio_stream_index = root["audio_stream_index"].asInt();
-		info.audio_timebase.num = root["audio_timebase"]["num"].asInt();
-		info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
+        info.video_bit_rate =
+            jsonCompatUInt(root.value("video_bit_rate"));
 
-	}
-	catch (const std::exception& e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON could not be parsed (or is invalid).", path);
-	}
+        const QJsonObject pixel_ratio =
+            root.value("pixel_ratio").toObject();
+        info.pixel_ratio.num = jsonCompatInt(pixel_ratio.value("num"));
+        info.pixel_ratio.den = jsonCompatInt(pixel_ratio.value("den"));
+
+        const QJsonObject display_ratio =
+            root.value("display_ratio").toObject();
+        info.display_ratio.num = jsonCompatInt(display_ratio.value("num"));
+        info.display_ratio.den = jsonCompatInt(display_ratio.value("den"));
+
+        info.vcodec = root.value("vcodec").toString().toStdString();
+        info.video_length = std::stoll(
+            root.value("video_length").toString().toStdString());
+        info.video_stream_index =
+            jsonCompatInt(root.value("video_stream_index"));
+
+        const QJsonObject video_timebase =
+            root.value("video_timebase").toObject();
+        info.video_timebase.num =
+            jsonCompatInt(video_timebase.value("num"));
+        info.video_timebase.den =
+            jsonCompatInt(video_timebase.value("den"));
+
+        info.interlaced_frame =
+            jsonCompatBool(root.value("interlaced_frame"));
+        info.top_field_first =
+            jsonCompatBool(root.value("top_field_first"));
+
+        info.acodec = root.value("acodec").toString().toStdString();
+        info.audio_bit_rate =
+            jsonCompatUInt(root.value("audio_bit_rate"));
+        info.sample_rate =
+            jsonCompatUInt(root.value("sample_rate"));
+        info.channels = jsonCompatInt(root.value("channels"));
+        info.audio_stream_index =
+            jsonCompatInt(root.value("audio_stream_index"));
+
+        const QJsonObject audio_timebase =
+            root.value("audio_timebase").toObject();
+        info.audio_timebase.num =
+            jsonCompatInt(audio_timebase.value("num"));
+        info.audio_timebase.den =
+            jsonCompatInt(audio_timebase.value("den"));
+    }
+    catch (const std::exception&)
+    {
+        throw InvalidJSON(
+            "JSON could not be parsed (or is invalid).", path);
+    }
+
 }
 
 // Find the location of a frame in a chunk

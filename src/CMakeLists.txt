@@ -79,6 +79,7 @@ set(OPENSHOT_SOURCES
   FrameMapper.cpp
   MemoryTrim.cpp
   Json.cpp
+  QtJsonAdapter.cpp
   KeyFrame.cpp
   OpenShotVersion.cpp
   PlayerBase.cpp
