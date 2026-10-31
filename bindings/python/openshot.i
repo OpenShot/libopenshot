@@ -506,6 +506,7 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "FFmpegReader.h"
 %include "FFmpegWriter.h"
 %include "Fraction.h"
+%include "ColorSpace.h"
 %include "Frame.h"
 %include "FrameScope.h"
 %include "FrameMapper.h"

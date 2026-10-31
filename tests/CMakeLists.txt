@@ -47,6 +47,7 @@ set(OPENSHOT_TESTS
   Caption
   Clip
   Color
+  ColorSpace
   Coordinate
   DummyReader
   FFmpegCapabilities
