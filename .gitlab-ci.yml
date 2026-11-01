@@ -33,6 +33,7 @@ linux-builder:
     expire_in: 6 months
     paths:
     - build/install-x64/*
+    - build/ffmpeg-hardware-check/*
   script:
     - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=linux-builder"
     - if [ ! -f artifacts.zip ]; then
@@ -48,6 +49,7 @@ linux-builder:
     - if [ ! -f "$FFMPEG_ROOT/env.sh" ]; then echo "ERROR runner is missing $FFMPEG_ROOT (FFmpeg 7 with Vulkan)"; exit 1; fi
     - . "$FFMPEG_ROOT/env.sh"
     - export FFMPEGDIR="$FFMPEG_ROOT"
+    - bash ci/linux/check-ffmpeg-hardware.sh "$FFMPEG_ROOT" "$CI_PROJECT_DIR/build/ffmpeg-hardware-check"
     - mkdir -p build; cd build;
     - pkg-config --exists libpipewire-0.3 libspa-0.2 gio-2.0 gio-unix-2.0 || echo "WARNING PipeWire Wayland capture dependencies are missing; building without Wayland capture support"
     - cmake -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"OpenCV_DIR:PATH=$OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_SYSTEM_JSONCPP=0 -DENABLE_WAYLAND_CAPTURE=ON -DENABLE_GPU_FRAME=ON -D"Vulkan_INCLUDE_DIR:PATH=$VULKAN_HEADERS_ROOT/include" -D"CMAKE_CXX_FLAGS=-I$VULKAN_HEADERS_ROOT/include" ../
