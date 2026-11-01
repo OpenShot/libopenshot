@@ -4,6 +4,7 @@
 #include "VideoRenderer.h"
 #include "../VulkanFrameImage.h"
 #include "../VulkanCompositor.h"
+#include "../Logger.h"
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QOpenGLExtraFunctions>
@@ -12,6 +13,7 @@
 #include <QWidget>
 #include <QVariant>
 #include <QDebug>
+#include <QByteArray>
 #include <QThread>
 #include "ExternalOpenGL.h"
 #ifdef _WIN32
@@ -49,6 +51,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     uint64_t native_draws = 0;
     uint64_t fallback_frames = 0;
     std::string last_failure;
+    QPointer<QOpenGLContext> logged_context;
+    bool identity_logged = false;
     bool unavailable(const std::string& reason) { last_failure = reason; return false; }
     explicit Impl(QWidget* value) : widget(value) {
         value->setProperty("openshot_gpu_presenter", QVariant::fromValue(static_cast<QObject*>(this)));
@@ -81,6 +85,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         }
     }
     bool draw(int x, int y, int width, int height) {
+        if (qEnvironmentVariable("OPENSHOT_PRESENTATION_BACKEND") == "cpu")
+            return unavailable("OPENSHOT_PRESENTATION_BACKEND=cpu (Vulkan processing remains enabled)");
         auto lastStage = std::chrono::steady_clock::now();
         const bool trace = qEnvironmentVariableIsSet("OPENSHOT_TRACE_PRESENTATION");
         auto stage = [&](const char* name) {
@@ -91,6 +97,27 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         };
         auto context = QOpenGLContext::currentContext();
         if (!context) return unavailable("No current Qt OpenGL context");
+        if (logged_context != context) {
+            auto text = [&](GLenum name) {
+                const auto* value = context->functions()->glGetString(name);
+                return value ? reinterpret_cast<const char*>(value) : "unknown";
+            };
+#ifdef _WIN32
+            const bool memory = context->hasExtension("GL_EXT_memory_object_win32");
+            const bool semaphore = context->hasExtension("GL_EXT_semaphore_win32");
+#else
+            const bool memory = context->hasExtension("GL_EXT_memory_object_fd");
+            const bool semaphore = context->hasExtension("GL_EXT_semaphore_fd");
+#endif
+            Logger::Instance()->Log(std::string("GPU presentation Qt context: vendor=") + text(GL_VENDOR) +
+                "; renderer=" + text(GL_RENDERER) + "; version=" + text(GL_VERSION) +
+                "; OpenGL ES=" + (context->isOpenGLES() ? "yes" : "no") +
+                "; external memory=" + (memory ? "yes" : "no") +
+                "; external semaphore=" + (semaphore ? "yes" : "no"), Logger::LevelInfo);
+            logged_context = context;
+            identity_logged = false;
+        }
+        stage("begin draw");
         if (context->isOpenGLES())
             return unavailable("Vulkan presentation requires desktop OpenGL; Qt selected OpenGL ES/ANGLE (try QT_OPENGL=desktop)");
         if (!frame || !widget) return unavailable("No video frame or preview widget");
@@ -101,6 +128,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         if (!surface) return unavailable("Frame cannot be presented as a Vulkan RGBA surface");
         auto inputContext = reinterpret_cast<AVHWFramesContext*>(surface->GetFrame()->hw_frames_ctx->data);
         if (inputContext->sw_format != AV_PIX_FMT_RGBA) {
+            stage("begin RGBA conversion");
             surface = std::dynamic_pointer_cast<const VulkanFrameImage>(RenderVulkanImage(
                 surface, nullptr, surface->GetWidth(), surface->GetHeight(), QTransform(), 1.0, Qt::black));
             if (!surface) return unavailable("Frame cannot be presented as a Vulkan RGBA surface");
@@ -116,6 +144,16 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         // Multi-plane decode surfaces must first go through the RGBA compositor.
         if (fc->sw_format != AV_PIX_FMT_RGBA || vfc->format[0] != VK_FORMAT_R8G8B8A8_UNORM || image->img[1])
             return unavailable("Unsupported Vulkan image format for OpenGL sharing");
+        VkPhysicalDeviceIDProperties identity{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
+        VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &identity};
+        vkGetPhysicalDeviceProperties2(vk->phys_dev, &properties);
+        const bool logIdentity = !identity_logged;
+        if (logIdentity) {
+            Logger::Instance()->Log(std::string("GPU presentation Vulkan device: ") + properties.properties.deviceName +
+                "; UUID=" + QByteArray(reinterpret_cast<const char*>(identity.deviceUUID), VK_UUID_SIZE).toHex().toStdString(),
+                Logger::LevelInfo);
+            identity_logged = true;
+        }
 #ifdef _WIN32
         if (!context->hasExtension("GL_EXT_memory_object_win32") || !context->hasExtension("GL_EXT_semaphore_win32"))
 #else
@@ -125,15 +163,15 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         auto gl = context->functions();
         auto extra = context->extraFunctions();
         auto getUuid = glFunction<PFNGLGETUNSIGNEDBYTEI_VEXTPROC>(context, "glGetUnsignedBytei_vEXT");
-        VkPhysicalDeviceIDProperties identity{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
-        VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &identity};
-        vkGetPhysicalDeviceProperties2(vk->phys_dev, &properties);
         GLint deviceCount = 0;
         gl->glGetIntegerv(GL_NUM_DEVICE_UUIDS_EXT, &deviceCount);
         bool sameDevice = false;
         for (int i = 0; i < deviceCount; ++i) {
             GLubyte uuid[GL_UUID_SIZE_EXT];
             getUuid(GL_DEVICE_UUID_EXT, i, uuid);
+            if (logIdentity)
+                Logger::Instance()->Log("GPU presentation OpenGL device UUID=" +
+                    QByteArray(reinterpret_cast<const char*>(uuid), GL_UUID_SIZE_EXT).toHex().toStdString(), Logger::LevelInfo);
             sameDevice = sameDevice || std::memcmp(uuid, identity.deviceUUID, VK_UUID_SIZE) == 0;
         }
         if (!sameDevice) {
@@ -362,6 +400,16 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             gl->glDisable(GL_BLEND);
             gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
             gl->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            if (trace) {
+                const auto error = gl->glGetError();
+                GLint framebuffer = 0, activeProgram = 0, boundTexture = 0;
+                gl->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
+                gl->glGetIntegerv(GL_CURRENT_PROGRAM, &activeProgram);
+                gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
+                qWarning() << "GPU presentation draw state: error=" << error
+                           << "framebuffer=" << framebuffer << "program=" << activeProgram
+                           << "texture=" << boundTexture << "vertex=" << vertex;
+            }
             signalSemaphore(semaphores[1], 0, nullptr, 1, &texture, &layout);
             gl->glFlush();
             stage("GL draw flush");

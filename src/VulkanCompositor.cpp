@@ -12,10 +12,12 @@
 #include <map>
 #include <mutex>
 #include <stdexcept>
+#include <sstream>
 #include <vector>
 extern "C" {
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vulkan.h>
+#include <libavutil/error.h>
 }
 // SPIR-V generated from src/vulkan/*.comp at build time.
 #include "affine.comp.h"
@@ -26,7 +28,11 @@ void VkCheck(VkResult r, const char* operation) {
     if(r != VK_SUCCESS) throw std::runtime_error(std::string(operation)+": Vulkan error "+std::to_string(r));
 }
 void AvCheck(int r, const char* operation) {
-    if(r < 0) throw std::runtime_error(std::string(operation)+": FFmpeg error "+std::to_string(r));
+    if(r < 0) {
+        char error[AV_ERROR_MAX_STRING_SIZE];
+        av_strerror(r, error, sizeof(error));
+        throw std::runtime_error(std::string(operation)+": FFmpeg error "+std::to_string(r)+" ("+error+")");
+    }
 }
 struct FrameDelete { void operator()(AVFrame* f) const { av_frame_free(&f); } };
 using FramePtr=std::unique_ptr<AVFrame,FrameDelete>;
@@ -232,8 +238,20 @@ public:
 #else
             AVBufferRef* pool=OutputPool(device_ref,width,height,encode_nv12);
             const int allocated=av_hwframe_get_buffer(pool,output.get(),0);
+            std::string operation="Allocate compositor output";
+            if(allocated<0){
+                const auto* fc=reinterpret_cast<const AVHWFramesContext*>(pool->data);
+                const auto* vc=reinterpret_cast<const AVVulkanFramesContext*>(fc->hwctx);
+                std::ostringstream detail;
+                detail << operation << " [" << width << 'x' << height
+                       << ", format=" << (encode_nv12?"NV12":"RGBA")
+                       << ", usage=0x" << std::hex << vc->usage
+                       << ", image_flags=0x" << vc->img_flags << std::dec
+                       << ", tiling=" << vc->tiling << ']';
+                operation=detail.str();
+            }
             av_buffer_unref(&pool);
-            AvCheck(allocated,"Allocate compositor output");
+            AvCheck(allocated,operation.c_str());
 #endif
         }
         AvCheck(av_frame_copy_props(output.get(),src),"Copy compositor metadata");

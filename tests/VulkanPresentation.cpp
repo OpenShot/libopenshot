@@ -12,6 +12,7 @@
 #include <QOpenGLWidget>
 #include <QPainter>
 #include <QThread>
+#include <QDebug>
 extern "C" {
 #include <libavutil/hwcontext.h>
 }
@@ -20,6 +21,18 @@ class Preview : public QOpenGLWidget {
 public:
     openshot::VulkanOpenGLPresenter presenter{reinterpret_cast<uintptr_t>(this)};
     bool nativeDraw = false;
+    void initializeGL() override {
+        auto* current = context();
+        typedef const GLubyte* (APIENTRYP GetString)(GLenum);
+        auto getString = reinterpret_cast<GetString>(current->getProcAddress("glGetString"));
+        qWarning() << "Presentation test Qt context:" << qVersion() << current->format()
+                   << "OpenGL ES:" << current->isOpenGLES()
+                   << "glCreateProgram:" << bool(current->getProcAddress("glCreateProgram"));
+        if (getString)
+            qWarning() << "Presentation test GL:" << reinterpret_cast<const char*>(getString(GL_VENDOR))
+                       << reinterpret_cast<const char*>(getString(GL_RENDERER))
+                       << reinterpret_cast<const char*>(getString(GL_VERSION));
+    }
     void paintGL() override {
         QPainter painter(this);
         painter.fillRect(rect(), Qt::blue);
@@ -122,6 +135,10 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     // a race where Vulkan consumes its own release signal before GL waits.
     for (int i = 0; i < 64; ++i) {
         image = widget.grabFramebuffer();
+        if (i == 0 && qEnvironmentVariableIsSet("OPENSHOT_PRESENTATION_CAPTURE"))
+            image.save(qEnvironmentVariable("OPENSHOT_PRESENTATION_CAPTURE"));
+        INFO("frame=" << i << " top=" << image.pixelColor(image.width()/2, image.height()/4).name().toStdString()
+             << " bottom=" << image.pixelColor(image.width()/2, 3*image.height()/4).name().toStdString());
         REQUIRE(widget.nativeDraw);
         REQUIRE(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
         REQUIRE(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
