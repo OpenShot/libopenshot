@@ -155,7 +155,9 @@ struct UploadCache {
     int64_t bytes = 0;
     uint64_t clock = 0;
 };
-UploadCache& Uploads() { static UploadCache cache; return cache; }
+// Never destroyed: freeing cached Vulkan frames from a static destructor at
+// process exit crashes the Windows NVIDIA driver, which may already be unloading.
+UploadCache& Uploads() { static auto* cache = new UploadCache; return *cache; }
 struct BufferDeleter { void operator()(AVBufferRef* p) const { av_buffer_unref(&p); } };
 using OwnedBuffer = std::unique_ptr<AVBufferRef, BufferDeleter>;
 }
