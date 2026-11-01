@@ -67,6 +67,23 @@ TEST_CASE("Hardware encoder uploads preserve surface format",
 		WARN("Skipping hardware encoder test: device unavailable: " << codec);
 		return;
 	}
+	// A device context alone does not guarantee an available encoding session
+	// (for example, VideoToolbox can report that its encoder is unavailable).
+	const AVCodec* encoder = avcodec_find_encoder_by_name(codec);
+	AVCodecContext* probe = avcodec_alloc_context3(encoder);
+	REQUIRE(probe != nullptr);
+	probe->width = 320;
+	probe->height = 240;
+	probe->time_base = AVRational{1, 24};
+	probe->pix_fmt = AV_PIX_FMT_NV12;
+	probe->bit_rate = 1000000;
+	const int encoder_result = avcodec_open2(probe, encoder, nullptr);
+	avcodec_free_context(&probe);
+	if (encoder_result < 0) {
+		WARN("Skipping hardware encoder test: encoding session unavailable: " << codec
+		     << " (FFmpeg error " << encoder_result << ")");
+		return;
+	}
 	QTemporaryDir directory;
 	REQUIRE(directory.isValid());
 	const std::string path = directory.filePath("hardware.mp4").toStdString();
