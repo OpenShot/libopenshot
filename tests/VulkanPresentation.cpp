@@ -68,6 +68,11 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     int argc = 1;
     char name[] = "vulkan-presentation";
     char* argv[] = {name, nullptr};
+#ifdef _WIN32
+    // Match the editor: ANGLE/Direct3D cannot import Vulkan Win32 resources.
+    if (!qEnvironmentVariableIsSet("QT_OPENGL"))
+        qputenv("QT_OPENGL", "desktop");
+#endif
     QApplication app(argc, argv);
     data.pool = av_hwframe_ctx_alloc(data.device);
     REQUIRE(data.pool);

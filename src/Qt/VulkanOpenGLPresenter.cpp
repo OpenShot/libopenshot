@@ -91,6 +91,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         };
         auto context = QOpenGLContext::currentContext();
         if (!context) return unavailable("No current Qt OpenGL context");
+        if (context->isOpenGLES())
+            return unavailable("Vulkan presentation requires desktop OpenGL; Qt selected OpenGL ES/ANGLE (try QT_OPENGL=desktop)");
         if (!frame || !widget) return unavailable("No video frame or preview widget");
         if (fallback_delivered) return false;
         auto authoritative = frame->GetDeferredImage();

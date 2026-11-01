@@ -2117,7 +2117,10 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				if (hw_en_av_pix_fmt != AV_PIX_FMT_VULKAN) {
 					video_codec_ctx->profile = AV_PROFILE_H264_CONSTRAINED_BASELINE;
 					av_opt_set(video_codec_ctx->priv_data, "preset", "slow", 0);
-					av_opt_set(video_codec_ctx->priv_data, "tune", "zerolatency", 0);
+					if (hw_en_av_pix_fmt == AV_PIX_FMT_CUDA)
+						av_opt_set_int(video_codec_ctx->priv_data, "zerolatency", 1, 0);
+					else
+						av_opt_set(video_codec_ctx->priv_data, "tune", "zerolatency", 0);
 					av_opt_set(video_codec_ctx->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
 				}
 				break;

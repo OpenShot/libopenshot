@@ -124,6 +124,8 @@ windows-builder-x64:
     - $env:MSYSTEM = "MINGW64"
     - $env:FFMPEGDIR = "C:/msys64/mingw64"
     - if ((& "$env:FFMPEGDIR/bin/ffmpeg.exe" -version | Select-Object -First 1) -notmatch "^ffmpeg version 7[.]1[.]") { throw "FFmpeg 7.1 is required" }
+    - $gpuEncoders = (& "$env:FFMPEGDIR/bin/ffmpeg.exe" -hide_banner -encoders 2>&1 | Out-String)
+    - 'if ($LASTEXITCODE -ne 0) { throw "Could not enumerate FFmpeg encoders" }; foreach ($codec in @("h264_nvenc", "hevc_nvenc", "h264_qsv", "hevc_qsv", "h264_amf", "hevc_amf")) { if ($gpuEncoders -notmatch "\b$codec\b") { throw "Windows FFmpeg is missing required hardware encoder $codec" } }'
     - ffmpeg -hide_banner -devices | findstr /I "gdigrab"
     - ffmpeg -hide_banner -devices | findstr /I "dshow"
     - cmake -B build -S . -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"babl_DIR=C:/msys64/mingw64" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-x64" -D"OpenCV_DIR:PATH=$env:OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_AUTOGEN_PARALLEL=1 -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -DENABLE_GPU_FRAME=ON
@@ -199,6 +201,8 @@ windows-builder-x86:
     - $env:MSYSTEM = "MINGW32"
     - $env:FFMPEGDIR = "C:/msys64/mingw32"
     - if ((& "$env:FFMPEGDIR/bin/ffmpeg.exe" -version | Select-Object -First 1) -notmatch "^ffmpeg version 7[.]1[.]") { throw "FFmpeg 7.1 is required" }
+    - $gpuEncoders = (& "$env:FFMPEGDIR/bin/ffmpeg.exe" -hide_banner -encoders 2>&1 | Out-String)
+    - 'if ($LASTEXITCODE -ne 0) { throw "Could not enumerate FFmpeg encoders" }; foreach ($codec in @("h264_nvenc", "hevc_nvenc", "h264_qsv", "hevc_qsv", "h264_amf", "hevc_amf")) { if ($gpuEncoders -notmatch "\b$codec\b") { throw "Windows FFmpeg is missing required hardware encoder $codec" } }'
     - ffmpeg -hide_banner -devices | findstr /I "gdigrab"
     - ffmpeg -hide_banner -devices | findstr /I "dshow"
     - cmake -B build -S . -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"babl_DIR=C:/msys64/mingw32" -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -D"OpenShotAudio_ROOT=$CI_PROJECT_DIR\build\install-x86" -D"OpenCV_DIR:PATH=$env:OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_AUTOGEN_PARALLEL=1 -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32 -msse2 -mfpmath=sse" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32 -msse2 -mfpmath=sse" -DENABLE_GPU_FRAME=ON

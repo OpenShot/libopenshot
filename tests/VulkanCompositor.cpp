@@ -153,6 +153,53 @@ TEST_CASE("Native Vulkan export keeps decoded and composited frames on the GPU",
         reader.Close();
     }
 }
+TEST_CASE("NVENC export accepts CPU and Vulkan frames without changing the requested encoder", "[vulkan][hardware][writer][nvenc]") {
+    if (!VulkanAvailable()) return;
+    const auto encoders = openshot::GpuEncoders();
+    if (std::find(encoders.begin(), encoders.end(), "h264_nvenc") == encoders.end()) {
+        WARN("Skipping Vulkan test: no usable NVENC encoder");
+        return;
+    }
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    QImage pixels(256, 256, QImage::Format_RGBA8888_Premultiplied);
+    for (int y = 0; y < pixels.height(); ++y)
+        for (int x = 0; x < pixels.width(); ++x)
+            pixels.setPixelColor(x, y, y < 128 ? Qt::red : Qt::blue);
+    const auto uploaded = openshot::UploadVulkanImage(pixels);
+    REQUIRE(uploaded);
+    for (const std::string codec : {"h264_nvenc", "hevc_nvenc"}) {
+        if (std::find(encoders.begin(), encoders.end(), codec) == encoders.end()) continue;
+        for (bool gpu : {false, true}) {
+            INFO("encoder=" << codec << " GPU input=" << gpu);
+            const auto path = directory.filePath(QString::fromStdString(codec + (gpu ? "-gpu.mp4" : "-cpu.mp4"))).toStdString();
+            openshot::FFmpegWriter writer(path);
+            writer.SetVideoOptions(true, codec, openshot::Fraction(24, 1), 256, 256,
+                                   openshot::Fraction(1, 1), false, false, 2000000);
+            writer.Open();
+            REQUIRE(writer.info.vcodec == codec);
+            const auto before = openshot::VulkanFrameReadbackCount();
+            for (int n = 1; n <= 8; ++n) {
+                auto frame = std::make_shared<openshot::Frame>(n, 256, 256, "black");
+                if (gpu) frame->AddDeferredImage(uploaded);
+                else frame->AddImage(std::make_shared<QImage>(pixels));
+                writer.WriteFrame(frame);
+            }
+            writer.Close();
+            if (gpu) CHECK(openshot::VulkanFrameReadbackCount() == before);
+            openshot::FFmpegReader reader(path);
+            reader.Open();
+            CHECK(reader.info.video_length == 8);
+            const auto image = reader.GetFrame(4)->GetImage();
+            REQUIRE(image);
+            CHECK(image->pixelColor(128, 64).red() > 220);
+            CHECK(image->pixelColor(128, 64).blue() < 25);
+            CHECK(image->pixelColor(128, 192).blue() > 220);
+            CHECK(image->pixelColor(128, 192).red() < 25);
+            reader.Close();
+        }
+    }
+}
 TEST_CASE("Vulkan export accepts CPU frames and keeps writers independent", "[vulkan][writer][fallback]") {
     // Run this with OPENSHOT_RENDER_BACKEND=cpu, an invalid Vulkan device, or
     // an older FFmpeg too: the requested codec must fall back before the header.
