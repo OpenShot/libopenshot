@@ -173,6 +173,11 @@ foreach(tname ${OPENSHOT_TESTS})
   set(test_properties
     LABELS ${tname}
   )
+  if(tname STREQUAL "FFmpegWriter")
+    list(APPEND test_properties
+      SKIP_REGULAR_EXPRESSION "Skipping hardware encoder test:"
+    )
+  endif()
   if(tname STREQUAL "FFmpegReader")
     # Catch2 v2 has no native SKIP assertion. Report unavailable VAAPI
     # prerequisites as skipped in CTest rather than as a passing decode test.

@@ -45,6 +45,54 @@ AVStream* first_video_stream(AVFormatContext* format_context)
 }
 }
 
+TEST_CASE("Hardware encoder uploads preserve surface format",
+          "[libopenshot][ffmpegwriter][hardware]")
+{
+#if USE_HW_ACCEL && (defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
+#ifdef __APPLE__
+	const char* codec = "h264_videotoolbox";
+	const AVHWDeviceType device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+#else
+	const char* codec = "h264_nvenc";
+	const AVHWDeviceType device_type = AV_HWDEVICE_TYPE_CUDA;
+#endif
+	if (!FFmpegWriter::IsValidCodec(codec)) {
+		WARN("Skipping hardware encoder test: encoder not compiled: " << codec);
+		return;
+	}
+	AVBufferRef* device = nullptr;
+	const int device_result = av_hwdevice_ctx_create(&device, device_type, nullptr, nullptr, 0);
+	av_buffer_unref(&device);
+	if (device_result < 0) {
+		WARN("Skipping hardware encoder test: device unavailable: " << codec);
+		return;
+	}
+	QTemporaryDir directory;
+	REQUIRE(directory.isValid());
+	const std::string path = directory.filePath("hardware.mp4").toStdString();
+	FFmpegWriter writer(path);
+	writer.SetVideoOptions(true, codec, Fraction(24, 1), 320, 240,
+	                       Fraction(1, 1), false, false, 1000000);
+	writer.Open();
+	for (int number = 1; number <= 12; ++number)
+		writer.WriteFrame(std::make_shared<Frame>(number, 320, 240, "red"));
+	writer.Close();
+
+	FFmpegReader reader(path);
+	reader.Open();
+	auto decoded = reader.GetFrame(6);
+	REQUIRE(decoded->GetWidth() == 320);
+	REQUIRE(decoded->GetHeight() == 240);
+	const unsigned char* pixel = decoded->GetPixels(120) + 4 * 160;
+	CHECK(pixel[0] > 200);
+	CHECK(pixel[1] < 40);
+	CHECK(pixel[2] < 40);
+	reader.Close();
+#else
+	WARN("Skipping hardware encoder test: hardware encoding not enabled on this platform");
+#endif
+}
+
 TEST_CASE("Raw video export preserves all color planes and frame ownership",
           "[libopenshot][ffmpegwriter][rawvideo]")
 {
