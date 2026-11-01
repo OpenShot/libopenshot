@@ -42,7 +42,51 @@ template<class T> T glFunction(QOpenGLContext* context, const char* name) {
     if (!function) throw std::runtime_error(name);
     return function;
 }
+#ifdef _WIN32
+constexpr auto kMemoryHandle = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+constexpr auto kSemaphoreHandle = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+constexpr GLenum kGLHandle = GL_HANDLE_TYPE_OPAQUE_WIN32_EXT;
+constexpr const char* kMemoryExtension = "GL_EXT_memory_object_win32";
+constexpr const char* kSemaphoreExtension = "GL_EXT_semaphore_win32";
+using ImportMemory = PFNGLIMPORTMEMORYWIN32HANDLEEXTPROC;
+using ImportSemaphore = PFNGLIMPORTSEMAPHOREWIN32HANDLEEXTPROC;
+#else
+constexpr auto kMemoryHandle = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+constexpr auto kSemaphoreHandle = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+constexpr GLenum kGLHandle = GL_HANDLE_TYPE_OPAQUE_FD_EXT;
+constexpr const char* kMemoryExtension = "GL_EXT_memory_object_fd";
+constexpr const char* kSemaphoreExtension = "GL_EXT_semaphore_fd";
+using ImportMemory = PFNGLIMPORTMEMORYFDEXTPROC;
+using ImportSemaphore = PFNGLIMPORTSEMAPHOREFDEXTPROC;
+#endif
+constexpr VkImageSubresourceRange kColor = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 }
+// OpenGL samples a presenter-owned Vulkan image rather than the frame itself.
+// NVIDIA's Windows driver returns zeros when FFmpeg or compositor frames are
+// read through an exported alias of their memory (even from Vulkan), while a
+// GPU copy into an image allocated for export is visible. The shared image and
+// its OpenGL import persist until the frame size, device, or context changes.
+struct SharedTarget {
+    AVBufferRef* device_ref = nullptr;
+    VkDevice device = VK_NULL_HANDLE;
+    QPointer<QOpenGLContext> context;
+    int width = 0, height = 0;
+    uint32_t family = 0;
+    VkQueue queue = VK_NULL_HANDLE;
+    VkImage image = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    // Separate directions: reusing one binary semaphore lets Vulkan's
+    // acquire consume its own release signal before GL can wait on it.
+    VkSemaphore handoff[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
+    VkCommandPool pool = VK_NULL_HANDLE;
+    VkCommandBuffer commands[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
+    VkFence fence = VK_NULL_HANDLE;
+    bool pending = false;
+    GLuint gl_memory = 0, texture = 0, gl_semaphores[2] = {0, 0}, buffer = 0, vertex_array = 0;
+    std::unique_ptr<QOpenGLShaderProgram> program;
+    PFNGLWAITSEMAPHOREEXTPROC wait_semaphore = nullptr;
+    PFNGLSIGNALSEMAPHOREEXTPROC signal_semaphore = nullptr;
+};
 struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     QPointer<QWidget> widget;
     std::shared_ptr<Frame> frame;
@@ -53,11 +97,13 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     std::string last_failure;
     QPointer<QOpenGLContext> logged_context;
     bool identity_logged = false;
+    SharedTarget target;
     bool unavailable(const std::string& reason) { last_failure = reason; return false; }
     explicit Impl(QWidget* value) : widget(value) {
         value->setProperty("openshot_gpu_presenter", QVariant::fromValue(static_cast<QObject*>(this)));
     }
     ~Impl() override {
+        releaseTarget();
         if (widget) widget->setProperty("openshot_gpu_presenter", QVariant());
     }
     void PresentFrame(const std::shared_ptr<Frame>& value) override {
@@ -84,6 +130,210 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             QMetaObject::invokeMethod(widget, "present", Qt::QueuedConnection, Q_ARG(QImage, image));
         }
     }
+    void waitPending() {
+        if (!target.pending) return;
+        target.pending = false;
+        check(vkWaitForFences(target.device, 1, &target.fence, VK_TRUE, UINT64_MAX), "Wait for presentation transfer");
+        check(vkResetFences(target.device, 1, &target.fence), "Reset presentation fence");
+    }
+    // OpenGL objects are deleted only while their context is current; otherwise
+    // they are released with that context.
+    void releaseTarget() {
+        if (target.device) {
+            try { waitPending(); } catch (const std::exception&) { vkDeviceWaitIdle(target.device); }
+        }
+        auto* context = QOpenGLContext::currentContext();
+        if (target.context && context == target.context) {
+            auto gl = context->functions();
+            if (target.vertex_array) context->extraFunctions()->glDeleteVertexArrays(1, &target.vertex_array);
+            if (target.buffer) gl->glDeleteBuffers(1, &target.buffer);
+            if (target.texture) gl->glDeleteTextures(1, &target.texture);
+            if (target.gl_memory)
+                reinterpret_cast<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context->getProcAddress("glDeleteMemoryObjectsEXT"))(1, &target.gl_memory);
+            if (target.gl_semaphores[0] || target.gl_semaphores[1])
+                reinterpret_cast<PFNGLDELETESEMAPHORESEXTPROC>(context->getProcAddress("glDeleteSemaphoresEXT"))(2, target.gl_semaphores);
+        }
+        target.program.reset(); // Qt defers deletion until the context is current.
+        if (target.device) {
+            if (target.fence) vkDestroyFence(target.device, target.fence, nullptr);
+            if (target.pool) vkDestroyCommandPool(target.device, target.pool, nullptr);
+            for (auto semaphore : target.handoff)
+                if (semaphore) vkDestroySemaphore(target.device, semaphore, nullptr);
+            if (target.image) vkDestroyImage(target.device, target.image, nullptr);
+            if (target.memory) vkFreeMemory(target.device, target.memory, nullptr);
+        }
+        av_buffer_unref(&target.device_ref);
+        target = SharedTarget();
+    }
+    void createTarget(QOpenGLContext* context, const AVHWFramesContext* fc, int width, int height) {
+        auto vk = static_cast<AVVulkanDeviceContext*>(fc->device_ctx->hwctx);
+        target.device_ref = av_buffer_ref(fc->device_ref);
+        if (!target.device_ref) throw std::bad_alloc();
+        target.device = vk->act_dev;
+        target.context = context;
+        target.width = width;
+        target.height = height;
+        target.family = vk->queue_family_comp_index;
+        vkGetDeviceQueue(target.device, target.family, 0, &target.queue);
+        auto gl = context->functions();
+        auto extra = context->extraFunctions();
+        auto createMemory = glFunction<PFNGLCREATEMEMORYOBJECTSEXTPROC>(context, "glCreateMemoryObjectsEXT");
+        auto memoryParameter = glFunction<PFNGLMEMORYOBJECTPARAMETERIVEXTPROC>(context, "glMemoryObjectParameterivEXT");
+        auto textureMemory = glFunction<PFNGLTEXSTORAGEMEM2DEXTPROC>(context, "glTexStorageMem2DEXT");
+        auto createSemaphores = glFunction<PFNGLGENSEMAPHORESEXTPROC>(context, "glGenSemaphoresEXT");
+        glFunction<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context, "glDeleteMemoryObjectsEXT");
+        glFunction<PFNGLDELETESEMAPHORESEXTPROC>(context, "glDeleteSemaphoresEXT");
+        target.wait_semaphore = glFunction<PFNGLWAITSEMAPHOREEXTPROC>(context, "glWaitSemaphoreEXT");
+        target.signal_semaphore = glFunction<PFNGLSIGNALSEMAPHOREEXTPROC>(context, "glSignalSemaphoreEXT");
+#ifdef _WIN32
+        auto importMemory = glFunction<ImportMemory>(context, "glImportMemoryWin32HandleEXT");
+        auto importSemaphore = glFunction<ImportSemaphore>(context, "glImportSemaphoreWin32HandleEXT");
+        auto getMemoryHandle = reinterpret_cast<PFN_vkGetMemoryWin32HandleKHR>(vkGetDeviceProcAddr(target.device, "vkGetMemoryWin32HandleKHR"));
+        auto getSemaphoreHandle = reinterpret_cast<PFN_vkGetSemaphoreWin32HandleKHR>(vkGetDeviceProcAddr(target.device, "vkGetSemaphoreWin32HandleKHR"));
+#else
+        auto importMemory = glFunction<ImportMemory>(context, "glImportMemoryFdEXT");
+        auto importSemaphore = glFunction<ImportSemaphore>(context, "glImportSemaphoreFdEXT");
+        auto getMemoryHandle = reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetDeviceProcAddr(target.device, "vkGetMemoryFdKHR"));
+        auto getSemaphoreHandle = reinterpret_cast<PFN_vkGetSemaphoreFdKHR>(vkGetDeviceProcAddr(target.device, "vkGetSemaphoreFdKHR"));
+#endif
+        if (!getMemoryHandle || !getSemaphoreHandle)
+            throw std::runtime_error("Vulkan device lacks external memory/semaphore export");
+
+        VkExternalMemoryImageCreateInfo external{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO};
+        external.handleTypes = kMemoryHandle;
+        VkImageCreateInfo create{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, &external};
+        create.imageType = VK_IMAGE_TYPE_2D;
+        create.format = VK_FORMAT_R8G8B8A8_UNORM;
+        create.extent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
+        create.mipLevels = create.arrayLayers = 1;
+        create.samples = VK_SAMPLE_COUNT_1_BIT;
+        create.tiling = VK_IMAGE_TILING_OPTIMAL;
+        create.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        create.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        create.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        check(vkCreateImage(target.device, &create, nullptr, &target.image), "Create presentation image");
+        VkMemoryDedicatedRequirements dedicated{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS};
+        VkMemoryRequirements2 requirements{VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, &dedicated};
+        VkImageMemoryRequirementsInfo2 requirementInfo{VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2};
+        requirementInfo.image = target.image;
+        vkGetImageMemoryRequirements2(target.device, &requirementInfo, &requirements);
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+        vkGetPhysicalDeviceMemoryProperties(vk->phys_dev, &memoryProperties);
+        uint32_t memoryType = UINT32_MAX;
+        for (uint32_t i = 0; i < memoryProperties.memoryTypeCount && memoryType == UINT32_MAX; ++i)
+            if ((requirements.memoryRequirements.memoryTypeBits & (1u << i)) &&
+                (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
+                memoryType = i;
+        if (memoryType == UINT32_MAX) throw std::runtime_error("No device-local presentation memory");
+        const bool useDedicated = dedicated.prefersDedicatedAllocation || dedicated.requiresDedicatedAllocation;
+        VkMemoryDedicatedAllocateInfo dedicatedInfo{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
+        dedicatedInfo.image = target.image;
+        VkExportMemoryAllocateInfo exportInfo{VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO, useDedicated ? &dedicatedInfo : nullptr};
+        exportInfo.handleTypes = kMemoryHandle;
+        VkMemoryAllocateInfo allocate{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, &exportInfo};
+        allocate.allocationSize = requirements.memoryRequirements.size;
+        allocate.memoryTypeIndex = memoryType;
+        check(vkAllocateMemory(target.device, &allocate, nullptr, &target.memory), "Allocate presentation memory");
+        check(vkBindImageMemory(target.device, target.image, target.memory, 0), "Bind presentation memory");
+
+        createMemory(1, &target.gl_memory);
+        GLint glDedicated = useDedicated;
+        memoryParameter(target.gl_memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &glDedicated);
+#ifdef _WIN32
+        VkMemoryGetWin32HandleInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR};
+        memoryInfo.memory = target.memory;
+        memoryInfo.handleType = kMemoryHandle;
+        HANDLE memoryHandle = nullptr;
+        check(getMemoryHandle(target.device, &memoryInfo, &memoryHandle), "Export presentation memory");
+        importMemory(target.gl_memory, requirements.memoryRequirements.size, kGLHandle, memoryHandle);
+        // Win32 imports retain the resource, not ownership of the handle.
+        CloseHandle(memoryHandle);
+#else
+        VkMemoryGetFdInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR};
+        memoryInfo.memory = target.memory;
+        memoryInfo.handleType = kMemoryHandle;
+        int memoryFd = -1;
+        check(getMemoryHandle(target.device, &memoryInfo, &memoryFd), "Export presentation memory");
+        importMemory(target.gl_memory, requirements.memoryRequirements.size, kGLHandle, memoryFd); // GL owns the fd.
+#endif
+        gl->glGenTextures(1, &target.texture);
+        gl->glBindTexture(GL_TEXTURE_2D, target.texture);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        textureMemory(GL_TEXTURE_2D, 1, GL_RGBA8, width, height, target.gl_memory, 0);
+
+        VkExportSemaphoreCreateInfo exportSemaphore{VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO};
+        exportSemaphore.handleTypes = kSemaphoreHandle;
+        VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &exportSemaphore};
+        createSemaphores(2, target.gl_semaphores);
+        for (int direction = 0; direction < 2; ++direction) {
+            check(vkCreateSemaphore(target.device, &semaphoreInfo, nullptr, &target.handoff[direction]), "Create presentation semaphore");
+#ifdef _WIN32
+            VkSemaphoreGetWin32HandleInfoKHR handleInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR};
+            handleInfo.semaphore = target.handoff[direction];
+            handleInfo.handleType = kSemaphoreHandle;
+            HANDLE semaphoreHandle = nullptr;
+            check(getSemaphoreHandle(target.device, &handleInfo, &semaphoreHandle), "Export presentation semaphore");
+            importSemaphore(target.gl_semaphores[direction], kGLHandle, semaphoreHandle);
+            CloseHandle(semaphoreHandle);
+#else
+            VkSemaphoreGetFdInfoKHR handleInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR};
+            handleInfo.semaphore = target.handoff[direction];
+            handleInfo.handleType = kSemaphoreHandle;
+            int semaphoreFd = -1;
+            check(getSemaphoreHandle(target.device, &handleInfo, &semaphoreFd), "Export presentation semaphore");
+            importSemaphore(target.gl_semaphores[direction], kGLHandle, semaphoreFd);
+#endif
+        }
+        if (gl->glGetError() != GL_NO_ERROR) throw std::runtime_error("OpenGL external memory import failed");
+
+        VkCommandPoolCreateInfo poolInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = target.family;
+        check(vkCreateCommandPool(target.device, &poolInfo, nullptr, &target.pool), "Create presentation command pool");
+        VkCommandBufferAllocateInfo allocation{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        allocation.commandPool = target.pool;
+        allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocation.commandBufferCount = 2;
+        check(vkAllocateCommandBuffers(target.device, &allocation, target.commands), "Allocate presentation commands");
+        VkFenceCreateInfo fenceInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+        check(vkCreateFence(target.device, &fenceInfo, nullptr, &target.fence), "Create presentation fence");
+        // The acquire from OpenGL is the same every frame.
+        VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        check(vkBeginCommandBuffer(target.commands[1], &begin), "Begin presentation acquire");
+        VkImageMemoryBarrier acquire{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        acquire.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        acquire.oldLayout = acquire.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        acquire.srcQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
+        acquire.dstQueueFamilyIndex = target.family;
+        acquire.image = target.image;
+        acquire.subresourceRange = kColor;
+        vkCmdPipelineBarrier(target.commands[1], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             0, 0, nullptr, 0, nullptr, 1, &acquire);
+        check(vkEndCommandBuffer(target.commands[1]), "End presentation acquire");
+
+        target.program.reset(new QOpenGLShaderProgram);
+        if (!target.program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+            "attribute vec2 vertex; varying vec2 uv; void main(){uv=vec2((vertex.x+1.0)*0.5,(1.0-vertex.y)*0.5);gl_Position=vec4(vertex,0,1);}") ||
+            !target.program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+            "uniform sampler2D video; varying vec2 uv; void main(){gl_FragColor=texture2D(video,uv);}") || !target.program->link())
+            throw std::runtime_error("OpenGL presentation shader: " + target.program->log().toStdString());
+        const float vertices[] = {-1,-1, 1,-1, -1,1, 1,1};
+        GLint previousVertexArray = 0;
+        gl->glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
+        extra->glGenVertexArrays(1, &target.vertex_array);
+        extra->glBindVertexArray(target.vertex_array);
+        gl->glGenBuffers(1, &target.buffer);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, target.buffer);
+        gl->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        const int vertex = target.program->attributeLocation("vertex");
+        target.program->enableAttributeArray(vertex);
+        target.program->setAttributeBuffer(vertex, GL_FLOAT, 0, 2);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        extra->glBindVertexArray(previousVertexArray);
+    }
     bool draw(int x, int y, int width, int height) {
         if (qEnvironmentVariable("OPENSHOT_PRESENTATION_BACKEND") == "cpu")
             return unavailable("OPENSHOT_PRESENTATION_BACKEND=cpu (Vulkan processing remains enabled)");
@@ -102,18 +352,11 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 const auto* value = context->functions()->glGetString(name);
                 return value ? reinterpret_cast<const char*>(value) : "unknown";
             };
-#ifdef _WIN32
-            const bool memory = context->hasExtension("GL_EXT_memory_object_win32");
-            const bool semaphore = context->hasExtension("GL_EXT_semaphore_win32");
-#else
-            const bool memory = context->hasExtension("GL_EXT_memory_object_fd");
-            const bool semaphore = context->hasExtension("GL_EXT_semaphore_fd");
-#endif
             Logger::Instance()->Log(std::string("GPU presentation Qt context: vendor=") + text(GL_VENDOR) +
                 "; renderer=" + text(GL_RENDERER) + "; version=" + text(GL_VERSION) +
                 "; OpenGL ES=" + (context->isOpenGLES() ? "yes" : "no") +
-                "; external memory=" + (memory ? "yes" : "no") +
-                "; external semaphore=" + (semaphore ? "yes" : "no"), Logger::LevelInfo);
+                "; external memory=" + (context->hasExtension(kMemoryExtension) ? "yes" : "no") +
+                "; external semaphore=" + (context->hasExtension(kSemaphoreExtension) ? "yes" : "no"), Logger::LevelInfo);
             logged_context = context;
             identity_logged = false;
         }
@@ -144,6 +387,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         // Multi-plane decode surfaces must first go through the RGBA compositor.
         if (fc->sw_format != AV_PIX_FMT_RGBA || vfc->format[0] != VK_FORMAT_R8G8B8A8_UNORM || image->img[1])
             return unavailable("Unsupported Vulkan image format for OpenGL sharing");
+        if (!(vfc->usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT))
+            return unavailable("Vulkan frame cannot be copied for OpenGL sharing");
         VkPhysicalDeviceIDProperties identity{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
         VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &identity};
         vkGetPhysicalDeviceProperties2(vk->phys_dev, &properties);
@@ -154,11 +399,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 Logger::LevelInfo);
             identity_logged = true;
         }
-#ifdef _WIN32
-        if (!context->hasExtension("GL_EXT_memory_object_win32") || !context->hasExtension("GL_EXT_semaphore_win32"))
-#else
-        if (!context->hasExtension("GL_EXT_memory_object_fd") || !context->hasExtension("GL_EXT_semaphore_fd"))
-#endif
+        if (!context->hasExtension(kMemoryExtension) || !context->hasExtension(kSemaphoreExtension))
             return unavailable("OpenGL driver lacks external memory or semaphore sharing extensions");
         auto gl = context->functions();
         auto extra = context->extraFunctions();
@@ -180,225 +421,110 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 (renderer ? reinterpret_cast<const char*>(renderer) : "unknown") +
                 "; Vulkan: " + properties.properties.deviceName + ")");
         }
-        auto createMemory = glFunction<PFNGLCREATEMEMORYOBJECTSEXTPROC>(context, "glCreateMemoryObjectsEXT");
-        auto deleteMemory = glFunction<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context, "glDeleteMemoryObjectsEXT");
-        auto memoryParameter = glFunction<PFNGLMEMORYOBJECTPARAMETERIVEXTPROC>(context, "glMemoryObjectParameterivEXT");
-#ifdef _WIN32
-        auto importMemory = glFunction<PFNGLIMPORTMEMORYWIN32HANDLEEXTPROC>(context, "glImportMemoryWin32HandleEXT");
-#else
-        auto importMemory = glFunction<PFNGLIMPORTMEMORYFDEXTPROC>(context, "glImportMemoryFdEXT");
-#endif
-        auto textureMemory = glFunction<PFNGLTEXSTORAGEMEM2DEXTPROC>(context, "glTexStorageMem2DEXT");
-        auto createSemaphore = glFunction<PFNGLGENSEMAPHORESEXTPROC>(context, "glGenSemaphoresEXT");
-        auto deleteSemaphore = glFunction<PFNGLDELETESEMAPHORESEXTPROC>(context, "glDeleteSemaphoresEXT");
-#ifdef _WIN32
-        auto importSemaphore = glFunction<PFNGLIMPORTSEMAPHOREWIN32HANDLEEXTPROC>(context, "glImportSemaphoreWin32HandleEXT");
-#else
-        auto importSemaphore = glFunction<PFNGLIMPORTSEMAPHOREFDEXTPROC>(context, "glImportSemaphoreFdEXT");
-#endif
-        auto waitSemaphore = glFunction<PFNGLWAITSEMAPHOREEXTPROC>(context, "glWaitSemaphoreEXT");
-        auto signalSemaphore = glFunction<PFNGLSIGNALSEMAPHOREEXTPROC>(context, "glSignalSemaphoreEXT");
-#ifdef _WIN32
-        auto getMemoryHandle = reinterpret_cast<PFN_vkGetMemoryWin32HandleKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetMemoryWin32HandleKHR"));
-        auto getSemaphoreHandle = reinterpret_cast<PFN_vkGetSemaphoreWin32HandleKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetSemaphoreWin32HandleKHR"));
-        if (!getMemoryHandle || !getSemaphoreHandle || vk->queue_family_comp_index < 0)
-            return unavailable("Vulkan device lacks Win32 memory/semaphore export or a compute queue");
-#else
-        auto getMemoryFd = reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetMemoryFdKHR"));
-        auto getSemaphoreFd = reinterpret_cast<PFN_vkGetSemaphoreFdKHR>(vkGetDeviceProcAddr(vk->act_dev, "vkGetSemaphoreFdKHR"));
-        if (!getMemoryFd || !getSemaphoreFd || vk->queue_family_comp_index < 0)
-            return unavailable("Vulkan device lacks file-descriptor memory/semaphore export or a compute queue");
-#endif
-        // Construct all fallible GL resources before transferring image ownership.
-        QOpenGLShaderProgram program;
-        if (!program.addShaderFromSourceCode(QOpenGLShader::Vertex,
-            "attribute vec2 vertex; varying vec2 uv; void main(){uv=vec2((vertex.x+1.0)*0.5,(1.0-vertex.y)*0.5);gl_Position=vec4(vertex,0,1);}") ||
-            !program.addShaderFromSourceCode(QOpenGLShader::Fragment,
-            "uniform sampler2D video; varying vec2 uv; void main(){gl_FragColor=texture2D(video,uv);}") || !program.link()) return unavailable("OpenGL presentation shader: " + program.log().toStdString());
-        stage("shader");
-        VkDevice device = vk->act_dev;
-        GLuint memory = 0, texture = 0, semaphores[2] = {0, 0}, buffer = 0, vertexArray = 0;
-        GLint previousVertexArray = 0;
-        gl->glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
-        VkSemaphore handoff[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
-        VkCommandPool pool = VK_NULL_HANDLE;
-        VkFence fence = VK_NULL_HANDLE;
-#ifdef _WIN32
-        HANDLE memoryHandle = nullptr, semaphoreHandle = nullptr;
-#else
-        int memoryFd = -1, semaphoreFd = -1;
-#endif
-        auto cleanup = [&]() {
-            if (vertexArray) {
-                extra->glBindVertexArray(previousVertexArray);
-                extra->glDeleteVertexArrays(1, &vertexArray);
-            }
-            if (buffer) gl->glDeleteBuffers(1, &buffer);
-            if (texture) gl->glDeleteTextures(1, &texture);
-            stage("delete texture");
-            if (memory) deleteMemory(1, &memory);
-            stage("delete memory");
-            deleteSemaphore(2, semaphores);
-            stage("delete GL semaphore");
-            if (fence) vkDestroyFence(device, fence, nullptr);
-            if (pool) vkDestroyCommandPool(device, pool, nullptr);
-            for (auto semaphore : handoff)
-                if (semaphore) vkDestroySemaphore(device, semaphore, nullptr);
-            stage("delete Vulkan resources");
-#ifdef _WIN32
-            if (memoryHandle) CloseHandle(memoryHandle);
-            if (semaphoreHandle) CloseHandle(semaphoreHandle);
-#else
-            if (memoryFd >= 0) close(memoryFd);
-            if (semaphoreFd >= 0) close(semaphoreFd);
-#endif
-        };
-        bool locked = false;
+        if (vk->queue_family_comp_index < 0)
+            return unavailable("Vulkan device lacks a compute queue");
+
+        bool locked = false, copySubmitted = false;
+        uint64_t copyValue = 0;
         try {
-#ifdef _WIN32
-            VkMemoryGetWin32HandleInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR};
-            memoryInfo.memory = image->mem[0];
-            memoryInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-            check(getMemoryHandle(device, &memoryInfo, &memoryHandle), "Export Vulkan image memory");
-#else
-            VkMemoryGetFdInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR};
-            memoryInfo.memory = image->mem[0];
-            memoryInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
-            check(getMemoryFd(device, &memoryInfo, &memoryFd), "Export Vulkan image memory");
-#endif
-            createMemory(1, &memory);
-            VkMemoryDedicatedRequirements dedicated{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS};
-            VkMemoryRequirements2 requirements{VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, &dedicated};
-            VkImageMemoryRequirementsInfo2 requirementInfo{VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2};
-            requirementInfo.image = image->img[0];
-            vkGetImageMemoryRequirements2(device, &requirementInfo, &requirements);
-            GLint useDedicated = dedicated.prefersDedicatedAllocation || dedicated.requiresDedicatedAllocation;
-            memoryParameter(memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &useDedicated);
-#ifdef _WIN32
-            importMemory(memory, image->size[0], GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, memoryHandle);
-            // Unlike file descriptors, Win32 imports retain the resource, not
-            // ownership of the application's handle.
-            CloseHandle(memoryHandle);
-            memoryHandle = nullptr;
-#else
-            importMemory(memory, image->size[0], GL_HANDLE_TYPE_OPAQUE_FD_EXT, memoryFd);
-            memoryFd = -1; // GL consumes imported descriptors.
-#endif
-            stage("import memory");
-            gl->glGenTextures(1, &texture);
-            gl->glBindTexture(GL_TEXTURE_2D, texture);
-            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            textureMemory(GL_TEXTURE_2D, 1, GL_RGBA8, source->width, source->height, memory, image->offset[0]);
-            stage("texture storage");
-            VkExportSemaphoreCreateInfo exportInfo{VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO};
-#ifdef _WIN32
-            exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-#else
-            exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
-#endif
-            VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &exportInfo};
-            // Separate directions: reusing one binary semaphore lets Vulkan's
-            // acquire consume its own release signal before GL can wait on it.
-            createSemaphore(2, semaphores);
-            for (int direction = 0; direction < 2; ++direction) {
-                check(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &handoff[direction]), "Create presentation semaphore");
-#ifdef _WIN32
-                VkSemaphoreGetWin32HandleInfoKHR handleInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR};
-                handleInfo.semaphore = handoff[direction];
-                handleInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-                check(getSemaphoreHandle(device, &handleInfo, &semaphoreHandle), "Export presentation semaphore");
-                importSemaphore(semaphores[direction], GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, semaphoreHandle);
-                CloseHandle(semaphoreHandle);
-                semaphoreHandle = nullptr;
-#else
-                VkSemaphoreGetFdInfoKHR fdInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR};
-                fdInfo.semaphore = handoff[direction];
-                fdInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
-                check(getSemaphoreFd(device, &fdInfo, &semaphoreFd), "Export presentation semaphore");
-                importSemaphore(semaphores[direction], GL_HANDLE_TYPE_OPAQUE_FD_EXT, semaphoreFd);
-                semaphoreFd = -1;
-#endif
+            if (target.context != context || target.device != vk->act_dev ||
+                target.width != source->width || target.height != source->height) {
+                releaseTarget();
+                createTarget(context, fc, source->width, source->height);
+                stage("create shared image");
             }
-            if (gl->glGetError() != GL_NO_ERROR) throw std::runtime_error("OpenGL external memory import failed");
-            const uint32_t family = vk->queue_family_comp_index;
-            VkQueue queue;
-            vkGetDeviceQueue(device, family, 0, &queue);
-            VkCommandPoolCreateInfo poolInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-            poolInfo.queueFamilyIndex = family;
-            check(vkCreateCommandPool(device, &poolInfo, nullptr, &pool), "Create presentation command pool");
-            VkCommandBuffer commands[2];
-            VkCommandBufferAllocateInfo allocation{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-            allocation.commandPool = pool;
-            allocation.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocation.commandBufferCount = 2;
-            check(vkAllocateCommandBuffers(device, &allocation, commands), "Allocate presentation commands");
-            VkFenceCreateInfo fenceInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-            check(vkCreateFence(device, &fenceInfo, nullptr, &fence), "Create presentation fence");
-            const float vertices[] = {-1,-1, 1,-1, -1,1, 1,1};
-            extra->glGenVertexArrays(1, &vertexArray);
-            extra->glBindVertexArray(vertexArray);
-            gl->glGenBuffers(1, &buffer);
-            gl->glBindBuffer(GL_ARRAY_BUFFER, buffer);
-            gl->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-            program.bind();
-            program.setUniformValue("video", 0);
-            const int vertex = program.attributeLocation("vertex");
-            program.enableAttributeArray(vertex);
-            program.setAttributeBuffer(vertex, GL_FLOAT, 0, 2);
-            vfc->lock_frame(fc, image);
-            locked = true;
-            stage("frame lock");
-            const auto oldLayout = image->layout[0];
-            const auto oldOwner = image->queue_family[0];
-            for (int i = 0; i < 2; ++i) {
-                VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-                check(vkBeginCommandBuffer(commands[i], &begin), "Begin presentation commands");
-                VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-                barrier.srcAccessMask = i ? 0 : image->access[0];
-                barrier.dstAccessMask = i ? VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT : 0;
-                barrier.oldLayout = i ? VK_IMAGE_LAYOUT_GENERAL : oldLayout;
-                barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-                barrier.srcQueueFamilyIndex = i ? VK_QUEUE_FAMILY_EXTERNAL : oldOwner;
-                barrier.dstQueueFamilyIndex = i ? family : VK_QUEUE_FAMILY_EXTERNAL;
-                barrier.image = image->img[0];
-                barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-                vkCmdPipelineBarrier(commands[i], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-                check(vkEndCommandBuffer(commands[i]), "End presentation commands");
-            }
-            auto submit = [&](int index, VkSemaphore wait, uint64_t waitValue, VkSemaphore signal, uint64_t signalValue) {
-                VkTimelineSemaphoreSubmitInfo timeline{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
-                timeline.waitSemaphoreValueCount = timeline.signalSemaphoreValueCount = 1;
-                timeline.pWaitSemaphoreValues = &waitValue;
-                timeline.pSignalSemaphoreValues = &signalValue;
-                VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-                VkSubmitInfo info{VK_STRUCTURE_TYPE_SUBMIT_INFO, &timeline};
-                info.waitSemaphoreCount = info.signalSemaphoreCount = info.commandBufferCount = 1;
-                info.pWaitSemaphores = &wait;
-                info.pWaitDstStageMask = &stage;
-                info.pSignalSemaphores = &signal;
-                info.pCommandBuffers = &commands[index];
-                vk->lock_queue(dc, family, 0);
-                auto result = vkQueueSubmit(queue, 1, &info, index ? fence : VK_NULL_HANDLE);
-                vk->unlock_queue(dc, family, 0);
+            // The previous frame's commands must retire before re-recording.
+            waitPending();
+            stage("previous frame");
+            const auto submit = [&](const VkSubmitInfo& info, VkFence signalFence) {
+                vk->lock_queue(dc, target.family, 0);
+                const auto result = vkQueueSubmit(target.queue, 1, &info, signalFence);
+                vk->unlock_queue(dc, target.family, 0);
                 check(result, "Submit presentation transfer");
             };
-            submit(0, image->sem[0], image->sem_value[0], handoff[0], 0);
-            stage("release submit");
+            vfc->lock_frame(fc, image);
+            locked = true;
+            VkCommandBuffer copy = target.commands[0];
+            VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+            begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            check(vkBeginCommandBuffer(copy, &begin), "Begin presentation copy");
+            // FFmpeg frames are concurrent or owned by the compute family, so
+            // the copy needs no ownership transfer of the source.
+            VkImageMemoryBarrier toCopy[2] = {{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER}, {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER}};
+            toCopy[0].srcAccessMask = image->access[0];
+            toCopy[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            toCopy[0].oldLayout = image->layout[0];
+            toCopy[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            toCopy[0].srcQueueFamilyIndex = toCopy[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            toCopy[0].image = image->img[0];
+            toCopy[0].subresourceRange = kColor;
+            toCopy[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            toCopy[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            toCopy[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            toCopy[1].srcQueueFamilyIndex = toCopy[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            toCopy[1].image = target.image;
+            toCopy[1].subresourceRange = kColor;
+            vkCmdPipelineBarrier(copy, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 0, 0, nullptr, 0, nullptr, 2, toCopy);
+            VkImageCopy region{};
+            region.srcSubresource = region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+            region.extent = {static_cast<uint32_t>(target.width), static_cast<uint32_t>(target.height), 1};
+            vkCmdCopyImage(copy, image->img[0], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           target.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            VkImageMemoryBarrier release{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+            release.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            release.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            release.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            release.srcQueueFamilyIndex = target.family;
+            release.dstQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
+            release.image = target.image;
+            release.subresourceRange = kColor;
+            vkCmdPipelineBarrier(copy, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                 0, 0, nullptr, 0, nullptr, 1, &release);
+            check(vkEndCommandBuffer(copy), "End presentation copy");
+            // Advance the frame's timeline and release the copy to OpenGL.
+            const uint64_t waitValue = image->sem_value[0];
+            const uint64_t signalValues[2] = {image->sem_value[0] + 1, 0};
+            const VkSemaphore copySignals[2] = {image->sem[0], target.handoff[0]};
+            VkTimelineSemaphoreSubmitInfo timeline{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
+            timeline.waitSemaphoreValueCount = 1;
+            timeline.pWaitSemaphoreValues = &waitValue;
+            timeline.signalSemaphoreValueCount = 2;
+            timeline.pSignalSemaphoreValues = signalValues;
+            const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            VkSubmitInfo copyInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO, &timeline};
+            copyInfo.waitSemaphoreCount = 1;
+            copyInfo.pWaitSemaphores = &image->sem[0];
+            copyInfo.pWaitDstStageMask = &waitStage;
+            copyInfo.commandBufferCount = 1;
+            copyInfo.pCommandBuffers = &copy;
+            copyInfo.signalSemaphoreCount = 2;
+            copyInfo.pSignalSemaphores = copySignals;
+            submit(copyInfo, VK_NULL_HANDLE);
+            copySubmitted = true;
+            copyValue = ++image->sem_value[0];
+            image->layout[0] = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            image->access[0] = VK_ACCESS_TRANSFER_READ_BIT;
+            vfc->unlock_frame(fc, image);
+            locked = false;
+            stage("copy submit");
+
             const GLenum layout = GL_LAYOUT_GENERAL_EXT;
-            waitSemaphore(semaphores[0], 0, nullptr, 1, &texture, &layout);
-            GLint viewport[4];
+            target.wait_semaphore(target.gl_semaphores[0], 0, nullptr, 1, &target.texture, &layout);
+            GLint viewport[4], previousVertexArray = 0;
             gl->glGetIntegerv(GL_VIEWPORT, viewport);
+            gl->glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
             gl->glViewport(x, y, width, height);
             gl->glActiveTexture(GL_TEXTURE0);
-            gl->glBindTexture(GL_TEXTURE_2D, texture);
+            gl->glBindTexture(GL_TEXTURE_2D, target.texture);
             gl->glDisable(GL_DEPTH_TEST);
             gl->glDisable(GL_SCISSOR_TEST);
             gl->glDisable(GL_STENCIL_TEST);
             gl->glDisable(GL_BLEND);
             gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            target.program->bind();
+            target.program->setUniformValue("video", 0);
+            extra->glBindVertexArray(target.vertex_array);
             gl->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             if (trace) {
                 const auto error = gl->glGetError();
@@ -408,35 +534,36 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
                 qWarning() << "GPU presentation draw state: error=" << error
                            << "framebuffer=" << framebuffer << "program=" << activeProgram
-                           << "texture=" << boundTexture << "vertex=" << vertex;
+                           << "texture=" << boundTexture;
             }
-            signalSemaphore(semaphores[1], 0, nullptr, 1, &texture, &layout);
+            extra->glBindVertexArray(previousVertexArray);
+            target.program->release();
+            gl->glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+            target.signal_semaphore(target.gl_semaphores[1], 0, nullptr, 1, &target.texture, &layout);
             gl->glFlush();
             stage("GL draw flush");
-            submit(1, handoff[1], 0, image->sem[0], image->sem_value[0] + 1);
-            image->sem_value[0]++;
-            image->layout[0] = VK_IMAGE_LAYOUT_GENERAL;
-            image->access[0] = VK_ACCESS_MEMORY_READ_BIT;
-            image->queue_family[0] = family;
-            vfc->unlock_frame(fc, image);
-            locked = false;
-            // Synchronous prototype: no resource reuse before GL and Vulkan finish.
-            check(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX), "Wait for presentation transfer");
-            stage("acquire fence");
-            gl->glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-            program.disableAttributeArray(vertex);
-            program.release();
-            gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
-            // Retire GL's imported-object command references as well as the
-            // Vulkan queue work before destroying the cross-API resources.
-            gl->glFinish();
-            stage("GL finish");
-            cleanup();
-            stage("cleanup");
+
+            VkSubmitInfo acquireInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+            acquireInfo.waitSemaphoreCount = 1;
+            acquireInfo.pWaitSemaphores = &target.handoff[1];
+            acquireInfo.pWaitDstStageMask = &waitStage;
+            acquireInfo.commandBufferCount = 1;
+            acquireInfo.pCommandBuffers = &target.commands[1];
+            submit(acquireInfo, target.fence);
+            target.pending = true;
+            stage("acquire submit");
             return true;
         } catch (...) {
             if (locked) vfc->unlock_frame(fc, image);
-            cleanup();
+            // A half-finished handoff leaves the semaphores unusable.
+            if (copySubmitted && !target.pending) {
+                VkSemaphoreWaitInfo copyDone{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+                copyDone.semaphoreCount = 1;
+                copyDone.pSemaphores = &image->sem[0];
+                copyDone.pValues = &copyValue;
+                vkWaitSemaphores(target.device, &copyDone, UINT64_MAX);
+            }
+            releaseTarget();
             throw;
         }
     }

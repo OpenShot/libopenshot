@@ -175,6 +175,23 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
     CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
     CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
+    // A new frame size replaces the presenter's shared OpenGL image.
+    QImage resized(96, 48, QImage::Format_RGBA8888_Premultiplied);
+    for (int y = 0; y < resized.height(); ++y)
+        for (int x = 0; x < resized.width(); ++x)
+            resized.setPixelColor(x, y, y < resized.height() / 2 ? Qt::blue : Qt::red);
+    frame->AddDeferredImage(openshot::RenderVulkanImage(openshot::UploadVulkanImage(resized), nullptr,
+                                                        96, 48, QTransform(), 1.0, Qt::transparent));
+    renderer.paint(frame);
+    for (int i = 0; i < 20; ++i) {
+        QCoreApplication::processEvents();
+        QThread::msleep(5);
+    }
+    image = widget.grabFramebuffer();
+    CHECK(widget.nativeDraw);
+    CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::blue));
+    CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::red));
     widget.presenter.Clear();
     CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
     CHECK_FALSE(widget.presenter.FallbackReason().empty());
