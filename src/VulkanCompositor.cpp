@@ -44,9 +44,10 @@ constexpr int kSlots=4;
 struct OutputPools {
     std::mutex mutex;
     std::map<std::tuple<AVHWDeviceContext*,int,int,bool>,AVBufferRef*> pools;
-    ~OutputPools(){ for(auto& item:pools) av_buffer_unref(&item.second); }
 };
-OutputPools& SharedPools(){ static OutputPools pools; return pools; }
+// Never destroyed: at process exit the Windows NVIDIA driver may already be
+// unloading, and freeing Vulkan frames from a static destructor crashes it.
+OutputPools& SharedPools(){ static auto* pools=new OutputPools; return *pools; }
 constexpr VkImageUsageFlags kOutputUsage=VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 // Returns a new reference the caller must release.
 AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){

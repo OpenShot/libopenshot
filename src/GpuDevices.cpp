@@ -200,13 +200,14 @@ bool EncoderOpens(const char* name, AVBufferRef* device, AVPixelFormat hw_format
 int CreateSharedVulkanDevice(AVBufferRef** output) {
     // All readers share one device so their surfaces can be composed without interop.
     // Keep an owning reference for the process lifetime; each caller gets its own ref.
+    // Never destroyed: destroying the device during process exit crashes drivers
+    // that are already unloading.
     struct SharedDevice {
         std::mutex mutex;
         AVBufferRef* device = nullptr;
         bool tried = false;
-        ~SharedDevice() { av_buffer_unref(&device); }
     };
-    static SharedDevice shared;
+    static auto& shared = *new SharedDevice;
     const std::lock_guard<std::mutex> lock(shared.mutex);
     if (!shared.device) {
         // Only search once; without a usable GPU every reader decodes on the CPU.

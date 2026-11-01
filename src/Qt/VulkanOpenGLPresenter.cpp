@@ -61,11 +61,13 @@ using ImportSemaphore = PFNGLIMPORTSEMAPHOREFDEXTPROC;
 #endif
 constexpr VkImageSubresourceRange kColor = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 }
-// OpenGL samples a presenter-owned Vulkan image rather than the frame itself.
-// NVIDIA's Windows driver returns zeros when FFmpeg or compositor frames are
-// read through an exported alias of their memory (even from Vulkan), while a
-// GPU copy into an image allocated for export is visible. The shared image and
-// its OpenGL import persist until the frame size, device, or context changes.
+// Frames reach OpenGL through a presenter-owned linear buffer, never through
+// shared image memory. NVIDIA's Windows driver returns zeros when FFmpeg or
+// compositor frames are read through an exported alias of their memory, and
+// Maxwell GPUs raise a TEX LAYOUT exception (then a TDR) when OpenGL samples
+// an imported optimal-tiling Vulkan image. Vulkan copies each frame into the
+// buffer, and OpenGL unpacks it into its own texture. The buffer and its
+// OpenGL import persist until the frame size, device, or context changes.
 struct SharedTarget {
     AVBufferRef* device_ref = nullptr;
     VkDevice device = VK_NULL_HANDLE;
@@ -73,7 +75,7 @@ struct SharedTarget {
     int width = 0, height = 0;
     uint32_t family = 0;
     VkQueue queue = VK_NULL_HANDLE;
-    VkImage image = VK_NULL_HANDLE;
+    VkBuffer pixels = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     // Separate directions: reusing one binary semaphore lets Vulkan's
     // acquire consume its own release signal before GL can wait on it.
@@ -82,7 +84,7 @@ struct SharedTarget {
     VkCommandBuffer commands[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
     VkFence fence = VK_NULL_HANDLE;
     bool pending = false;
-    GLuint gl_memory = 0, texture = 0, gl_semaphores[2] = {0, 0}, buffer = 0, vertex_array = 0;
+    GLuint gl_memory = 0, gl_pixels = 0, texture = 0, gl_semaphores[2] = {0, 0}, buffer = 0, vertex_array = 0;
     std::unique_ptr<QOpenGLShaderProgram> program;
     PFNGLWAITSEMAPHOREEXTPROC wait_semaphore = nullptr;
     PFNGLSIGNALSEMAPHOREEXTPROC signal_semaphore = nullptr;
@@ -147,6 +149,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             auto gl = context->functions();
             if (target.vertex_array) context->extraFunctions()->glDeleteVertexArrays(1, &target.vertex_array);
             if (target.buffer) gl->glDeleteBuffers(1, &target.buffer);
+            if (target.gl_pixels) gl->glDeleteBuffers(1, &target.gl_pixels);
             if (target.texture) gl->glDeleteTextures(1, &target.texture);
             if (target.gl_memory)
                 reinterpret_cast<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context->getProcAddress("glDeleteMemoryObjectsEXT"))(1, &target.gl_memory);
@@ -159,7 +162,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             if (target.pool) vkDestroyCommandPool(target.device, target.pool, nullptr);
             for (auto semaphore : target.handoff)
                 if (semaphore) vkDestroySemaphore(target.device, semaphore, nullptr);
-            if (target.image) vkDestroyImage(target.device, target.image, nullptr);
+            if (target.pixels) vkDestroyBuffer(target.device, target.pixels, nullptr);
             if (target.memory) vkFreeMemory(target.device, target.memory, nullptr);
         }
         av_buffer_unref(&target.device_ref);
@@ -179,7 +182,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         auto extra = context->extraFunctions();
         auto createMemory = glFunction<PFNGLCREATEMEMORYOBJECTSEXTPROC>(context, "glCreateMemoryObjectsEXT");
         auto memoryParameter = glFunction<PFNGLMEMORYOBJECTPARAMETERIVEXTPROC>(context, "glMemoryObjectParameterivEXT");
-        auto textureMemory = glFunction<PFNGLTEXSTORAGEMEM2DEXTPROC>(context, "glTexStorageMem2DEXT");
+        auto bufferMemory = glFunction<PFNGLBUFFERSTORAGEMEMEXTPROC>(context, "glBufferStorageMemEXT");
         auto createSemaphores = glFunction<PFNGLGENSEMAPHORESEXTPROC>(context, "glGenSemaphoresEXT");
         glFunction<PFNGLDELETEMEMORYOBJECTSEXTPROC>(context, "glDeleteMemoryObjectsEXT");
         glFunction<PFNGLDELETESEMAPHORESEXTPROC>(context, "glDeleteSemaphoresEXT");
@@ -199,24 +202,19 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         if (!getMemoryHandle || !getSemaphoreHandle)
             throw std::runtime_error("Vulkan device lacks external memory/semaphore export");
 
-        VkExternalMemoryImageCreateInfo external{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO};
+        const VkDeviceSize size = VkDeviceSize(width) * height * 4;
+        VkExternalMemoryBufferCreateInfo external{VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO};
         external.handleTypes = kMemoryHandle;
-        VkImageCreateInfo create{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, &external};
-        create.imageType = VK_IMAGE_TYPE_2D;
-        create.format = VK_FORMAT_R8G8B8A8_UNORM;
-        create.extent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
-        create.mipLevels = create.arrayLayers = 1;
-        create.samples = VK_SAMPLE_COUNT_1_BIT;
-        create.tiling = VK_IMAGE_TILING_OPTIMAL;
-        create.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        VkBufferCreateInfo create{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, &external};
+        create.size = size;
+        create.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         create.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        create.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        check(vkCreateImage(target.device, &create, nullptr, &target.image), "Create presentation image");
+        check(vkCreateBuffer(target.device, &create, nullptr, &target.pixels), "Create presentation buffer");
         VkMemoryDedicatedRequirements dedicated{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS};
         VkMemoryRequirements2 requirements{VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, &dedicated};
-        VkImageMemoryRequirementsInfo2 requirementInfo{VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2};
-        requirementInfo.image = target.image;
-        vkGetImageMemoryRequirements2(target.device, &requirementInfo, &requirements);
+        VkBufferMemoryRequirementsInfo2 requirementInfo{VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2};
+        requirementInfo.buffer = target.pixels;
+        vkGetBufferMemoryRequirements2(target.device, &requirementInfo, &requirements);
         VkPhysicalDeviceMemoryProperties memoryProperties;
         vkGetPhysicalDeviceMemoryProperties(vk->phys_dev, &memoryProperties);
         uint32_t memoryType = UINT32_MAX;
@@ -227,14 +225,14 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         if (memoryType == UINT32_MAX) throw std::runtime_error("No device-local presentation memory");
         const bool useDedicated = dedicated.prefersDedicatedAllocation || dedicated.requiresDedicatedAllocation;
         VkMemoryDedicatedAllocateInfo dedicatedInfo{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
-        dedicatedInfo.image = target.image;
+        dedicatedInfo.buffer = target.pixels;
         VkExportMemoryAllocateInfo exportInfo{VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO, useDedicated ? &dedicatedInfo : nullptr};
         exportInfo.handleTypes = kMemoryHandle;
         VkMemoryAllocateInfo allocate{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, &exportInfo};
         allocate.allocationSize = requirements.memoryRequirements.size;
         allocate.memoryTypeIndex = memoryType;
         check(vkAllocateMemory(target.device, &allocate, nullptr, &target.memory), "Allocate presentation memory");
-        check(vkBindImageMemory(target.device, target.image, target.memory, 0), "Bind presentation memory");
+        check(vkBindBufferMemory(target.device, target.pixels, target.memory, 0), "Bind presentation memory");
 
         createMemory(1, &target.gl_memory);
         GLint glDedicated = useDedicated;
@@ -256,13 +254,21 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         check(getMemoryHandle(target.device, &memoryInfo, &memoryFd), "Export presentation memory");
         importMemory(target.gl_memory, requirements.memoryRequirements.size, kGLHandle, memoryFd); // GL owns the fd.
 #endif
+        GLint previousUnpack = 0, previousTexture = 0;
+        gl->glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &previousUnpack);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTexture);
+        gl->glGenBuffers(1, &target.gl_pixels);
+        gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, target.gl_pixels);
+        bufferMemory(GL_PIXEL_UNPACK_BUFFER, size, target.gl_memory, 0);
+        gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, previousUnpack);
         gl->glGenTextures(1, &target.texture);
         gl->glBindTexture(GL_TEXTURE_2D, target.texture);
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        textureMemory(GL_TEXTURE_2D, 1, GL_RGBA8, width, height, target.gl_memory, 0);
+        gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        gl->glBindTexture(GL_TEXTURE_2D, previousTexture);
 
         VkExportSemaphoreCreateInfo exportSemaphore{VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO};
         exportSemaphore.handleTypes = kSemaphoreHandle;
@@ -303,15 +309,14 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         // The acquire from OpenGL is the same every frame.
         VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
         check(vkBeginCommandBuffer(target.commands[1], &begin), "Begin presentation acquire");
-        VkImageMemoryBarrier acquire{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        VkBufferMemoryBarrier acquire{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
         acquire.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        acquire.oldLayout = acquire.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         acquire.srcQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
         acquire.dstQueueFamilyIndex = target.family;
-        acquire.image = target.image;
-        acquire.subresourceRange = kColor;
+        acquire.buffer = target.pixels;
+        acquire.size = VK_WHOLE_SIZE;
         vkCmdPipelineBarrier(target.commands[1], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                             0, 0, nullptr, 0, nullptr, 1, &acquire);
+                             0, 0, nullptr, 1, &acquire, 0, nullptr);
         check(vkEndCommandBuffer(target.commands[1]), "End presentation acquire");
 
         target.program.reset(new QOpenGLShaderProgram);
@@ -431,7 +436,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 target.width != source->width || target.height != source->height) {
                 releaseTarget();
                 createTarget(context, fc, source->width, source->height);
-                stage("create shared image");
+                stage("create shared buffer");
             }
             // The previous frame's commands must retire before re-recording.
             waitPending();
@@ -450,37 +455,28 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             check(vkBeginCommandBuffer(copy, &begin), "Begin presentation copy");
             // FFmpeg frames are concurrent or owned by the compute family, so
             // the copy needs no ownership transfer of the source.
-            VkImageMemoryBarrier toCopy[2] = {{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER}, {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER}};
-            toCopy[0].srcAccessMask = image->access[0];
-            toCopy[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            toCopy[0].oldLayout = image->layout[0];
-            toCopy[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            toCopy[0].srcQueueFamilyIndex = toCopy[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            toCopy[0].image = image->img[0];
-            toCopy[0].subresourceRange = kColor;
-            toCopy[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            toCopy[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            toCopy[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            toCopy[1].srcQueueFamilyIndex = toCopy[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            toCopy[1].image = target.image;
-            toCopy[1].subresourceRange = kColor;
+            VkImageMemoryBarrier toCopy{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+            toCopy.srcAccessMask = image->access[0];
+            toCopy.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            toCopy.oldLayout = image->layout[0];
+            toCopy.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            toCopy.srcQueueFamilyIndex = toCopy.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            toCopy.image = image->img[0];
+            toCopy.subresourceRange = kColor;
             vkCmdPipelineBarrier(copy, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                 0, 0, nullptr, 0, nullptr, 2, toCopy);
-            VkImageCopy region{};
-            region.srcSubresource = region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-            region.extent = {static_cast<uint32_t>(target.width), static_cast<uint32_t>(target.height), 1};
-            vkCmdCopyImage(copy, image->img[0], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           target.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-            VkImageMemoryBarrier release{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+                                 0, 0, nullptr, 0, nullptr, 1, &toCopy);
+            VkBufferImageCopy region{};
+            region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+            region.imageExtent = {static_cast<uint32_t>(target.width), static_cast<uint32_t>(target.height), 1};
+            vkCmdCopyImageToBuffer(copy, image->img[0], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target.pixels, 1, &region);
+            VkBufferMemoryBarrier release{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             release.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            release.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            release.newLayout = VK_IMAGE_LAYOUT_GENERAL;
             release.srcQueueFamilyIndex = target.family;
             release.dstQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
-            release.image = target.image;
-            release.subresourceRange = kColor;
+            release.buffer = target.pixels;
+            release.size = VK_WHOLE_SIZE;
             vkCmdPipelineBarrier(copy, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                 0, 0, nullptr, 0, nullptr, 1, &release);
+                                 0, 0, nullptr, 1, &release, 0, nullptr);
             check(vkEndCommandBuffer(copy), "End presentation copy");
             // Advance the frame's timeline and release the copy to OpenGL.
             const uint64_t waitValue = image->sem_value[0];
@@ -509,14 +505,23 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             locked = false;
             stage("copy submit");
 
-            const GLenum layout = GL_LAYOUT_GENERAL_EXT;
-            target.wait_semaphore(target.gl_semaphores[0], 0, nullptr, 1, &target.texture, &layout);
-            GLint viewport[4], previousVertexArray = 0;
+            target.wait_semaphore(target.gl_semaphores[0], 1, &target.gl_pixels, 0, nullptr, nullptr);
+            GLint viewport[4], previousVertexArray = 0, previousUnpack = 0, unpackAlignment = 4, unpackRowLength = 0;
             gl->glGetIntegerv(GL_VIEWPORT, viewport);
             gl->glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
-            gl->glViewport(x, y, width, height);
+            gl->glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &previousUnpack);
+            gl->glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
+            gl->glGetIntegerv(GL_UNPACK_ROW_LENGTH, &unpackRowLength);
             gl->glActiveTexture(GL_TEXTURE0);
             gl->glBindTexture(GL_TEXTURE_2D, target.texture);
+            gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, target.gl_pixels);
+            gl->glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+            gl->glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            gl->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, target.width, target.height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, previousUnpack);
+            gl->glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
+            gl->glPixelStorei(GL_UNPACK_ROW_LENGTH, unpackRowLength);
+            gl->glViewport(x, y, width, height);
             gl->glDisable(GL_DEPTH_TEST);
             gl->glDisable(GL_SCISSOR_TEST);
             gl->glDisable(GL_STENCIL_TEST);
@@ -539,7 +544,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             extra->glBindVertexArray(previousVertexArray);
             target.program->release();
             gl->glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-            target.signal_semaphore(target.gl_semaphores[1], 0, nullptr, 1, &target.texture, &layout);
+            // Signals once the unpack above has finished reading the buffer.
+            target.signal_semaphore(target.gl_semaphores[1], 1, &target.gl_pixels, 0, nullptr, nullptr);
             gl->glFlush();
             stage("GL draw flush");
 
