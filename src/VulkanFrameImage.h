@@ -11,6 +11,11 @@ namespace openshot {
 bool VulkanRenderingEnabled();
 /// Process-wide count of GPU images materialized as CPU pixels (diagnostics).
 uint64_t VulkanFrameReadbackCount();
+/// Process-wide count of CPU images that could not be uploaded to the GPU.
+uint64_t VulkanUploadFailureCount();
+#ifndef SWIG
+void RecordVulkanUploadFailure();
+#endif
 /// A retained FFmpeg Vulkan image. CPU pixels are created only by Materialize().
 class VulkanFrameImage final : public FrameImage {
 public:

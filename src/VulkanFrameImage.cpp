@@ -47,8 +47,13 @@ void Validate(const AVFrame* frame) {
         throw std::invalid_argument("Expected an FFmpeg Vulkan hardware frame");
 }
 }
-namespace { std::atomic<uint64_t> readback_count{0}; }
+namespace { std::atomic<uint64_t> readback_count{0}, upload_failures{0}; }
 uint64_t VulkanFrameReadbackCount() { return readback_count.load(std::memory_order_relaxed); }
+uint64_t VulkanUploadFailureCount() { return upload_failures.load(std::memory_order_relaxed); }
+void RecordVulkanUploadFailure() {
+    upload_failures.fetch_add(1, std::memory_order_relaxed);
+    gpu_metrics::Record(gpu_metrics::UploadFailure);
+}
 bool VulkanRenderingEnabled() {
     const char* backend = std::getenv("OPENSHOT_RENDER_BACKEND");
     return !(backend && std::strcmp(backend, "cpu") == 0);
@@ -148,18 +153,49 @@ std::shared_ptr<const FrameImage> VulkanFrameProcessor::Process(const AVFrame* f
     return RenderVulkanImage(source, nullptr, width, height, matrix, 1.0, Qt::transparent, high_quality);
 }
 namespace {
+struct BufferDeleter { void operator()(AVBufferRef* p) const { av_buffer_unref(&p); } };
+using OwnedBuffer = std::unique_ptr<AVBufferRef, BufferDeleter>;
 struct UploadCache {
     struct Entry { std::shared_ptr<const FrameImage> surface; int64_t bytes; uint64_t age; };
+    struct Pool { OwnedBuffer frames; uint64_t age; };
     std::mutex mutex;
     std::map<qint64, Entry> entries;
+    // One frame pool per image size. A pool per upload leaked its device
+    // memory on NVIDIA (about 1.5 MiB per 600x600 upload) and was slow.
+    std::map<std::pair<int, int>, Pool> pools;
     int64_t bytes = 0;
     uint64_t clock = 0;
 };
 // Never destroyed: freeing cached Vulkan frames from a static destructor at
 // process exit crashes the Windows NVIDIA driver, which may already be unloading.
 UploadCache& Uploads() { static auto* cache = new UploadCache; return *cache; }
-struct BufferDeleter { void operator()(AVBufferRef* p) const { av_buffer_unref(&p); } };
-using OwnedBuffer = std::unique_ptr<AVBufferRef, BufferDeleter>;
+AVBufferRef* UploadPool(UploadCache& cache, int width, int height) {
+    auto found = cache.pools.find({width, height});
+    if (found != cache.pools.end()) {
+        found->second.age = ++cache.clock;
+        return found->second.frames.get();
+    }
+    AVBufferRef* device_ptr = nullptr;
+    Check(CreateSharedVulkanDevice(&device_ptr), "Create image upload device");
+    OwnedBuffer device(device_ptr);
+    OwnedBuffer pool(av_hwframe_ctx_alloc(device.get()));
+    if (!pool) throw std::bad_alloc();
+    auto* context = reinterpret_cast<AVHWFramesContext*>(pool->data);
+    context->format = AV_PIX_FMT_VULKAN;
+    context->sw_format = AV_PIX_FMT_RGBA;
+    context->width = width; context->height = height;
+    auto* vk = reinterpret_cast<AVVulkanFramesContext*>(context->hwctx);
+    vk->usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT |
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    Check(av_hwframe_ctx_init(pool.get()), "Initialize image upload pool");
+    // Images still in use keep their own pool reference after it is dropped here.
+    if (cache.pools.size() >= 8)
+        cache.pools.erase(std::min_element(cache.pools.begin(), cache.pools.end(),
+            [](const auto& a, const auto& b) { return a.second.age < b.second.age; }));
+    auto* frames = pool.get();
+    cache.pools.emplace(std::make_pair(width, height), UploadCache::Pool{std::move(pool), ++cache.clock});
+    return frames;
+}
 }
 std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image) {
     if (image.isNull()) throw std::invalid_argument("Cannot upload an empty image");
@@ -171,27 +207,27 @@ std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image) {
         found->second.age = ++cache.clock;
         return found->second.surface;
     }
-    AVBufferRef* device_ptr = nullptr;
-    Check(CreateSharedVulkanDevice(&device_ptr), "Create image upload device");
-    OwnedBuffer device(device_ptr);
-    OwnedBuffer pool(av_hwframe_ctx_alloc(device.get()));
-    if (!pool) throw std::bad_alloc();
-    auto* context = reinterpret_cast<AVHWFramesContext*>(pool->data);
-    context->format = AV_PIX_FMT_VULKAN;
-    context->sw_format = AV_PIX_FMT_RGBA;
-    context->width = image.width(); context->height = image.height();
-    auto* vk = reinterpret_cast<AVVulkanFramesContext*>(context->hwctx);
-    vk->usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT |
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-    Check(av_hwframe_ctx_init(pool.get()), "Initialize image upload pool");
+    auto* pool = UploadPool(cache, image.width(), image.height());
     QImage rgba = image.convertToFormat(QImage::Format_RGBA8888_Premultiplied);
     auto cpu = AllocateFrame();
     auto gpu = AllocateFrame();
     cpu->format = AV_PIX_FMT_RGBA; cpu->width = rgba.width(); cpu->height = rgba.height();
     cpu->data[0] = const_cast<uint8_t*>(rgba.constBits());
     cpu->linesize[0] = rgba.bytesPerLine();
-    Check(av_hwframe_get_buffer(pool.get(), gpu.get(), 0), "Allocate uploaded image");
+    Check(av_hwframe_get_buffer(pool, gpu.get(), 0), "Allocate uploaded image");
     Check(av_hwframe_transfer_data(gpu.get(), cpu.get(), 0), "Upload CPU image");
+    // FFmpeg may copy straight from the CPU pixels (host-mapped memory) and
+    // returns before the copy runs; wait so rgba is not freed or reused first.
+    auto* uploaded = reinterpret_cast<AVVkFrame*>(gpu->data[0]);
+    auto* frames = reinterpret_cast<AVHWFramesContext*>(pool->data);
+    auto* device = reinterpret_cast<AVVulkanDeviceContext*>(frames->device_ctx->hwctx);
+    VkSemaphoreWaitInfo copied{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+    copied.semaphoreCount = 1;
+    copied.pSemaphores = &uploaded->sem[0];
+    copied.pValues = &uploaded->sem_value[0];
+    const VkResult waited = vkWaitSemaphores(device->act_dev, &copied, UINT64_MAX);
+    if (waited != VK_SUCCESS)
+        throw std::runtime_error("Wait for CPU image upload: " + VulkanResultName(waited));
     gpu_metrics::Record(gpu_metrics::Upload);
     std::shared_ptr<const FrameImage> surface = std::make_shared<VulkanFrameImage>(gpu.get(), true);
 #ifdef __APPLE__
@@ -218,6 +254,7 @@ void ReleaseVulkanUploads() {
     auto& cache = Uploads();
     const std::lock_guard<std::mutex> lock(cache.mutex);
     cache.entries.clear(); cache.bytes = 0;
+    cache.pools.clear();
 }
 
 }

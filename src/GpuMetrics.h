@@ -11,7 +11,7 @@ void ResetGpuMetrics(bool exporting = false);
 #ifndef SWIG
 namespace gpu_metrics {
 enum Event { DecodeGpu, DecodeCpu, ImageSource, RenderGpu, RenderCpu,
-             Readback, Upload, EncodeGpu, EncodeCpu, Count };
+             Readback, Upload, EncodeGpu, EncodeCpu, UploadFailure, Count };
 /// Scope follows synchronous timeline work; unrelated background readers are ignored.
 struct Counters;
 class Scope {

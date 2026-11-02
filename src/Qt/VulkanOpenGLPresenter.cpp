@@ -4,6 +4,7 @@
 #include "VideoRenderer.h"
 #include "../VulkanFrameImage.h"
 #include "../VulkanCompositor.h"
+#include "../GpuDevices.h"
 #include "../Logger.h"
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -35,7 +36,7 @@ extern "C" {
 namespace openshot {
 namespace {
 void check(VkResult result, const char* operation) {
-    if (result != VK_SUCCESS) throw std::runtime_error(operation);
+    if (result != VK_SUCCESS) throw std::runtime_error(std::string(operation) + ": " + VulkanResultName(result));
 }
 template<class T> T glFunction(QOpenGLContext* context, const char* name) {
     auto function = reinterpret_cast<T>(context->getProcAddress(name));

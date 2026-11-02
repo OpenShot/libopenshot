@@ -37,6 +37,8 @@ std::vector<std::string> GpuEncoders();
 /// best GPU (OPENSHOT_VULKAN_DEVICE, an index or a name, overrides it). Returns a new
 /// reference, or a negative FFmpeg error when there is no usable GPU.
 int CreateSharedVulkanDevice(AVBufferRef** output);
+/// A VkResult's name (e.g. "VK_ERROR_DEVICE_LOST"), for error messages.
+std::string VulkanResultName(int result);
 #endif
 }
 #endif

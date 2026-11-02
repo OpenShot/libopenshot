@@ -1462,9 +1462,13 @@ std::shared_ptr<const VulkanFrameImage> VulkanSource(const std::shared_ptr<Frame
         frame->AddDeferredImage(uploaded);
         return std::dynamic_pointer_cast<const VulkanFrameImage>(uploaded);
     } catch (const std::exception& error) {
-        static std::atomic_flag warned = ATOMIC_FLAG_INIT;
-        if (!warned.test_and_set())
-            Logger::Instance()->Log(std::string("GPU image upload unavailable; using CPU: ") + error.what(), Logger::LevelWarning);
+        // Log the first failure and then every 100th, so repeats stay visible
+        // without flooding the log; the total is in VulkanUploadFailureCount().
+        RecordVulkanUploadFailure();
+        const auto failures = VulkanUploadFailureCount();
+        if (failures == 1 || failures % 100 == 0)
+            Logger::Instance()->Log("GPU image upload unavailable; using CPU (" + std::to_string(failures) +
+                                    " failures): " + error.what(), Logger::LevelWarning);
         return {};
     }
 }

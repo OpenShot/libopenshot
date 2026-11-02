@@ -18,7 +18,7 @@ std::shared_ptr<Counters> sessions[2] = {std::make_shared<Counters>(), std::make
 thread_local Scope* current = nullptr;
 thread_local const char* reason = "Other";
 const char* names[] = {"decode_gpu", "decode_cpu", "image_sources", "render_gpu", "render_cpu",
-                       "readbacks", "uploads", "encode_gpu", "encode_cpu"};
+                       "readbacks", "uploads", "encode_gpu", "encode_cpu", "upload_failures"};
 const char* reasons[] = {"Effect", "Transform", "Composite", "Encoder", "Other"};
 }
 Scope::Scope(bool exporting) : previous(current), exceptions(std::uncaught_exceptions()) {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "VulkanCompositor.h"
 #include "VulkanEncodeConverter.h"
+#include "GpuDevices.h"
 #include "VulkanFrameImage.h"
 #ifdef __APPLE__
 #include "MacVulkanInterop.h"
@@ -25,7 +26,7 @@ extern "C" {
 namespace openshot {
 namespace {
 void VkCheck(VkResult r, const char* operation) {
-    if(r != VK_SUCCESS) throw std::runtime_error(std::string(operation)+": Vulkan error "+std::to_string(r));
+    if(r != VK_SUCCESS) throw std::runtime_error(std::string(operation)+": "+VulkanResultName(r));
 }
 void AvCheck(int r, const char* operation) {
     if(r < 0) {

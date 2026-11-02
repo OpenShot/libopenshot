@@ -1540,7 +1540,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 				if (auto surface = frame->GetDeferredImage()) f->AddDeferredImage(surface);
 				else
 #endif
-				f->AddImage(std::make_shared<QImage>(frame->GetImage()->copy()));
+				f->AddImage(std::make_shared<QImage>(*frame->GetImage()));
 			}
 
 			// Use solid color (if no image data found)
@@ -1562,14 +1562,14 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 				if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 				else
 #endif
-				f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+				f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 			} else if (last_video_frame && last_video_frame->has_image_data
 				&& last_video_frame->number <= requested_frame) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 				if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 				else
 #endif
-				f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+				f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 			} else {
 				f->AddColor(info.width, info.height, "#000");
 			}
@@ -1819,7 +1819,8 @@ bool FFmpegReader::GetAVFrame() {
                     ? gpu_metrics::DecodeGpu : gpu_metrics::DecodeCpu);
 			packet_status.video_decoded++;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-			if (packet_status.video_decoded == 1 && !hw_decode_succeeded)
+			// Cover art and still images are decoded on the CPU by design.
+			if (packet_status.video_decoded == 1 && !hw_decode_succeeded && !info.has_single_image)
 				Logger::Instance()->Log("GPU decode not observed: CPU video frame received; codec=" +
 					info.vcodec + "; " + path, Logger::LevelInfo);
 #endif
@@ -3001,7 +3002,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = previous_frame_instance->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
 				}
 
 				// Fall back to last finalized timeline image (survives cache churn).
@@ -3013,7 +3014,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 				}
 
 				// Fall back to the last decoded image only when it is not from the future.
@@ -3025,7 +3026,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				}
 
 				// Last-resort fallback if no prior image is available.
@@ -3076,13 +3077,15 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			if (info.has_single_image) {
 				// For still-image video (including attached cover art), reuse the most
 				// recent image so playback does not stall waiting for video EOF.
+				// QImage copies share pixels until written, and keep the cache key
+				// that lets the GPU reuse one upload instead of one per frame.
 				std::shared_ptr<Frame> previous_frame_instance = final_cache.GetFrame(f->number - 1);
 				if (previous_frame_instance && previous_frame_instance->has_image_data) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 					if (auto surface = previous_frame_instance->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_final_video_frame
@@ -3092,7 +3095,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_video_frame
@@ -3102,7 +3105,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				}
 			}
 
@@ -3116,7 +3119,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = previous_frame_instance->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_final_video_frame
@@ -3126,7 +3129,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_video_frame
@@ -3136,7 +3139,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
 					else
 #endif
-					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				}
 			}
 

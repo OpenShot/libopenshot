@@ -627,6 +627,33 @@ TEST_CASE("PNG clips upload once and keep animated transforms on Vulkan", "[vulk
     timeline.Close();
 }
 
+TEST_CASE("FFmpeg still images and cover art upload once", "[vulkan][hardware][upload]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir temporary;
+    REQUIRE(temporary.isValid());
+    const auto path = temporary.filePath("cover.jpg");
+    QImage bitmap(64, 64, QImage::Format_RGB32);
+    bitmap.fill(QColor(255, 0, 0));
+    REQUIRE(bitmap.save(path));
+    // FFmpegReader fills each frame of a still image from the previous one, as
+    // it does for an audio file's cover art; that must not upload every frame.
+    openshot::FFmpegReader reader(path.toStdString());
+    REQUIRE(reader.info.has_single_image);
+    openshot::Clip clip(&reader);
+    openshot::Timeline timeline(128,128,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    openshot::ResetGpuMetrics();
+    for (int i = 1; i <= 24; ++i)
+        REQUIRE(timeline.GetFrame(i)->GetDeferredImage());
+    Json::Reader parser;
+    Json::Value metrics;
+    REQUIRE(parser.parse(openshot::GpuMetricsSnapshot(), metrics));
+    CHECK(metrics["uploads"].asUInt64() <= 1);
+    CHECK(metrics["upload_failures"].asUInt64() == 0);
+    timeline.Close();
+}
+
 TEST_CASE("Saved GPU preferences reach the native runtime environment", "[vulkan][settings]") {
     struct Restore {
         std::string backend, device;
