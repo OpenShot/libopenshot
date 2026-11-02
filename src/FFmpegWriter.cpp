@@ -2007,13 +2007,19 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		}
 
 		switch (video_codec_ctx->codec_id) {
-			case AV_CODEC_ID_H264:
+			case AV_CODEC_ID_H264: {
 				video_codec_ctx->max_b_frames = 0;  // At least this GPU doesn't support b-frames
-				video_codec_ctx->profile = AV_PROFILE_H264_CONSTRAINED_BASELINE;
+				// Honor an explicitly requested High Profile (e.g. via SetOption).
+				// Keep the legacy Constrained Baseline default for other cases.
+				const bool use_high_profile = (video_codec_ctx->profile == AV_PROFILE_H264_HIGH);
+				video_codec_ctx->profile = use_high_profile
+					? AV_PROFILE_H264_HIGH : AV_PROFILE_H264_CONSTRAINED_BASELINE;
 				av_opt_set(video_codec_ctx->priv_data, "preset", "slow", 0);
 				av_opt_set(video_codec_ctx->priv_data, "tune", "zerolatency", 0);
-				av_opt_set(video_codec_ctx->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
+				av_opt_set(video_codec_ctx->priv_data, "vprofile",
+					use_high_profile ? "high" : "baseline", AV_OPT_SEARCH_CHILDREN);
 				break;
+			}
 			case AV_CODEC_ID_HEVC:
 				// tested to work with defaults
 				break;
