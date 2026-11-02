@@ -1050,6 +1050,39 @@ void FFmpegReader::UpdateVideoInfo() {
 	}
 	info.pixel_format = AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx);
 
+	// Expose stream color characteristics through the existing metadata map.
+	// This reports source signaling; it does not imply HDR rendering support.
+	const AVCodecParameters* color_params = pStream->codecpar;
+	if (color_params) {
+		const char* primaries =
+			av_color_primaries_name(color_params->color_primaries);
+		const char* transfer =
+			av_color_transfer_name(color_params->color_trc);
+		const char* matrix =
+			av_color_space_name(color_params->color_space);
+
+		if (primaries)
+			info.metadata["color_primaries"] = primaries;
+		if (transfer)
+			info.metadata["color_transfer"] = transfer;
+		if (matrix)
+			info.metadata["color_space"] = matrix;
+
+		const AVPixFmtDescriptor* descriptor =
+			av_pix_fmt_desc_get(
+				static_cast<AVPixelFormat>(info.pixel_format));
+
+		if (descriptor)
+			info.metadata["bit_depth"] =
+				std::to_string(descriptor->comp[0].depth);
+
+		if (color_params->color_trc == AVCOL_TRC_SMPTE2084)
+			info.metadata["hdr_transfer"] = "PQ";
+		else if (color_params->color_trc == AVCOL_TRC_ARIB_STD_B67)
+			info.metadata["hdr_transfer"] = "HLG";
+	}
+
+
 	// Calculate the DAR (display aspect ratio)
 	Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
 
