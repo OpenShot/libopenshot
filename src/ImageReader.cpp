@@ -34,6 +34,12 @@ ImageReader::ImageReader(const std::string& path, bool inspect_reader) : path(pa
 // Open image file
 void ImageReader::Open()
 {
+	const std::lock_guard<std::mutex> lock(cache_mutex);
+	OpenUnlocked();
+}
+
+void ImageReader::OpenUnlocked()
+{
 	// Open reader if not already open
 	if (!is_open)
 	{
@@ -83,17 +89,29 @@ void ImageReader::Open()
 
 void ImageReader::Close()
 {
-	if (is_open)
-	{
-		is_open = false;
-		// Delete the image
-		image.reset();
-	}
+	const std::lock_guard<std::mutex> lock(cache_mutex);
+	CloseUnlocked();
+}
+
+void ImageReader::CloseUnlocked()
+{
+	// Always release cached resources, including after partial setup.
+	cached_image.reset();
+	image.reset();
+	is_open = false;
+}
+
+bool ImageReader::IsOpen()
+{
+	const std::lock_guard<std::mutex> lock(cache_mutex);
+	return is_open;
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 {
+	const std::lock_guard<std::mutex> lock(cache_mutex);
+
 	if (!is_open) {
 		throw ReaderClosed(
 			"The ImageReader is closed. "
@@ -106,8 +124,12 @@ std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 		image->size().width(), image->size().height(),
 		"#000000", 0, 2);
 
-	// Add Image data to frame
-	auto qimage = openshot::Magick2QImage(image);
+	// Convert once per Open() cycle, under the reader mutex.
+	if (!cached_image)
+		cached_image = openshot::Magick2QImage(image);
+
+	// Use a separate QImage object with implicitly shared pixel data.
+	auto qimage = std::make_shared<QImage>(*cached_image);
 	image_frame->AddImage(qimage);
 	return image_frame;
 }
@@ -121,6 +143,7 @@ std::string ImageReader::Json() const {
 
 // Generate Json::Value for this object
 Json::Value ImageReader::JsonValue() const {
+	const std::lock_guard<std::mutex> lock(cache_mutex);
 
 	// get parent properties
 	Json::Value root = ReaderBase::JsonValue();
@@ -149,6 +172,7 @@ void ImageReader::SetJson(const std::string value) {
 
 // Load Json::Value into this object
 void ImageReader::SetJsonValue(const Json::Value root) {
+	const std::lock_guard<std::mutex> lock(cache_mutex);
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
@@ -158,8 +182,8 @@ void ImageReader::SetJsonValue(const Json::Value root) {
 		path = root["path"].asString();
 
 	if (is_open) {
-		Close();
-		Open();
+		CloseUnlocked();
+		OpenUnlocked();
 	}
 }
 
