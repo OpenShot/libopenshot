@@ -76,7 +76,8 @@ namespace openshot
 	private:
 		QString path;
 		std::shared_ptr<QImage> image;			///> Original image (full quality)
-		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
+		std::shared_ptr<QImage> cached_image;
+		std::shared_ptr<QImage> source_image; ///< Persistent memory-backed source	///> Scaled for performance
 		bool is_open;	///> Is Reader opened
 		QSize max_size;	///> Current max_size as calculated with Clip properties
 
@@ -103,6 +104,16 @@ namespace openshot
 		/// When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiation.
 		QtImageReader(std::string path, bool inspect_reader=true);
+
+		/// Construct from an in-memory image, copying its pixels.
+		///
+		/// The source image is retained across Open()/Close() cycles.
+		/// Frames have independent QImage objects using Qt implicit sharing.
+		///
+		/// In-memory images are transient: JSON serialization does not
+		/// preserve their pixel data. Use a file-backed reader when
+		/// persistent project serialization is required.
+		explicit QtImageReader(const QImage& source);
 
 		virtual ~QtImageReader();
 
