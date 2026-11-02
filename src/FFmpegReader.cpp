@@ -242,6 +242,9 @@ void FFmpegReader::Open() {
 	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 	// Open reader if not already open
 	if (!is_open) {
+		// Reset MPEG-TS keyframe index for a fresh input open.
+		if (!preserve_mpegts_keyframes_on_open)
+			mpegts_keyframes.clear();
 
 		// Initialize format context
 		pFormatCtx = NULL;
@@ -1269,11 +1272,28 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 				frame = ReadStream(requested_frame);
 			} else {
 				// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-				if (enable_seek) {
-					// Only seek if enabled
+				const bool is_mpegts =
+					pFormatCtx && pFormatCtx->iformat &&
+					pFormatCtx->iformat->name &&
+					strcmp(pFormatCtx->iformat->name, "mpegts") == 0;
+
+				bool has_indexed_keyframe = false;
+				if (is_mpegts && enable_seek && diff > 20) {
+					const int64_t safe_pts =
+						ConvertFrameToVideoPTS(requested_frame - 90);
+					for (const auto& entry : mpegts_keyframes) {
+						if (entry.pts <= safe_pts) {
+							has_indexed_keyframe = true;
+							break;
+						}
+					}
+				}
+
+				if (enable_seek && (!is_mpegts || has_indexed_keyframe)) {
+					// MPEG-TS seeks require a previously indexed safe keyframe.
 					Seek(requested_frame);
 
-				} else if (!enable_seek && diff < 0) {
+				} else if ((!enable_seek || is_mpegts) && diff < 0) {
 					// Start over, since we can't seek, and the requested frame is smaller than our position
 					// Since we are seeking to frame 1, this actually just closes/re-opens the reader
 					Seek(1);
@@ -1507,6 +1527,36 @@ int FFmpegReader::GetNextPacket() {
 	if (found_packet >= 0) {
 		// Update current packet pointer
 		packet = next_packet;
+
+		// Remember MPEG-TS video keyframes as packets are read.
+		const bool is_mpegts_packet =
+			pFormatCtx && pFormatCtx->iformat &&
+			pFormatCtx->iformat->name &&
+			strcmp(pFormatCtx->iformat->name, "mpegts") == 0;
+
+		if (is_mpegts_packet &&
+			packet->stream_index == videoStream &&
+			(packet->flags & AV_PKT_FLAG_KEY) &&
+			packet->pos >= 0 &&
+			packet->pts != AV_NOPTS_VALUE) {
+			bool known = false;
+			for (const auto& entry : mpegts_keyframes) {
+				if (entry.byte_position == packet->pos) {
+					known = true;
+					break;
+				}
+			}
+			if (!known) {
+				mpegts_keyframes.push_back(
+					{packet->pts, packet->dts, packet->pos});
+				Logger::Instance()->AppendDebugMethod(
+					"FFmpegReader::GetNextPacket (MPEG-TS keyframe indexed)",
+					"pts", packet->pts,
+					"dts", packet->dts,
+					"byte_position", packet->pos,
+					"index_size", mpegts_keyframes.size());
+			}
+		}
 
 		// Keep track of packet stats
 		if (packet->stream_index == videoStream) {
@@ -1777,8 +1827,15 @@ bool FFmpegReader::ReopenWithoutHardwareDecode(int64_t requested_frame) {
 	hw_decode_failed = false;
 	hw_decode_error_count = 0;
 
-	Close();
-	Open();
+	preserve_mpegts_keyframes_on_open = true;
+	try {
+		Close();
+		Open();
+	} catch (...) {
+		preserve_mpegts_keyframes_on_open = false;
+		throw;
+	}
+	preserve_mpegts_keyframes_on_open = false;
 	Seek(requested_frame);
 	return true;
 #else
@@ -2415,14 +2472,25 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = 12;
+	const bool is_mpegts_format =
+		pFormatCtx && pFormatCtx->iformat &&
+		pFormatCtx->iformat->name &&
+		strcmp(pFormatCtx->iformat->name, "mpegts") == 0;
+	int buffer_amount = is_mpegts_format ? 90 : 12;
 	if (requested_frame - buffer_amount < 20) {
 		// prevent Open() from seeking again
 		is_seeking = true;
 
 		// Close and re-open file (basically seeking to frame 1)
-		Close();
-		Open();
+		preserve_mpegts_keyframes_on_open = true;
+		try {
+			Close();
+			Open();
+		} catch (...) {
+			preserve_mpegts_keyframes_on_open = false;
+			throw;
+		}
+		preserve_mpegts_keyframes_on_open = false;
 
 		// Update overrides (since closing and re-opening might update these)
 		info.has_audio = has_audio_override;
@@ -2439,9 +2507,47 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 		seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
 
 	} else {
+		// Discard any packet retained from the previous read position.
+		if (packet) {
+			RemoveAVPacket(packet);
+			packet = NULL;
+		}
+
 		// Seek to nearest key-frame (aka, i-frame)
 		bool seek_worked = false;
 		int64_t seek_target = 0;
+
+		// Prefer known MPEG-TS keyframe byte positions.
+		const bool is_mpegts_seek =
+			pFormatCtx && pFormatCtx->iformat &&
+			pFormatCtx->iformat->name &&
+			strcmp(pFormatCtx->iformat->name, "mpegts") == 0;
+		if (is_mpegts_seek && info.has_video && !HasAlbumArt()) {
+			const int64_t safe_pts =
+				ConvertFrameToVideoPTS(requested_frame - buffer_amount);
+			int64_t selected_pts = AV_NOPTS_VALUE;
+			int64_t selected_pos = -1;
+			for (const auto& entry : mpegts_keyframes) {
+				if (entry.pts <= safe_pts &&
+				    (selected_pts == AV_NOPTS_VALUE ||
+				     entry.pts > selected_pts)) {
+					selected_pts = entry.pts;
+					selected_pos = entry.byte_position;
+				}
+			}
+			if (selected_pos >= 0 &&
+			    av_seek_frame(pFormatCtx, -1, selected_pos,
+			                  AVSEEK_FLAG_BYTE) >= 0) {
+				seek_target = selected_pts;
+				is_video_seek = true;
+				seek_worked = true;
+				Logger::Instance()->AppendDebugMethod(
+					"FFmpegReader::Seek (MPEG-TS indexed byte seek)",
+					"requested_frame", requested_frame,
+					"keyframe_pts", selected_pts,
+					"byte_position", selected_pos);
+			}
+		}
 
 		// Seek video stream (if any), except album arts
 		if (!seek_worked && info.has_video && !HasAlbumArt()) {
@@ -2500,8 +2606,15 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 			is_seeking = true;
 
 			// Close and re-open file (basically seeking to frame 1)
-			Close();
-			Open();
+			preserve_mpegts_keyframes_on_open = true;
+			try {
+				Close();
+				Open();
+			} catch (...) {
+				preserve_mpegts_keyframes_on_open = false;
+				throw;
+			}
+			preserve_mpegts_keyframes_on_open = false;
 
 			// Not actually seeking, so clear these flags
 			is_seeking = false;
@@ -2643,7 +2756,7 @@ int64_t FFmpegReader::ConvertFrameToVideoPTS(int64_t frame_number) {
 			: (1.0 / 30.0);
 
 	// Get timestamp of this frame (in seconds)
-	double seconds = (double(frame_number - 1) / fps_value) + pts_offset_seconds;
+	double seconds = (double(frame_number - 1) / fps_value) - pts_offset_seconds;
 
 	// Calculate the # of video packets in this timestamp
 	int64_t video_pts = round(seconds / video_timebase_value);
@@ -2797,7 +2910,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 		}
 
 		// Calculate PTS in seconds (of working frame), and the most recent processed pts value
-		double frame_pts_seconds = (double(f->number - 1) / info.fps.ToDouble()) + pts_offset_seconds;
+		double frame_pts_seconds = (double(f->number - 1) / info.fps.ToDouble());
 		double recent_pts_seconds = std::max(video_pts_seconds, audio_pts_seconds);
 
 		// Determine if video and audio are ready (based on timestamps)

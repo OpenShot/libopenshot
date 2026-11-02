@@ -27,6 +27,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <memory>
+#include <vector>
 #include "AudioLocation.h"
 #include "CacheMemory.h"
 #include "Clip.h"
@@ -103,6 +104,15 @@ namespace openshot {
 	class FFmpegReader : public ReaderBase {
 	private:
 		std::string path;
+
+		// MPEG-TS keyframes discovered during packet reading.
+		struct MPEGTSKeyframe {
+			int64_t pts;
+			int64_t dts;
+			int64_t byte_position;
+		};
+		std::vector<MPEGTSKeyframe> mpegts_keyframes;
+		bool preserve_mpegts_keyframes_on_open = false;
 
 		AVFormatContext *pFormatCtx;
 		int videoStream, audioStream;
