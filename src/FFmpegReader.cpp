@@ -24,6 +24,8 @@
 
 #include "FFmpegUtilities.h"
 #include "FFmpegColorRange.h"
+#include "FFmpegColorMatrix.h"
+#include "QtUtilities.h"
 #include "PreviewSize.h"
 #include "effects/CropHelpers.h"
 
@@ -2026,6 +2028,11 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	constexpr size_t ALIGNMENT = 32;  // AVX2
 	int buffer_size = ((raw_buffer_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
 	buffer = (unsigned char*) aligned_malloc(buffer_size, ALIGNMENT);
+	if (!buffer) {
+		AV_RESET_FRAME(pFrameRGB);
+		RemoveAVFrame(pFrame);
+		throw OutOfMemory("Failed to allocate RGB buffer", path);
+	}
 
 	// Copy picture data from one AVFrame (or AVPicture) to another one.
 	AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
@@ -2035,13 +2042,30 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		scale_mode = SWS_BICUBIC;
 	}
 	img_convert_ctx = sws_getCachedContext(img_convert_ctx, src_width, src_height, src_pix_fmt, width, height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
-	if (!img_convert_ctx)
+	if (!img_convert_ctx) {
+		openshot::aligned_free(buffer);
+		AV_RESET_FRAME(pFrameRGB);
+		RemoveAVFrame(pFrame);
 		throw OutOfMemory("Failed to initialize sws context", path);
-	const int *src_coeff = sws_getCoefficients(SWS_CS_DEFAULT);
+	}
+	const int source_matrix = SourceSwsColorspace(pFrame ? pFrame->colorspace : AVCOL_SPC_UNSPECIFIED);
+	if (source_matrix < 0) {
+		openshot::aligned_free(buffer);
+		AV_RESET_FRAME(pFrameRGB);
+		RemoveAVFrame(pFrame);
+		throw InvalidFile("Unsupported source color matrix", path);
+	}
+	const int *src_coeff = sws_getCoefficients(source_matrix);
 	const int *dst_coeff = sws_getCoefficients(SWS_CS_DEFAULT);
 	const int dst_full_range = 1; // RGB outputs are full-range
-	sws_setColorspaceDetails(img_convert_ctx, src_coeff, src_full_range ? 1 : 0,
+	const int color_result = sws_setColorspaceDetails(img_convert_ctx, src_coeff, src_full_range ? 1 : 0,
 							 dst_coeff, dst_full_range, 0, 1 << 16, 1 << 16);
+	if (color_result < 0) {
+		openshot::aligned_free(buffer);
+		AV_RESET_FRAME(pFrameRGB);
+		RemoveAVFrame(pFrame);
+		throw InvalidFile("Failed to configure source color matrix", path);
+	}
 
 	if (!pFrame || !pFrame->data[0] || pFrame->linesize[0] <= 0) {
 #if USE_HW_ACCEL
@@ -2056,6 +2080,8 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 				"src_height", src_height);
 		}
 #endif
+		openshot::aligned_free(buffer);
+		AV_RESET_FRAME(pFrameRGB);
 		if (pFrame) {
 			RemoveAVFrame(pFrame);
 			pFrame = NULL;
@@ -2089,6 +2115,14 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 	// Create or get the existing frame object
 	std::shared_ptr<Frame> f = CreateFrame(current_frame);
+
+	// Preserve the original encoded source color characteristics.
+	// These do not describe the converted RGBA pixel representation.
+	f->source_color_metadata.primaries = pFrame->color_primaries;
+	f->source_color_metadata.transfer = pFrame->color_trc;
+	f->source_color_metadata.matrix = pFrame->colorspace;
+	f->source_color_metadata.range = pFrame->color_range;
+	f->source_color_metadata.chroma_location = pFrame->chroma_location;
 
 	// Add Image data to frame
 	if (!ffmpeg_has_alpha(src_pix_fmt)) {

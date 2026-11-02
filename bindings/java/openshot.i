@@ -219,6 +219,7 @@ typedef struct OpenShotByteBuffer {
 %include "FFmpegReader.h"
 %include "FFmpegWriter.h"
 %include "Fraction.h"
+%include "ColorSpace.h"
 %include "Frame.h"
 %include "FrameMapper.h"
 %include "PlayerBase.h"
