@@ -2064,3 +2064,165 @@ TEST_CASE("Imported locations match historical rendered image bounds", "[libopen
         timeline.Close();
     }
 }
+
+
+// Independent pitch and speed regression tests
+
+TEST_CASE("Pitch controls default to neutral values", "[libopenshot][clip][pitch]")
+{
+    Clip clip;
+
+    CHECK(clip.pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+    CHECK(clip.preserve_pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+    CHECK(clip.time.GetValue(1) == Approx(1.0).margin(0.00001));
+}
+
+TEST_CASE("Pitch controls survive JSON round trip", "[libopenshot][clip][pitch]")
+{
+    Clip original;
+
+    original.pitch = Keyframe(12.0);
+    original.preserve_pitch = Keyframe(1.0);
+
+    Json::Value json = original.JsonValue();
+
+    REQUIRE(json.isMember("pitch"));
+    REQUIRE(json.isMember("preserve_pitch"));
+
+    Clip restored;
+    restored.SetJsonValue(json);
+
+    CHECK(restored.pitch.GetValue(1) == Approx(12.0).margin(0.00001));
+    CHECK(restored.preserve_pitch.GetValue(1) == Approx(1.0).margin(0.00001));
+}
+
+TEST_CASE("Legacy clip JSON restores neutral pitch defaults", "[libopenshot][clip][pitch]")
+{
+    Clip original;
+    Json::Value json = original.JsonValue();
+
+    json.removeMember("pitch");
+    json.removeMember("preserve_pitch");
+
+    Clip restored;
+    restored.pitch = Keyframe(7.0);
+    restored.preserve_pitch = Keyframe(1.0);
+
+    restored.SetJsonValue(json);
+
+    CHECK(restored.pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+    CHECK(restored.preserve_pitch.GetValue(1) == Approx(0.0).margin(0.00001));
+}
+
+// Verify that a 2x speed change preserves the original audio pitch.
+#ifdef OPENSHOT_HAVE_RUBBERBAND
+TEST_CASE("Independent pitch and speed audio", "[libopenshot][clip][pitch][audio]")
+{
+    const Fraction fps(30, 1);
+    const int sample_rate = 48000;
+    const int channels = 2;
+    const int samples_per_frame = 1600;
+    const int source_frames = 120;
+    const double frequency = 440.0;
+    const double pi = std::acos(-1.0);
+
+    CacheMemory cache;
+    cache.SetMaxBytes(0);
+
+    for (int64_t frame_number = 1; frame_number <= source_frames; ++frame_number) {
+        auto frame = std::make_shared<Frame>(
+            frame_number, samples_per_frame, channels);
+        frame->SampleRate(sample_rate);
+
+        std::vector<float> samples(samples_per_frame);
+
+        for (int sample = 0; sample < samples_per_frame; ++sample) {
+            const int64_t position =
+                (frame_number - 1) * samples_per_frame + sample;
+
+            samples[sample] = static_cast<float>(
+                0.1 * std::sin(2.0 * pi * frequency *
+                               position / sample_rate));
+        }
+
+        frame->AddAudio(true, 0, 0, samples.data(),
+                        samples_per_frame, 1.0f);
+        frame->AddAudio(true, 1, 0, samples.data(),
+                        samples_per_frame, 1.0f);
+
+        cache.Add(frame);
+    }
+
+    DummyReader reader(fps, 320, 180, sample_rate,
+                       channels, 4.0, &cache);
+    reader.Open();
+    reader.info.has_audio = true;
+
+    double speed = 2.0;
+    double semitones = 0.0;
+    double expected_frequency = 440.0;
+
+    SECTION("2x speed preserves pitch") {
+        speed = 2.0;
+    }
+    SECTION("0.5x speed preserves pitch") {
+        speed = 0.5;
+    }
+    SECTION("0.5x speed raises pitch one octave") {
+        speed = 0.5;
+        semitones = 12.0;
+        expected_frequency = 880.0;
+    }
+    SECTION("2x speed lowers pitch one octave") {
+        speed = 2.0;
+        semitones = -12.0;
+        expected_frequency = 220.0;
+    }
+
+    Clip clip(&reader);
+    clip.time = Keyframe();
+    clip.time.AddPoint(1.0, 1.0, LINEAR);
+    clip.time.AddPoint(61.0, 1.0 + 60.0 * speed, LINEAR);
+    clip.preserve_pitch = Keyframe(1.0);
+    clip.pitch = Keyframe(semitones);
+    clip.Open();
+
+    std::vector<float> output;
+
+    for (int64_t frame_number = 1; frame_number <= 30; ++frame_number) {
+        auto frame = clip.GetFrame(frame_number);
+        REQUIRE(frame->GetAudioSamplesCount() == samples_per_frame);
+
+        const float* samples = frame->GetAudioSamples(0);
+        REQUIRE(samples != nullptr);
+
+        output.insert(output.end(),
+                      samples, samples + samples_per_frame);
+    }
+
+    // Exclude the first 0.2 seconds to avoid startup transients.
+    const size_t start = sample_rate / 5;
+    REQUIRE(output.size() > start + sample_rate / 2);
+
+    int crossings = 0;
+    for (size_t i = start + 1; i < output.size(); ++i) {
+        if (output[i - 1] <= 0.0f && output[i] > 0.0f)
+            ++crossings;
+    }
+
+    const double duration =
+        static_cast<double>(output.size() - start) / sample_rate;
+    const double measured_frequency = crossings / duration;
+
+    INFO("Speed: " << speed
+         << ", pitch: " << semitones
+         << ", measured: " << measured_frequency
+         << ", expected: " << expected_frequency);
+    CHECK(measured_frequency ==
+          Approx(expected_frequency).margin(15.0));
+
+    clip.Close();
+    reader.Close();
+    cache.Clear();
+}
+#endif
