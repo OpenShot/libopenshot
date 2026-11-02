@@ -2808,7 +2808,8 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			if (!hw_frame->hw_frames_ctx) {
 				std::clog << "Error hw_frames_ctx.\n";
 			}
-			hw_frame->format = AV_PIX_FMT_NV12;
+			// Keep the hardware format assigned by av_hwframe_get_buffer().
+			// NV12 describes the CPU source, not the encoder surface.
 			if ( av_hwframe_transfer_data(hw_frame, frame_final, 0) < 0) {
 				std::clog << "Error while transferring frame data to surface.\n";
 			}
