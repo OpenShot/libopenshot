@@ -251,3 +251,40 @@ TEST_CASE("Closing after a failed header does not write a trailer",
     CHECK_THROWS_AS(writer.Open(), InvalidFile);
     CHECK_NOTHROW(writer.Close());
 }
+
+TEST_CASE("AMD AMF encoder names are identified independently of hardware",
+          "[libopenshot][codec-capabilities][hardware-encoders]")
+{
+    CHECK(ffmpeg_is_amf_encoder("h264_amf"));
+    CHECK(ffmpeg_is_amf_encoder("hevc_amf"));
+    CHECK(ffmpeg_is_amf_encoder("av1_amf"));
+
+    CHECK_FALSE(ffmpeg_is_amf_encoder(nullptr));
+    CHECK_FALSE(ffmpeg_is_amf_encoder(""));
+    CHECK_FALSE(ffmpeg_is_amf_encoder("h264_vaapi"));
+    CHECK_FALSE(ffmpeg_is_amf_encoder("h264_nvenc"));
+    CHECK_FALSE(ffmpeg_is_amf_encoder("libx264"));
+    CHECK_FALSE(ffmpeg_is_amf_encoder("H264_AMF"));
+    CHECK_FALSE(ffmpeg_is_amf_encoder("not_h264_amf"));
+}
+
+TEST_CASE("AMD AMF capability detection requires FFmpeg registration",
+          "[libopenshot][codec-capabilities][hardware-encoders]")
+{
+    const char* names[] = {"h264_amf", "hevc_amf", "av1_amf"};
+
+    for (const char* name : names) {
+        const bool registered =
+            avcodec_find_encoder_by_name(name) != nullptr;
+
+        CHECK(ffmpeg_amf_encoder_is_compiled(name) == registered);
+    }
+
+    CHECK_FALSE(ffmpeg_amf_encoder_is_compiled(nullptr));
+    CHECK_FALSE(ffmpeg_amf_encoder_is_compiled(""));
+    CHECK_FALSE(ffmpeg_amf_encoder_is_compiled("h264_vaapi"));
+    CHECK_FALSE(ffmpeg_amf_encoder_is_compiled("h264_nvenc"));
+    CHECK_FALSE(ffmpeg_amf_encoder_is_compiled("pcm_s16le"));
+    CHECK_FALSE(ffmpeg_amf_encoder_is_compiled(
+        "openshot_nonexistent_encoder"));
+}
