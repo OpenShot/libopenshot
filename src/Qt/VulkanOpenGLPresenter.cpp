@@ -5,6 +5,7 @@
 #include "../VulkanFrameImage.h"
 #include "../VulkanCompositor.h"
 #include "../GpuDevices.h"
+#include "../GpuDebug.h"
 #include "../Logger.h"
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -30,6 +31,7 @@
 #include <cstring>
 #include <chrono>
 #include <algorithm>
+#include <cstdio>
 extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
 }
@@ -64,6 +66,11 @@ using ImportMemory = PFNGLIMPORTMEMORYFDEXTPROC;
 using ImportSemaphore = PFNGLIMPORTSEMAPHOREFDEXTPROC;
 #endif
 constexpr VkImageSubresourceRange kColor = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+std::string pixelText(const unsigned char* pixel) {
+    char text[16];
+    std::snprintf(text, sizeof(text), "#%02x%02x%02x%02x", pixel[0], pixel[1], pixel[2], pixel[3]);
+    return text;
+}
 }
 // Frames reach OpenGL through a presenter-owned linear buffer, never through
 // shared image memory. NVIDIA's Windows driver returns zeros when FFmpeg or
@@ -92,6 +99,10 @@ struct SharedTarget {
     std::unique_ptr<QOpenGLShaderProgram> program;
     PFNGLWAITSEMAPHOREEXTPROC wait_semaphore = nullptr;
     PFNGLSIGNALSEMAPHOREEXTPROC signal_semaphore = nullptr;
+    // GpuDebug: a host-visible copy of the frame's centre pixel.
+    VkBuffer probe = VK_NULL_HANDLE;
+    VkDeviceMemory probe_memory = VK_NULL_HANDLE;
+    const unsigned char* probe_pixel = nullptr;
 };
 struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     QPointer<QWidget> widget;
@@ -108,6 +119,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     std::string paused_reason;
     QPointer<QOpenGLContext> logged_context;
     bool identity_logged = false;
+    uint64_t debug_frames = 0;
+    std::string debug_geometry;
     SharedTarget target;
     bool unavailable(const std::string& reason) { last_failure = reason; return false; }
     explicit Impl(QWidget* value) : widget(value) {
@@ -173,9 +186,33 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 if (semaphore) vkDestroySemaphore(target.device, semaphore, nullptr);
             if (target.pixels) vkDestroyBuffer(target.device, target.pixels, nullptr);
             if (target.memory) vkFreeMemory(target.device, target.memory, nullptr);
+            if (target.probe) vkDestroyBuffer(target.device, target.probe, nullptr);
+            if (target.probe_memory) vkFreeMemory(target.device, target.probe_memory, nullptr);
         }
         av_buffer_unref(&target.device_ref);
         target = SharedTarget();
+    }
+    // GpuDebug: a 4-byte host-visible buffer that receives the frame's centre pixel.
+    void createProbe(const VkPhysicalDeviceMemoryProperties& memoryProperties) {
+        VkBufferCreateInfo create{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        create.size = 4;
+        create.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        check(vkCreateBuffer(target.device, &create, nullptr, &target.probe), "Create debug probe");
+        VkMemoryRequirements needs;
+        vkGetBufferMemoryRequirements(target.device, target.probe, &needs);
+        const VkMemoryPropertyFlags wanted = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        VkMemoryAllocateInfo allocate{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+        allocate.allocationSize = needs.size;
+        allocate.memoryTypeIndex = UINT32_MAX;
+        for (uint32_t i = 0; i < memoryProperties.memoryTypeCount && allocate.memoryTypeIndex == UINT32_MAX; ++i)
+            if ((needs.memoryTypeBits & (1u << i)) && (memoryProperties.memoryTypes[i].propertyFlags & wanted) == wanted)
+                allocate.memoryTypeIndex = i;
+        if (allocate.memoryTypeIndex == UINT32_MAX) throw std::runtime_error("No host-visible debug probe memory");
+        check(vkAllocateMemory(target.device, &allocate, nullptr, &target.probe_memory), "Allocate debug probe");
+        check(vkBindBufferMemory(target.device, target.probe, target.probe_memory, 0), "Bind debug probe");
+        void* mapped = nullptr;
+        check(vkMapMemory(target.device, target.probe_memory, 0, VK_WHOLE_SIZE, 0, &mapped), "Map debug probe");
+        target.probe_pixel = static_cast<const unsigned char*>(mapped);
     }
     void createTarget(QOpenGLContext* context, const AVHWFramesContext* fc, int width, int height) {
         auto vk = static_cast<AVVulkanDeviceContext*>(fc->device_ctx->hwctx);
@@ -232,7 +269,13 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
                 memoryType = i;
         if (memoryType == UINT32_MAX) throw std::runtime_error("No device-local presentation memory");
-        const bool useDedicated = dedicated.prefersDedicatedAllocation || dedicated.requiresDedicatedAllocation;
+        bool useDedicated = dedicated.prefersDedicatedAllocation || dedicated.requiresDedicatedAllocation;
+        // GpuDebug: OPENSHOT_PRESENTATION_DEDICATED=0|1 overrides the driver's preference.
+        const auto forceDedicated = GpuDebugSetting("OPENSHOT_PRESENTATION_DEDICATED");
+        if (forceDedicated == "1")
+            useDedicated = true;
+        else if (forceDedicated == "0" && !dedicated.requiresDedicatedAllocation)
+            useDedicated = false;
         VkMemoryDedicatedAllocateInfo dedicatedInfo{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
         dedicatedInfo.buffer = target.pixels;
         VkExportMemoryAllocateInfo exportInfo{VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO, useDedicated ? &dedicatedInfo : nullptr};
@@ -242,10 +285,33 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         allocate.memoryTypeIndex = memoryType;
         check(vkAllocateMemory(target.device, &allocate, nullptr, &target.memory), "Allocate presentation memory");
         check(vkBindBufferMemory(target.device, target.pixels, target.memory, 0), "Bind presentation memory");
+        if (GpuDebug()) {
+            const auto& type = memoryProperties.memoryTypes[memoryType];
+            char flags[64];
+            std::snprintf(flags, sizeof(flags), "0x%x; heap %u flags=0x%x", type.propertyFlags, type.heapIndex,
+                          memoryProperties.memoryHeaps[type.heapIndex].flags);
+            Logger::Instance()->Log("GPU debug presentation buffer: " + std::to_string(width) + "x" +
+                std::to_string(height) + "; size=" + std::to_string(size) + "; allocation=" +
+                std::to_string(requirements.memoryRequirements.size) + "; memory type " + std::to_string(memoryType) +
+                " flags=" + flags + "; dedicated prefers=" + std::to_string(dedicated.prefersDedicatedAllocation) +
+                " requires=" + std::to_string(dedicated.requiresDedicatedAllocation) + " used=" +
+                std::to_string(useDedicated) + "; override=" + forceDedicated.toStdString(), Logger::LevelInfo);
+            createProbe(memoryProperties);
+        }
+        // GpuDebug: check OpenGL errors after each import step, not only at the end.
+        GLenum importError = GL_NO_ERROR;
+        const auto glStep = [&](const char* name) {
+            if (!GpuDebug()) return;
+            const GLenum error = context->functions()->glGetError();
+            if (importError == GL_NO_ERROR) importError = error;
+            Logger::Instance()->Log(std::string("GPU debug OpenGL ") + name + ": error=" + std::to_string(error),
+                                    Logger::LevelInfo);
+        };
 
         createMemory(1, &target.gl_memory);
         GLint glDedicated = useDedicated;
         memoryParameter(target.gl_memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &glDedicated);
+        glStep("create memory object");
 #ifdef _WIN32
         VkMemoryGetWin32HandleInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR};
         memoryInfo.memory = target.memory;
@@ -255,6 +321,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         importMemory(target.gl_memory, requirements.memoryRequirements.size, kGLHandle, memoryHandle);
         // Win32 imports retain the resource, not ownership of the handle.
         CloseHandle(memoryHandle);
+        glStep("import memory");
 #else
         VkMemoryGetFdInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR};
         memoryInfo.memory = target.memory;
@@ -262,6 +329,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         int memoryFd = -1;
         check(getMemoryHandle(target.device, &memoryInfo, &memoryFd), "Export presentation memory");
         importMemory(target.gl_memory, requirements.memoryRequirements.size, kGLHandle, memoryFd); // GL owns the fd.
+        glStep("import memory");
 #endif
         GLint previousUnpack = 0, previousTexture = 0;
         gl->glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &previousUnpack);
@@ -269,6 +337,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         gl->glGenBuffers(1, &target.gl_pixels);
         gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, target.gl_pixels);
         bufferMemory(GL_PIXEL_UNPACK_BUFFER, size, target.gl_memory, 0);
+        glStep("buffer storage");
         gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, previousUnpack);
         gl->glGenTextures(1, &target.texture);
         gl->glBindTexture(GL_TEXTURE_2D, target.texture);
@@ -277,6 +346,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glStep("texture");
         gl->glBindTexture(GL_TEXTURE_2D, previousTexture);
 
         VkExportSemaphoreCreateInfo exportSemaphore{VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO};
@@ -301,8 +371,10 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             check(getSemaphoreHandle(target.device, &handleInfo, &semaphoreFd), "Export presentation semaphore");
             importSemaphore(target.gl_semaphores[direction], kGLHandle, semaphoreFd);
 #endif
+            glStep("import semaphore");
         }
-        if (gl->glGetError() != GL_NO_ERROR) throw std::runtime_error("OpenGL external memory import failed");
+        if (importError != GL_NO_ERROR || gl->glGetError() != GL_NO_ERROR)
+            throw std::runtime_error("OpenGL external memory import failed");
 
         VkCommandPoolCreateInfo poolInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -352,7 +424,11 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         if (qEnvironmentVariable("OPENSHOT_PRESENTATION_BACKEND") == "cpu")
             return unavailable("OPENSHOT_PRESENTATION_BACKEND=cpu (Vulkan processing remains enabled)");
         auto lastStage = std::chrono::steady_clock::now();
-        const bool trace = qEnvironmentVariableIsSet("OPENSHOT_TRACE_PRESENTATION");
+        const bool trace = GpuDebug();
+        // GpuDebug switches: draw solid magenta instead of the video, or have
+        // the CPU wait for each side instead of sharing semaphores.
+        static const bool pattern = GpuDebugSetting("OPENSHOT_PRESENTATION_TEST") == "pattern";
+        static const bool cpuWait = GpuDebugSetting("OPENSHOT_PRESENTATION_SYNC") == "wait";
         auto stage = [&](const char* name) {
             if (!trace) return;
             auto now = std::chrono::steady_clock::now();
@@ -443,6 +519,9 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
 
         bool locked = false, copySubmitted = false;
         uint64_t copyValue = 0;
+        // GpuDebug: centre pixel at each step, for the first 10 frames and every 60th.
+        const bool probeFrame = trace && (++debug_frames <= 10 || debug_frames % 60 == 0);
+        std::string pixels;
         try {
             if (target.context != context || target.device != vk->act_dev ||
                 target.width != source->width || target.height != source->height) {
@@ -480,7 +559,22 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             VkBufferImageCopy region{};
             region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
             region.imageExtent = {static_cast<uint32_t>(target.width), static_cast<uint32_t>(target.height), 1};
-            vkCmdCopyImageToBuffer(copy, image->img[0], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target.pixels, 1, &region);
+            if (pattern)
+                vkCmdFillBuffer(copy, target.pixels, 0, VK_WHOLE_SIZE, 0xFFFF00FFu); // RGBA ff00ffff
+            else
+                vkCmdCopyImageToBuffer(copy, image->img[0], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target.pixels, 1, &region);
+            if (target.probe) {
+                VkBufferImageCopy centre{};
+                centre.imageSubresource = region.imageSubresource;
+                centre.imageOffset = {target.width / 2, target.height / 2, 0};
+                centre.imageExtent = {1, 1, 1};
+                vkCmdCopyImageToBuffer(copy, image->img[0], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target.probe, 1, &centre);
+                VkMemoryBarrier toHost{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+                toHost.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                toHost.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+                vkCmdPipelineBarrier(copy, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT,
+                                     0, 1, &toHost, 0, nullptr, 0, nullptr);
+            }
             VkBufferMemoryBarrier release{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             release.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             release.srcQueueFamilyIndex = target.family;
@@ -497,7 +591,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             VkTimelineSemaphoreSubmitInfo timeline{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
             timeline.waitSemaphoreValueCount = 1;
             timeline.pWaitSemaphoreValues = &waitValue;
-            timeline.signalSemaphoreValueCount = 2;
+            timeline.signalSemaphoreValueCount = cpuWait ? 1 : 2;
             timeline.pSignalSemaphoreValues = signalValues;
             const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
             VkSubmitInfo copyInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO, &timeline};
@@ -506,7 +600,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             copyInfo.pWaitDstStageMask = &waitStage;
             copyInfo.commandBufferCount = 1;
             copyInfo.pCommandBuffers = &copy;
-            copyInfo.signalSemaphoreCount = 2;
+            copyInfo.signalSemaphoreCount = cpuWait ? 1 : 2;
             copyInfo.pSignalSemaphores = copySignals;
             submit(copyInfo, VK_NULL_HANDLE);
             copySubmitted = true;
@@ -516,8 +610,30 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             vfc->unlock_frame(fc, image);
             locked = false;
             stage("copy submit");
+            if (cpuWait || probeFrame) {
+                VkSemaphoreWaitInfo copyDone{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+                copyDone.semaphoreCount = 1;
+                copyDone.pSemaphores = &image->sem[0];
+                copyDone.pValues = &copyValue;
+                check(vkWaitSemaphores(target.device, &copyDone, UINT64_MAX), "Wait for presentation copy");
+                if (probeFrame && target.probe_pixel)
+                    pixels += "vulkan=" + pixelText(target.probe_pixel);
+            }
 
-            target.wait_semaphore(target.gl_semaphores[0], 1, &target.gl_pixels, 0, nullptr, nullptr);
+            if (!cpuWait)
+                target.wait_semaphore(target.gl_semaphores[0], 1, &target.gl_pixels, 0, nullptr, nullptr);
+            if (probeFrame) {
+                using GetBufferSubData = void (QOPENGLF_APIENTRYP)(GLenum, GLintptr, GLsizeiptr, void*);
+                auto getBufferSubData = reinterpret_cast<GetBufferSubData>(context->getProcAddress("glGetBufferSubData"));
+                unsigned char pixel[4] = {0, 0, 0, 0};
+                GLint previousCopy = 0;
+                gl->glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &previousCopy);
+                gl->glBindBuffer(GL_COPY_READ_BUFFER, target.gl_pixels);
+                if (getBufferSubData)
+                    getBufferSubData(GL_COPY_READ_BUFFER, (GLintptr(target.height / 2) * target.width + target.width / 2) * 4, 4, pixel);
+                gl->glBindBuffer(GL_COPY_READ_BUFFER, previousCopy);
+                pixels += " buffer=" + pixelText(pixel);
+            }
             GLint viewport[4], previousVertexArray = 0, previousUnpack = 0, unpackAlignment = 4, unpackRowLength = 0;
             gl->glGetIntegerv(GL_VIEWPORT, viewport);
             gl->glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
@@ -531,6 +647,20 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             gl->glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             gl->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, target.width, target.height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
             gl->glBindBuffer(GL_PIXEL_UNPACK_BUFFER, previousUnpack);
+            if (probeFrame) {
+                unsigned char pixel[4] = {0, 0, 0, 0};
+                GLint previousFramebuffer = 0;
+                GLuint probe = 0;
+                gl->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+                gl->glGenFramebuffers(1, &probe);
+                gl->glBindFramebuffer(GL_FRAMEBUFFER, probe);
+                gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture, 0);
+                gl->glReadPixels(target.width / 2, target.height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+                gl->glBindFramebuffer(GL_FRAMEBUFFER, previousFramebuffer);
+                gl->glDeleteFramebuffers(1, &probe);
+                const GLenum readError = gl->glGetError();
+                pixels += " texture=" + pixelText(pixel) + (readError ? " (GL error " + std::to_string(readError) + ")" : "");
+            }
             gl->glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
             gl->glPixelStorei(GL_UNPACK_ROW_LENGTH, unpackRowLength);
             gl->glViewport(x, y, width, height);
@@ -552,17 +682,43 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 qWarning() << "GPU presentation draw state: error=" << error
                            << "framebuffer=" << framebuffer << "program=" << activeProgram
                            << "texture=" << boundTexture;
+                // Log where the frame lands whenever that changes.
+                const qreal ratio = widget ? widget->devicePixelRatioF() : 0.0;
+                const std::string geometry = "draw " + std::to_string(x) + "," + std::to_string(y) + " " +
+                    std::to_string(width) + "x" + std::to_string(height) + "; frame " + std::to_string(target.width) +
+                    "x" + std::to_string(target.height) + "; GL viewport " + std::to_string(viewport[0]) + "," +
+                    std::to_string(viewport[1]) + " " + std::to_string(viewport[2]) + "x" + std::to_string(viewport[3]) +
+                    "; framebuffer " + std::to_string(framebuffer) + "; widget " +
+                    std::to_string(widget ? widget->width() : 0) + "x" + std::to_string(widget ? widget->height() : 0) +
+                    " at scale " + std::to_string(ratio) + "; pattern=" + std::to_string(pattern) +
+                    " cpu wait=" + std::to_string(cpuWait) + "; GL error=" + std::to_string(error);
+                if (geometry != debug_geometry) {
+                    debug_geometry = geometry;
+                    Logger::Instance()->Log("GPU debug presentation " + geometry, Logger::LevelInfo);
+                }
+            }
+            if (probeFrame) {
+                unsigned char pixel[4] = {0, 0, 0, 0};
+                gl->glReadPixels(x + width / 2, y + height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+                const GLenum readError = gl->glGetError();
+                pixels += " screen=" + pixelText(pixel) + (readError ? " (GL error " + std::to_string(readError) + ")" : "");
+                Logger::Instance()->Log("GPU debug preview pixels, frame " + std::to_string(debug_frames) + ": " + pixels,
+                                        Logger::LevelInfo);
             }
             extra->glBindVertexArray(previousVertexArray);
             target.program->release();
             gl->glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
             // Signals once the unpack above has finished reading the buffer.
-            target.signal_semaphore(target.gl_semaphores[1], 1, &target.gl_pixels, 0, nullptr, nullptr);
-            gl->glFlush();
+            if (cpuWait) {
+                gl->glFinish();
+            } else {
+                target.signal_semaphore(target.gl_semaphores[1], 1, &target.gl_pixels, 0, nullptr, nullptr);
+                gl->glFlush();
+            }
             stage("GL draw flush");
 
             VkSubmitInfo acquireInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-            acquireInfo.waitSemaphoreCount = 1;
+            acquireInfo.waitSemaphoreCount = cpuWait ? 0 : 1;
             acquireInfo.pWaitSemaphores = &target.handoff[1];
             acquireInfo.pWaitDstStageMask = &waitStage;
             acquireInfo.commandBufferCount = 1;

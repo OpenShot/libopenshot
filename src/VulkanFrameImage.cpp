@@ -3,6 +3,7 @@
 #include "GpuMetrics.h"
 #include "VulkanFrameImage.h"
 #include "GpuDevices.h"
+#include "Logger.h"
 #include <map>
 #include <atomic>
 #include "VulkanCompositor.h"
@@ -40,6 +41,29 @@ OwnedFrame AllocateFrame() {
     OwnedFrame f(av_frame_alloc());
     if (!f) throw std::bad_alloc();
     return f;
+}
+// Readback failures are rare and hard to reproduce, so log what FFmpeg was given.
+void LogReadbackFailure(const AVFrame* frame, int result) {
+    auto fc = reinterpret_cast<const AVHWFramesContext*>(frame->hw_frames_ctx->data);
+    auto vfc = static_cast<const AVVulkanFramesContext*>(fc->hwctx);
+    auto vk = static_cast<const AVVulkanDeviceContext*>(fc->device_ctx->hwctx);
+    bool hostImport = false;
+    for (int i = 0; i < vk->nb_enabled_dev_extensions; ++i)
+        hostImport |= std::strcmp(vk->enabled_dev_extensions[i], VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME) == 0;
+    VkPhysicalDeviceExternalMemoryHostPropertiesEXT host{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT};
+    VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &host};
+    vkGetPhysicalDeviceProperties2(vk->phys_dev, &properties);
+    char error[AV_ERROR_MAX_STRING_SIZE];
+    av_strerror(result, error, sizeof(error));
+    const char* format = av_get_pix_fmt_name(fc->sw_format);
+    Logger::Instance()->Log(std::string("Vulkan readback failed: ") + error + " (" + std::to_string(result) +
+        "); frame " + std::to_string(frame->width) + "x" + std::to_string(frame->height) + "; pool " +
+        std::to_string(fc->width) + "x" + std::to_string(fc->height) + " " + (format ? format : "unknown") +
+        "; Vulkan format " + std::to_string(vfc->format[0]) + "; tiling " + std::to_string(vfc->tiling) +
+        "; usage 0x" + QString::number(vfc->usage, 16).toStdString() + "; host memory import " +
+        (hostImport ? "on, alignment " + std::to_string(host.minImportedHostPointerAlignment) : std::string("off")) +
+        "; row pitch alignment " + std::to_string(properties.properties.limits.optimalBufferCopyRowPitchAlignment) +
+        "; device " + properties.properties.deviceName, Logger::LevelWarning);
 }
 void Validate(const AVFrame* frame) {
     if (!frame || frame->format != AV_PIX_FMT_VULKAN || !frame->hw_frames_ctx ||
@@ -102,7 +126,11 @@ QImage VulkanFrameImage::Materialize() const {
         Check(ReadMacVulkanFrame(cpu.get(), impl->frame.get()), "Read back Mac Vulkan frame");
     else
 #endif
-        Check(av_hwframe_transfer_data(cpu.get(), impl->frame.get(), 0), "Read back Vulkan frame");
+    {
+        const int result = av_hwframe_transfer_data(cpu.get(), impl->frame.get(), 0);
+        if (result < 0) LogReadbackFailure(impl->frame.get(), result);
+        Check(result, "Read back Vulkan frame");
+    }
     readback_count.fetch_add(1,std::memory_order_relaxed);
     gpu_metrics::Record(gpu_metrics::Readback);
     Check(av_frame_copy_props(cpu.get(), impl->frame.get()), "Copy Vulkan frame metadata");
