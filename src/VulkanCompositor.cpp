@@ -26,7 +26,9 @@ extern "C" {
 namespace openshot {
 namespace {
 void VkCheck(VkResult r, const char* operation) {
-    if(r != VK_SUCCESS) throw std::runtime_error(std::string(operation)+": "+VulkanResultName(r));
+    if(r == VK_SUCCESS) return;
+    ReportVulkanResult(r);
+    throw std::runtime_error(std::string(operation)+": "+VulkanResultName(r));
 }
 void AvCheck(int r, const char* operation) {
     if(r < 0) {

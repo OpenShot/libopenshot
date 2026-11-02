@@ -100,7 +100,7 @@ set(OPENSHOT_TESTS
 )
 
 if(ENABLE_GPU_FRAME)
-  list(APPEND OPENSHOT_TESTS VulkanCompositor VulkanPresentation)
+  list(APPEND OPENSHOT_TESTS VulkanCompositor VulkanPresentation VulkanDeviceLost)
 endif()
 
 # The SIGPIPE crash-handler test is POSIX-only. Do not create an empty

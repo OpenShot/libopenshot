@@ -32,6 +32,9 @@ GpuDevice ActiveGpuDevice();
 /// Hardware encoders (e.g. "h264_nvenc", "hevc_vaapi") that open on the active
 /// card. Tested once per process with a tiny frame size; takes a fraction of a second.
 std::vector<std::string> GpuEncoders();
+/// True after a Vulkan call reported VK_ERROR_DEVICE_LOST (a driver reset or GPU
+/// timeout). Processing then stays on the CPU for the rest of the session.
+bool VulkanDeviceLost();
 #ifndef SWIG
 /// The shared Vulkan device every reader decodes on, created on first use with the
 /// best GPU (OPENSHOT_VULKAN_DEVICE, an index or a name, overrides it). Returns a new
@@ -39,6 +42,8 @@ std::vector<std::string> GpuEncoders();
 int CreateSharedVulkanDevice(AVBufferRef** output);
 /// A VkResult's name (e.g. "VK_ERROR_DEVICE_LOST"), for error messages.
 std::string VulkanResultName(int result);
+/// Record a failed Vulkan call; VK_ERROR_DEVICE_LOST sets VulkanDeviceLost().
+void ReportVulkanResult(int result);
 #endif
 }
 #endif

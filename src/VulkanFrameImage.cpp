@@ -56,7 +56,7 @@ void RecordVulkanUploadFailure() {
 }
 bool VulkanRenderingEnabled() {
     const char* backend = std::getenv("OPENSHOT_RENDER_BACKEND");
-    return !(backend && std::strcmp(backend, "cpu") == 0);
+    return !(backend && std::strcmp(backend, "cpu") == 0) && !VulkanDeviceLost();
 }
 struct VulkanFrameImage::Impl {
     OwnedFrame frame;
@@ -226,6 +226,7 @@ std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image) {
     copied.pSemaphores = &uploaded->sem[0];
     copied.pValues = &uploaded->sem_value[0];
     const VkResult waited = vkWaitSemaphores(device->act_dev, &copied, UINT64_MAX);
+    ReportVulkanResult(waited);
     if (waited != VK_SUCCESS)
         throw std::runtime_error("Wait for CPU image upload: " + VulkanResultName(waited));
     gpu_metrics::Record(gpu_metrics::Upload);

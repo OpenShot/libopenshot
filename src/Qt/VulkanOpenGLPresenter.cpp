@@ -29,6 +29,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <chrono>
+#include <algorithm>
 extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
 }
@@ -36,7 +37,9 @@ extern "C" {
 namespace openshot {
 namespace {
 void check(VkResult result, const char* operation) {
-    if (result != VK_SUCCESS) throw std::runtime_error(std::string(operation) + ": " + VulkanResultName(result));
+    if (result == VK_SUCCESS) return;
+    ReportVulkanResult(result);
+    throw std::runtime_error(std::string(operation) + ": " + VulkanResultName(result));
 }
 template<class T> T glFunction(QOpenGLContext* context, const char* name) {
     auto function = reinterpret_cast<T>(context->getProcAddress(name));
@@ -98,6 +101,11 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     uint64_t native_draws = 0;
     uint64_t fallback_frames = 0;
     std::string last_failure;
+    // After a failed draw the CPU shows frames until retry_after, and each
+    // further failure in a row doubles the wait (up to 30 seconds).
+    int failures_in_a_row = 0;
+    std::chrono::steady_clock::time_point retry_after;
+    std::string paused_reason;
     QPointer<QOpenGLContext> logged_context;
     bool identity_logged = false;
     SharedTarget target;
@@ -371,6 +379,9 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             return unavailable("Vulkan presentation requires desktop OpenGL; Qt selected OpenGL ES/ANGLE (try QT_OPENGL=desktop)");
         if (!frame || !widget) return unavailable("No video frame or preview widget");
         if (fallback_delivered) return false;
+        if (VulkanDeviceLost())
+            return unavailable("GPU device lost (driver reset or GPU timeout); the CPU is used for the rest of this session");
+        if (std::chrono::steady_clock::now() < retry_after) return unavailable(paused_reason);
         auto authoritative = frame->GetDeferredImage();
         if (!authoritative) return unavailable("Frame has no deferred GPU surface");
         auto surface = display_surface ? display_surface : std::dynamic_pointer_cast<const VulkanFrameImage>(authoritative);
@@ -580,10 +591,27 @@ VulkanOpenGLPresenter::VulkanOpenGLPresenter(uintptr_t widget)
 VulkanOpenGLPresenter::~VulkanOpenGLPresenter() = default;
 bool VulkanOpenGLPresenter::Draw(int x, int y, int width, int height) {
     try {
-        if (impl->draw(x, y, width, height)) { impl->last_failure.clear(); ++impl->native_draws; return true; }
+        if (impl->draw(x, y, width, height)) {
+            impl->last_failure.clear();
+            impl->failures_in_a_row = 0;
+            ++impl->native_draws;
+            return true;
+        }
     } catch (const std::exception& error) {
         impl->last_failure = error.what();
         qWarning() << "Vulkan presentation fallback:" << error.what();
+        if (!VulkanDeviceLost()) {
+            // Usually low GPU memory: free cached GPU images, then retry later
+            // instead of failing again on every frame.
+            ReleaseVulkanMemory();
+            const int failures = ++impl->failures_in_a_row;
+            const auto delay = std::chrono::milliseconds(std::min(30000, 500 << std::min(failures - 1, 6)));
+            impl->retry_after = std::chrono::steady_clock::now() + delay;
+            impl->paused_reason = std::string("GPU preview paused after an error; retrying shortly (") +
+                error.what() + ")";
+            Logger::Instance()->Log("GPU preview failed (" + std::to_string(failures) + " in a row); retrying in " +
+                std::to_string(delay.count()) + " ms: " + error.what(), Logger::LevelWarning);
+        }
     }
     impl->fallback();
     return false;

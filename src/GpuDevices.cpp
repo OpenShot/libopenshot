@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "VulkanFrameImage.h"
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -338,6 +339,14 @@ std::vector<std::string> GpuEncoders() {
         list += (list.empty() ? "" : ", ") + name;
     Logger::Instance()->Log("GPU encoders on " + gpu.name + ": " + (list.empty() ? "none" : list), Logger::LevelInfo);
     return encoders;
+}
+
+namespace { std::atomic<bool> device_lost{false}; }
+bool VulkanDeviceLost() { return device_lost.load(std::memory_order_relaxed); }
+void ReportVulkanResult(int result) {
+    if (result != VK_ERROR_DEVICE_LOST || device_lost.exchange(true)) return;
+    Logger::Instance()->Log("GPU device lost (driver reset or GPU timeout); using the CPU for the rest of this session",
+                            Logger::LevelWarning);
 }
 
 std::string VulkanResultName(int result) {
