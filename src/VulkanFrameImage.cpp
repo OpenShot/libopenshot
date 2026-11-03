@@ -4,6 +4,7 @@
 #include "VulkanFrameImage.h"
 #include "GpuDevices.h"
 #include "Logger.h"
+#include "GpuDebug.h"
 #include <map>
 #include <atomic>
 #include "VulkanCompositor.h"
@@ -131,8 +132,14 @@ QImage VulkanFrameImage::Materialize() const {
         if (result < 0) LogReadbackFailure(impl->frame.get(), result);
         Check(result, "Read back Vulkan frame");
     }
-    readback_count.fetch_add(1,std::memory_order_relaxed);
+    const auto readbacks = readback_count.fetch_add(1,std::memory_order_relaxed) + 1;
     gpu_metrics::Record(gpu_metrics::Readback);
+    // GpuDebug: say why frames are copied back ("Other" is work outside the
+    // timeline, such as thumbnails), for the first 20 and every 100th.
+    if (GpuDebug() && (readbacks <= 20 || readbacks % 100 == 0))
+        Logger::Instance()->Log("GPU debug readback " + std::to_string(readbacks) + ": reason " +
+            gpu_metrics::CurrentReason() + "; " + std::to_string(GetWidth()) + "x" + std::to_string(GetHeight()),
+            Logger::LevelInfo);
     Check(av_frame_copy_props(cpu.get(), impl->frame.get()), "Copy Vulkan frame metadata");
     QImage result(GetWidth(), GetHeight(), QImage::Format_RGBA8888);
     if (result.isNull()) throw std::bad_alloc();

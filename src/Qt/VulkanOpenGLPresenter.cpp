@@ -31,6 +31,7 @@
 #include <cstring>
 #include <chrono>
 #include <algorithm>
+#include <vector>
 #include <cstdio>
 extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
@@ -49,9 +50,14 @@ template<class T> T glFunction(QOpenGLContext* context, const char* name) {
     return function;
 }
 #ifdef _WIN32
-constexpr auto kMemoryHandle = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-constexpr auto kSemaphoreHandle = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-constexpr GLenum kGLHandle = GL_HANDLE_TYPE_OPAQUE_WIN32_EXT;
+// GpuDebug: OPENSHOT_PRESENTATION_HANDLE=kmt shares through the older global
+// (KMT) handles, which are never closed, instead of NT handles.
+const bool kKmtHandles = GpuDebugSetting("OPENSHOT_PRESENTATION_HANDLE") == "kmt";
+const auto kMemoryHandle = kKmtHandles ? VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT
+                                       : VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+const auto kSemaphoreHandle = kKmtHandles ? VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT
+                                          : VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+const GLenum kGLHandle = kKmtHandles ? GL_HANDLE_TYPE_OPAQUE_WIN32_KMT_EXT : GL_HANDLE_TYPE_OPAQUE_WIN32_EXT;
 constexpr const char* kMemoryExtension = "GL_EXT_memory_object_win32";
 constexpr const char* kSemaphoreExtension = "GL_EXT_semaphore_win32";
 using ImportMemory = PFNGLIMPORTMEMORYWIN32HANDLEEXTPROC;
@@ -103,6 +109,11 @@ struct SharedTarget {
     VkBuffer probe = VK_NULL_HANDLE;
     VkDeviceMemory probe_memory = VK_NULL_HANDLE;
     const unsigned char* probe_pixel = nullptr;
+#ifdef _WIN32
+    // Imported Win32 handles stay open while OpenGL uses them: a driver may
+    // resolve the handle after the import call returns.
+    std::vector<HANDLE> handles;
+#endif
 };
 struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     QPointer<QWidget> widget;
@@ -189,6 +200,9 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             if (target.probe) vkDestroyBuffer(target.device, target.probe, nullptr);
             if (target.probe_memory) vkFreeMemory(target.device, target.probe_memory, nullptr);
         }
+#ifdef _WIN32
+        for (auto handle : target.handles) CloseHandle(handle);
+#endif
         av_buffer_unref(&target.device_ref);
         target = SharedTarget();
     }
@@ -295,7 +309,11 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 std::to_string(requirements.memoryRequirements.size) + "; memory type " + std::to_string(memoryType) +
                 " flags=" + flags + "; dedicated prefers=" + std::to_string(dedicated.prefersDedicatedAllocation) +
                 " requires=" + std::to_string(dedicated.requiresDedicatedAllocation) + " used=" +
-                std::to_string(useDedicated) + "; override=" + forceDedicated.toStdString(), Logger::LevelInfo);
+                std::to_string(useDedicated) + "; override=" + forceDedicated.toStdString()
+#ifdef _WIN32
+                + "; handles=" + (kKmtHandles ? "kmt" : "nt")
+#endif
+                , Logger::LevelInfo);
             createProbe(memoryProperties);
         }
         // GpuDebug: check OpenGL errors after each import step, not only at the end.
@@ -319,8 +337,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         HANDLE memoryHandle = nullptr;
         check(getMemoryHandle(target.device, &memoryInfo, &memoryHandle), "Export presentation memory");
         importMemory(target.gl_memory, requirements.memoryRequirements.size, kGLHandle, memoryHandle);
-        // Win32 imports retain the resource, not ownership of the handle.
-        CloseHandle(memoryHandle);
+        if (!kKmtHandles) target.handles.push_back(memoryHandle);
         glStep("import memory");
 #else
         VkMemoryGetFdInfoKHR memoryInfo{VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR};
@@ -362,7 +379,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             HANDLE semaphoreHandle = nullptr;
             check(getSemaphoreHandle(target.device, &handleInfo, &semaphoreHandle), "Export presentation semaphore");
             importSemaphore(target.gl_semaphores[direction], kGLHandle, semaphoreHandle);
-            CloseHandle(semaphoreHandle);
+            if (!kKmtHandles) target.handles.push_back(semaphoreHandle);
 #else
             VkSemaphoreGetFdInfoKHR handleInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR};
             handleInfo.semaphore = target.handoff[direction];

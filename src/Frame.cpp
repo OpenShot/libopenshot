@@ -20,6 +20,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "QtUtilities.h"
+#include "GpuMetrics.h"
 
 #include <AppConfig.h>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -540,6 +541,7 @@ ChannelLayout Frame::ChannelsLayout()
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Save(std::string path, float scale, std::string format, int quality)
 {
+	gpu_metrics::Reason gpu_reason("Image file");
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
 
@@ -568,6 +570,7 @@ void Frame::Save(std::string path, float scale, std::string format, int quality)
 // Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Thumbnail(std::string path, int new_width, int new_height, std::string mask_path, std::string overlay_path,
 		std::string background_color, bool ignore_aspect, std::string format, int quality, float rotate, ScaleType scale_mode) {
+	gpu_metrics::Reason gpu_reason("Thumbnail");
 
 	// Create blank thumbnail image & fill background color
 	auto thumbnail = std::make_shared<QImage>(

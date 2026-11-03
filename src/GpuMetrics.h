@@ -34,6 +34,8 @@ public:
 };
 void Record(Event event);
 void RecordRender(const Frame& frame);
+/// The current thread's reason for CPU work ("Other" outside a Reason scope).
+const char* CurrentReason();
 }
 #endif
 }

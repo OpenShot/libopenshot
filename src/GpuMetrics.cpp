@@ -38,6 +38,7 @@ Scope::~Scope() {
 }
 Reason::Reason(const char* name) : previous(reason) { reason = name; }
 Reason::~Reason() { reason = previous; }
+const char* CurrentReason() { return reason; }
 void Record(Event event) {
     if (!current) return;
     current->counters->values[event].fetch_add(1, std::memory_order_relaxed);
