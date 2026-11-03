@@ -428,24 +428,28 @@ std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameI
     auto& pipeline=found->second.pipeline;
     return pipeline->Render(*src,back.get(),matrix,opacity,clear,high_quality);
 }
+namespace {
+// Its ring slots keep recent NV12 frames, which NVENC export maps into CUDA.
+thread_local std::unique_ptr<Pipeline> nv12_pipeline;
+thread_local std::tuple<AVHWDeviceContext*,int,int> nv12_key{};
+}
 std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const FrameImage> source, const AVFrame* target) {
     auto src=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
     if(!src) throw std::invalid_argument("NV12 conversion requires a Vulkan surface");
     const auto* frame=src->GetFrame();
     if(frame->width%2 || frame->height%2) throw std::invalid_argument("NV12 export requires even dimensions");
     auto* fc=reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data);
-    using Key=std::tuple<AVHWDeviceContext*,int,int>;
-    thread_local std::unique_ptr<Pipeline> pipeline;
-    thread_local Key key{};
-    Key requested{fc->device_ctx,frame->width,frame->height};
-    if(!pipeline || key!=requested){
-        pipeline=std::make_unique<Pipeline>(fc->device_ref,frame->width,frame->height,true);
-        key=requested;
+    const std::tuple<AVHWDeviceContext*,int,int> requested{fc->device_ctx,frame->width,frame->height};
+    if(!nv12_pipeline || nv12_key!=requested){
+        nv12_pipeline=std::make_unique<Pipeline>(fc->device_ref,frame->width,frame->height,true);
+        nv12_key=requested;
     }
-    return pipeline->Render(*src,nullptr,QTransform(),1.0,Qt::black,false,target);
+    return nv12_pipeline->Render(*src,nullptr,QTransform(),1.0,Qt::black,false,target);
 }
 
 void ReleaseVulkanMemory() {
+    // Free CUDA-mapped NV12 frames while CUDA is loaded, not at process exit.
+    nv12_pipeline.reset();
     ReleaseVulkanUploads();
 #ifdef __APPLE__
     ReleaseMacVulkanPools();
