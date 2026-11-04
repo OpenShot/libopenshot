@@ -56,9 +56,8 @@ linux-builder:
     - pkg-config --exists libpipewire-0.3 libspa-0.2 gio-2.0 gio-unix-2.0 || echo "WARNING PipeWire Wayland capture dependencies are missing; building without Wayland capture support"
     - cmake -U "Qt5*_DIR" -U "*FFmpeg*" -U "*PC_av*" -U "*PC_sw*" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"OpenCV_DIR:PATH=$OpenCV_DIR" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_QT6=OFF -DUSE_SYSTEM_JSONCPP=0 -DENABLE_WAYLAND_CAPTURE=ON -DENABLE_GPU_FRAME=ON -D"Vulkan_INCLUDE_DIR:PATH=$VULKAN_HEADERS_ROOT/include" -D"CMAKE_CXX_FLAGS=-I$VULKAN_HEADERS_ROOT/include" ../
     - cmake --build . --parallel $(nproc)
-    # Some focal libraries link the system FFmpeg 4.2; never load two FFmpegs
-    - ldd src/libopenshot.so | grep -E 'libav|libsw|vulkan'
-    - if ldd src/libopenshot.so | grep -qE 'libavcodec\.so\.58|libavutil\.so\.56'; then echo "ERROR libopenshot also loads the system FFmpeg 4.2"; exit 1; fi
+    - ldd src/libopenshot.so | tee libopenshot-deps.log
+    - if grep -qE "not found|libavcodec\.so\.58|libavutil\.so\.56" libopenshot-deps.log; then echo "ERROR unresolved libraries or system FFmpeg 4.2"; exit 1; fi
     - make install
     - ctest --output-on-failure -VV
     - make doc

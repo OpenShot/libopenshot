@@ -3017,6 +3017,8 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 				av_frame_free(&hw_frame);
 				throw ErrorEncodingVideo("Could not allocate hardware upload buffer", -1);
 			}
+			// Keep the hardware format assigned by av_hwframe_get_buffer().
+			// NV12 describes the CPU source, not the encoder surface.
 			if ( av_hwframe_transfer_data(hw_frame, frame_final, 0) < 0) {
 				av_frame_free(&hw_frame);
 				throw ErrorEncodingVideo("Could not upload CPU frame to encoder", -1);

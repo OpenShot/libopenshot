@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 # Compiled support checks are GPU-independent. Real driver/encoding tests are separate.
 set -euo pipefail
 root=${1:?FFmpeg installation prefix}
