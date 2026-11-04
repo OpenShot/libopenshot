@@ -325,6 +325,15 @@ void FFmpegReader::Open() {
 
 			// Get codec and codec context from stream
 			const AVCodec *pCodec = avcodec_find_decoder(codecId);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			// Full FFmpeg builds prefer libdav1d for AV1, but that decoder cannot
+			// produce Vulkan frames. Keep it as the default for software retries.
+			if (codecId == AV_CODEC_ID_AV1 && hw_de_on && VulkanAv1DecodeSupported()) {
+				const AVCodec* native_av1 = avcodec_find_decoder_by_name("av1");
+				if (native_av1)
+					pCodec = native_av1;
+			}
+#endif
 			if (!pCodec)
 				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			AVDictionary *opts = NULL;

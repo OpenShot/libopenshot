@@ -77,6 +77,23 @@ TEST_CASE("Vulkan GPU listing reports the card OpenShot renders with", "[vulkan]
     for(const auto& name : encoders) CHECK(avcodec_find_encoder_by_name(name.c_str()));
     CHECK(openshot::GpuEncoders()==encoders);
 }
+TEST_CASE("AV1 prefers Vulkan decoding over the default software decoder", "[vulkan][hardware][reader]") {
+    if (!VulkanAvailable()) return;
+    if (!openshot::VulkanAv1DecodeSupported()) {
+        WARN("Skipping Vulkan test: no Vulkan AV1 decode extension");
+        return;
+    }
+    openshot::FFmpegReader reader(TEST_MEDIA_PATH "test_video_sync.mp4");
+    reader.Open();
+    auto frame = reader.GetFrame(90);
+    REQUIRE(frame->GetDeferredImage());
+    CHECK(reader.HardwareDecodeSuccessful());
+    auto image = frame->GetImage();
+    REQUIRE(image);
+    CHECK(image->pixelColor(930, 820).red() > 250);
+    reader.Close();
+}
+
 TEST_CASE("VA-API AV1 export accepts a requested bitrate", "[vulkan][hardware][writer]") {
     if(!VulkanAvailable()) return;
     const auto encoders=openshot::GpuEncoders();
@@ -99,6 +116,8 @@ TEST_CASE("VA-API AV1 export accepts a requested bitrate", "[vulkan][hardware][w
     CHECK(decoder->id==AV_CODEC_ID_AV1);
     auto image=reader.GetFrame(1)->GetImage();
     REQUIRE(image);
+    if (openshot::VulkanAv1DecodeSupported())
+        CHECK(reader.HardwareDecodeSuccessful());
     CHECK(image->pixelColor(128,128).red()>200);
     CHECK(image->pixelColor(128,128).blue()<30);
     reader.Close();

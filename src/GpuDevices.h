@@ -44,6 +44,8 @@ int CreateSharedVulkanDevice(AVBufferRef** output);
 std::string VulkanResultName(int result);
 /// Record a failed Vulkan call; VK_ERROR_DEVICE_LOST sets VulkanDeviceLost().
 void ReportVulkanResult(int result);
+/// Whether the active Vulkan driver advertises AV1 hardware decoding.
+bool VulkanAv1DecodeSupported();
 #endif
 }
 #endif

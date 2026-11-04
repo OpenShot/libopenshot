@@ -273,6 +273,17 @@ void ConfigureGpuEnvironment(const std::string& backend, const std::string& devi
 #endif
 }
 
+bool VulkanAv1DecodeSupported() {
+    AVBufferRef* device = nullptr;
+    if (!VulkanRenderingEnabled() || CreateSharedVulkanDevice(&device) < 0)
+        return false;
+    const auto physical = PhysicalDevice(device);
+    const bool supported = Describe(physical).video_decode &&
+        HasExtension(physical, "VK_KHR_video_decode_av1");
+    av_buffer_unref(&device);
+    return supported;
+}
+
 std::vector<GpuDevice> ListGpuDevices() {
     const std::string active = ActiveGpuDevice().uuid;
     ListingInstance listing;
