@@ -18,8 +18,10 @@ class Scope {
     Scope* previous;
     std::shared_ptr<Counters> counters;
     bool gpu = false, readback = false;
+    bool export_frame = false;
     int exceptions;
     friend void Record(Event event);
+    friend void RecordExportFrame();
 public:
     explicit Scope(bool exporting);
     ~Scope();
@@ -34,6 +36,8 @@ public:
 };
 void Record(Event event);
 void RecordRender(const Frame& frame);
+/// Mark a measured writer request, including one served from the timeline cache.
+void RecordExportFrame();
 /// The current thread's reason for CPU work ("Other" outside a Reason scope).
 const char* CurrentReason();
 }

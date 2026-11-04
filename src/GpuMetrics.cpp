@@ -11,6 +11,7 @@ namespace openshot { namespace gpu_metrics {
 struct Counters {
     std::array<std::atomic<uint64_t>, Count> values{};
     std::atomic<uint64_t> resident{0}, requests{0};
+    std::atomic<uint64_t> export_frames{0}, export_resident{0};
     std::array<std::atomic<uint64_t>, 5> reasons{};
 };
 namespace {
@@ -29,6 +30,10 @@ Scope::Scope(bool exporting) : previous(current), exceptions(std::uncaught_excep
 }
 Scope::~Scope() {
     if (counters) {
+        if (export_frame && std::uncaught_exceptions() == exceptions) {
+            counters->export_frames.fetch_add(1, std::memory_order_relaxed);
+            if (gpu && !readback) counters->export_resident.fetch_add(1, std::memory_order_relaxed);
+        }
         if (gpu && std::uncaught_exceptions() == exceptions) {
             counters->requests.fetch_add(1, std::memory_order_relaxed);
             if (!readback) counters->resident.fetch_add(1, std::memory_order_relaxed);
@@ -39,6 +44,9 @@ Scope::~Scope() {
 Reason::Reason(const char* name) : previous(reason) { reason = name; }
 Reason::~Reason() { reason = previous; }
 const char* CurrentReason() { return reason; }
+void RecordExportFrame() {
+    if (current) current->export_frame = true;
+}
 void Record(Event event) {
     if (!current) return;
     current->counters->values[event].fetch_add(1, std::memory_order_relaxed);
@@ -65,8 +73,11 @@ std::string GpuMetricsSnapshot(bool exporting) {
     for (int i = 0; i < Count; ++i) root[names[i]] = Json::UInt64(counters->values[i].load(std::memory_order_relaxed));
     root["copy_free"] = Json::UInt64(counters->resident.load(std::memory_order_relaxed));
     root["gpu_requests"] = Json::UInt64(counters->requests.load(std::memory_order_relaxed));
+    root["export_frames"] = Json::UInt64(counters->export_frames.load(std::memory_order_relaxed));
+    root["export_copy_free"] = Json::UInt64(counters->export_resident.load(std::memory_order_relaxed));
     for (int i = 0; i < 5; ++i) root["readback_reasons"][reasons[i]] = Json::UInt64(counters->reasons[i].load(std::memory_order_relaxed));
     root["definition"] = "Operation counts exclude cache hits; copy-free counts GPU work requests without GPU-to-CPU readbacks, not end-to-end host-free frames";
+    root["export_copy_free_definition"] = "Measured writer frames with GPU work and no CPU readback; includes cached frames and excludes separate background rendering requests";
     return root.toStyledString();
 }
 void ResetGpuMetrics(bool exporting) {

@@ -1140,6 +1140,7 @@ void FFmpegWriter::WriteHeader() {
 // Add a frame to the queue waiting to be encoded.
 void FFmpegWriter::WriteMeasuredFrame(ReaderBase* reader, int64_t number) {
     gpu_metrics::Scope scope(true);
+    gpu_metrics::RecordExportFrame();
     WriteFrame(reader->GetFrame(number));
 }
 

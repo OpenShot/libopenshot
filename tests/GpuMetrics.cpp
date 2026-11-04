@@ -55,3 +55,26 @@ TEST_CASE("Failed GPU work is not a copy-free success", "[GpuMetrics]") {
     try { Scope scope(false); Record(DecodeGpu); throw 1; } catch (int) {}
     REQUIRE(snapshot()["gpu_requests"].asUInt64() == 0);
 }
+
+TEST_CASE("Export residency includes cached frames read back by a CPU encoder", "[GpuMetrics]") {
+    ResetGpuMetrics(true);
+    // The cache worker completes GPU work in a separate request.
+    { Scope render(true); Record(RenderGpu); }
+    { Scope writer(true); RecordExportFrame(); Reason reason("Encoder");
+      Record(Readback); Record(EncodeCpu); }
+    auto value = snapshot(true);
+    REQUIRE(value["copy_free"].asUInt64() == 1); // Operation-only metric.
+    REQUIRE(value["export_frames"].asUInt64() == 1);
+    REQUIRE(value["export_copy_free"].asUInt64() == 0);
+    REQUIRE(value["readback_reasons"]["Encoder"].asUInt64() == 1);
+}
+
+TEST_CASE("Export residency counts GPU writes and excludes failed requests and old sessions", "[GpuMetrics]") {
+    ResetGpuMetrics(true);
+    { Scope writer(true); RecordExportFrame(); Record(EncodeGpu); }
+    try { Scope writer(true); RecordExportFrame(); Record(EncodeGpu); throw 1; } catch (int) {}
+    REQUIRE(snapshot(true)["export_frames"].asUInt64() == 1);
+    REQUIRE(snapshot(true)["export_copy_free"].asUInt64() == 1);
+    { Scope old(true); RecordExportFrame(); Record(EncodeGpu); ResetGpuMetrics(true); }
+    REQUIRE(snapshot(true)["export_frames"].asUInt64() == 0);
+}
