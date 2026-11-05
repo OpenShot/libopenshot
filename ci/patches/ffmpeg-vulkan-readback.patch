@@ -1,0 +1,42 @@
+--- a/libavutil/hwcontext_vulkan.c
++++ b/libavutil/hwcontext_vulkan.c
+@@ -3813,13 +3813,15 @@
+         }
+     }
+ 
+-    for (int i = 0; i < planes; i++)
+-        av_image_copy_plane(vkbuf->mapped_mem + region[i].bufferOffset,
+-                            region[i].bufferRowLength,
+-                            swf->data[i],
+-                            swf->linesize[i],
+-                            swf->linesize[i],
+-                            region[i].imageExtent.height);
++    for (int i = 0; i < planes; i++) {
++        if (upload)
++            av_image_copy_plane(vkbuf->mapped_mem + region[i].bufferOffset, region[i].bufferRowLength,
++                                swf->data[i], swf->linesize[i], swf->linesize[i], region[i].imageExtent.height);
++        else
++            av_image_copy_plane(swf->data[i], swf->linesize[i],
++                                vkbuf->mapped_mem + region[i].bufferOffset, region[i].bufferRowLength,
++                                swf->linesize[i], region[i].imageExtent.height);
++    }
+ 
+     if (!(vkbuf->flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) && upload) {
+         ret = vk->FlushMappedMemoryRanges(hwctx->act_dev, 1,
+@@ -4079,7 +4081,15 @@
+         return AVERROR(EINVAL);
+ 
+     /* Setup buffers first */
+-    if (p->vkctx.extensions & FF_VK_EXT_EXTERNAL_HOST_MEMORY) {
++    /* AMD Linux host-pointer imports can fail submission with EFAULT and
++     * lose the device. Use owned staging memory for CPU transfers there.
++     * GPU-to-GPU decode/render/presentation/export paths are unchanged. */
++    int use_host_import = !!(p->vkctx.extensions & FF_VK_EXT_EXTERNAL_HOST_MEMORY);
++#ifdef __linux__
++    if (p->props.properties.vendorID == 0x1002)
++        use_host_import = 0;
++#endif
++    if (use_host_import) {
+         err = host_map_frame(hwfc, bufs, &nb_bufs, swf, region, upload);
+         if (err >= 0)
+             host_mapped = 1;

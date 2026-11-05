@@ -48,6 +48,9 @@ void LogReadbackFailure(const AVFrame* frame, int result) {
     auto fc = reinterpret_cast<const AVHWFramesContext*>(frame->hw_frames_ctx->data);
     auto vfc = static_cast<const AVVulkanFramesContext*>(fc->hwctx);
     auto vk = static_cast<const AVVulkanDeviceContext*>(fc->device_ctx->hwctx);
+    // FFmpeg translates failed submissions to AVERROR_EXTERNAL. Confirm the
+    // VkResult here so callers stop using the dead device immediately.
+    ReportVulkanResult(vkDeviceWaitIdle(vk->act_dev));
     bool hostImport = false;
     for (int i = 0; i < vk->nb_enabled_dev_extensions; ++i)
         hostImport |= std::strcmp(vk->enabled_dev_extensions[i], VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME) == 0;

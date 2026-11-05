@@ -179,8 +179,16 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             fallback_delivered = true;
             ++fallback_frames;
             display_surface.reset();
-            const QImage image = *frame->GetImage();
-            QMetaObject::invokeMethod(widget, "present", Qt::QueuedConnection, Q_ARG(QImage, image));
+            // A lost device cannot provide CPU pixels. Let the GUI clear its
+            // caches and request a fresh CPU-rendered frame instead.
+            if (VulkanDeviceLost() && frame->GetDeferredImage()) return;
+            try {
+                const QImage image = *frame->GetImage();
+                QMetaObject::invokeMethod(widget, "present", Qt::QueuedConnection, Q_ARG(QImage, image));
+            } catch (const std::exception& error) {
+                last_failure = std::string("GPU preview fallback could not read the frame: ") + error.what();
+                Logger::Instance()->Log(last_failure, Logger::LevelWarning);
+            }
         }
     }
     void waitPending() {

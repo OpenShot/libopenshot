@@ -2,6 +2,7 @@
 # Run using C:\msys64\usr\bin\bash.exe. No pacman changes.
 # Usage: bash setup-ffmpeg-windows.sh mingw64|mingw32
 set -euo pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 arch=${1:?Specify mingw64 or mingw32}
 case "$arch" in mingw64) cpu=x86_64 ;; mingw32) cpu=x86 ;; *) exit 2 ;; esac
 version=7.1.3
@@ -23,6 +24,7 @@ if [ ! -f "FFmpeg-n$version.tar.gz" ]; then
 fi
 printf '%s  %s\n' e0b04c4b43d7e6d67cb6710334fb513adf13ac860532f30e1d0ac4c231f232fb "FFmpeg-n$version.tar.gz" | sha256sum -c -
 if [ ! -d "$root/FFmpeg-n$version" ]; then tar xzf "FFmpeg-n$version.tar.gz"; fi
+bash "$script_dir/../patch-ffmpeg-vulkan.sh" "$root/FFmpeg-n$version"
 cd "$work"
 opts=(--prefix="$prefix" --target-os=mingw32 --arch="$cpu"
  --enable-gpl --enable-version3 --enable-shared --disable-static --disable-doc

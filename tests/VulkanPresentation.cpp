@@ -16,6 +16,7 @@
 #include <QDebug>
 extern "C" {
 #include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_vulkan.h>
 }
 namespace {
 class Preview : public QOpenGLWidget {
@@ -210,6 +211,11 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     CHECK(widget.presenter.FallbackFrames() == 0);
     CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::blue));
     CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::red));
+    // Recovery must not read pixels from a dead device or throw through paintGL.
+    openshot::ReportVulkanResult(VK_ERROR_DEVICE_LOST);
+    CHECK_NOTHROW(widget.presenter.Present(frame));
+    CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
+    CHECK(widget.presenter.FallbackReason().find("device lost") != std::string::npos);
     widget.presenter.Clear();
     CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
     CHECK_FALSE(widget.presenter.FallbackReason().empty());

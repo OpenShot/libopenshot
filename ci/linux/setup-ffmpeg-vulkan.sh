@@ -5,6 +5,7 @@
 # Not enabled: libwavpack (removed from FFmpeg 5+, native decoder used),
 # chromaprint (focal's library links FFmpeg 4.2, loading two FFmpegs at once).
 set -euo pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
 FFMPEG_VERSION=${FFMPEG_VERSION:-7.1.3}
 VULKAN_HEADERS_TAG=${VULKAN_HEADERS_TAG:-v1.4.347}
@@ -21,7 +22,7 @@ export DEBIAN_FRONTEND=noninteractive
 if [ "$SKIP_APT" != 1 ]; then
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-  build-essential pkg-config nasm yasm git curl xz-utils cmake \
+  build-essential pkg-config nasm yasm git curl xz-utils cmake patch \
   glslang-tools libvulkan-dev \
   libx264-dev libx265-dev libvpx-dev meson ninja-build \
   libmp3lame-dev libopus-dev libvorbis-dev libtheora-dev libspeex-dev \
@@ -177,6 +178,7 @@ if [ ! -d "ffmpeg-$FFMPEG_VERSION" ]; then
   mv "FFmpeg-n$FFMPEG_VERSION" "ffmpeg-$FFMPEG_VERSION"
 fi
 cd "ffmpeg-$FFMPEG_VERSION"
+bash "$script_dir/../patch-ffmpeg-vulkan.sh" "$PWD"
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
 ./configure --prefix="$PREFIX" --enable-gpl --enable-version3 \
   --enable-shared --disable-static --disable-doc \
