@@ -9,11 +9,18 @@
 #include "VulkanEncodeConverter.h"
 #include "GpuDevices.h"
 #include "GpuMetrics.h"
+#include "FrameScope.h"
 #include "FFmpegReader.h"
 #include "FFmpegWriter.h"
 #include <QTemporaryDir>
 #include <algorithm>
 #include "Clip.h"
+#include "effects/Saturation.h"
+#include "effects/Crop.h"
+#include "effects/ColorGrade.h"
+#include "effects/Mask.h"
+#include "effects/Blur.h"
+#include "QtImageReader.h"
 #include "Timeline.h"
 #include "DummyReader.h"
 #include <map>
@@ -329,9 +336,11 @@ TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan]
     auto first=openshot::RenderVulkanImage(source,nullptr,32,32,transform,0.5,Qt::blue);
     // A second render must not overwrite the first cached frame's GPU storage.
     auto second=openshot::RenderVulkanImage(source,nullptr,32,32,QTransform(),1.0,Qt::green);
-    gpu.reset();cpu.reset();pool.reset();device.reset();source.reset();
+    gpu.reset();pool.reset();device.reset();source.reset();
     CHECK(first->GetBytes() >= 32 * 32 * 4);
     QImage image=first->Materialize();
+    // FFmpeg may import the upload memory asynchronously; retain it until completion.
+    cpu.reset();
     const auto blended=image.pixelColor(12,12);
     CHECK(blended.red()>=126);CHECK(blended.red()<=129);
     CHECK(blended.green()==0);
@@ -616,9 +625,19 @@ TEST_CASE("PNG clips upload once and keep animated transforms on Vulkan", "[vulk
     bitmap.fill(QColor(0, 0, 255, 128));
     REQUIRE(bitmap.save(path));
     openshot::Clip clip(path.toStdString());
-    clip.scale_x = openshot::Keyframe(0.6);
+    clip.scale_x.AddPoint(1,0.6,openshot::LINEAR);
+    clip.scale_x.AddPoint(8,0.8,openshot::LINEAR);
     clip.scale_y = openshot::Keyframe(0.6);
-    clip.rotation = openshot::Keyframe(10);
+    clip.rotation.AddPoint(1,10,openshot::LINEAR);
+    clip.rotation.AddPoint(8,20,openshot::LINEAR);
+    openshot::Saturation saturation;
+    saturation.saturation.AddPoint(1,1.0,openshot::LINEAR);
+    saturation.saturation.AddPoint(8,1.5,openshot::LINEAR);
+    openshot::Crop crop;
+    crop.left.AddPoint(1,0.0,openshot::LINEAR);
+    crop.left.AddPoint(8,0.125,openshot::LINEAR);
+    clip.AddEffect(&saturation);
+    clip.AddEffect(&crop);
     openshot::Timeline timeline(128,128,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
     timeline.AddClip(&clip);
     timeline.Open();
@@ -688,4 +707,229 @@ TEST_CASE("Saved GPU preferences reach the native runtime environment", "[vulkan
     openshot::ConfigureGpuEnvironment("vulkan", "");
     CHECK(openshot::VulkanRenderingEnabled());
     CHECK(std::getenv("OPENSHOT_VULKAN_DEVICE") == nullptr);
+}
+
+namespace {
+void ProcessCpuEffect(openshot::EffectBase& effect, std::shared_ptr<openshot::Frame> frame, int number) {
+    struct Restore {
+        std::string backend, device;
+        ~Restore() { openshot::ConfigureGpuEnvironment(backend,device); }
+    } restore{std::getenv("OPENSHOT_RENDER_BACKEND") ? std::getenv("OPENSHOT_RENDER_BACKEND") : "",
+              std::getenv("OPENSHOT_VULKAN_DEVICE") ? std::getenv("OPENSHOT_VULKAN_DEVICE") : ""};
+    openshot::ConfigureGpuEnvironment("cpu",restore.device);
+    effect.ProcessFrame(frame,number);
+}
+void CheckVulkanEffect(openshot::EffectBase& effect, const QImage& pixels,
+    std::shared_ptr<const openshot::FrameImage> source, int number, int tolerance) {
+    auto cpu=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
+    auto gpu=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
+    cpu->AddImage(std::make_shared<QImage>(pixels.copy()));
+    gpu->AddDeferredImage(source);
+    ProcessCpuEffect(effect,cpu,number);
+    const auto readbacks=openshot::VulkanFrameReadbackCount();
+    effect.ProcessFrame(gpu,number);
+    REQUIRE(gpu->GetDeferredImage());
+    CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+    auto expected=cpu->GetImage(),actual=gpu->GetImage();
+    REQUIRE(actual->size()==expected->size());
+    int max_error=0;
+    for (int y=0;y<actual->height();++y)
+        for (int x=0;x<actual->width()*4;++x)
+            max_error=std::max(max_error,std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x])));
+    INFO("frame=" << number << " max byte error=" << max_error);
+    CHECK(max_error<=tolerance);
+}
+
+}
+
+TEST_CASE("Vulkan saturation matches CPU for animated channels and alpha", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(32, 16, QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<pixels.height(); ++y)
+        for (int x=0; x<pixels.width(); ++x)
+            pixels.setPixelColor(x,y,QColor((x*37)%256,(y*53)%256,(x*19+y*11)%256,(x%4)*85));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Saturation effect;
+    effect.saturation.AddPoint(1,0.0,openshot::LINEAR);
+    effect.saturation.AddPoint(9,2.0,openshot::LINEAR);
+    effect.saturation_R=openshot::Keyframe(0.7);
+    effect.saturation_G=openshot::Keyframe(1.2);
+    effect.saturation_B=openshot::Keyframe(0.4);
+    for (int number : {1,5,9,3}) {
+        CheckVulkanEffect(effect,pixels,source,number,2);
+    }
+}
+
+TEST_CASE("Vulkan crop matches CPU for offsets resizing and animation", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(32,24,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<24; ++y)
+        for (int x=0; x<32; ++x)
+            pixels.setPixelColor(x,y,QColor(x*7,y*9,100,(x%4)*85));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Crop effect;
+    effect.left.AddPoint(1,0.125,openshot::LINEAR);
+    effect.left.AddPoint(9,0.375,openshot::LINEAR);
+    effect.top=openshot::Keyframe(0.25);
+    effect.right=openshot::Keyframe(0.125);
+    effect.bottom=openshot::Keyframe(0.125);
+    for (bool resize : {false,true}) {
+        effect.resize=resize;
+        for (double shift : {-0.25,0.0,0.25,0.13}) {
+            effect.x=openshot::Keyframe(shift);
+            effect.y=openshot::Keyframe(shift);
+            for (int number : {1,5,9,3}) {
+                CheckVulkanEffect(effect,pixels,source,number,0);
+            }
+        }
+    }
+}
+
+TEST_CASE("Vulkan grading matches animated CPU controls with transparency", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(32,16,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<16; ++y)
+        for (int x=0; x<32; ++x)
+            pixels.setPixelColor(x,y,QColor((x*37)%256,(y*53)%256,(x*19+y*11)%256,(x%4)*85));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::ColorGrade effect;
+    effect.temperature=openshot::Keyframe(0.4);
+    effect.tint=openshot::Keyframe(-0.3);
+    effect.exposure.AddPoint(1,-1.0,openshot::LINEAR);
+    effect.exposure.AddPoint(9,1.0,openshot::LINEAR);
+    effect.contrast=openshot::Keyframe(0.25);
+    effect.shadows=openshot::Keyframe(0.3);
+    effect.highlights=openshot::Keyframe(-0.4);
+    effect.saturation=openshot::Keyframe(1.2);
+    effect.vibrance=openshot::Keyframe(0.5);
+    effect.mix=openshot::Keyframe(0.7);
+    for (int number : {1,5,9,3}) {
+        CheckVulkanEffect(effect,pixels,source,number,1);
+    }
+}
+
+TEST_CASE("Vulkan grading keeps animated wheels and curves on the GPU", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(32,16,QImage::Format_RGBA8888_Premultiplied);
+    for(int y=0;y<16;++y)
+        for(int x=0;x<32;++x)
+            pixels.setPixelColor(x,y,QColor((x*37)%256,(y*53)%256,(x*19+y*11)%256,(x%4)*85));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::ColorGrade effect;
+    effect.wheels.global.color=openshot::Color("#ff3040");
+    effect.wheels.global.amount.AddPoint(1,-0.3,openshot::LINEAR);
+    effect.wheels.global.amount.AddPoint(9,0.4,openshot::LINEAR);
+    effect.wheels.shadows.color=openshot::Color("#30ff40");
+    effect.wheels.shadows.amount=openshot::Keyframe(0.3);
+    effect.wheels.midtones.color=openshot::Color("#3040ff");
+    effect.wheels.midtones.amount=openshot::Keyframe(0.25);
+    effect.wheels.highlights.luma=openshot::Keyframe(-0.15);
+    effect.curve_all.Nodes().emplace_back(2,0.5,0.65,openshot::LINEAR);
+    effect.curve_all.Nodes().back().y.AddPoint(1,0.65,openshot::LINEAR);
+    effect.curve_all.Nodes().back().y.AddPoint(9,0.35,openshot::LINEAR);
+    effect.curve_red.Nodes().back().y=openshot::Keyframe(0.8);
+    effect.curve_green.Nodes().back().y=openshot::Keyframe(0.9);
+    effect.curve_blue.Nodes().emplace_back(2,0.5,0.35,openshot::LINEAR);
+    for(bool enabled : {false,true}) {
+        effect.wheels.enabled=openshot::Keyframe(enabled?1.0:0.0);
+        effect.curve_blue.enabled=openshot::Keyframe(enabled?1.0:0.0);
+        for(int number : {1,5,9,3}) CheckVulkanEffect(effect,pixels,source,number,2);
+    }
+}
+
+TEST_CASE("Vulkan reader masks match animated CPU wipes and inversion", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir directory;
+    const auto path=directory.filePath("mask.png");
+    QImage pixels(32,16,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<16; ++y)
+        for (int x=0; x<32; ++x)
+            pixels.setPixelColor(x,y,QColor(x*7,y*13,100,(x%4)*85));
+    REQUIRE(pixels.save(path));
+    openshot::QtImageReader reader(path.toStdString());
+    openshot::Mask effect(&reader,openshot::Keyframe(0.0),openshot::Keyframe(3.0));
+    effect.brightness.AddPoint(1,-0.5,openshot::LINEAR);
+    effect.brightness.AddPoint(9,0.5,openshot::LINEAR);
+    auto source=openshot::UploadVulkanImage(pixels);
+    for (bool invert : {false,true}) {
+        effect.mask_invert=invert;
+        for (bool replace : {false,true}) {
+            effect.replace_image=replace;
+            for (int number : {1,5,9}) {
+                CheckVulkanEffect(effect,pixels,source,number,0);
+            }
+        }
+    }
+}
+
+TEST_CASE("Vulkan blur matches CPU region edges iterations and alpha", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(32,16,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<16; ++y)
+        for (int x=0; x<32; ++x)
+            pixels.setPixelColor(x,y,QColor((x*37)%256,(y*53)%256,(x*19+y*11)%256,(x%4)*85));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Blur effect;
+    effect.horizontal_radius.AddPoint(1,0.0,openshot::LINEAR);
+    effect.horizontal_radius.AddPoint(9,100.0,openshot::LINEAR);
+    effect.vertical_radius=openshot::Keyframe(3.0);
+    effect.iterations=openshot::Keyframe(2.0);
+    for (double margin : {0.0,0.25}) {
+        effect.left=effect.right=effect.top=effect.bottom=openshot::Keyframe(margin);
+        for (int number : {1,3,9}) {
+            CheckVulkanEffect(effect,pixels,source,number,1);
+        }
+    }
+}
+
+TEST_CASE("Animated output sizes reuse Vulkan pipelines and preserve earlier frames", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(48,32,QImage::Format_RGBA8888_Premultiplied);
+    pixels.fill(Qt::red);
+    auto source=openshot::UploadVulkanImage(pixels);
+    const auto created=openshot::VulkanPipelineCreationCount();
+    std::vector<std::shared_ptr<const openshot::FrameImage>> frames;
+    for(int width=16;width<48;++width) {
+        frames.push_back(openshot::RenderVulkanImage(source,nullptr,width,32,QTransform(),1.0));
+        REQUIRE(frames.back()->GetWidth()==width);
+    }
+    CHECK(openshot::VulkanPipelineCreationCount()-created<=1);
+    // Old frames remain valid after both submission slots and retained pools turn over.
+    CHECK(frames.front()->Materialize().pixelColor(8,16)==QColor(Qt::red));
+    CHECK(frames.back()->Materialize().pixelColor(8,16)==QColor(Qt::red));
+}
+
+TEST_CASE("Queued grading frames retain their own wheel parameters", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(16,16,QImage::Format_RGBA8888_Premultiplied);
+    pixels.fill(QColor(100,80,60));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::VulkanGradeParameters parameters{};
+    parameters.controls={0,0,1,1,0,0,1,0,1};
+    for(auto& curve:parameters.curves)
+        for(int i=0;i<256;++i) curve[i]=float(i)/255.0f;
+    std::vector<std::shared_ptr<const openshot::FrameImage>> frames;
+    for(int i=0;i<12;++i) {
+        parameters.wheels[0]=float(i)/32.0f;
+        frames.push_back(openshot::GradeVulkanImage(source,parameters));
+    }
+    for(int i=0;i<12;++i) {
+        const auto color=frames[i]->Materialize().pixelColor(8,8);
+        CHECK(std::abs(color.red()-int(100+255.0*i/32.0+0.5))<=1);
+        CHECK(color.green()==80);
+        CHECK(color.blue()==60);
+    }
+}
+
+TEST_CASE("Scope analysis preserves the cached GPU preview surface", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(16,16,QImage::Format_RGBA8888_Premultiplied);
+    pixels.fill(Qt::red);
+    auto source=openshot::UploadVulkanImage(pixels);
+    auto frame=std::make_shared<openshot::Frame>(1,16,16,"transparent");
+    frame->AddDeferredImage(source);
+    openshot::FrameScope scope;
+    scope.SetFrame(frame);
+    CHECK(scope.HasVideo());
+    CHECK(frame->GetDeferredImage()==source);
 }

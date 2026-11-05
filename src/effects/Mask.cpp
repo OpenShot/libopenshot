@@ -17,6 +17,11 @@
 #include "ReaderBase.h"
 #include <array>
 #include <omp.h>
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -55,6 +60,26 @@ void Mask::init_effect_details()
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+    // An absent reader/generated mask is a no-op, including on deferred frames.
+    if (!MaskReader() && MaskSourceId().empty()) return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && MaskSourceId().empty()) {
+        try {
+            auto mask=ResolveReaderMaskImage(frame->GetWidth(),frame->GetHeight(),frame_number);
+            if (!mask || mask->isNull()) return frame;
+            auto surface=frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                const float factor=20.0f/std::max(0.5f,20.0f-float(contrast.GetValue(frame_number)));
+                frame->AddDeferredImage(MaskVulkanImage(surface,UploadVulkanImage(*mask),factor,
+                    int(255*brightness.GetValue(frame_number)),mask_invert,replace_image));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan mask CPU fallback: ")+error.what());
+        }
+    }
+#endif
 	// Get frame image first
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 	if (!frame_image || frame_image->isNull())

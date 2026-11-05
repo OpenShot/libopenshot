@@ -93,6 +93,9 @@ namespace openshot
 			return GetMaskImage(target_image, frame_number);
 		}
 
+		/// Resolve reader artwork without requiring CPU pixels from the target frame.
+		std::shared_ptr<QImage> ResolveReaderMaskImage(int width, int height, int64_t frame_number);
+
 		/// Optional override for effects that need custom mask behavior.
 		virtual bool UseCustomMaskBlend(int64_t frame_number) const { return false; }
 

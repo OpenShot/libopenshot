@@ -14,6 +14,11 @@
 #include "Exceptions.h"
 #include <array>
 #include <cmath>
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -123,6 +128,22 @@ void Saturation::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && !MaskReader() && MaskSourceId().empty()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data) surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(SaturateVulkanImage(surface, {
+                    float(saturation.GetValue(frame_number)), float(saturation_R.GetValue(frame_number)),
+                    float(saturation_G.GetValue(frame_number)), float(saturation_B.GetValue(frame_number))}));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan saturation CPU fallback: ") + error.what());
+        }
+    }
+#endif
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 

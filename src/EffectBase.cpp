@@ -502,6 +502,11 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 		return empty_mask;
 	}
 
+    return ResolveReaderMaskImage(target_image->width(),target_image->height(),frame_number);
+}
+
+std::shared_ptr<QImage> EffectBase::ResolveReaderMaskImage(int width,int height,int64_t frame_number) {
+
 	if (!mask_reader)
 		return {};
 
@@ -515,8 +520,8 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 
 			if (mask_reader->info.has_single_image &&
 				cached_single_mask_image &&
-				cached_single_mask_width == target_image->width() &&
-				cached_single_mask_height == target_image->height()) {
+				cached_single_mask_width == width &&
+				cached_single_mask_height == height) {
 				source_mask = cached_single_mask_image;
 				used_cached_scaled = true;
 			}
@@ -541,12 +546,12 @@ std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_
 
 	auto scaled_mask = std::make_shared<QImage>(
 		source_mask->scaled(
-			target_image->width(), target_image->height(),
+			width, height,
 			Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 	if (mask_reader->info.has_single_image) {
 		cached_single_mask_image = scaled_mask;
-		cached_single_mask_width = target_image->width();
-		cached_single_mask_height = target_image->height();
+		cached_single_mask_width = width;
+		cached_single_mask_height = height;
 	}
 	return scaled_mask;
 }

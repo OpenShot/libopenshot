@@ -19,6 +19,11 @@
 #include <QRectF>
 #include <QRect>
 #include <QSize>
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -53,9 +58,6 @@ void Crop::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	// Get the frame's image
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-
 	// Get current keyframe values
 	double left_value = left.GetValue(frame_number);
 	double top_value = top.GetValue(frame_number);
@@ -66,7 +68,7 @@ std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame>
 	double x_shift = x.GetValue(frame_number);
 	double y_shift = y.GetValue(frame_number);
 
-	QSize sz = frame_image->size();
+	QSize sz(frame->GetWidth(), frame->GetHeight());
 
 	// Compute destination rectangle to paint into
 	QRectF paint_r(
@@ -96,6 +98,24 @@ std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame>
 		copy_r.setBottom(sz.height());
 	}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && !MaskReader() && MaskSourceId().empty()) {
+        const QRect canvas = resize ? paint_r.toRect() : QRect(QPoint(0,0),sz);
+        if (canvas.width()>0 && canvas.height()>0 && paint_r.width()>0 && paint_r.height()>0) {
+            try {
+                auto surface = frame->GetDeferredImage();
+                if (!surface && ParentClip() && frame->has_image_data) surface = UploadVulkanImage(*frame->GetImage());
+                if (surface) {
+                    frame->AddDeferredImage(CropVulkanImage(surface,paint_r,copy_r,canvas));
+                    return frame;
+                }
+            } catch (const std::exception& error) {
+                Logger::Instance()->Log(std::string("Vulkan crop CPU fallback: ") + error.what());
+            }
+        }
+    }
+#endif
+    auto frame_image = frame->GetImage();
 	QImage cropped(sz, QImage::Format_RGBA8888_Premultiplied);
 	cropped.fill(Qt::transparent);
 

@@ -44,6 +44,24 @@ void check(VkResult result, const char* operation) {
     ReportVulkanResult(result);
     throw std::runtime_error(std::string(operation) + ": " + VulkanResultName(result));
 }
+// Qt shares this context with its widget texture cache. Leaving our video
+// texture bound can interfere with later Qt popup/overlay texture uploads.
+class TextureBindingGuard {
+    QOpenGLFunctions* gl;
+    GLint active = GL_TEXTURE0;
+    GLint texture = 0;
+public:
+    explicit TextureBindingGuard(QOpenGLFunctions* functions) : gl(functions) {
+        gl->glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+    }
+    ~TextureBindingGuard() {
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, texture);
+        gl->glActiveTexture(active);
+    }
+};
 template<class T> T glFunction(QOpenGLContext* context, const char* name) {
     auto function = reinterpret_cast<T>(context->getProcAddress(name));
     if (!function) throw std::runtime_error(name);
@@ -513,6 +531,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
             return unavailable("OpenGL driver lacks external memory or semaphore sharing extensions");
         auto gl = context->functions();
         auto extra = context->extraFunctions();
+        TextureBindingGuard textureBinding(gl);
         auto getUuid = glFunction<PFNGLGETUNSIGNEDBYTEI_VEXTPROC>(context, "glGetUnsignedBytei_vEXT");
         GLint deviceCount = 0;
         gl->glGetIntegerv(GL_NUM_DEVICE_UUIDS_EXT, &deviceCount);

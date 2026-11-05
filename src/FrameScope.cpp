@@ -236,7 +236,15 @@ void FrameScope::analyze() {
 void FrameScope::analyze_video() {
 	// Frame images are always QImage::Format_RGBA8888_Premultiplied (enforced
 	// by Frame::AddImage). Pixel byte order is [R=0, G=1, B=2, A=3].
-	std::shared_ptr<QImage> image = frame->GetImage();
+    std::shared_ptr<QImage> image;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    // Analysis is read-only. Do not replace the shared preview/cache surface
+    // with mutable CPU pixels just because the scopes need to inspect it.
+    if (auto surface=frame->GetDeferredImage())
+        image=std::make_shared<QImage>(surface->Materialize());
+    else
+#endif
+        image=frame->GetImage();
 	if (!image || image->isNull())
 		return;
 

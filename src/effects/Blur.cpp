@@ -19,6 +19,11 @@
 #include <QRect>
 
 #include <algorithm>
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -81,9 +86,6 @@ void Blur::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Blur::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	// Get the frame's image
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-
 	// Get the current blur radius
 	int horizontal_radius_value = horizontal_radius.GetValue(frame_number);
 	int vertical_radius_value = vertical_radius.GetValue(frame_number);
@@ -91,31 +93,47 @@ std::shared_ptr<openshot::Frame> Blur::GetFrame(std::shared_ptr<openshot::Frame>
 	int iteration_value = iterations.GetInt(frame_number);
 	(void) sigma_value;
 
-	int w = frame_image->width();
-	int h = frame_image->height();
+	int w = frame->GetWidth();
+	int h = frame->GetHeight();
 	if (w <= 0 || h <= 0 || iteration_value <= 0)
 		return frame;
 
 	// Define area we're working on in terms of a QRect with QMargins applied.
-	QRect area(QPoint(0, 0), frame_image->size());
+	QRect area(0,0,w,h);
 	area = area.marginsRemoved({
 		int(clamp_margin(left.GetValue(frame_number)) * w),
 		int(clamp_margin(top.GetValue(frame_number)) * h),
 		int(clamp_margin(right.GetValue(frame_number)) * w),
 		int(clamp_margin(bottom.GetValue(frame_number)) * h)
 	});
-	area = area.intersected(QRect(QPoint(0, 0), frame_image->size()));
+	area = area.intersected(QRect(0,0,w,h));
 	if (area.isEmpty())
 		return frame;
 
+    const int horizontal_area_radius=std::min(std::max(0,horizontal_radius_value),area.width()-1);
+    const int vertical_area_radius=std::min(std::max(0,vertical_radius_value),area.height()-1);
+    if (!horizontal_area_radius && !vertical_area_radius) return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && !MaskReader() && MaskSourceId().empty()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(BlurVulkanImage(surface,area,horizontal_area_radius,vertical_area_radius,iteration_value));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan blur CPU fallback: ")+error.what());
+        }
+    }
+#endif
+    auto frame_image=frame->GetImage();
 	// Grab two copies of the image pixel data
 	QImage image_copy = frame_image->copy(area);
 	std::shared_ptr<QImage> blur_image = std::make_shared<QImage>(image_copy);
 	std::shared_ptr<QImage> frame_image_2 = std::make_shared<QImage>(image_copy);
 	const int area_w = blur_image->width();
 	const int area_h = blur_image->height();
-	const int horizontal_area_radius = std::min(std::max(0, horizontal_radius_value), std::max(0, area_w - 1));
-	const int vertical_area_radius = std::min(std::max(0, vertical_radius_value), std::max(0, area_h - 1));
 	bool blurred = false;
 
 	// Loop through each iteration

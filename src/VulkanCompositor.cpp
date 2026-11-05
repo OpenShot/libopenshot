@@ -9,6 +9,8 @@
 #endif
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <cstring>
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -25,6 +27,7 @@ extern "C" {
 #include "encode_nv12.comp.h"
 namespace openshot {
 namespace {
+std::atomic<uint64_t> pipeline_creations{0};
 void VkCheck(VkResult r, const char* operation) {
     if(r == VK_SUCCESS) return;
     ReportVulkanResult(r);
@@ -46,7 +49,9 @@ constexpr int kSlots=4;
 // its last frame is released.
 struct OutputPools {
     std::mutex mutex;
-    std::map<std::tuple<AVHWDeviceContext*,int,int,bool>,AVBufferRef*> pools;
+    struct Entry { AVBufferRef* frames=nullptr; uint64_t used=0; };
+    std::map<std::tuple<AVHWDeviceContext*,int,int,bool>,Entry> pools;
+    uint64_t clock=0;
 };
 // Never destroyed: at process exit the Windows NVIDIA driver may already be
 // unloading, and freeing Vulkan frames from a static destructor crashes it.
@@ -56,7 +61,9 @@ constexpr VkImageUsageFlags kOutputUsage=VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USA
 AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
     auto& shared=SharedPools();
     const std::lock_guard<std::mutex> lock(shared.mutex);
-    auto& pool=shared.pools[{reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12}];
+    auto& entry=shared.pools[{reinterpret_cast<AVHWDeviceContext*>(device_ref->data),w,h,encode_nv12}];
+    entry.used=++shared.clock;
+    auto& pool=entry.frames;
     if(!pool){
         AVBufferRef* frames=av_hwframe_ctx_alloc(device_ref);
         if(!frames) throw std::bad_alloc();
@@ -73,14 +80,30 @@ AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
         }
         pool=frames;
     }
+    // Resizing effects can produce a new size every frame. Keep retained pools
+    // bounded; frames still in use retain their own references to evicted pools.
+    while(shared.pools.size()>16) {
+        auto oldest=std::min_element(shared.pools.begin(),shared.pools.end(),
+            [](const auto& a,const auto& b){return a.second.used<b.second.used;});
+        av_buffer_unref(&oldest->second.frames);
+        shared.pools.erase(oldest);
+    }
     AVBufferRef* ref=av_buffer_ref(pool);
     if(!ref) throw std::bad_alloc();
     return ref;
 }
+struct EffectParameters {
+    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask
+    std::array<float,9> values{};
+    const VulkanGradeParameters* grade=nullptr;
+};
 struct Parameters {
     float matrix_x[4], matrix_y[4], coeffs[4], extra[4], clear[4];
     int sizes[4], modes[4];
+    float effect[4];
 };
+static_assert(sizeof(VulkanGradeParameters)==1045*sizeof(float), "Grading buffer must match shader scalar layout");
+static_assert(sizeof(Parameters)==128, "Vulkan guarantees 128 bytes of push constants");
 struct LockedFrame {
     AVHWFramesContext* context;
     AVVulkanFramesContext* vkcontext;
@@ -113,16 +136,44 @@ class Pipeline {
         VkCommandBuffer cmd=VK_NULL_HANDLE;
         VkFence fence=VK_NULL_HANDLE;
         bool busy=false;
+        VkBuffer grade_buffer=VK_NULL_HANDLE;
+        VkDeviceMemory grade_memory=VK_NULL_HANDLE;
+        void* grade_data=nullptr;
+        bool grade_coherent=false;
         std::vector<VkImageView> views;
         FramePtr target;
         std::vector<FramePtr> inputs;
     };
     std::array<Slot,kSlots> ring;
     int next_slot=0;
-    int width,height;
     bool encode_nv12;
+    void CreateGradeBuffer(Slot& slot) {
+        VkBufferCreateInfo buffer{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        buffer.size=sizeof(VulkanGradeParameters);
+        buffer.usage=VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        VkCheck(vkCreateBuffer(device,&buffer,nullptr,&slot.grade_buffer),"Create grading parameter buffer");
+        VkMemoryRequirements requirements;
+        vkGetBufferMemoryRequirements(device,slot.grade_buffer,&requirements);
+        VkPhysicalDeviceMemoryProperties memory;
+        vkGetPhysicalDeviceMemoryProperties(vkcontext->phys_dev,&memory);
+        uint32_t type=UINT32_MAX;
+        for(uint32_t i=0;i<memory.memoryTypeCount;++i) {
+            const auto flags=memory.memoryTypes[i].propertyFlags;
+            if((requirements.memoryTypeBits&(1u<<i)) && (flags&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+                type=i;
+                if(flags&VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) break;
+            }
+        }
+        if(type==UINT32_MAX) throw std::runtime_error("No host-visible grading parameter memory");
+        slot.grade_coherent=memory.memoryTypes[type].propertyFlags&VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        VkMemoryAllocateInfo allocation{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+        allocation.allocationSize=requirements.size;allocation.memoryTypeIndex=type;
+        VkCheck(vkAllocateMemory(device,&allocation,nullptr,&slot.grade_memory),"Allocate grading parameter memory");
+        VkCheck(vkBindBufferMemory(device,slot.grade_buffer,slot.grade_memory,0),"Bind grading parameter memory");
+        VkCheck(vkMapMemory(device,slot.grade_memory,0,VK_WHOLE_SIZE,0,&slot.grade_data),"Map grading parameters");
+    }
 public:
-    Pipeline(AVBufferRef* device_owner,int w,int h,bool encode=false):width(w),height(h),encode_nv12(encode) {
+    Pipeline(AVBufferRef* device_owner,bool encode=false):encode_nv12(encode) {
         device_ref=av_buffer_ref(device_owner);
         if(!device_ref) throw std::bad_alloc();
         device_context=reinterpret_cast<AVHWDeviceContext*>(device_ref->data);
@@ -135,24 +186,25 @@ public:
             VkCommandPoolCreateInfo ci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
             ci.queueFamilyIndex=queue_family; ci.flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             VkCheck(vkCreateCommandPool(device,&ci,nullptr,&commands),"Create command pool");
-            std::array<VkDescriptorSetLayoutBinding,5> bindings{};
-            for(int i=0;i<5;++i) {
+            std::array<VkDescriptorSetLayoutBinding,6> bindings{};
+            for(int i=0;i<6;++i) {
                 bindings[i].binding=i; bindings[i].descriptorCount=1;
-                bindings[i].descriptorType=(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                bindings[i].descriptorType=i==5?VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 bindings[i].stageFlags=VK_SHADER_STAGE_COMPUTE_BIT;
             }
             VkDescriptorSetLayoutCreateInfo di{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-            di.bindingCount=5; di.pBindings=bindings.data();
+            di.bindingCount=6; di.pBindings=bindings.data();
             VkCheck(vkCreateDescriptorSetLayout(device,&di,nullptr,&descriptors),"Create descriptors");
             VkPushConstantRange range{VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(Parameters)};
             VkPipelineLayoutCreateInfo li{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
             li.setLayoutCount=1; li.pSetLayouts=&descriptors; li.pushConstantRangeCount=1; li.pPushConstantRanges=&range;
             VkCheck(vkCreatePipelineLayout(device,&li,nullptr,&layout),"Create pipeline layout");
-            std::array<VkDescriptorPoolSize,2> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots}}};
+            std::array<VkDescriptorPoolSize,3> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,kSlots}}};
             VkDescriptorPoolCreateInfo pi{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-            pi.maxSets=kSlots; pi.poolSizeCount=2; pi.pPoolSizes=sizes.data();
+            pi.maxSets=kSlots; pi.poolSizeCount=3; pi.pPoolSizes=sizes.data();
             VkCheck(vkCreateDescriptorPool(device,&pi,nullptr,&pool),"Create descriptor pool");
             for(auto& slot:ring){
+                if(!encode_nv12) CreateGradeBuffer(slot);
                 VkDescriptorSetAllocateInfo ai{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
                 ai.descriptorPool=pool; ai.descriptorSetCount=1; ai.pSetLayouts=&descriptors;
                 VkCheck(vkAllocateDescriptorSets(device,&ai,&slot.set),"Allocate descriptors");
@@ -177,12 +229,16 @@ public:
             const auto status=vkCreateComputePipelines(device,VK_NULL_HANDLE,1,&pci,nullptr,&pipeline);
             vkDestroyShaderModule(device,module,nullptr);
             VkCheck(status,"Create affine pipeline");
+            pipeline_creations.fetch_add(1,std::memory_order_relaxed);
         }catch(...){Destroy();throw;}
     }
     ~Pipeline(){Destroy();}
     void Destroy(){
         for(auto& slot:ring){
             Retire(slot);
+            if(slot.grade_data) vkUnmapMemory(device,slot.grade_memory);
+            if(slot.grade_buffer) vkDestroyBuffer(device,slot.grade_buffer,nullptr);
+            if(slot.grade_memory) vkFreeMemory(device,slot.grade_memory,nullptr);
             if(slot.fence) vkDestroyFence(device,slot.fence,nullptr);
         }
         if(pipeline) vkDestroyPipeline(device,pipeline,nullptr);
@@ -214,7 +270,8 @@ public:
         return view;
     }
     std::shared_ptr<const FrameImage> Render(const VulkanFrameImage& input,const VulkanFrameImage* background,
-        const QTransform& matrix,double opacity,const QColor& clear,bool high_quality=false,const AVFrame* target=nullptr) {
+        int width,int height,const QTransform& matrix,double opacity,const QColor& clear,bool high_quality=false,const AVFrame* target=nullptr,
+        const EffectParameters* effect=nullptr) {
         const auto* src=input.GetFrame();
         const auto* src_fc=reinterpret_cast<const AVHWFramesContext*>(src->hw_frames_ctx->data);
         if(src_fc->device_ctx!=device_context) throw std::runtime_error("Vulkan source device mismatch");
@@ -272,6 +329,16 @@ public:
         p.clear[3]=clear.alphaF();p.clear[0]=clear.redF()*p.clear[3];p.clear[1]=clear.greenF()*p.clear[3];p.clear[2]=clear.blueF()*p.clear[3];
         p.modes[1]=back?1:0;
         p.modes[2]=high_quality?1:0;
+        if(effect) {
+            p.modes[3]=effect->mode;
+            std::copy_n(effect->values.begin(),4,p.effect);
+            if(effect->mode==3 || effect->mode==5) {
+                // Grading uses no background. Reuse clear and the unused matrix
+                // component to stay within Vulkan's guaranteed 128-byte limit.
+                std::copy_n(effect->values.begin()+4,4,p.clear);
+                p.matrix_x[3]=effect->values[8];
+            }
+        }
         int plane_count=0;
         if(src_fc->sw_format==AV_PIX_FMT_RGBA){p.modes[0]=input.IsPremultiplied()?2:3;plane_count=1;}
         else if(src_fc->sw_format==AV_PIX_FMT_NV12){p.modes[0]=1;plane_count=1;}
@@ -291,6 +358,15 @@ public:
         Slot& slot=ring[next_slot];
         next_slot=(next_slot+1)%kSlots;
         Retire(slot);
+        if(effect && effect->grade) {
+            // Each in-flight submission owns its parameters until its fence retires.
+            std::memcpy(slot.grade_data,effect->grade,sizeof(VulkanGradeParameters));
+            if(!slot.grade_coherent) {
+                VkMappedMemoryRange range{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+                range.memory=slot.grade_memory;range.size=VK_WHOLE_SIZE;
+                VkCheck(vkFlushMappedMemoryRanges(device,1,&range),"Flush grading parameters");
+            }
+        }
         // Lock in stable address order, avoiding deadlocks when frames are shared.
         std::vector<const AVFrame*> all{src,output.get()};
         if(back && back->data[0]!=src->data[0]) all.push_back(back);
@@ -335,13 +411,19 @@ public:
                 views[4]=make_view(of->img[separate?1:0],VK_FORMAT_R8G8_UNORM,separate?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_1_BIT);
             }else views[4]=make_view(of->img[0],VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_ASPECT_COLOR_BIT);
             std::array<VkDescriptorImageInfo,5> images{};
-            std::array<VkWriteDescriptorSet,5> writes{};
+            std::array<VkWriteDescriptorSet,6> writes{};
             for(int i=0;i<5;++i){
                 images[i].sampler=(i==4 || (encode_nv12 && i==3))?VK_NULL_HANDLE:sampler;images[i].imageView=views[i];images[i].imageLayout=VK_IMAGE_LAYOUT_GENERAL;
                 writes[i].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;writes[i].dstSet=set;writes[i].dstBinding=i;writes[i].descriptorCount=1;
                 writes[i].descriptorType=(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;writes[i].pImageInfo=&images[i];
             }
-            vkUpdateDescriptorSets(device,5,writes.data(),0,nullptr);
+            VkDescriptorBufferInfo grade_buffer{slot.grade_buffer,0,sizeof(VulkanGradeParameters)};
+            if(!encode_nv12) {
+                writes[5].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                writes[5].dstSet=set;writes[5].dstBinding=5;writes[5].descriptorCount=1;
+                writes[5].descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;writes[5].pBufferInfo=&grade_buffer;
+            }
+            vkUpdateDescriptorSets(device,encode_nv12?5:6,writes.data(),0,nullptr);
             VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};bi.flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             VkCheck(vkBeginCommandBuffer(cmd,&bi),"Begin affine commands");
             std::vector<VkSemaphore> semaphores;
@@ -402,36 +484,94 @@ public:
     }
 };
 }
-std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameImage> source,
-    std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,double opacity,const QColor& clear,bool high_quality){
+static std::shared_ptr<const FrameImage> RenderImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,double opacity,const QColor& clear,bool high_quality,
+    const EffectParameters* effect){
     auto src=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
     auto back=std::dynamic_pointer_cast<const VulkanFrameImage>(background);
     if(!src || (background && !back)) throw std::invalid_argument("Vulkan compositor requires Vulkan surfaces");
     if(width<=0 || height<=0) throw std::invalid_argument("Invalid compositor dimensions");
     auto* fc=reinterpret_cast<AVHWFramesContext*>(src->GetFrame()->hw_frames_ctx->data);
-    using Key=std::tuple<AVHWDeviceContext*,int,int>;
-    // Reader scaling and timeline transforms alternate output dimensions. Keep a
-    // bounded LRU so those operations do not recompile a pipeline on every frame.
+    using Key=AVHWDeviceContext*;
+    // Output dimensions are push constants, not pipeline state. Animated crop
+    // resizing must reuse the pipeline rather than compile one per frame size.
     struct CachedPipeline { std::unique_ptr<Pipeline> pipeline; uint64_t used; };
     thread_local std::map<Key,CachedPipeline> cache;
     thread_local uint64_t clock=0;
-    const Key requested{fc->device_ctx,width,height};
+    const Key requested=fc->device_ctx;
     auto found=cache.find(requested);
     if(found==cache.end()){
         if(cache.size()>=8){
             auto oldest=std::min_element(cache.begin(),cache.end(),[](const auto& a,const auto& b){return a.second.used<b.second.used;});
             cache.erase(oldest);
         }
-        found=cache.emplace(requested,CachedPipeline{std::make_unique<Pipeline>(fc->device_ref,width,height),0}).first;
+        found=cache.emplace(requested,CachedPipeline{std::make_unique<Pipeline>(fc->device_ref),0}).first;
     }
     found->second.used=++clock;
     auto& pipeline=found->second.pipeline;
-    return pipeline->Render(*src,back.get(),matrix,opacity,clear,high_quality);
+    return pipeline->Render(*src,back.get(),width,height,matrix,opacity,clear,high_quality,nullptr,effect);
+}
+std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,
+    double opacity,const QColor& clear,bool high_quality) {
+    return RenderImage(source,background,width,height,matrix,opacity,clear,high_quality,nullptr);
+}
+std::shared_ptr<const FrameImage> SaturateVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<float,4>& saturation) {
+    const int width=source->GetWidth(),height=source->GetHeight();
+    EffectParameters effect{1};
+    std::copy(saturation.begin(),saturation.end(),effect.values.begin());
+    return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> CropVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QRectF& destination,const QRectF& copy,const QRect& canvas) {
+    QTransform matrix;
+    matrix.translate(destination.x()-copy.x()-canvas.x(),destination.y()-copy.y()-canvas.y());
+    const std::array<float,4> bounds{float(destination.left()-canvas.x()),float(destination.top()-canvas.y()),
+        float(destination.right()-canvas.x()),float(destination.bottom()-canvas.y())};
+    EffectParameters effect{2};
+    std::copy(bounds.begin(),bounds.end(),effect.values.begin());
+    return RenderImage(source,nullptr,canvas.width(),canvas.height(),matrix,1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> GradeVulkanImage(std::shared_ptr<const FrameImage> source,
+    const VulkanGradeParameters& parameters) {
+    const int width=source->GetWidth(),height=source->GetHeight();
+    EffectParameters effect{3,parameters.controls,&parameters};
+    return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> MaskVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> mask,float contrast,int brightness,bool invert,bool replace) {
+    const int width=source->GetWidth(),height=source->GetHeight();
+    EffectParameters effect{4,{contrast,float(brightness),float(invert),float(replace)}};
+    return RenderImage(source,mask,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> BlurVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QRect& area,int horizontal,int vertical,int iterations) {
+    const int width=source->GetWidth(),height=source->GetHeight();
+    // Blur samples premultiplied RGBA byte values, as the CPU implementation does.
+    auto rgba=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
+    if(!rgba) throw std::invalid_argument("Blur requires a Vulkan surface");
+    const auto* context=reinterpret_cast<const AVHWFramesContext*>(rgba->GetFrame()->hw_frames_ctx->data);
+    if(context->sw_format!=AV_PIX_FMT_RGBA || !rgba->IsPremultiplied())
+        source=RenderVulkanImage(source,nullptr,width,height,QTransform(),1.0);
+    auto result=source;
+    for(int i=0;i<iterations;++i) {
+        for(int direction=0;direction<2;++direction) {
+            const int radius=direction?vertical:horizontal;
+            if(radius<=0) continue;
+            EffectParameters effect{5,{float(radius),float(direction),float(area.left()),float(area.top()),
+                float(area.right()),float(area.bottom())}};
+            result=RenderImage(result,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
+        }
+    }
+    // QPainter paints the blurred region over the original, including alpha.
+    EffectParameters region{2,{float(area.left()),float(area.top()),float(area.right()+1),float(area.bottom()+1)}};
+    return RenderImage(result,source,width,height,QTransform(),1.0,Qt::transparent,false,&region);
 }
 namespace {
 // Its ring slots keep recent NV12 frames, which NVENC export maps into CUDA.
 thread_local std::unique_ptr<Pipeline> nv12_pipeline;
-thread_local std::tuple<AVHWDeviceContext*,int,int> nv12_key{};
+thread_local AVHWDeviceContext* nv12_key=nullptr;
 }
 std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const FrameImage> source, const AVFrame* target) {
     auto src=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
@@ -439,13 +579,15 @@ std::shared_ptr<const FrameImage> ConvertVulkanToNV12(std::shared_ptr<const Fram
     const auto* frame=src->GetFrame();
     if(frame->width%2 || frame->height%2) throw std::invalid_argument("NV12 export requires even dimensions");
     auto* fc=reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data);
-    const std::tuple<AVHWDeviceContext*,int,int> requested{fc->device_ctx,frame->width,frame->height};
+    const auto requested=fc->device_ctx;
     if(!nv12_pipeline || nv12_key!=requested){
-        nv12_pipeline=std::make_unique<Pipeline>(fc->device_ref,frame->width,frame->height,true);
+        nv12_pipeline=std::make_unique<Pipeline>(fc->device_ref,true);
         nv12_key=requested;
     }
-    return nv12_pipeline->Render(*src,nullptr,QTransform(),1.0,Qt::black,false,target);
+    return nv12_pipeline->Render(*src,nullptr,frame->width,frame->height,QTransform(),1.0,Qt::black,false,target);
 }
+
+uint64_t VulkanPipelineCreationCount() { return pipeline_creations.load(std::memory_order_relaxed); }
 
 void ReleaseVulkanMemory() {
     // Free CUDA-mapped NV12 frames while CUDA is loaded, not at process exit.
@@ -456,7 +598,7 @@ void ReleaseVulkanMemory() {
 #endif
     auto& shared=SharedPools();
     const std::lock_guard<std::mutex> lock(shared.mutex);
-    for(auto& item:shared.pools) av_buffer_unref(&item.second);
+    for(auto& item:shared.pools) av_buffer_unref(&item.second.frames);
     shared.pools.clear();
 }
 

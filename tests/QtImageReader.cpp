@@ -13,6 +13,7 @@
 #include "openshot_catch.h"
 
 #include <QGuiApplication>
+#include <QTemporaryDir>
 #include <sstream>
 
 #include "QtImageReader.h"
@@ -155,4 +156,30 @@ TEST_CASE( "Max_Decode_Size_SVG_QtImageReader", "[libopenshot][qtimagereader]" )
 	CHECK(limited->GetHeight() == 128);
 
 	r.Close();
+}
+
+TEST_CASE("Artwork resolution follows maximum animation scale and preview size", "[libopenshot][qtimagereader]") {
+    QTemporaryDir directory;
+    const auto path=directory.filePath("large.png");
+    QImage image(1024,1024,QImage::Format_RGBA8888_Premultiplied);
+    image.fill(Qt::red);
+    REQUIRE(image.save(path));
+    QtImageReader reader(path.toStdString());
+    Clip clip(&reader);
+    clip.scale_x.AddPoint(1,1.0,LINEAR);
+    clip.scale_x.AddPoint(10,2.0,LINEAR);
+    clip.scale_y=clip.scale_x;
+    Timeline timeline(128,128,Fraction(24,1),48000,2,LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    clip.Reader()->Open();
+    auto first=reader.GetFrame(1)->GetImage();
+    CHECK(first->size()==QSize(256,256));
+    CHECK(reader.GetFrame(8)->GetImage()->cacheKey()==first->cacheKey());
+    clip.scale_x.AddPoint(10,4.0,LINEAR);
+    clip.scale_y=clip.scale_x;
+    CHECK(reader.GetFrame(1)->GetWidth()==512);
+    timeline.preview_width=timeline.preview_height=64;
+    CHECK(reader.GetFrame(1)->GetWidth()==256);
+    timeline.Close();
 }

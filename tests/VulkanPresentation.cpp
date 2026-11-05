@@ -9,6 +9,7 @@
 #include "Qt/VulkanOpenGLPresenter.h"
 #include <QApplication>
 #include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QOpenGLWidget>
 #include <QPainter>
 #include <QThread>
@@ -21,6 +22,7 @@ class Preview : public QOpenGLWidget {
 public:
     openshot::VulkanOpenGLPresenter presenter{reinterpret_cast<uintptr_t>(this)};
     bool nativeDraw = false;
+    bool textureStatePreserved = false;
     void initializeGL() override {
         auto* current = context();
         typedef const GLubyte* (APIENTRYP GetString)(GLenum);
@@ -37,7 +39,22 @@ public:
         QPainter painter(this);
         painter.fillRect(rect(), Qt::blue);
         painter.beginNativePainting();
+        // Qt also uploads textures for popup labels and screenshot overlays.
+        // Native drawing must leave its texture binding intact.
+        auto* gl = context()->functions();
+        GLuint qtTexture = 0;
+        gl->glGenTextures(1, &qtTexture);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, qtTexture);
+        gl->glActiveTexture(GL_TEXTURE1);
         nativeDraw = presenter.Draw(0, 0, width() * devicePixelRatioF(), height() * devicePixelRatioF());
+        GLint active = 0, binding = 0;
+        gl->glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &binding);
+        textureStatePreserved = binding == GLint(qtTexture) && active == GL_TEXTURE1;
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
+        gl->glDeleteTextures(1, &qtTexture);
         painter.endNativePainting();
         painter.fillRect(QRect(0, 0, 20, 20), Qt::green);
     }
@@ -144,6 +161,7 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
         REQUIRE(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
     }
     REQUIRE(widget.nativeDraw);
+    CHECK(widget.textureStatePreserved);
     CHECK(widget.presenter.NativeDraws() >= 64);
     CHECK(widget.presenter.FallbackFrames() == 0);
     CHECK(widget.presenter.FallbackReason().empty());
