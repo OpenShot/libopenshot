@@ -235,13 +235,15 @@ void main() {
         }
     }
     if(p.modes.w==7) {
-        // EffectBase::BlendWithMask: mix input (background) and result by mask gray.
+        // EffectBase::BlendWithMask: mix input (background) and result by mask
+        // gray. The table holds the factor, then its inverse, per gray value.
         ivec4 effected=ivec4(round(front*255.0)),original=ivec4(round(back*255.0));
         ivec4 mask=ivec4(round(texelFetch(mask_tex,pixel,0)*255.0));
         int gray=(mask.r*11+mask.g*16+mask.b*5)/32;
-        if(p.effect.x!=0.0) gray=255-gray;
         precise vec4 mixed=vec4(original)*value(256+gray)+vec4(effected)*value(gray);
         front=floor(mixed)/255.0;
+        // Drive-amount masks keep the input's alpha.
+        if(p.effect.x!=0.0) front.a=float(original.a)/255.0;
     }
     if(p.modes.w>=3) back=vec4(0);
     imageStore(output_img,pixel,front+back*(1-front.a));

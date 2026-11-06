@@ -1024,7 +1024,16 @@ TEST_CASE("Vulkan effect masks blend on the GPU like the CPU", "[vulkan][hardwar
     openshot::Crop crop;
     crop.left=openshot::Keyframe(0.25);
     crop.bottom=openshot::Keyframe(0.3);
-    const std::vector<std::pair<openshot::EffectBase*,int>> effects{{&crop,0},{&grade,1},{&saturation,2},{&lut,1}};
+    // Saturation and Blur also have a "drive amount" mask mode.
+    openshot::Saturation driven_saturation;
+    driven_saturation.saturation=openshot::Keyframe(0.0);
+    driven_saturation.mask_mode=openshot::SATURATION_MASK_DRIVE_AMOUNT;
+    openshot::Blur driven_blur;
+    driven_blur.horizontal_radius=openshot::Keyframe(4.0);
+    driven_blur.vertical_radius=openshot::Keyframe(2.0);
+    driven_blur.mask_mode=openshot::BLUR_MASK_DRIVE_AMOUNT;
+    const std::vector<std::pair<openshot::EffectBase*,int>> effects{{&crop,0},{&grade,1},{&saturation,2},{&lut,1},
+        {&driven_saturation,2},{&driven_blur,1}};
     for (const auto& [effect,tolerance] : effects) {
         effect->MaskReader(new openshot::QtImageReader(path.toStdString()));
         for (bool invert : {false,true}) {
@@ -1129,4 +1138,65 @@ TEST_CASE("Masked clip grading with a LUT and scopes stays on Vulkan", "[vulkan]
     CHECK(metrics["render_cpu"].asUInt64()==0);
     clip.RemoveEffect(&grade);
     timeline.Close();
+}
+
+TEST_CASE("Video masks stay on Vulkan for Mask and effect masks", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    // Scale a 720p decoded mask down to the frame on the GPU, for the Mask
+    // effect's wipe and for the common effect mask.
+    const QImage pixels=EffectPixels(320,180);
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Mask wipe;
+    wipe.MaskReader(new openshot::FFmpegReader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4"));
+    openshot::ColorGrade grade;
+    grade.exposure=openshot::Keyframe(1.0);
+    grade.MaskReader(new openshot::FFmpegReader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4"));
+    // These frames have detailed artwork; the trailer opens on black.
+    const std::vector<int> numbers{300,700};
+    {
+        openshot::FFmpegReader probe(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+        probe.Open();
+        for (int number : numbers) {
+            auto frame=probe.GetFrame(number);
+            REQUIRE(frame->GetDeferredImage());
+            const auto image=frame->GetImage();
+            int lowest=255,highest=0;
+            for (int y=0; y<image->height(); y+=8)
+                for (int x=0; x<image->width(); x+=8) {
+                    const int gray=qGray(image->pixel(x,y));
+                    lowest=std::min(lowest,gray); highest=std::max(highest,gray);
+                }
+            REQUIRE(highest-lowest>100);
+        }
+    }
+    for (auto* effect : std::initializer_list<openshot::EffectBase*>{&wipe,&grade}) {
+        for (int number : numbers) {
+            // GPU first: the CPU run reads the reader's cached mask frames back.
+            auto gpu=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
+            gpu->AddDeferredImage(source);
+            const auto readbacks=openshot::VulkanFrameReadbackCount();
+            effect->ProcessFrame(gpu,number);
+            INFO(effect->info.class_name << " frame=" << number);
+            REQUIRE(gpu->GetDeferredImage());
+            CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+            auto cpu=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
+            cpu->AddImage(std::make_shared<QImage>(pixels.copy()));
+            ProcessCpuEffect(*effect,cpu,number);
+            // The GPU scales the mask with its own filter, so compare on average.
+            auto expected=cpu->GetImage(),actual=gpu->GetImage();
+            double total=0.0;
+            for (int y=0; y<actual->height(); ++y)
+                for (int x=0; x<actual->width()*4; ++x)
+                    total+=std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x]));
+            const double mean=total/(actual->width()*actual->height()*4.0);
+            double changed=0.0;
+            for (int y=0; y<actual->height(); ++y)
+                for (int x=0; x<actual->width()*4; ++x)
+                    changed+=std::abs(int(pixels.constScanLine(y)[x])-int(actual->constScanLine(y)[x]));
+            changed/=actual->width()*actual->height()*4.0;
+            INFO("mean byte error=" << mean << " mean change=" << changed);
+            CHECK(changed>0.5);
+            CHECK(mean<=2.0);
+        }
+    }
 }

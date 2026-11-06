@@ -41,6 +41,7 @@ namespace openshot
 	{
 	protected:
 		bool RendersOnVulkan() const override { return true; }
+		bool MaskDrivesAmount(int64_t frame_number) const override { return UseCustomMaskBlend(frame_number); }
 
 	private:
 		/// Init effect settings

@@ -638,18 +638,32 @@ static std::shared_ptr<const FrameImage> PremultipliedRGBA(std::shared_ptr<const
     return RenderVulkanImage(source,nullptr,source->GetWidth(),source->GetHeight(),QTransform(),1.0);
 }
 std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const FrameImage> original,
-    std::shared_ptr<const FrameImage> effected,std::shared_ptr<const FrameImage> mask,bool invert) {
-    // GPU division is not correctly rounded; share the CPU's exact factors.
-    static const auto factors=[]{
-        auto table=std::make_shared<std::vector<float>>(512);
-        for(int gray=0;gray<256;++gray) {
-            (*table)[gray]=static_cast<float>(gray)/255.0f;
-            (*table)[256+gray]=1.0f-(*table)[gray];
+    std::shared_ptr<const FrameImage> effected,std::shared_ptr<const FrameImage> mask,bool invert,bool drive) {
+    // GPU division is not correctly rounded, so share the CPU's exact factors
+    // (and inverses) per mask gray value, for each blend variant.
+    static const auto tables=[]{
+        std::array<std::shared_ptr<const std::vector<float>>,4> result;
+        for(int variant=0;variant<4;++variant) {
+            const bool flip=variant&1,squared=variant&2;
+            auto table=std::make_shared<std::vector<float>>(512);
+            for(int gray=0;gray<256;++gray) {
+                float factor;
+                if(squared) {
+                    // Blur and Saturation "drive amount" mode.
+                    factor=static_cast<float>(gray)/255.0f;
+                    if(flip) factor=1.0f-factor;
+                    factor=factor*factor;
+                } else factor=static_cast<float>(flip?255-gray:gray)/255.0f;
+                (*table)[gray]=factor;
+                (*table)[256+gray]=1.0f-factor;
+            }
+            result[variant]=table;
         }
-        return std::shared_ptr<const std::vector<float>>(table);
+        return result;
     }();
+    const auto& factors=tables[(invert?1:0)|(drive?2:0)];
     auto mask_surface=std::dynamic_pointer_cast<const VulkanFrameImage>(PremultipliedRGBA(mask));
-    EffectParameters effect{7,{invert?1.0f:0.0f},factors->data(),factors->size()*sizeof(float),factors};
+    EffectParameters effect{7,{drive?1.0f:0.0f},factors->data(),factors->size()*sizeof(float),factors};
     effect.mask=mask_surface.get();
     return RenderImage(effected,PremultipliedRGBA(original),effected->GetWidth(),effected->GetHeight(),
         QTransform(),1.0,Qt::transparent,false,&effect);

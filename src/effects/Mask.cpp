@@ -65,13 +65,13 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
     if (VulkanRenderingEnabled() && MaskSourceId().empty()) {
         try {
-            auto mask=ResolveReaderMaskImage(frame->GetWidth(),frame->GetHeight(),frame_number);
-            if (!mask || mask->isNull()) return frame;
+            auto mask=ResolveReaderMaskSurface(frame->GetWidth(),frame->GetHeight(),frame_number);
+            if (!mask) return frame;
             auto surface=frame->GetDeferredImage();
             if (!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
             if (surface) {
                 const float factor=20.0f/std::max(0.5f,20.0f-float(contrast.GetValue(frame_number)));
-                frame->AddDeferredImage(MaskVulkanImage(surface,UploadVulkanImage(*mask),factor,
+                frame->AddDeferredImage(MaskVulkanImage(surface,mask,factor,
                     int(255*brightness.GetValue(frame_number)),mask_invert,replace_image));
                 return frame;
             }

@@ -38,8 +38,9 @@ std::shared_ptr<const FrameImage> GradeVulkanImage(std::shared_ptr<const FrameIm
 std::shared_ptr<const FrameImage> LookupVulkanImage(std::shared_ptr<const FrameImage> source,
     std::shared_ptr<const std::vector<float>> table, int size, bool cube, const std::array<float,3>& intensity);
 /// Blend an effect result over its input by a grayscale mask, as EffectBase does.
+/// drive selects the squared "drive amount" response, which keeps the input alpha.
 std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const FrameImage> original,
-    std::shared_ptr<const FrameImage> effected, std::shared_ptr<const FrameImage> mask, bool invert);
+    std::shared_ptr<const FrameImage> effected, std::shared_ptr<const FrameImage> mask, bool invert, bool drive = false);
 /// Count FrameScope video data for a region on the GPU. Returns luma, red,
 /// green and blue histograms (256 each), the same four waveforms
 /// (columns x bins each), then the vectorscope (size x size).
