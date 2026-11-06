@@ -43,19 +43,36 @@ public:
         // Qt also uploads textures for popup labels and screenshot overlays.
         // Native drawing must leave its texture binding intact.
         auto* gl = context()->functions();
-        GLuint qtTexture = 0;
-        gl->glGenTextures(1, &qtTexture);
+        GLuint qtTextures[2] = {};
+        gl->glGenTextures(2, qtTextures);
         gl->glActiveTexture(GL_TEXTURE0);
-        gl->glBindTexture(GL_TEXTURE_2D, qtTexture);
+        gl->glBindTexture(GL_TEXTURE_2D, qtTextures[0]);
+#ifdef __APPLE__
+        GLuint qtRectangle = 0;
+        gl->glGenTextures(1, &qtRectangle);
+        gl->glBindTexture(GL_TEXTURE_RECTANGLE, qtRectangle);
+#endif
         gl->glActiveTexture(GL_TEXTURE1);
+        gl->glBindTexture(GL_TEXTURE_2D, qtTextures[1]);
         nativeDraw = presenter.Draw(0, 0, width() * devicePixelRatioF(), height() * devicePixelRatioF());
-        GLint active = 0, binding = 0;
+        GLint active = 0, binding = 0, otherBinding = 0;
         gl->glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+        gl->glActiveTexture(GL_TEXTURE1);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &otherBinding);
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
         gl->glActiveTexture(GL_TEXTURE0);
         gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &binding);
-        textureStatePreserved = binding == GLint(qtTexture) && active == GL_TEXTURE1;
+        textureStatePreserved = binding == GLint(qtTextures[0]) && active == GL_TEXTURE1 &&
+                                otherBinding == GLint(qtTextures[1]);
+#ifdef __APPLE__
+        GLint rectangle = 0;
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_RECTANGLE, &rectangle);
+        textureStatePreserved = textureStatePreserved && rectangle == GLint(qtRectangle);
+        gl->glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+        gl->glDeleteTextures(1, &qtRectangle);
+#endif
         gl->glBindTexture(GL_TEXTURE_2D, 0);
-        gl->glDeleteTextures(1, &qtTexture);
+        gl->glDeleteTextures(2, qtTextures);
         painter.endNativePainting();
         painter.fillRect(QRect(0, 0, 20, 20), Qt::green);
     }
@@ -158,6 +175,7 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
         INFO("frame=" << i << " top=" << image.pixelColor(image.width()/2, image.height()/4).name().toStdString()
              << " bottom=" << image.pixelColor(image.width()/2, 3*image.height()/4).name().toStdString());
         REQUIRE(widget.nativeDraw);
+        CHECK(widget.textureStatePreserved);
         REQUIRE(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
         REQUIRE(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
     }
@@ -216,6 +234,7 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     CHECK_NOTHROW(widget.presenter.Present(frame));
     CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
     CHECK(widget.presenter.FallbackReason().find("device lost") != std::string::npos);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
     widget.presenter.Clear();
     CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
     CHECK_FALSE(widget.presenter.FallbackReason().empty());

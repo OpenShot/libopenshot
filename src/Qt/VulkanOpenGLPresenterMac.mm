@@ -5,6 +5,8 @@
 #include "VideoRenderer.h"
 #include "../VulkanFrameImage.h"
 #include "../VulkanCompositor.h"
+#include "../GpuDevices.h"
+#include "../Logger.h"
 #include "../MacVulkanInterop.h"
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -25,6 +27,25 @@ extern "C" {
 }
 namespace openshot {
 namespace {
+// Qt shares the texture units with native painting. Restore both targets used
+// by Qt and the IOSurface bridge, including when importing or drawing fails.
+class TextureBindingGuard {
+    QOpenGLFunctions* gl;
+    GLint active = GL_TEXTURE0, texture = 0, rectangle = 0;
+public:
+    explicit TextureBindingGuard(QOpenGLFunctions* functions) : gl(functions) {
+        gl->glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_RECTANGLE, &rectangle);
+    }
+    ~TextureBindingGuard() {
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, texture);
+        gl->glBindTexture(GL_TEXTURE_RECTANGLE, rectangle);
+        gl->glActiveTexture(active);
+    }
+};
 bool SameDevice(CGLContextObj context, uint64_t registry) {
     if (!context || !registry) return false;
     GLint current = 0;
@@ -60,8 +81,16 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
     void fallback() {
         if (!fallback_delivered && frame && widget) {
             fallback_delivered = true; ++fallback_frames; display_surface.reset();
-            const QImage image = *frame->GetImage();
-            QMetaObject::invokeMethod(widget, "present", Qt::QueuedConnection, Q_ARG(QImage, image));
+            // A dead GPU cannot provide CPU pixels. The next rendered frame
+            // will use the CPU path instead of reading this stale surface.
+            if (VulkanDeviceLost() && frame->GetDeferredImage()) return;
+            try {
+                const QImage image = *frame->GetImage();
+                QMetaObject::invokeMethod(widget, "present", Qt::QueuedConnection, Q_ARG(QImage, image));
+            } catch (const std::exception& error) {
+                last_failure = std::string("GPU preview fallback could not read the frame: ") + error.what();
+                Logger::Instance()->Log(last_failure, Logger::LevelWarning);
+            }
         }
     }
     void PresentFrame(const std::shared_ptr<Frame>& value) override {
@@ -83,6 +112,8 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         if (!context || !cgl) return unavailable("No current Qt/CGL OpenGL context");
         if (!frame || !widget) return unavailable("No video frame or preview widget");
         if (fallback_delivered) return false;
+        if (VulkanDeviceLost())
+            return unavailable("GPU device lost (driver reset or GPU timeout); the CPU is used for the rest of this session");
         auto surface = display_surface ? display_surface : std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage());
         if (!surface) return unavailable("Frame cannot be presented as a shared Mac Vulkan surface");
         auto* fc = reinterpret_cast<const AVHWFramesContext*>(surface->GetFrame()->hw_frames_ctx->data);
@@ -102,6 +133,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         if (!io) return unavailable("Core Video pixel buffer has no IOSurface");
         auto* gl = context->functions();
         auto* extra = context->extraFunctions();
+        TextureBindingGuard textureBinding(gl);
         const bool core = context->format().profile() == QSurfaceFormat::CoreProfile;
         QOpenGLShaderProgram program;
         const char* vertex = core ?
