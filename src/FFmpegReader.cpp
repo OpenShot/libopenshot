@@ -1337,7 +1337,7 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 		// Prevent async calls to the remainder of this code
 		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
-#if USE_HW_ACCEL
+#if USE_HW_ACCEL && defined(OPENSHOT_ENABLE_GPU_FRAME)
 		// A lost GPU device cannot decode; reopen this reader on the CPU.
 		if (hw_de_on && !force_sw_decode && VulkanDeviceLost()) {
 			hw_decode_failed = true;

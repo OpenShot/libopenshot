@@ -2112,10 +2112,15 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 			}
 		}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		const bool vulkan_encoder = hw_en_av_pix_fmt == AV_PIX_FMT_VULKAN;
+#else
+		const bool vulkan_encoder = false;  // Older FFmpeg has no AV_PIX_FMT_VULKAN
+#endif
 		switch (video_codec_ctx->codec_id) {
 			case AV_CODEC_ID_H264:
 				video_codec_ctx->max_b_frames = 0;  // At least this GPU doesn't support b-frames
-				if (hw_en_av_pix_fmt != AV_PIX_FMT_VULKAN) {
+				if (!vulkan_encoder) {
 					video_codec_ctx->profile = AV_PROFILE_H264_CONSTRAINED_BASELINE;
 					av_opt_set(video_codec_ctx->priv_data, "preset", "slow", 0);
 					if (hw_en_av_pix_fmt == AV_PIX_FMT_CUDA)
