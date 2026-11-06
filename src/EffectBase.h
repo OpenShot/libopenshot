@@ -106,6 +106,9 @@ namespace openshot
 		/// Optional override for effects that apply mask processing inside GetFrame().
 		virtual bool HandlesMaskInternally() const { return false; }
 
+		/// Effects with a Vulkan path keep masked GPU frames on the GPU.
+		virtual bool RendersOnVulkan() const { return false; }
+
 	public:
 		/// Parent effect (which properties will set this effect properties)
 		EffectBase* parentEffect;

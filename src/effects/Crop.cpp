@@ -99,7 +99,7 @@ std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame>
 	}
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-    if (VulkanRenderingEnabled() && !MaskReader() && MaskSourceId().empty()) {
+    if (VulkanRenderingEnabled()) {
         const QRect canvas = resize ? paint_r.toRect() : QRect(QPoint(0,0),sz);
         if (canvas.width()>0 && canvas.height()>0 && paint_r.width()>0 && paint_r.height()>0) {
             try {

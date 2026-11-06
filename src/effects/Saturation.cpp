@@ -129,7 +129,7 @@ void Saturation::init_effect_details()
 std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-    if (VulkanRenderingEnabled() && !MaskReader() && MaskSourceId().empty()) {
+    if (VulkanRenderingEnabled()) {
         try {
             auto surface = frame->GetDeferredImage();
             if (!surface && ParentClip() && frame->has_image_data) surface = UploadVulkanImage(*frame->GetImage());

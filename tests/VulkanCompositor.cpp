@@ -18,6 +18,10 @@
 #include "effects/Saturation.h"
 #include "effects/Crop.h"
 #include "effects/ColorGrade.h"
+#include "effects/ColorMap.h"
+#include <QFile>
+#include <QTextStream>
+#include <cmath>
 #include "effects/Mask.h"
 #include "effects/Blur.h"
 #include "QtImageReader.h"
@@ -932,4 +936,197 @@ TEST_CASE("Scope analysis preserves the cached GPU preview surface", "[vulkan][h
     scope.SetFrame(frame);
     CHECK(scope.HasVideo());
     CHECK(frame->GetDeferredImage()==source);
+}
+
+namespace {
+QImage EffectPixels(int width=32,int height=16) {
+    QImage pixels(width,height,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<height; ++y)
+        for (int x=0; x<width; ++x)
+            pixels.setPixelColor(x,y,QColor((x*37)%256,(y*53)%256,(x*19+y*11)%256,(x%4)*85));
+    return pixels;
+}
+// Nonlinear .cube table with a custom input domain.
+std::string WriteCube(const QTemporaryDir& directory,bool cube,int size) {
+    const auto path=directory.filePath(cube?"grade3d.cube":"grade1d.cube");
+    QFile file(path);
+    REQUIRE(file.open(QIODevice::WriteOnly|QIODevice::Text));
+    QTextStream out(&file);
+    out << "TITLE \"test\"\n" << (cube?"LUT_3D_SIZE ":"LUT_1D_SIZE ") << size << "\n"
+        << "DOMAIN_MIN 0.1 0.0 0.05\nDOMAIN_MAX 0.9 1.0 1.0\n";
+    const int entries=cube?size*size*size:size;
+    for (int i=0; i<entries; ++i) {
+        const float r=float(i%size)/float(size-1);
+        const float g=float(cube?(i/size)%size:i)/float(size-1);
+        const float b=float(cube?i/(size*size):i)/float(size-1);
+        out << r*r << ' ' << std::sqrt(g) << ' ' << (1.0f-0.8f*b) << '\n';
+    }
+    return path.toStdString();
+}
+}
+
+TEST_CASE("Vulkan LUTs match CPU ColorMap for 1D and 3D tables", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir directory;
+    const QImage pixels=EffectPixels();
+    auto source=openshot::UploadVulkanImage(pixels);
+    for (bool cube : {false,true}) {
+        openshot::ColorMap effect(WriteCube(directory,cube,cube?5:7));
+        effect.intensity.AddPoint(1,0.2,openshot::LINEAR);
+        effect.intensity.AddPoint(9,1.0,openshot::LINEAR);
+        effect.intensity_g=openshot::Keyframe(0.5);
+        for (int number : {1,5,9}) {
+            INFO("cube=" << cube);
+            CheckVulkanEffect(effect,pixels,source,number,1);
+        }
+    }
+}
+
+TEST_CASE("Vulkan grading applies its LUT without leaving the GPU", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir directory;
+    const QImage pixels=EffectPixels();
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::ColorGrade effect;
+    Json::Value settings;
+    settings["lut_path"]=WriteCube(directory,true,5);
+    settings["lut_intensity"]=openshot::Keyframe(0.8).JsonValue();
+    effect.SetJsonValue(settings);
+    effect.exposure.AddPoint(1,-0.5,openshot::LINEAR);
+    effect.exposure.AddPoint(9,0.5,openshot::LINEAR);
+    effect.saturation=openshot::Keyframe(1.3);
+    for (int number : {1,5,9}) CheckVulkanEffect(effect,pixels,source,number,2);
+    // A neutral grade applies only the LUT.
+    effect.exposure=openshot::Keyframe(0.0);
+    effect.saturation=openshot::Keyframe(1.0);
+    CheckVulkanEffect(effect,pixels,source,1,1);
+}
+
+TEST_CASE("Vulkan effect masks blend on the GPU like the CPU", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir directory;
+    const auto path=directory.filePath("mask.png");
+    QImage mask(20,10,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0; y<mask.height(); ++y)
+        for (int x=0; x<mask.width(); ++x)
+            mask.setPixelColor(x,y,QColor(x*13,y*25,(x*y*7)%256));
+    REQUIRE(mask.save(path));
+    const QImage pixels=EffectPixels();
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::ColorGrade grade;
+    grade.exposure=openshot::Keyframe(0.7);
+    grade.temperature=openshot::Keyframe(-0.4);
+    openshot::Saturation saturation;
+    saturation.saturation=openshot::Keyframe(0.0);
+    QTemporaryDir tables;
+    openshot::ColorMap lut(WriteCube(tables,true,5));
+    // Crop is byte exact on its own, so it checks the blend exactly.
+    openshot::Crop crop;
+    crop.left=openshot::Keyframe(0.25);
+    crop.bottom=openshot::Keyframe(0.3);
+    const std::vector<std::pair<openshot::EffectBase*,int>> effects{{&crop,0},{&grade,1},{&saturation,2},{&lut,1}};
+    for (const auto& [effect,tolerance] : effects) {
+        effect->MaskReader(new openshot::QtImageReader(path.toStdString()));
+        for (bool invert : {false,true}) {
+            effect->mask_invert=invert;
+            INFO(effect->info.class_name << " invert=" << invert);
+            CheckVulkanEffect(*effect,pixels,source,1,tolerance);
+        }
+    }
+}
+
+TEST_CASE("Vulkan scopes count on the GPU like the CPU", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels=EffectPixels(48,24);
+    pixels.setPixelColor(1,1,QColor(255,255,255));
+    pixels.setPixelColor(2,1,QColor(0,0,0));
+    pixels.setPixelColor(5,1,QColor(255,10,250));
+    auto source=openshot::UploadVulkanImage(pixels);
+    for (bool region : {false,true}) {
+        for (int columns : {20,64}) {
+            openshot::FrameScope cpu,gpu;
+            for (auto* scope : {&cpu,&gpu}) {
+                scope->SetWaveformColumns(columns);
+                scope->SetVectorscopeSize(64);
+                if (region) scope->SetVideoRegionNormalized(0.2f,0.1f,0.5f,0.7f);
+            }
+            auto cpu_frame=std::make_shared<openshot::Frame>(1,pixels.width(),pixels.height(),"transparent");
+            cpu_frame->AddImage(std::make_shared<QImage>(pixels.copy()));
+            auto gpu_frame=std::make_shared<openshot::Frame>(1,pixels.width(),pixels.height(),"transparent");
+            gpu_frame->AddDeferredImage(source);
+            cpu.SetFrame(cpu_frame);
+            const auto readbacks=openshot::VulkanFrameReadbackCount();
+            gpu.SetFrame(gpu_frame);
+            INFO("region=" << region << " columns=" << columns);
+            CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+            CHECK(gpu_frame->GetDeferredImage()==source);
+            REQUIRE(gpu.HasVideo());
+            CHECK(gpu.GetVideoHistogramLumaBins()==cpu.GetVideoHistogramLumaBins());
+            CHECK(gpu.GetVideoHistogramRedBins()==cpu.GetVideoHistogramRedBins());
+            CHECK(gpu.GetVideoHistogramGreenBins()==cpu.GetVideoHistogramGreenBins());
+            CHECK(gpu.GetVideoHistogramBlueBins()==cpu.GetVideoHistogramBlueBins());
+            CHECK(gpu.GetVideoWaveformLumaBins()==cpu.GetVideoWaveformLumaBins());
+            CHECK(gpu.GetVideoWaveformRedBins()==cpu.GetVideoWaveformRedBins());
+            CHECK(gpu.GetVideoWaveformGreenBins()==cpu.GetVideoWaveformGreenBins());
+            CHECK(gpu.GetVideoWaveformBlueBins()==cpu.GetVideoWaveformBlueBins());
+            CHECK(gpu.GetVideoVectorscopeBins()==cpu.GetVideoVectorscopeBins());
+            CHECK(gpu.GetVideoClippedShadows()==cpu.GetVideoClippedShadows());
+            CHECK(gpu.GetVideoClippedHighlights()==cpu.GetVideoClippedHighlights());
+            CHECK(gpu.GetVideoClippedRed()==cpu.GetVideoClippedRed());
+            CHECK(gpu.GetVideoClippedGreen()==cpu.GetVideoClippedGreen());
+            CHECK(gpu.GetVideoClippedBlue()==cpu.GetVideoClippedBlue());
+            CHECK(std::abs(gpu.GetVideoAverageLuma()-cpu.GetVideoAverageLuma())<=0.5/255.0+1e-6);
+        }
+    }
+}
+
+TEST_CASE("Masked clip grading with a LUT and scopes stays on Vulkan", "[vulkan][hardware][effects]") {
+    if (!VulkanAvailable()) return;
+    QTemporaryDir directory;
+    const auto artwork=directory.filePath("artwork.png"),mask=directory.filePath("mask.png");
+    REQUIRE(EffectPixels(64,64).save(artwork));
+    QImage gradient(16,16,QImage::Format_RGBA8888);
+    for (int y=0; y<16; ++y)
+        for (int x=0; x<16; ++x)
+            gradient.setPixelColor(x,y,QColor(x*17,x*17,x*17));
+    REQUIRE(gradient.save(mask));
+    openshot::Clip clip(artwork.toStdString());
+    openshot::ColorGrade grade;
+    Json::Value settings;
+    settings["lut_path"]=WriteCube(directory,true,5);
+    settings["lut_intensity"]=openshot::Keyframe(0.6).JsonValue();
+    settings["exposure"]=openshot::Keyframe(0.4).JsonValue();
+    grade.SetJsonValue(settings);
+    grade.MaskReader(new openshot::QtImageReader(mask.toStdString()));
+    clip.AddEffect(&grade);
+    openshot::Timeline timeline(128,128,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    openshot::ResetGpuMetrics();
+    for (int i=1; i<=4; ++i) {
+        auto frame=timeline.GetFrame(i);
+        REQUIRE(frame->GetDeferredImage());
+        openshot::FrameScope scope;
+        scope.SetVideoRegionNormalized(0.25f,0.25f,0.5f,0.5f);
+        scope.SetFrame(frame);
+        REQUIRE(scope.HasVideo());
+        uint64_t counted=0;
+        for (auto bin : scope.GetVideoHistogramLumaBins()) counted+=bin;
+        CHECK(counted>0);
+    }
+    // A neutral grade applies only its LUT, still on the GPU.
+    grade.exposure=openshot::Keyframe(0.0);
+    for (int i=5; i<=6; ++i) {
+        auto frame=timeline.GetFrame(i);
+        REQUIRE(frame->GetDeferredImage());
+    }
+    Json::Reader reader;
+    Json::Value metrics;
+    REQUIRE(reader.parse(openshot::GpuMetricsSnapshot(), metrics));
+    // The clip and the still mask each upload once; nothing returns to the CPU.
+    CHECK(metrics["uploads"].asUInt64()==2);
+    CHECK(metrics["readbacks"].asUInt64()==0);
+    CHECK(metrics["render_cpu"].asUInt64()==0);
+    clip.RemoveEffect(&grade);
+    timeline.Close();
 }

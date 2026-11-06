@@ -6,6 +6,7 @@
 #include <memory>
 #include <array>
 #include <cstdint>
+#include <vector>
 #include <QColor>
 #include <QTransform>
 #include <QRectF>
@@ -31,6 +32,19 @@ struct VulkanGradeParameters {
 };
 std::shared_ptr<const FrameImage> GradeVulkanImage(std::shared_ptr<const FrameImage> source,
     const VulkanGradeParameters& parameters);
+/// Apply a 1D or 3D .cube LUT as ColorMap does. The table holds the domain
+/// minimum and maximum (3 floats each), then the RGB entries. Pass the same
+/// table object each frame so the GPU copy is reused.
+std::shared_ptr<const FrameImage> LookupVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const std::vector<float>> table, int size, bool cube, const std::array<float,3>& intensity);
+/// Blend an effect result over its input by a grayscale mask, as EffectBase does.
+std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const FrameImage> original,
+    std::shared_ptr<const FrameImage> effected, std::shared_ptr<const FrameImage> mask, bool invert);
+/// Count FrameScope video data for a region on the GPU. Returns luma, red,
+/// green and blue histograms (256 each), the same four waveforms
+/// (columns x bins each), then the vectorscope (size x size).
+std::vector<uint32_t> ScopeVulkanImage(std::shared_ptr<const FrameImage> source, const QRect& region,
+    int waveform_columns, int waveform_bins, int vectorscope_size);
 /// Apply a reader mask using the existing brightness/contrast and inversion semantics.
 std::shared_ptr<const FrameImage> MaskVulkanImage(std::shared_ptr<const FrameImage> source,
     std::shared_ptr<const FrameImage> mask, float contrast, int brightness, bool invert, bool replace);

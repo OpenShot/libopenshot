@@ -20,6 +20,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <vector>
+#include <memory>
 #include <string>
 #include <array>
 
@@ -34,6 +35,9 @@ namespace openshot
      */
     class ColorMap : public EffectBase
     {
+    protected:
+        bool RendersOnVulkan() const override { return true; }
+
     private:
         enum class LUTType { None, LUT1D, LUT3D };
 
@@ -44,6 +48,7 @@ namespace openshot
         bool needs_refresh;               ///< Reload LUT on next frame
         std::array<float, 3> lut_domain_min; ///< Input domain minimum per channel
         std::array<float, 3> lut_domain_max; ///< Input domain maximum per channel
+        std::shared_ptr<const std::vector<float>> gpu_table; ///< Domain and entries, shared with Vulkan
 
         /// Populate info fields (class_name, name, description)
         void init_effect_details();

@@ -15,6 +15,11 @@
 #include <algorithm>
 #include <omp.h>
 #include <QRegularExpression>
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -22,6 +27,7 @@ void ColorMap::load_cube_file()
 {
     if (lut_path.empty()) {
         lut_data.clear();
+        gpu_table.reset();
         lut_size = 0;
         lut_type = LUTType::None;
         needs_refresh = false;
@@ -126,7 +132,12 @@ void ColorMap::load_cube_file()
         lut_type = parsed_is_3d ? LUTType::LUT3D : LUTType::LUT1D;
         lut_domain_min = parsed_domain_min;
         lut_domain_max = parsed_domain_max;
+        auto table = std::make_shared<std::vector<float>>(lut_domain_min.begin(), lut_domain_min.end());
+        table->insert(table->end(), lut_domain_max.begin(), lut_domain_max.end());
+        table->insert(table->end(), lut_data.begin(), lut_data.end());
+        gpu_table = table;
     } else {
+        gpu_table.reset();
         lut_data.clear();
         lut_size = 0;
         lut_type = LUTType::None;
@@ -186,14 +197,30 @@ ColorMap::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
     if (lut_data.empty() || lut_size <= 0 || lut_type == LUTType::None)
         return frame;
 
-    auto image = frame->GetImage();
-    int w = image->width(), h = image->height();
-    unsigned char *pixels = image->bits();
-
     float overall = float(intensity.GetValue(frame_number));
     float tR = float(intensity_r.GetValue(frame_number)) * overall;
     float tG = float(intensity_g.GetValue(frame_number)) * overall;
     float tB = float(intensity_b.GetValue(frame_number)) * overall;
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && gpu_table) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data) surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(LookupVulkanImage(surface, gpu_table, lut_size,
+                    lut_type == LUTType::LUT3D, {tR, tG, tB}));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan LUT CPU fallback: ") + error.what());
+        }
+    }
+#endif
+
+    auto image = frame->GetImage();
+    int w = image->width(), h = image->height();
+    unsigned char *pixels = image->bits();
 
     const bool use3d = (lut_type == LUTType::LUT3D);
     const bool use1d = (lut_type == LUTType::LUT1D);

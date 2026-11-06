@@ -114,7 +114,7 @@ std::shared_ptr<openshot::Frame> Blur::GetFrame(std::shared_ptr<openshot::Frame>
     const int vertical_area_radius=std::min(std::max(0,vertical_radius_value),area.height()-1);
     if (!horizontal_area_radius && !vertical_area_radius) return frame;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-    if (VulkanRenderingEnabled() && !MaskReader() && MaskSourceId().empty()) {
+    if (VulkanRenderingEnabled()) {
         try {
             auto surface=frame->GetDeferredImage();
             if (!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());

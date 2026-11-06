@@ -5,7 +5,10 @@ layout(binding=1) uniform sampler2D plane_u;
 layout(binding=2) uniform sampler2D plane_v;
 layout(binding=3) uniform sampler2D background_tex;
 layout(binding=4, rgba8) uniform writeonly image2D output_img;
-layout(std430,binding=5) readonly buffer GradingParameters { float values[]; } grading;
+// Effect parameters and tables (float bits), or scope counters.
+layout(std430,binding=5) buffer Data { uint data[]; };
+layout(binding=6) uniform sampler2D mask_tex;
+shared uint scope_histograms[1024];
 layout(push_constant) uniform Parameters {
     vec4 matrix_x;
     vec4 matrix_y;
@@ -47,35 +50,107 @@ vec4 sample_source(sampler2D image, vec2 uv) {
     }
     return result/total;
 }
+float value(int index) { return uintBitsToFloat(data[index]); }
 vec3 wheel_bias(int wheel) {
     int start=9+wheel*3;
-    return vec3(grading.values[start],grading.values[start+1],grading.values[start+2]);
+    return vec3(value(start),value(start+1),value(start+2));
 }
 float grade_curve(int curve,float value) {
     int index=clamp(int(value*255.0+0.5),0,255);
-    return grading.values[21+curve*256+index];
+    return uintBitsToFloat(data[21+curve*256+index]);
+}
+// Premultiplied RGBA from any supported source format.
+vec4 load_source(vec2 uv) {
+    if(p.modes.x>=2) {
+        vec4 front=clamp(sample_source(plane_y,uv),0.0,1.0);
+        if(p.modes.x==3) front.rgb*=front.a;
+        else front.rgb=min(front.rgb,vec3(front.a));
+        return front;
+    }
+    float y=(sample_source(plane_y,uv).r-p.extra.y)*p.color_coeffs.x;
+    vec2 chroma=p.modes.x==1 ? sample_source(plane_u,uv).rg : vec2(sample_source(plane_u,uv).r,sample_source(plane_v,uv).r);
+    chroma-=p.extra.z;
+    return vec4(clamp(vec3(y+p.color_coeffs.y*chroma.y,
+        y+p.color_coeffs.z*chroma.x+p.color_coeffs.w*chroma.y,
+        y+p.extra.x*chroma.x),0,1),1);
+}
+// ColorMap table: domain min/max, then RGB entries.
+vec3 lut_entry(int index) { int i=6+index*3; return vec3(value(i),value(i+1),value(i+2)); }
+float lut_1d(float v,int channel,int size) {
+    if(size<=1) return value(6+channel);
+    precise float scaled=v*float(size-1);
+    int i0=int(floor(scaled)),i1=min(i0+1,size-1);
+    precise float t=scaled-float(i0);
+    int last=size*3-1;
+    return value(6+clamp(i0*3+channel,0,last))*(1.0-t)+value(6+clamp(i1*3+channel,0,last))*t;
+}
+vec3 lut_3d(vec3 v,int n) {
+    precise vec3 f=v*float(n-1);
+    ivec3 i0=ivec3(floor(f)),i1=min(i0+1,ivec3(n-1));
+    precise vec3 d=f-vec3(i0);
+    #define LUT(r,g,b) lut_entry(((b*n+g)*n+r))
+    precise vec3 c00=LUT(i0.r,i0.g,i0.b)*(1.0-d.r)+LUT(i1.r,i0.g,i0.b)*d.r;
+    precise vec3 c01=LUT(i0.r,i0.g,i1.b)*(1.0-d.r)+LUT(i1.r,i0.g,i1.b)*d.r;
+    precise vec3 c10=LUT(i0.r,i1.g,i0.b)*(1.0-d.r)+LUT(i1.r,i1.g,i0.b)*d.r;
+    precise vec3 c11=LUT(i0.r,i1.g,i1.b)*(1.0-d.r)+LUT(i1.r,i1.g,i1.b)*d.r;
+    #undef LUT
+    precise vec3 c0=c00*(1.0-d.g)+c10*d.g;
+    precise vec3 c1=c01*(1.0-d.g)+c11*d.g;
+    return c0*(1.0-d.b)+c1*d.b;
+}
+// FrameScope analysis: shared histograms per workgroup, global waveforms and
+// vectorscope. Matches FrameScope::analyze_video's byte math.
+void scope() {
+    for(uint i=gl_LocalInvocationIndex;i<1024u;i+=256u) scope_histograms[i]=0u;
+    barrier();
+    ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
+    ivec4 region=ivec4(p.effect);
+    if(all(greaterThanEqual(pixel,region.xy)) && all(lessThan(pixel,region.zw))) {
+        ivec4 c=ivec4(round(load_source((vec2(pixel)+0.5)/vec2(p.sizes.zw))*255.0));
+        if(c.a>0) {
+            const float inv255=1.0/255.0;
+            precise vec3 f;
+            ivec3 index;
+            if(c.a==255) { f=vec3(c.rgb)*inv255; index=c.rgb; }
+            else {
+                f=min(vec3(1.0),(vec3(c.rgb)*(255.0/float(c.a)))*inv255);
+                index=ivec3(f*255.0+0.5);
+            }
+            precise float luma=0.299*f.r+0.587*f.g+0.114*f.b;
+            int luma_index=int(luma*255.0+0.5);
+            int columns=int(p.clear.x),bins=int(p.clear.y),size=int(p.clear.z);
+            int column=clamp(((pixel.x-region.x)*columns)/max(1,int(p.clear.w)),0,columns-1);
+            uint plane=uint(columns*bins),wave=1024u+uint(column*bins);
+            precise float u=-0.14713*f.r-0.28886*f.g+0.43600*f.b;
+            precise float v=0.61500*f.r-0.51499*f.g-0.10001*f.b;
+            float middle=float(size-1)*0.5;
+            int vx=clamp(int(middle+(u/0.43600)*middle+0.5),0,size-1);
+            int vy=clamp(int(middle-(v/0.61500)*middle+0.5),0,size-1);
+            atomicAdd(scope_histograms[luma_index],1u);
+            atomicAdd(scope_histograms[256+index.r],1u);
+            atomicAdd(scope_histograms[512+index.g],1u);
+            atomicAdd(scope_histograms[768+index.b],1u);
+            atomicAdd(data[wave+uint(luma_index)],1u);
+            atomicAdd(data[wave+plane+uint(index.r)],1u);
+            atomicAdd(data[wave+2u*plane+uint(index.g)],1u);
+            atomicAdd(data[wave+3u*plane+uint(index.b)],1u);
+            atomicAdd(data[1024u+4u*plane+uint(vy*size+vx)],1u);
+        }
+    }
+    barrier();
+    for(uint i=gl_LocalInvocationIndex;i<1024u;i+=256u)
+        if(scope_histograms[i]!=0u) atomicAdd(data[i],scope_histograms[i]);
 }
 void main() {
+    // Scopes count instead of writing an image; every invocation reaches the barriers.
+    if(p.modes.w==8) { scope(); return; }
     ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
     if(any(greaterThanEqual(pixel,p.sizes.xy))) return;
     vec2 center=vec2(pixel)+0.5;
     vec2 src=vec2(dot(p.matrix_x.xyz,vec3(center,1)),dot(p.matrix_y.xyz,vec3(center,1)));
     vec4 front=vec4(0);
     if(all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)))) {
-        vec2 uv=src/vec2(p.sizes.zw);
-        if(p.modes.x>=2) {
-            front=sample_source(plane_y,uv);
-            front=clamp(front,0.0,1.0);
-            if(p.modes.x==3) front.rgb*=front.a;
-            else front.rgb=min(front.rgb,vec3(front.a));
-        } else {
-            float y=(sample_source(plane_y,uv).r-p.extra.y)*p.color_coeffs.x;
-            vec2 chroma=p.modes.x==1 ? sample_source(plane_u,uv).rg : vec2(sample_source(plane_u,uv).r,sample_source(plane_v,uv).r);
-            chroma-=p.extra.z;
-            front=vec4(clamp(vec3(y+p.color_coeffs.y*chroma.y,
-                y+p.color_coeffs.z*chroma.x+p.color_coeffs.w*chroma.y,
-                y+p.extra.x*chroma.x),0,1),1);
-        }
+        front=load_source(src/vec2(p.sizes.zw));
         if(p.modes.w==1 && front.a>0.0) {
             // Match Saturation's integer rounding and fixed-point brightness.
             int alpha=int(round(front.a*255.0));
@@ -115,6 +190,21 @@ void main() {
             rgb=clamp(mix(original,rgb,p.matrix_x.w),0.0,1.0);
             front.rgb=floor(rgb*front.a*255.0+0.5)/255.0;
         }
+        if(p.modes.w==6 && front.a>0.0) {
+            // ColorMap: straight color from premultiplied bytes, truncating writes.
+            ivec4 bytes=ivec4(round(front*255.0));
+            float alpha=float(bytes.a)/255.0;
+            precise vec3 color=(vec3(bytes.rgb)/alpha)*(1.0/255.0);
+            vec3 low=vec3(value(0),value(1),value(2)),range=vec3(value(3),value(4),value(5))-low;
+            vec3 domain;
+            for(int i=0;i<3;++i) domain[i]=clamp(range[i]<=0.0?color[i]:(color[i]-low[i])/range[i],0.0,1.0);
+            int size=int(p.effect.x);
+            vec3 mapped=p.effect.y!=0.0?lut_3d(domain,size):
+                vec3(lut_1d(domain.r,0,size),lut_1d(domain.g,1,size),lut_1d(domain.b,2,size));
+            vec3 amount=vec3(p.effect.zw,p.clear.x);
+            precise vec3 blended=(mapped*amount+color*(1.0-amount))*alpha;
+            front.rgb=vec3(clamp(ivec3(blended*255.0),ivec3(0),ivec3(255)))/255.0;
+        }
         front*=p.extra.w;
     }
     if(p.modes.w==2 && (any(lessThan(center,p.effect.xy)) || any(greaterThanEqual(center,p.effect.zw))))
@@ -144,6 +234,15 @@ void main() {
             front=floor(round(front*255.0)*float(alpha)/255.0)/255.0;
         }
     }
-    if(p.modes.w==3 || p.modes.w==4 || p.modes.w==5) back=vec4(0);
+    if(p.modes.w==7) {
+        // EffectBase::BlendWithMask: mix input (background) and result by mask gray.
+        ivec4 effected=ivec4(round(front*255.0)),original=ivec4(round(back*255.0));
+        ivec4 mask=ivec4(round(texelFetch(mask_tex,pixel,0)*255.0));
+        int gray=(mask.r*11+mask.g*16+mask.b*5)/32;
+        if(p.effect.x!=0.0) gray=255-gray;
+        precise vec4 mixed=vec4(original)*value(256+gray)+vec4(effected)*value(gray);
+        front=floor(mixed)/255.0;
+    }
+    if(p.modes.w>=3) back=vec4(0);
     imageStore(output_img,pixel,front+back*(1-front.a));
 }

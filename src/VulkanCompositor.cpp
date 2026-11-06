@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cstring>
 #include <cstdint>
 #include <map>
@@ -93,9 +94,13 @@ AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
     return ref;
 }
 struct EffectParameters {
-    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask
+    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask, 5 blur, 6 LUT, 7 mask blend, 8 scope
     std::array<float,9> values{};
-    const VulkanGradeParameters* grade=nullptr;
+    const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
+    size_t data_bytes=0;
+    std::shared_ptr<const void> data_owner; // unchanged data: skip the copy while a slot holds it
+    const VulkanFrameImage* mask=nullptr; // third input (binding 6)
+    std::vector<uint32_t>* counts=nullptr; // scope: zeroed, counted on the GPU, then read back
 };
 struct Parameters {
     float matrix_x[4], matrix_y[4], coeffs[4], extra[4], clear[4];
@@ -131,15 +136,22 @@ class Pipeline {
     VkSampler sampler=VK_NULL_HANDLE;
     // Consumers order submissions through the frames' timeline semaphores.
     // Keep encoder-owned targets alive until their views and work are retired.
+    struct Buffer {
+        VkBuffer buffer=VK_NULL_HANDLE;
+        VkDeviceMemory memory=VK_NULL_HANDLE;
+        void* mapped=nullptr;
+        VkDeviceSize size=0;
+        bool coherent=true;
+    };
     struct Slot {
         VkDescriptorSet set=VK_NULL_HANDLE;
         VkCommandBuffer cmd=VK_NULL_HANDLE;
         VkFence fence=VK_NULL_HANDLE;
         bool busy=false;
-        VkBuffer grade_buffer=VK_NULL_HANDLE;
-        VkDeviceMemory grade_memory=VK_NULL_HANDLE;
-        void* grade_data=nullptr;
-        bool grade_coherent=false;
+        Buffer data;     // host-written shader parameters and tables
+        Buffer counts;   // GPU-only scope counters
+        Buffer staging;  // host-read copy of the counters
+        std::shared_ptr<const void> data_owner;
         std::vector<VkImageView> views;
         FramePtr target;
         std::vector<FramePtr> inputs;
@@ -147,30 +159,50 @@ class Pipeline {
     std::array<Slot,kSlots> ring;
     int next_slot=0;
     bool encode_nv12;
-    void CreateGradeBuffer(Slot& slot) {
-        VkBufferCreateInfo buffer{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        buffer.size=sizeof(VulkanGradeParameters);
-        buffer.usage=VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        VkCheck(vkCreateBuffer(device,&buffer,nullptr,&slot.grade_buffer),"Create grading parameter buffer");
+    void Release(Buffer& b) {
+        if(b.mapped) vkUnmapMemory(device,b.memory);
+        if(b.buffer) vkDestroyBuffer(device,b.buffer,nullptr);
+        if(b.memory) vkFreeMemory(device,b.memory,nullptr);
+        b=Buffer{};
+    }
+    // Grow-only. Choose the memory type with the most preferred properties:
+    // device-local for data shaders read per pixel, cached for host readback.
+    void Reserve(Buffer& b,VkDeviceSize size,VkBufferUsageFlags usage,VkMemoryPropertyFlags required,VkMemoryPropertyFlags preferred) {
+        if(b.size>=size) return;
+        Release(b);
+        VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        info.size=size; info.usage=usage;
+        VkCheck(vkCreateBuffer(device,&info,nullptr,&b.buffer),"Create shader buffer");
         VkMemoryRequirements requirements;
-        vkGetBufferMemoryRequirements(device,slot.grade_buffer,&requirements);
+        vkGetBufferMemoryRequirements(device,b.buffer,&requirements);
         VkPhysicalDeviceMemoryProperties memory;
         vkGetPhysicalDeviceMemoryProperties(vkcontext->phys_dev,&memory);
-        uint32_t type=UINT32_MAX;
+        uint32_t type=UINT32_MAX; int best=-1;
         for(uint32_t i=0;i<memory.memoryTypeCount;++i) {
             const auto flags=memory.memoryTypes[i].propertyFlags;
-            if((requirements.memoryTypeBits&(1u<<i)) && (flags&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
-                type=i;
-                if(flags&VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) break;
-            }
+            if(!(requirements.memoryTypeBits&(1u<<i)) || (flags&required)!=required) continue;
+            const int score=int(std::bitset<32>(flags&preferred).count());
+            if(score>best) { best=score; type=i; }
         }
-        if(type==UINT32_MAX) throw std::runtime_error("No host-visible grading parameter memory");
-        slot.grade_coherent=memory.memoryTypes[type].propertyFlags&VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        if(type==UINT32_MAX) throw std::runtime_error("No suitable Vulkan shader buffer memory");
+        b.coherent=memory.memoryTypes[type].propertyFlags&VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         VkMemoryAllocateInfo allocation{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-        allocation.allocationSize=requirements.size;allocation.memoryTypeIndex=type;
-        VkCheck(vkAllocateMemory(device,&allocation,nullptr,&slot.grade_memory),"Allocate grading parameter memory");
-        VkCheck(vkBindBufferMemory(device,slot.grade_buffer,slot.grade_memory,0),"Bind grading parameter memory");
-        VkCheck(vkMapMemory(device,slot.grade_memory,0,VK_WHOLE_SIZE,0,&slot.grade_data),"Map grading parameters");
+        allocation.allocationSize=requirements.size; allocation.memoryTypeIndex=type;
+        VkCheck(vkAllocateMemory(device,&allocation,nullptr,&b.memory),"Allocate shader buffer");
+        VkCheck(vkBindBufferMemory(device,b.buffer,b.memory,0),"Bind shader buffer");
+        if(required&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+            VkCheck(vkMapMemory(device,b.memory,0,VK_WHOLE_SIZE,0,&b.mapped),"Map shader buffer");
+        b.size=size;
+    }
+    void ReserveData(Slot& slot,VkDeviceSize size) {
+        Reserve(slot.data,size,VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    }
+    void Sync(const Buffer& b,bool to_device) {
+        if(b.coherent) return;
+        VkMappedMemoryRange range{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+        range.memory=b.memory; range.size=VK_WHOLE_SIZE;
+        VkCheck(to_device?vkFlushMappedMemoryRanges(device,1,&range):vkInvalidateMappedMemoryRanges(device,1,&range),"Synchronize shader buffer");
     }
 public:
     Pipeline(AVBufferRef* device_owner,bool encode=false):encode_nv12(encode) {
@@ -186,25 +218,25 @@ public:
             VkCommandPoolCreateInfo ci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
             ci.queueFamilyIndex=queue_family; ci.flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             VkCheck(vkCreateCommandPool(device,&ci,nullptr,&commands),"Create command pool");
-            std::array<VkDescriptorSetLayoutBinding,6> bindings{};
-            for(int i=0;i<6;++i) {
+            std::array<VkDescriptorSetLayoutBinding,7> bindings{};
+            for(int i=0;i<7;++i) {
                 bindings[i].binding=i; bindings[i].descriptorCount=1;
                 bindings[i].descriptorType=i==5?VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 bindings[i].stageFlags=VK_SHADER_STAGE_COMPUTE_BIT;
             }
             VkDescriptorSetLayoutCreateInfo di{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-            di.bindingCount=6; di.pBindings=bindings.data();
+            di.bindingCount=7; di.pBindings=bindings.data();
             VkCheck(vkCreateDescriptorSetLayout(device,&di,nullptr,&descriptors),"Create descriptors");
             VkPushConstantRange range{VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(Parameters)};
             VkPipelineLayoutCreateInfo li{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
             li.setLayoutCount=1; li.pSetLayouts=&descriptors; li.pushConstantRangeCount=1; li.pPushConstantRanges=&range;
             VkCheck(vkCreatePipelineLayout(device,&li,nullptr,&layout),"Create pipeline layout");
-            std::array<VkDescriptorPoolSize,3> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,kSlots}}};
+            std::array<VkDescriptorPoolSize,3> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,5*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,kSlots}}};
             VkDescriptorPoolCreateInfo pi{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
             pi.maxSets=kSlots; pi.poolSizeCount=3; pi.pPoolSizes=sizes.data();
             VkCheck(vkCreateDescriptorPool(device,&pi,nullptr,&pool),"Create descriptor pool");
             for(auto& slot:ring){
-                if(!encode_nv12) CreateGradeBuffer(slot);
+                if(!encode_nv12) ReserveData(slot,sizeof(VulkanGradeParameters));
                 VkDescriptorSetAllocateInfo ai{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
                 ai.descriptorPool=pool; ai.descriptorSetCount=1; ai.pSetLayouts=&descriptors;
                 VkCheck(vkAllocateDescriptorSets(device,&ai,&slot.set),"Allocate descriptors");
@@ -236,9 +268,7 @@ public:
     void Destroy(){
         for(auto& slot:ring){
             Retire(slot);
-            if(slot.grade_data) vkUnmapMemory(device,slot.grade_memory);
-            if(slot.grade_buffer) vkDestroyBuffer(device,slot.grade_buffer,nullptr);
-            if(slot.grade_memory) vkFreeMemory(device,slot.grade_memory,nullptr);
+            for(auto* b:{&slot.data,&slot.counts,&slot.staging}) Release(*b);
             if(slot.fence) vkDestroyFence(device,slot.fence,nullptr);
         }
         if(pipeline) vkDestroyPipeline(device,pipeline,nullptr);
@@ -281,6 +311,13 @@ public:
             if(bc->device_ctx!=device_context || bc->sw_format!=AV_PIX_FMT_RGBA || back->width!=width || back->height!=height)
                 throw std::runtime_error("Vulkan background must be matching RGBA surface");
         }
+        const AVFrame* mask=effect && effect->mask?effect->mask->GetFrame():nullptr;
+        if(mask){
+            const auto* mc=reinterpret_cast<const AVHWFramesContext*>(mask->hw_frames_ctx->data);
+            if(mc->device_ctx!=device_context || mc->sw_format!=AV_PIX_FMT_RGBA || mask->width!=width || mask->height!=height)
+                throw std::runtime_error("Vulkan mask must be matching RGBA surface");
+        }
+        const bool scope=effect && effect->counts;
         FramePtr output(av_frame_alloc());
         if(!output) throw std::bad_alloc();
         if(target){
@@ -332,12 +369,10 @@ public:
         if(effect) {
             p.modes[3]=effect->mode;
             std::copy_n(effect->values.begin(),4,p.effect);
-            if(effect->mode==3 || effect->mode==5) {
-                // Grading uses no background. Reuse clear and the unused matrix
-                // component to stay within Vulkan's guaranteed 128-byte limit.
-                std::copy_n(effect->values.begin()+4,4,p.clear);
-                p.matrix_x[3]=effect->values[8];
-            }
+            // Effects render over transparent. Reuse clear and the unused matrix
+            // component to stay within Vulkan's guaranteed 128-byte limit.
+            std::copy_n(effect->values.begin()+4,4,p.clear);
+            p.matrix_x[3]=effect->values[8];
         }
         int plane_count=0;
         if(src_fc->sw_format==AV_PIX_FMT_RGBA){p.modes[0]=input.IsPremultiplied()?2:3;plane_count=1;}
@@ -358,18 +393,26 @@ public:
         Slot& slot=ring[next_slot];
         next_slot=(next_slot+1)%kSlots;
         Retire(slot);
-        if(effect && effect->grade) {
-            // Each in-flight submission owns its parameters until its fence retires.
-            std::memcpy(slot.grade_data,effect->grade,sizeof(VulkanGradeParameters));
-            if(!slot.grade_coherent) {
-                VkMappedMemoryRange range{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
-                range.memory=slot.grade_memory;range.size=VK_WHOLE_SIZE;
-                VkCheck(vkFlushMappedMemoryRanges(device,1,&range),"Flush grading parameters");
-            }
+        // Each in-flight submission owns its parameters until its fence retires.
+        // Tables such as LUTs are copied once while a slot still holds them.
+        if(effect && effect->data && (!effect->data_owner || slot.data_owner!=effect->data_owner)) {
+            ReserveData(slot,effect->data_bytes);
+            std::memcpy(slot.data.mapped,effect->data,effect->data_bytes);
+            Sync(slot.data,true);
+            slot.data_owner=effect->data_owner;
+        }
+        const VkDeviceSize count_bytes=scope?effect->counts->size()*sizeof(uint32_t):0;
+        if(scope) {
+            Reserve(slot.counts,count_bytes,VK_BUFFER_USAGE_STORAGE_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_SRC_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                0,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            Reserve(slot.staging,count_bytes,VK_BUFFER_USAGE_TRANSFER_DST_BIT,VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                VK_MEMORY_PROPERTY_HOST_CACHED_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         }
         // Lock in stable address order, avoiding deadlocks when frames are shared.
         std::vector<const AVFrame*> all{src,output.get()};
-        if(back && back->data[0]!=src->data[0]) all.push_back(back);
+        for(const AVFrame* extra:{back,mask})
+            if(extra && std::none_of(all.begin(),all.end(),[&](const AVFrame* f){return f->data[0]==extra->data[0];}))
+                all.push_back(extra);
         std::sort(all.begin(),all.end(),[](const AVFrame* a,const AVFrame* b){return std::less<uint8_t*>()(a->data[0],b->data[0]);});
         std::vector<std::unique_ptr<LockedFrame>> locks;
         for(auto* f:all) locks.emplace_back(new LockedFrame(f));
@@ -386,13 +429,13 @@ public:
             // disappear when its writer closes, before this cached pipeline.
             slot.target.reset(av_frame_clone(output.get()));
             if(!slot.target) throw std::bad_alloc();
-            for(const AVFrame* input_frame : {src, back}) {
+            for(const AVFrame* input_frame : {src, back, mask}) {
                 if (!input_frame) continue;
                 FramePtr retained(av_frame_clone(input_frame));
                 if (!retained) throw std::bad_alloc();
                 slot.inputs.push_back(std::move(retained));
             }
-            std::array<VkImageView,5> views{};
+            std::array<VkImageView,6> views{};
             auto make_view=[&](VkImage image,VkFormat format,VkImageAspectFlags aspect){
                 auto view=View(image,format,aspect);owned_views.push_back(view);return view;
             };
@@ -410,20 +453,25 @@ public:
                 views[3]=make_view(of->img[0],VK_FORMAT_R8_UNORM,separate?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_0_BIT);
                 views[4]=make_view(of->img[separate?1:0],VK_FORMAT_R8G8_UNORM,separate?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_1_BIT);
             }else views[4]=make_view(of->img[0],VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_ASPECT_COLOR_BIT);
-            std::array<VkDescriptorImageInfo,5> images{};
-            std::array<VkWriteDescriptorSet,6> writes{};
-            for(int i=0;i<5;++i){
-                images[i].sampler=(i==4 || (encode_nv12 && i==3))?VK_NULL_HANDLE:sampler;images[i].imageView=views[i];images[i].imageLayout=VK_IMAGE_LAYOUT_GENERAL;
-                writes[i].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;writes[i].dstSet=set;writes[i].dstBinding=i;writes[i].descriptorCount=1;
-                writes[i].descriptorType=(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;writes[i].pImageInfo=&images[i];
+            views[5]=mask?make_view(reinterpret_cast<AVVkFrame*>(mask->data[0])->img[0],VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_ASPECT_COLOR_BIT):views[0];
+            std::array<VkDescriptorImageInfo,6> images{};
+            std::array<VkWriteDescriptorSet,7> writes{};
+            for(int i=0;i<6;++i){
+                const int binding=i==5?6:i;
+                const bool storage=binding==4 || (encode_nv12 && binding==3);
+                images[i].sampler=storage?VK_NULL_HANDLE:sampler;images[i].imageView=views[i];images[i].imageLayout=VK_IMAGE_LAYOUT_GENERAL;
+                auto& write=writes[binding];
+                write.sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;write.dstSet=set;write.dstBinding=binding;write.descriptorCount=1;
+                write.descriptorType=storage?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;write.pImageInfo=&images[i];
             }
-            VkDescriptorBufferInfo grade_buffer{slot.grade_buffer,0,sizeof(VulkanGradeParameters)};
-            if(!encode_nv12) {
-                writes[5].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                writes[5].dstSet=set;writes[5].dstBinding=5;writes[5].descriptorCount=1;
-                writes[5].descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;writes[5].pBufferInfo=&grade_buffer;
-            }
-            vkUpdateDescriptorSets(device,encode_nv12?5:6,writes.data(),0,nullptr);
+            // Scopes count into GPU memory; every other mode reads its parameters.
+            VkDescriptorBufferInfo data_buffer{scope?slot.counts.buffer:slot.data.buffer,0,VK_WHOLE_SIZE};
+            writes[5].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writes[5].dstSet=set;writes[5].dstBinding=5;writes[5].descriptorCount=1;
+            writes[5].descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;writes[5].pBufferInfo=&data_buffer;
+            // The NV12 encoder shader uses bindings 0-4 only.
+            if(encode_nv12) vkUpdateDescriptorSets(device,5,writes.data(),0,nullptr);
+            else vkUpdateDescriptorSets(device,7,writes.data(),0,nullptr);
             VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};bi.flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             VkCheck(vkBeginCommandBuffer(cmd,&bi),"Begin affine commands");
             std::vector<VkSemaphore> semaphores;
@@ -448,11 +496,31 @@ public:
                     }
                 }
             }
+            auto buffer_barrier=[&](VkBuffer buffer,VkAccessFlags from,VkAccessFlags to,VkPipelineStageFlags after,VkPipelineStageFlags before){
+                VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+                barrier.srcAccessMask=from;barrier.dstAccessMask=to;
+                barrier.srcQueueFamilyIndex=barrier.dstQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED;
+                barrier.buffer=buffer;barrier.size=VK_WHOLE_SIZE;
+                vkCmdPipelineBarrier(cmd,after,before,0,0,nullptr,1,&barrier,0,nullptr);
+            };
+            if(scope) {
+                vkCmdFillBuffer(cmd,slot.counts.buffer,0,count_bytes,0);
+                buffer_barrier(slot.counts.buffer,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT|VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            }
             vkCmdPipelineBarrier(cmd,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,0,0,nullptr,0,nullptr,barriers.size(),barriers.data());
             vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,pipeline);
             vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,layout,0,1,&set,0,nullptr);
             vkCmdPushConstants(cmd,layout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(p),&p);
             vkCmdDispatch(cmd,(width+15)/16,(height+15)/16,1);
+            if(scope) {
+                buffer_barrier(slot.counts.buffer,VK_ACCESS_SHADER_WRITE_BIT,VK_ACCESS_TRANSFER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,VK_PIPELINE_STAGE_TRANSFER_BIT);
+                VkBufferCopy region{0,0,count_bytes};
+                vkCmdCopyBuffer(cmd,slot.counts.buffer,slot.staging.buffer,1,&region);
+                buffer_barrier(slot.staging.buffer,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_HOST_READ_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,VK_PIPELINE_STAGE_HOST_BIT);
+            }
             VkCheck(vkEndCommandBuffer(cmd),"End affine commands");
             VkTimelineSemaphoreSubmitInfo ti{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
             ti.waitSemaphoreValueCount=waits.size();ti.pWaitSemaphoreValues=waits.data();ti.signalSemaphoreValueCount=signal_values.size();ti.pSignalSemaphoreValues=signal_values.data();
@@ -474,6 +542,13 @@ public:
             // Publish semaphore values before releasing frame locks. Do not wait here:
             // later readers wait on those semaphores.
             locks.clear();
+            if(scope) {
+                // Only the small counter buffer returns to the CPU, never the image.
+                Retire(slot);
+                Sync(slot.staging,false);
+                std::memcpy(effect->counts->data(),slot.staging.mapped,count_bytes);
+                return nullptr;
+            }
             return std::make_shared<VulkanFrameImage>(output.get(),!encode_nv12);
         }catch(...){
             // Imported surface destructors acquire the same frame mutexes.
@@ -536,7 +611,16 @@ std::shared_ptr<const FrameImage> CropVulkanImage(std::shared_ptr<const FrameIma
 std::shared_ptr<const FrameImage> GradeVulkanImage(std::shared_ptr<const FrameImage> source,
     const VulkanGradeParameters& parameters) {
     const int width=source->GetWidth(),height=source->GetHeight();
-    EffectParameters effect{3,parameters.controls,&parameters};
+    EffectParameters effect{3,parameters.controls,&parameters,sizeof(parameters)};
+    return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> LookupVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const std::vector<float>> table,int size,bool cube,const std::array<float,3>& intensity) {
+    const size_t entries=cube?size_t(size)*size*size:size_t(size);
+    if(!table || size<=0 || table->size()!=6+entries*3) throw std::invalid_argument("Invalid Vulkan LUT");
+    const int width=source->GetWidth(),height=source->GetHeight();
+    EffectParameters effect{6,{float(size),cube?1.0f:0.0f,intensity[0],intensity[1],intensity[2]},
+        table->data(),table->size()*sizeof(float),table};
     return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
 }
 std::shared_ptr<const FrameImage> MaskVulkanImage(std::shared_ptr<const FrameImage> source,
@@ -545,15 +629,46 @@ std::shared_ptr<const FrameImage> MaskVulkanImage(std::shared_ptr<const FrameIma
     EffectParameters effect{4,{contrast,float(brightness),float(invert),float(replace)}};
     return RenderImage(source,mask,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
 }
+// Byte-exact effects read premultiplied RGBA, as the CPU implementations do.
+static std::shared_ptr<const FrameImage> PremultipliedRGBA(std::shared_ptr<const FrameImage> source) {
+    auto rgba=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
+    if(!rgba) throw std::invalid_argument("Vulkan effect requires a Vulkan surface");
+    const auto* context=reinterpret_cast<const AVHWFramesContext*>(rgba->GetFrame()->hw_frames_ctx->data);
+    if(context->sw_format==AV_PIX_FMT_RGBA && rgba->IsPremultiplied()) return source;
+    return RenderVulkanImage(source,nullptr,source->GetWidth(),source->GetHeight(),QTransform(),1.0);
+}
+std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const FrameImage> original,
+    std::shared_ptr<const FrameImage> effected,std::shared_ptr<const FrameImage> mask,bool invert) {
+    // GPU division is not correctly rounded; share the CPU's exact factors.
+    static const auto factors=[]{
+        auto table=std::make_shared<std::vector<float>>(512);
+        for(int gray=0;gray<256;++gray) {
+            (*table)[gray]=static_cast<float>(gray)/255.0f;
+            (*table)[256+gray]=1.0f-(*table)[gray];
+        }
+        return std::shared_ptr<const std::vector<float>>(table);
+    }();
+    auto mask_surface=std::dynamic_pointer_cast<const VulkanFrameImage>(PremultipliedRGBA(mask));
+    EffectParameters effect{7,{invert?1.0f:0.0f},factors->data(),factors->size()*sizeof(float),factors};
+    effect.mask=mask_surface.get();
+    return RenderImage(effected,PremultipliedRGBA(original),effected->GetWidth(),effected->GetHeight(),
+        QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::vector<uint32_t> ScopeVulkanImage(std::shared_ptr<const FrameImage> source,const QRect& region,
+    int waveform_columns,int waveform_bins,int vectorscope_size) {
+    if(region.isEmpty() || waveform_columns<=0 || waveform_bins<256 || vectorscope_size<=0)
+        throw std::invalid_argument("Invalid Vulkan scope layout");
+    std::vector<uint32_t> counts(4*256+4*size_t(waveform_columns)*waveform_bins+size_t(vectorscope_size)*vectorscope_size);
+    EffectParameters effect{8,{float(region.left()),float(region.top()),float(region.right()+1),float(region.bottom()+1),
+        float(waveform_columns),float(waveform_bins),float(vectorscope_size),float(region.width())}};
+    effect.counts=&counts;
+    RenderImage(source,nullptr,source->GetWidth(),source->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
+    return counts;
+}
 std::shared_ptr<const FrameImage> BlurVulkanImage(std::shared_ptr<const FrameImage> source,
     const QRect& area,int horizontal,int vertical,int iterations) {
     const int width=source->GetWidth(),height=source->GetHeight();
-    // Blur samples premultiplied RGBA byte values, as the CPU implementation does.
-    auto rgba=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
-    if(!rgba) throw std::invalid_argument("Blur requires a Vulkan surface");
-    const auto* context=reinterpret_cast<const AVHWFramesContext*>(rgba->GetFrame()->hw_frames_ctx->data);
-    if(context->sw_format!=AV_PIX_FMT_RGBA || !rgba->IsPremultiplied())
-        source=RenderVulkanImage(source,nullptr,width,height,QTransform(),1.0);
+    source=PremultipliedRGBA(source);
     auto result=source;
     for(int i=0;i<iterations;++i) {
         for(int direction=0;direction<2;++direction) {

@@ -26,6 +26,10 @@
 #include "FFmpegReader.h"
 #include "QtImageReader.h"
 #include "Logger.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	#include "VulkanCompositor.h"
+	#include "VulkanFrameImage.h"
+#endif
 #include <omp.h>
 #include <QBrush>
 #include <QColor>
@@ -662,29 +666,72 @@ std::shared_ptr<openshot::Frame> EffectBase::ProcessFrame(std::shared_ptr<opensh
 	if (HandlesMaskInternally())
 		return GetFrame(frame, frame_number);
 
+	const auto blend_cpu = [&](std::shared_ptr<QImage> original_image, std::shared_ptr<openshot::Frame> output_frame) {
+		if (!output_frame)
+			return output_frame;
+		auto effected_image = output_frame->GetImage();
+		if (!effected_image || effected_image->isNull() ||
+			effected_image->size() != original_image->size())
+			return output_frame;
+
+		auto mask_image = GetMaskImage(effected_image, frame_number);
+		if (!mask_image || mask_image->isNull())
+			return output_frame;
+
+		if (UseCustomMaskBlend(frame_number))
+			ApplyCustomMaskBlend(original_image, effected_image, mask_image, frame_number);
+		else
+			BlendWithMask(original_image, effected_image, mask_image);
+		return output_frame;
+	};
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// GPU frames keep their input surface, and the mask blend stays on the GPU.
+	std::shared_ptr<const FrameImage> original_surface;
+	if (VulkanRenderingEnabled() && RendersOnVulkan() && !UseCustomMaskBlend(frame_number)) {
+		original_surface = frame->GetDeferredImage();
+		// Clip images are uploaded as the effect would; the effect reuses this upload.
+		if (!original_surface && ParentClip() && frame->has_image_data) {
+			try {
+				original_surface = UploadVulkanImage(*frame->GetImage());
+			} catch (const std::exception& error) {
+				Logger::Instance()->Log(std::string("Vulkan effect mask upload failed: ") + error.what());
+			}
+		}
+	}
+	if (original_surface) {
+		auto output_frame = GetFrame(frame, frame_number);
+		if (!output_frame)
+			return output_frame;
+		const int width = original_surface->GetWidth(), height = original_surface->GetHeight();
+		if (auto effected = output_frame->GetDeferredImage()) {
+			// A resized result has no matching mask area, as on the CPU.
+			if (effected->GetWidth() != width || effected->GetHeight() != height)
+				return output_frame;
+			try {
+				// Generated masks only need the target size, not its pixels.
+				auto mask_image = ResolveMaskSourceEffect()
+					? GetMaskImage(std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied), frame_number)
+					: ResolveReaderMaskImage(width, height, frame_number);
+				if (!mask_image || mask_image->isNull())
+					return output_frame;
+				output_frame->AddDeferredImage(BlendMaskVulkanImage(
+					original_surface, effected, UploadVulkanImage(*mask_image), mask_invert));
+				return output_frame;
+			} catch (const std::exception& error) {
+				Logger::Instance()->Log(std::string("Vulkan effect mask CPU fallback: ") + error.what());
+			}
+		}
+		return blend_cpu(std::make_shared<QImage>(original_surface->Materialize()), output_frame);
+	}
+#endif
+
 	auto pre_image = frame->GetImage();
 	if (!pre_image || pre_image->isNull())
 		return GetFrame(frame, frame_number);
 
 	const auto original_image = std::make_shared<QImage>(pre_image->copy());
-	auto output_frame = GetFrame(frame, frame_number);
-	if (!output_frame)
-		return output_frame;
-	auto effected_image = output_frame->GetImage();
-	if (!effected_image || effected_image->isNull() ||
-		effected_image->size() != original_image->size())
-		return output_frame;
-
-	auto mask_image = GetMaskImage(effected_image, frame_number);
-	if (!mask_image || mask_image->isNull())
-		return output_frame;
-
-	if (UseCustomMaskBlend(frame_number))
-		ApplyCustomMaskBlend(original_image, effected_image, mask_image, frame_number);
-	else
-		BlendWithMask(original_image, effected_image, mask_image);
-
-	return output_frame;
+	return blend_cpu(original_image, GetFrame(frame, frame_number));
 }
 
 /// Parent clip object of this reader (which can be unparented and NULL)

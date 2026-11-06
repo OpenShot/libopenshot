@@ -72,6 +72,9 @@ namespace openshot
 	 */
 	class ColorGrade : public EffectBase
 	{
+	protected:
+		bool RendersOnVulkan() const override { return true; }
+
 	private:
 		ColorMap lut_effect;
 		std::string lut_path;
@@ -79,6 +82,8 @@ namespace openshot
 
 		void init_effect_details();
 		void sync_lut_effect();
+		/// Apply the optional LUT through ColorMap, on Vulkan when the frame is.
+		std::shared_ptr<openshot::Frame> apply_lut(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
 
 		static float Clamp01(float value);
 
