@@ -1020,7 +1020,14 @@ TEST_CASE("Vulkan effect masks blend on the GPU like the CPU", "[vulkan][hardwar
     saturation.saturation=openshot::Keyframe(0.0);
     QTemporaryDir tables;
     openshot::ColorMap lut(WriteCube(tables,true,5));
-    // Crop is byte exact on its own, so it checks the blend exactly.
+    // Crop is byte exact on its own, so it checks the blend exactly. Metal
+    // (MoltenVK) compiles with fast math, which may fuse the blend's
+    // multiply-add and round one byte differently.
+#ifdef __APPLE__
+    const int blend_tolerance=1;
+#else
+    const int blend_tolerance=0;
+#endif
     openshot::Crop crop;
     crop.left=openshot::Keyframe(0.25);
     crop.bottom=openshot::Keyframe(0.3);
@@ -1032,7 +1039,7 @@ TEST_CASE("Vulkan effect masks blend on the GPU like the CPU", "[vulkan][hardwar
     driven_blur.horizontal_radius=openshot::Keyframe(4.0);
     driven_blur.vertical_radius=openshot::Keyframe(2.0);
     driven_blur.mask_mode=openshot::BLUR_MASK_DRIVE_AMOUNT;
-    const std::vector<std::pair<openshot::EffectBase*,int>> effects{{&crop,0},{&grade,1},{&saturation,2},{&lut,1},
+    const std::vector<std::pair<openshot::EffectBase*,int>> effects{{&crop,blend_tolerance},{&grade,1},{&saturation,2},{&lut,1},
         {&driven_saturation,2},{&driven_blur,1}};
     for (const auto& [effect,tolerance] : effects) {
         effect->MaskReader(new openshot::QtImageReader(path.toStdString()));
