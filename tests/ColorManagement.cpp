@@ -7,7 +7,9 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <QByteArray>
 #include <QTemporaryDir>
+#include <QtGlobal>
 
 #include "openshot_catch.h"
 
@@ -87,21 +89,22 @@ void CheckChart(const std::string& file, float relative_peak, int tolerance) {
 struct SoftwareDecode {
 	int previous = Settings::Instance()->HARDWARE_DECODER;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	std::string backend;
+	QByteArray backend;
 	bool had_backend = false;
 #endif
 	SoftwareDecode() {
 		Settings::Instance()->HARDWARE_DECODER = 0;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-		if (const char* value = std::getenv("OPENSHOT_RENDER_BACKEND")) { backend = value; had_backend = true; }
-		setenv("OPENSHOT_RENDER_BACKEND", "cpu", 1);
+		had_backend = qEnvironmentVariableIsSet("OPENSHOT_RENDER_BACKEND");
+		backend = qgetenv("OPENSHOT_RENDER_BACKEND");
+		qputenv("OPENSHOT_RENDER_BACKEND", "cpu");
 #endif
 	}
 	~SoftwareDecode() {
 		Settings::Instance()->HARDWARE_DECODER = previous;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-		if (had_backend) setenv("OPENSHOT_RENDER_BACKEND", backend.c_str(), 1);
-		else unsetenv("OPENSHOT_RENDER_BACKEND");
+		if (had_backend) qputenv("OPENSHOT_RENDER_BACKEND", backend);
+		else qunsetenv("OPENSHOT_RENDER_BACKEND");
 #endif
 	}
 };
