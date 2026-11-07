@@ -30,7 +30,7 @@ using namespace openshot;
 namespace {
 
 // Patches of examples/color-chart-*.mp4 (see tests/generate-color-charts.py):
-// SDR code values, then 600 and 1000 nit highlights. 4x4 grid of 80x48 patches.
+// SDR code values, then 600 and 1000 nit highlights. 4x4 grid of 160x96 patches.
 struct Patch { const char* name; std::array<int, 3> code; double nits; };
 const Patch kPatches[] = {
 	{"reference white", {255, 255, 255}, 0}, {"18% grey", {118, 118, 118}, 0},
@@ -58,7 +58,7 @@ std::array<int, 3> Expected(const Patch& patch, float relative_peak) {
 }
 
 std::array<int, 3> PatchColor(std::shared_ptr<Frame> frame, int index) {
-	const int x0 = (index % 4) * 80 + 30, y0 = (index / 4) * 48 + 18;
+	const int x0 = (index % 4) * 160 + 70, y0 = (index / 4) * 96 + 42;
 	long sum[3] = {0, 0, 0};
 	for (int y = y0; y < y0 + 12; ++y) {
 		const unsigned char* row = frame->GetPixels(y);
@@ -72,8 +72,8 @@ void CheckChart(const std::string& file, float relative_peak, int tolerance) {
 	FFmpegReader reader(TEST_MEDIA_PATH + file);
 	reader.Open();
 	auto frame = reader.GetFrame(2);
-	REQUIRE(frame->GetWidth() == 320);
-	REQUIRE(frame->GetHeight() == 192);
+	REQUIRE(frame->GetWidth() == 640);
+	REQUIRE(frame->GetHeight() == 384);
 	for (int i = 0; i < int(std::size(kPatches)); ++i) {
 		const auto expected = Expected(kPatches[i], relative_peak);
 		const auto actual = PatchColor(frame, i);

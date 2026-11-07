@@ -1220,7 +1220,7 @@ TEST_CASE("Vulkan decoding converts SDR, HLG and PQ charts like the CPU path", "
     } restore;
     // Mean of a flat patch interior; see tests/generate-color-charts.py.
     auto patch=[](std::shared_ptr<openshot::Frame> frame,int index){
-        const int x0=(index%4)*80+30,y0=(index/4)*48+18;
+        const int x0=(index%4)*160+70,y0=(index/4)*96+42;
         std::array<long,3> sum{};
         for(int y=y0;y<y0+12;++y)for(int x=x0;x<x0+20;++x)for(int c=0;c<3;++c)
             sum[c]+=frame->GetPixels(y)[x*4+c];
@@ -1239,14 +1239,17 @@ TEST_CASE("Vulkan decoding converts SDR, HLG and PQ charts like the CPU path", "
         openshot::FFmpegReader gpu_reader(path);
         gpu_reader.Open();
         auto gpu=gpu_reader.GetFrame(2);
-        // Hardware decoders may decline these small charts (VideoToolbox on an
-        // Intel Mac rejects the 320x192 H.264 one) and FFmpeg then decodes in
-        // software. Mac 10-bit surfaces are covered with synthetic
-        // CVPixelBuffers below.
+        // 10-bit P010 surfaces stay on the GPU instead of falling back to software decode.
+#ifdef __APPLE__
+        // VideoToolbox decodes H.264 and HEVC Main10 on every supported Mac. Intel
+        // Macs refuse very small H.264 frames (320x192), so the charts are 640x384.
+        REQUIRE(gpu->GetDeferredImage());
+#else
         if(!gpu->GetDeferredImage()) {
             WARN("Skipping Vulkan test: this device does not decode " << chart << " on the GPU");
             continue;
         }
+#endif
         for(int i=0;i<13;++i) {
             const auto expected=patch(cpu,i),actual=patch(gpu,i);
             INFO(chart << " patch " << i << " cpu (" << expected[0] << "," << expected[1] << "," << expected[2]

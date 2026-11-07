@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Generate the color chart fixtures used by tests/ColorManagement.cpp.
 
-Each chart is a 4x4 grid of flat patches (80x48 px, 320x192 frame, 3 frames)
+Each chart is a 4x4 grid of flat patches (160x96 px, 640x384 frame, 3 frames)
 with known colors, (near-)losslessly encoded:
 
   examples/color-chart-sdr-bt709.mp4  8-bit H.264, BT.709 tagged
@@ -23,7 +23,7 @@ import numpy as np
 
 FFMPEG = sys.argv[1] if len(sys.argv) > 1 else "ffmpeg"
 OUT = sys.argv[2] if len(sys.argv) > 2 else "examples"
-W, H, PW, PH = 320, 192, 80, 48
+W, H, PW, PH = 640, 384, 160, 96
 PATCHES = [(255, 255, 255), (118, 118, 118), (224, 172, 140), (141, 85, 62), (98, 155, 210),
            (87, 122, 59), (220, 30, 30), (40, 200, 40), (30, 40, 220), (240, 220, 40),
            (20, 20, 20), 600.0, 1000.0]
