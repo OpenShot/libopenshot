@@ -170,7 +170,8 @@ struct VulkanFrameProcessor::Impl {};
 VulkanFrameProcessor::VulkanFrameProcessor() : impl(new Impl) {}
 VulkanFrameProcessor::~VulkanFrameProcessor() = default;
 void VulkanFrameProcessor::Reset() {}
-std::shared_ptr<const FrameImage> VulkanFrameProcessor::Process(const AVFrame* frame, int width, int height, bool high_quality) {
+std::shared_ptr<const FrameImage> VulkanFrameProcessor::Process(const AVFrame* frame, int width, int height,
+    const color::SourceColor& color, bool high_quality) {
 #ifdef __APPLE__
     OwnedFrame imported;
     if (frame && frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
@@ -180,15 +181,8 @@ std::shared_ptr<const FrameImage> VulkanFrameProcessor::Process(const AVFrame* f
 #endif
     Validate(frame);
     if (width <= 0 || height <= 0) throw std::invalid_argument("Invalid Vulkan output dimensions");
-    // Preserve the existing FFmpegReader conversion matrix (SWS_CS_DEFAULT / BT.601).
-    // The generic compositor still honors metadata for callers outside that reader.
-    auto compatible = AllocateFrame();
-    Check(av_frame_ref(compatible.get(), frame), "Reference reader Vulkan frame");
-    compatible->colorspace = AVCOL_SPC_SMPTE170M;
-    auto source = std::make_shared<VulkanFrameImage>(compatible.get());
-    QTransform matrix;
-    matrix.scale(double(width) / frame->width, double(height) / frame->height);
-    return RenderVulkanImage(source, nullptr, width, height, matrix, 1.0, Qt::transparent, high_quality);
+    auto source = std::make_shared<VulkanFrameImage>(frame);
+    return DecodeVulkanImage(source, width, height, color, high_quality);
 }
 namespace {
 struct BufferDeleter { void operator()(AVBufferRef* p) const { av_buffer_unref(&p); } };

@@ -25,6 +25,11 @@
 
 #include "FFmpegUtilities.h"
 #include "FFmpegColorRange.h"
+#include "ColorManagement.h"
+
+extern "C" {
+#include <libavutil/mastering_display_metadata.h>
+}
 #include "PreviewSize.h"
 #include "effects/CropHelpers.h"
 
@@ -728,10 +733,26 @@ void FFmpegReader::Open() {
 		}
 
 		// Process video stream side data (rotation, spherical metadata, etc)
+		hdr_peak_nits = 0.0;
+		sdr_converter.reset();
 		for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++) {
 			AVStream* st = pFormatCtx->streams[i];
 			if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
 				size_t side_data_size = 0;
+				if (static_cast<int>(i) == videoStream) {
+					// HDR10 static metadata sets the tone mapping peak (MaxCLL, then mastering peak).
+					const uint8_t *light = ffmpeg_stream_get_side_data(
+						st, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, &side_data_size);
+					if (light && side_data_size >= sizeof(AVContentLightMetadata))
+						hdr_peak_nits = reinterpret_cast<const AVContentLightMetadata *>(light)->MaxCLL;
+					const uint8_t *mastering = ffmpeg_stream_get_side_data(
+						st, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, &side_data_size);
+					if (hdr_peak_nits <= 0.0 && mastering && side_data_size >= sizeof(AVMasteringDisplayMetadata)) {
+						const auto *display = reinterpret_cast<const AVMasteringDisplayMetadata *>(mastering);
+						if (display->has_luminance && display->max_luminance.den > 0)
+							hdr_peak_nits = av_q2d(display->max_luminance);
+					}
+				}
 				const uint8_t *displaymatrix = ffmpeg_stream_get_side_data(
 					st, AV_PKT_DATA_DISPLAYMATRIX, &side_data_size);
 				if (displaymatrix &&
@@ -1842,6 +1863,11 @@ bool FFmpegReader::GetAVFrame() {
 					info.vcodec + "; " + path, Logger::LevelInfo);
 #endif
 
+			// HDR10 metadata may only arrive with frames. Keep the first value so
+			// tone mapping does not change from frame to frame.
+			if (hdr_peak_nits <= 0.0)
+				hdr_peak_nits = color::FramePeakNits(decoded_frame);
+
 			// Allocate image (align 32 for simd)
 			AVPixelFormat decoded_pix_fmt = (AVPixelFormat)(decoded_frame->format);
 			if (decoded_pix_fmt == AV_PIX_FMT_NONE)
@@ -2189,7 +2215,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		try {
 			if (!vulkan_processor) vulkan_processor = std::make_shared<VulkanFrameProcessor>();
 			auto f = CreateFrame(current_frame);
-			f->AddDeferredImage(vulkan_processor->Process(pFrame, width, height, openshot::Settings::Instance()->HIGH_QUALITY_SCALING));
+			f->AddDeferredImage(vulkan_processor->Process(pFrame, width, height,
+				color::DescribeFrame(pFrame, src_width, src_height, hdr_peak_nits),
+				openshot::Settings::Instance()->HIGH_QUALITY_SCALING));
             gpu_metrics::Record(gpu_metrics::RenderGpu);
 			if (ApplyOrientationMetadata() && std::fabs(source_rotation) >= 0.0001)
 				Logger::Instance()->AppendDebugMethod("Vulkan reader: source orientation requires scaled CPU readback");
@@ -2220,21 +2248,36 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	int buffer_size = ((raw_buffer_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
 	buffer = (unsigned char*) aligned_malloc(buffer_size, ALIGNMENT);
 
-	// Copy picture data from one AVFrame (or AVPicture) to another one.
-	AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
+	// HDR (PQ/HLG) and BT.2020 sources keep 16 bits through scaling, then
+	// convert to SDR BT.709. Other sources convert straight to RGBA8.
+	const color::SourceColor source_color = color::DescribeFrame(pFrame, src_width, src_height, hdr_peak_nits);
+	const bool convert_color = source_color.NeedsConversion();
+	const AVPixelFormat rgb_pix_fmt = convert_color ? AV_PIX_FMT_RGBA64 : PIX_FMT_RGBA;
+	if (convert_color) {
+		hdr_buffer.resize(size_t(width) * height * 4);
+		av_image_fill_arrays(pFrameRGB->data, pFrameRGB->linesize,
+			reinterpret_cast<uint8_t*>(hdr_buffer.data()), AV_PIX_FMT_RGBA64, width, height, 1);
+		const auto* previous = sdr_converter ? &sdr_converter->Source() : nullptr;
+		if (!previous || previous->transfer != source_color.transfer || previous->bt2020 != source_color.bt2020 ||
+			previous->RelativePeak() != source_color.RelativePeak())
+			sdr_converter = std::make_shared<const color::SdrConverter>(source_color);
+	} else {
+		// Copy picture data from one AVFrame (or AVPicture) to another one.
+		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
+	}
 
 	int scale_mode = SWS_FAST_BILINEAR;
 	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
 		scale_mode = SWS_BICUBIC;
 	}
-	img_convert_ctx = sws_getCachedContext(img_convert_ctx, src_width, src_height, src_pix_fmt, width, height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+	img_convert_ctx = sws_getCachedContext(img_convert_ctx, src_width, src_height, src_pix_fmt, width, height, rgb_pix_fmt, scale_mode, NULL, NULL, NULL);
 	if (!img_convert_ctx)
 		throw OutOfMemory("Failed to initialize sws context", path);
-	const int *src_coeff = sws_getCoefficients(SWS_CS_DEFAULT);
-	const int *dst_coeff = sws_getCoefficients(SWS_CS_DEFAULT);
+	// Decode with the source's tagged YUV matrix (BT.601 when untagged).
+	const int *coefficients = sws_getCoefficients(color::SwsColorspace(source_color.matrix));
 	const int dst_full_range = 1; // RGB outputs are full-range
-	sws_setColorspaceDetails(img_convert_ctx, src_coeff, src_full_range ? 1 : 0,
-							 dst_coeff, dst_full_range, 0, 1 << 16, 1 << 16);
+	sws_setColorspaceDetails(img_convert_ctx, coefficients, src_full_range ? 1 : 0,
+							 coefficients, dst_full_range, 0, 1 << 16, 1 << 16);
 
 	if (!pFrame || !pFrame->data[0] || pFrame->linesize[0] <= 0) {
 #if USE_HW_ACCEL
@@ -2280,6 +2323,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		pFrame = NULL;
 		return;
 	}
+
+	if (convert_color)
+		sdr_converter->Convert(hdr_buffer.data(), pFrameRGB->linesize[0], buffer, width * bytes_per_pixel, width, height);
 
 	// Create or get the existing frame object
 	std::shared_ptr<Frame> f = CreateFrame(current_frame);

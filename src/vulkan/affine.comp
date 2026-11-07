@@ -16,7 +16,8 @@ layout(push_constant) uniform Parameters {
     vec4 extra; // U->B, Y offset, chroma offset, opacity
     vec4 clear;
     ivec4 sizes; // output width/height, source width/height
-    ivec4 modes; // 0 planar, 1 NV12, 2 premult RGBA, 3 straight RGBA; background enabled
+    ivec4 modes; // x: source format (bits 0-3: 0 planar, 1 NV12/P01x, 2 premult RGBA, 3 straight RGBA)
+                 //    plus transfer (bits 4-7) and BT.2020 gamut (bit 8), see to_sdr(); y: background enabled
     vec4 effect; // saturation controls, or crop bounds in output pixels
 } p;
 // Mitchell/Netravali family B=0, C=0.6 matches libswscale's default
@@ -59,20 +60,64 @@ float grade_curve(int curve,float value) {
     int index=clamp(int(value*255.0+0.5),0,255);
     return uintBitsToFloat(data[21+curve*256+index]);
 }
+// HDR/wide gamut to SDR BT.709; mirrors color::SdrConverter (ColorManagement.cpp).
+// Linear values are relative to the BT.2408 reference white (203 nits).
+#define TONE_KNEE 0.8
+#define REFERENCE_WHITE 203.0
+const mat3 BT2020_TO_709=mat3( // column-major
+    1.6604910,-0.1245505,-0.0181508,
+   -0.5876411, 1.1328999,-0.1005789,
+   -0.0728499,-0.0083494, 1.1187297);
+vec3 pq_to_linear(vec3 e) {
+    const float m1=2610.0/16384.0,m2=2523.0/4096.0*128.0;
+    const float c1=3424.0/4096.0,c2=2413.0/4096.0*32.0,c3=2392.0/4096.0*32.0;
+    vec3 v=pow(clamp(e,0.0,1.0),vec3(1.0/m2));
+    return 10000.0/REFERENCE_WHITE*pow(max(v-c1,0.0)/(c2-c3*v),vec3(1.0/m1));
+}
+vec3 hlg_to_scene(vec3 e) {
+    const float a=0.17883277,b=0.28466892,c=0.55991073;
+    e=clamp(e,0.0,1.0);
+    return mix(e*e/3.0,(exp((e-c)/a)+b)/12.0,greaterThan(e,vec3(0.5)));
+}
+float tone_map(float value,float peak) {
+    if(value<=TONE_KNEE || peak<=1.0) return min(value,1.0);
+    float span=1.0-TONE_KNEE,t=(value-TONE_KNEE)/span;
+    float w=max((peak-TONE_KNEE)/span,1.0);
+    return min(TONE_KNEE+span*t*(1.0+t/(w*w))/(1.0+t),1.0);
+}
+vec3 to_sdr(vec3 signal) {
+    int transfer=(p.modes.x>>4)&15;
+    bool bt2020=(p.modes.x&256)!=0;
+    vec3 rgb;
+    if(transfer==1) rgb=pq_to_linear(signal);
+    else if(transfer==2) {
+        // HLG OOTF for the nominal 1000 nit display (system gamma 1.2).
+        vec3 scene=hlg_to_scene(signal);
+        float luma=dot(scene,bt2020?vec3(0.2627,0.6780,0.0593):vec3(0.2126,0.7152,0.0722));
+        rgb=scene*(1000.0/REFERENCE_WHITE)*pow(clamp(luma,0.0,1.0),0.2);
+    } else rgb=pow(clamp(signal,0.0,1.0),vec3(2.4));
+    if(bt2020) rgb=BT2020_TO_709*rgb;
+    rgb=max(rgb,0.0);
+    float brightest=max(rgb.r,max(rgb.g,rgb.b));
+    if(brightest>TONE_KNEE) rgb*=tone_map(brightest,p.matrix_y.w)/brightest;
+    return pow(min(rgb,1.0),vec3(1.0/2.4));
+}
 // Premultiplied RGBA from any supported source format.
 vec4 load_source(vec2 uv) {
-    if(p.modes.x>=2) {
+    if((p.modes.x&15)>=2) {
         vec4 front=clamp(sample_source(plane_y,uv),0.0,1.0);
-        if(p.modes.x==3) front.rgb*=front.a;
+        if((p.modes.x&15)==3) front.rgb*=front.a;
         else front.rgb=min(front.rgb,vec3(front.a));
         return front;
     }
     float y=(sample_source(plane_y,uv).r-p.extra.y)*p.color_coeffs.x;
-    vec2 chroma=p.modes.x==1 ? sample_source(plane_u,uv).rg : vec2(sample_source(plane_u,uv).r,sample_source(plane_v,uv).r);
+    vec2 chroma=(p.modes.x&15)==1 ? sample_source(plane_u,uv).rg : vec2(sample_source(plane_u,uv).r,sample_source(plane_v,uv).r);
     chroma-=p.extra.z;
-    return vec4(clamp(vec3(y+p.color_coeffs.y*chroma.y,
+    vec3 rgb=clamp(vec3(y+p.color_coeffs.y*chroma.y,
         y+p.color_coeffs.z*chroma.x+p.color_coeffs.w*chroma.y,
-        y+p.extra.x*chroma.x),0,1),1);
+        y+p.extra.x*chroma.x),0,1);
+    if((p.modes.x>>4)!=0) rgb=to_sdr(rgb);
+    return vec4(rgb,1);
 }
 // ColorMap table: domain min/max, then RGB entries.
 vec3 lut_entry(int index) { int i=6+index*3; return vec3(value(i),value(i+1),value(i+2)); }

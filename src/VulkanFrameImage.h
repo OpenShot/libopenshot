@@ -7,6 +7,7 @@
 #include <memory>
 struct AVFrame;
 namespace openshot {
+namespace color { struct SourceColor; }
 /// False when OPENSHOT_RENDER_BACKEND=cpu selects the CPU pipeline at runtime.
 bool VulkanRenderingEnabled();
 /// Process-wide count of GPU images materialized as CPU pixels (diagnostics).
@@ -45,7 +46,10 @@ public:
     ~VulkanFrameProcessor();
     VulkanFrameProcessor(const VulkanFrameProcessor&) = delete;
     VulkanFrameProcessor& operator=(const VulkanFrameProcessor&) = delete;
-    std::shared_ptr<const FrameImage> Process(const AVFrame* frame, int width, int height, bool high_quality = false);
+    /// Scale and convert a decoded frame to RGBA. color describes the frame
+    /// (see color::DescribeFrame); HDR and BT.2020 sources become SDR BT.709.
+    std::shared_ptr<const FrameImage> Process(const AVFrame* frame, int width, int height,
+        const color::SourceColor& color, bool high_quality = false);
     void Reset();
 private:
     struct Impl;

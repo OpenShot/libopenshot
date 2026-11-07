@@ -48,6 +48,7 @@ set(OPENSHOT_TESTS
   Caption
   Clip
   Color
+  ColorManagement
   Coordinate
   DummyReader
   FFmpegCapabilities
@@ -194,6 +195,10 @@ foreach(tname ${OPENSHOT_TESTS})
   if(tname MATCHES "^Vulkan")
     # Same Vulkan headers as the library (newer than some system packages)
     target_include_directories(openshot-${tname}-test PRIVATE ${Vulkan_INCLUDE_DIR})
+    if(APPLE)
+      # Tests build Core Video surfaces to exercise VideoToolbox interop.
+      target_link_libraries(openshot-${tname}-test "-framework CoreVideo" "-framework CoreFoundation")
+    endif()
     # Report missing GPU, display or interop support as skipped, not passed.
     list(APPEND test_properties
       SKIP_REGULAR_EXPRESSION "Skipping Vulkan test:"

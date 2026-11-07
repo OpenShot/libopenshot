@@ -3,6 +3,9 @@
 #ifndef OPENSHOT_MAC_VULKAN_INTEROP_H
 #define OPENSHOT_MAC_VULKAN_INTEROP_H
 #include <cstdint>
+extern "C" {
+#include <libavutil/pixfmt.h>
+}
 struct AVFrame;
 struct AVBufferRef;
 namespace openshot {
@@ -10,6 +13,9 @@ namespace openshot {
 // surfaces retain their CVPixelBuffers until all Vulkan submissions have retired.
 AVFrame* ImportVideoToolboxFrame(const AVFrame* frame, bool writable = false);
 AVFrame* AllocateMacVulkanFrame(AVBufferRef* device, int width, int height, bool nv12);
+/// The FFmpeg layout of a Core Video pixel format (OSType) that can be shared
+/// with Vulkan: NV12, P010 or P210, else AV_PIX_FMT_NONE.
+AVPixelFormat MacSurfaceFormat(uint32_t core_video_format);
 uint64_t MacVulkanDeviceRegistryID(const AVFrame* frame);
 int64_t MacVulkanFrameBytes(const AVFrame* frame);
 bool IsMacVulkanFrame(const AVFrame* frame);

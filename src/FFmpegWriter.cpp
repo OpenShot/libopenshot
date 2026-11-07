@@ -28,6 +28,8 @@
 #include "FFmpegUtilities.h"
 
 #include "FFmpegWriter.h"
+#include "FFmpegColorRange.h"
+#include "ColorManagement.h"
 #include "Exceptions.h"
 #include "Frame.h"
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
@@ -2167,6 +2169,24 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		}
 #endif
 
+	// Tag YUV outputs so players decode them as rendered: SDR BT.709 color,
+	// with the matrix players assume for this size (BT.709 for HD, BT.601 for
+	// SD). RGB outputs are left untagged.
+	{
+		const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(video_codec_ctx->pix_fmt);
+		const bool hardware = desc && (desc->flags & AV_PIX_FMT_FLAG_HWACCEL);
+		const bool rgb = desc && !hardware && (desc->flags & (AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL));
+		const bool gray = desc && !hardware && desc->nb_components <= 2;
+		if (desc && !rgb && !gray) {
+			bool full_range = false;
+			NormalizeDeprecatedPixFmt(video_codec_ctx->pix_fmt, full_range);
+			video_codec_ctx->color_primaries = AVCOL_PRI_BT709;
+			video_codec_ctx->color_trc = AVCOL_TRC_BT709;
+			video_codec_ctx->colorspace = color::EncodeMatrix(info.width, info.height);
+			video_codec_ctx->color_range = full_range ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+		}
+	}
+
 	/* open the codec */
 	if (avcodec_open2(video_codec_ctx, codec, &opts) < 0)
 		throw InvalidCodec("Could not open video codec", path);
@@ -2896,6 +2916,13 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 		);
 		if (!img_convert_ctx)
 			throw ErrorEncodingVideo("Could not initialize sws context", -1);
+		// Encode with the matrix and range tagged in open_video().
+		bool dst_full_range = false;
+		NormalizeDeprecatedPixFmt(dst_fmt, dst_full_range);
+		const int* coefficients = sws_getCoefficients(
+			color::SwsColorspace(color::EncodeMatrix(info.width, info.height)));
+		sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients,
+			dst_full_range ? 1 : 0, 0, 1 << 16, 1 << 16);
 	}
 
 	// Scale RGBA → dst_fmt into persistent_dst_buffer

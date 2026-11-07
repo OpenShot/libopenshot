@@ -11,6 +11,12 @@
 #include <QTransform>
 #include <QRectF>
 namespace openshot {
+namespace color { struct SourceColor; }
+/// Scale a decoded YUV surface to RGBA using its color description: YUV
+/// matrix and range, and for HDR or BT.2020 sources conversion to SDR BT.709
+/// matching color::SdrConverter on the CPU.
+std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameImage> source,
+    int width, int height, const color::SourceColor& source_color, bool high_quality = false);
 /// Affine transform and source-over compositing into an independently owned GPU frame.
 /// Inputs must be Vulkan surfaces from the same device; null background uses clear.
 /// high_quality selects antialiased bicubic reader resampling; default matches Qt bilinear transforms.

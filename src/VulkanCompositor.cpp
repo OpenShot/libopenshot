@@ -4,6 +4,7 @@
 #include "VulkanEncodeConverter.h"
 #include "GpuDevices.h"
 #include "VulkanFrameImage.h"
+#include "ColorManagement.h"
 #ifdef __APPLE__
 #include "MacVulkanInterop.h"
 #endif
@@ -22,6 +23,7 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vulkan.h>
 #include <libavutil/error.h>
+#include <libavutil/pixdesc.h>
 }
 // SPIR-V generated from src/vulkan/*.comp at build time.
 #include "affine.comp.h"
@@ -301,7 +303,7 @@ public:
     }
     std::shared_ptr<const FrameImage> Render(const VulkanFrameImage& input,const VulkanFrameImage* background,
         int width,int height,const QTransform& matrix,double opacity,const QColor& clear,bool high_quality=false,const AVFrame* target=nullptr,
-        const EffectParameters* effect=nullptr) {
+        const EffectParameters* effect=nullptr,const color::SourceColor* source_color=nullptr) {
         const auto* src=input.GetFrame();
         const auto* src_fc=reinterpret_cast<const AVHWFramesContext*>(src->hw_frames_ctx->data);
         if(src_fc->device_ctx!=device_context) throw std::runtime_error("Vulkan source device mismatch");
@@ -353,7 +355,10 @@ public:
 #endif
         }
         AvCheck(av_frame_copy_props(output.get(),src),"Copy compositor metadata");
-        output->colorspace=encode_nv12?AVCOL_SPC_SMPTE170M:AVCOL_SPC_RGB; output->color_range=encode_nv12?AVCOL_RANGE_MPEG:AVCOL_RANGE_JPEG;
+        // Export NV12 uses the matrix FFmpegWriter tags for this size (BT.709 for HD).
+        const AVColorSpace encode_matrix=color::EncodeMatrix(width,height);
+        output->colorspace=encode_nv12?encode_matrix:AVCOL_SPC_RGB; output->color_range=encode_nv12?AVCOL_RANGE_MPEG:AVCOL_RANGE_JPEG;
+        if(encode_nv12){output->color_primaries=AVCOL_PRI_BT709;output->color_trc=AVCOL_TRC_BT709;}
         if(encode_nv12 && src_fc->sw_format!=AV_PIX_FMT_RGBA) throw std::runtime_error("Encoder conversion requires RGBA");
         Parameters p{};
         bool invertible=false;
@@ -375,19 +380,45 @@ public:
             p.matrix_x[3]=effect->values[8];
         }
         int plane_count=0;
-        if(src_fc->sw_format==AV_PIX_FMT_RGBA){p.modes[0]=input.IsPremultiplied()?2:3;plane_count=1;}
-        else if(src_fc->sw_format==AV_PIX_FMT_NV12){p.modes[0]=1;plane_count=1;}
-        else if(src_fc->sw_format==AV_PIX_FMT_YUV420P){p.modes[0]=0;plane_count=3;}
-        else throw std::runtime_error("Vulkan affine renderer supports RGBA, NV12 and YUV420P");
+        const AVPixelFormat sw_format=src_fc->sw_format;
+        // Two-plane 4:2:0/4:2:2 with MSB-aligned 10-16 bit samples (HEVC/AV1 Main10 decode).
+        const bool wide=sw_format==AV_PIX_FMT_P010 || sw_format==AV_PIX_FMT_P012 || sw_format==AV_PIX_FMT_P016 ||
+            sw_format==AV_PIX_FMT_P210 || sw_format==AV_PIX_FMT_P212 || sw_format==AV_PIX_FMT_P216;
+        if(sw_format==AV_PIX_FMT_RGBA){p.modes[0]=input.IsPremultiplied()?2:3;plane_count=1;}
+        else if(sw_format==AV_PIX_FMT_NV12 || wide){p.modes[0]=1;plane_count=1;}
+        else if(sw_format==AV_PIX_FMT_YUV420P){p.modes[0]=0;plane_count=3;}
+        else throw std::runtime_error(std::string("Vulkan affine renderer does not support ")+
+            (av_get_pix_fmt_name(sw_format)?av_get_pix_fmt_name(sw_format):"this format"));
+        const AVColorSpace matrix_space=source_color?source_color->matrix:color::DecodeMatrix(src->colorspace,src->width,src->height);
         double kr=0.299,kb=0.114;
-        if(src->colorspace==AVCOL_SPC_BT709){kr=0.2126;kb=0.0722;}
-        else if(src->colorspace==AVCOL_SPC_BT2020_NCL){kr=0.2627;kb=0.0593;}
-        else if(src->colorspace==AVCOL_SPC_SMPTE240M){kr=0.212;kb=0.087;}
-        const bool full=src->color_range==AVCOL_RANGE_JPEG;
-        const double cscale=full?1.0:255.0/224.0;
-        p.coeffs[0]=full?1.0:255.0/219.0;p.extra[1]=full?0.0:16.0/255.0;p.extra[2]=128.0/255.0;
+        if(matrix_space==AVCOL_SPC_BT709){kr=0.2126;kb=0.0722;}
+        else if(matrix_space==AVCOL_SPC_BT2020_NCL || matrix_space==AVCOL_SPC_BT2020_CL){kr=0.2627;kb=0.0593;}
+        else if(matrix_space==AVCOL_SPC_SMPTE240M){kr=0.212;kb=0.087;}
+        else if(matrix_space==AVCOL_SPC_FCC){kr=0.30;kb=0.11;}
+        const bool full=source_color?source_color->full_range:src->color_range==AVCOL_RANGE_JPEG;
+        // Samples are normalized by the texture's maximum (255 or 65535). Wide
+        // formats hold codes in the high bits, so limited range scales by 256.
+        const int depth=wide?av_pix_fmt_desc_get(sw_format)->comp[0].depth:8;
+        const double unit=wide?65535.0:255.0;
+        const double maximum=wide?double((1<<depth)-1)*(1<<(16-depth)):255.0;
+        const double half=wide?double(1<<(depth-1))*(1<<(16-depth)):128.0;
+        const double step=wide?256.0:1.0;
+        const double cscale=full?unit/maximum:unit/(224.0*step);
+        p.coeffs[0]=full?unit/maximum:unit/(219.0*step);p.extra[1]=full?0.0:16.0*step/unit;
+        p.extra[2]=full?half/unit:128.0*step/unit;
         p.coeffs[1]=2*(1-kr)*cscale;p.coeffs[2]=-2*kb*(1-kb)/(1-kr-kb)*cscale;
         p.coeffs[3]=-2*kr*(1-kr)/(1-kr-kb)*cscale;p.extra[0]=2*(1-kb)*cscale;
+        if(encode_nv12) {
+            // encode_nv12.comp reads the output matrix's Kr and Kb.
+            const bool hd=encode_matrix==AVCOL_SPC_BT709;
+            p.coeffs[0]=hd?0.2126f:0.299f;p.coeffs[1]=hd?0.0722f:0.114f;
+        }
+        // Transfer (bits 4-7), BT.2020 gamut (bit 8) and peak: see to_sdr() in affine.comp.
+        int color_flags=0;
+        if(source_color && source_color->NeedsConversion() && p.modes[0]<2) {
+            color_flags=(int(source_color->transfer)<<4)|(source_color->bt2020?256:0);
+            p.matrix_y[3]=source_color->RelativePeak();
+        }
         // Retire before locking inputs: releasing the last imported surface can
         // wait on that frame's synchronization mutex.
         Slot& slot=ring[next_slot];
@@ -440,8 +471,8 @@ public:
                 auto view=View(image,format,aspect);owned_views.push_back(view);return view;
             };
             if(p.modes[0]==1){
-                views[0]=make_view(sf->img[0],VK_FORMAT_R8_UNORM,separate_nv12?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_0_BIT);
-                views[1]=views[2]=make_view(sf->img[separate_nv12?1:0],VK_FORMAT_R8G8_UNORM,separate_nv12?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_1_BIT);
+                views[0]=make_view(sf->img[0],wide?VK_FORMAT_R16_UNORM:VK_FORMAT_R8_UNORM,separate_nv12?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_0_BIT);
+                views[1]=views[2]=make_view(sf->img[separate_nv12?1:0],wide?VK_FORMAT_R16G16_UNORM:VK_FORMAT_R8G8_UNORM,separate_nv12?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_1_BIT);
             }else if(p.modes[0]>=2){
                 views[0]=views[1]=views[2]=make_view(sf->img[0],VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_ASPECT_COLOR_BIT);
             }else{
@@ -511,6 +542,7 @@ public:
             vkCmdPipelineBarrier(cmd,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,0,0,nullptr,0,nullptr,barriers.size(),barriers.data());
             vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,pipeline);
             vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,layout,0,1,&set,0,nullptr);
+            p.modes[0]|=color_flags;
             vkCmdPushConstants(cmd,layout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(p),&p);
             vkCmdDispatch(cmd,(width+15)/16,(height+15)/16,1);
             if(scope) {
@@ -561,7 +593,7 @@ public:
 }
 static std::shared_ptr<const FrameImage> RenderImage(std::shared_ptr<const FrameImage> source,
     std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,double opacity,const QColor& clear,bool high_quality,
-    const EffectParameters* effect){
+    const EffectParameters* effect,const color::SourceColor* source_color=nullptr){
     auto src=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
     auto back=std::dynamic_pointer_cast<const VulkanFrameImage>(background);
     if(!src || (background && !back)) throw std::invalid_argument("Vulkan compositor requires Vulkan surfaces");
@@ -584,7 +616,13 @@ static std::shared_ptr<const FrameImage> RenderImage(std::shared_ptr<const Frame
     }
     found->second.used=++clock;
     auto& pipeline=found->second.pipeline;
-    return pipeline->Render(*src,back.get(),width,height,matrix,opacity,clear,high_quality,nullptr,effect);
+    return pipeline->Render(*src,back.get(),width,height,matrix,opacity,clear,high_quality,nullptr,effect,source_color);
+}
+std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameImage> source,
+    int width,int height,const color::SourceColor& source_color,bool high_quality) {
+    QTransform matrix;
+    matrix.scale(double(width)/source->GetWidth(),double(height)/source->GetHeight());
+    return RenderImage(source,nullptr,width,height,matrix,1.0,Qt::transparent,high_quality,nullptr,&source_color);
 }
 std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameImage> source,
     std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,

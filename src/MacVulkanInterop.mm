@@ -19,34 +19,59 @@ extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/error.h>
+#include <libavutil/pixfmt.h>
 }
 namespace openshot {
 namespace {
 const char native_pool_tag = 0;
 void AvCheck(int r, const char* what) { if (r < 0) throw std::runtime_error(what); }
 void VkCheck(VkResult r, const char* what) { if (r != VK_SUCCESS) throw std::runtime_error(what); }
+// Shared surface layouts: RGBA, or two-plane YUV with 8-bit (NV12) or
+// MSB-aligned 10-bit (P010 4:2:0, P210 4:2:2) samples, as VideoToolbox decodes.
+struct SurfaceFormat {
+    AVPixelFormat sw_format;
+    int planes;
+    MTLPixelFormat metal[2];
+    VkFormat vulkan[2];
+};
+SurfaceFormat Describe(AVPixelFormat sw_format) {
+    switch (sw_format) {
+        case AV_PIX_FMT_NV12:
+            return {sw_format, 2, {MTLPixelFormatR8Unorm, MTLPixelFormatRG8Unorm}, {VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM}};
+        case AV_PIX_FMT_P010:
+        case AV_PIX_FMT_P210:
+            return {sw_format, 2, {MTLPixelFormatR16Unorm, MTLPixelFormatRG16Unorm}, {VK_FORMAT_R16_UNORM, VK_FORMAT_R16G16_UNORM}};
+        case AV_PIX_FMT_RGBA:
+            return {sw_format, 1, {MTLPixelFormatRGBA8Unorm, MTLPixelFormatInvalid}, {VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_UNDEFINED}};
+        default:
+            throw std::runtime_error("Unsupported Mac Vulkan surface format");
+    }
+}
 struct Pools {
     std::mutex mutex;
-    std::map<std::tuple<AVHWDeviceContext*, int, int, bool>, AVBufferRef*> frames;
+    std::map<std::tuple<AVHWDeviceContext*, int, int, AVPixelFormat>, AVBufferRef*> frames;
     ~Pools() { for (auto& pair : frames) av_buffer_unref(&pair.second); }
 };
 Pools& NativePools() { static Pools pools; return pools; }
-AVBufferRef* Pool(AVBufferRef* device, int width, int height, bool nv12) {
+AVBufferRef* Pool(AVBufferRef* device, int width, int height, AVPixelFormat sw_format) {
     auto& pools = NativePools();
     std::lock_guard<std::mutex> lock(pools.mutex);
-    auto key = std::make_tuple(reinterpret_cast<AVHWDeviceContext*>(device->data), width, height, nv12);
+    auto key = std::make_tuple(reinterpret_cast<AVHWDeviceContext*>(device->data), width, height, sw_format);
     auto& ref = pools.frames[key];
     if (!ref) {
         ref = av_hwframe_ctx_alloc(device);
         if (!ref) throw std::bad_alloc();
         auto* fc = reinterpret_cast<AVHWFramesContext*>(ref->data);
         fc->format = AV_PIX_FMT_VULKAN;
-        fc->sw_format = nv12 ? AV_PIX_FMT_NV12 : AV_PIX_FMT_RGBA;
+        fc->sw_format = sw_format;
         fc->width = width; fc->height = height;
         fc->user_opaque = const_cast<char*>(&native_pool_tag);
         auto* vc = static_cast<AVVulkanFramesContext*>(fc->hwctx);
         vc->flags = AV_VK_FRAME_FLAG_DISABLE_MULTIPLANE;
-        vc->usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+        // These allocations only carry FFmpeg's synchronization; Wrap substitutes
+        // the imported images. 10-bit surfaces are only read (decoded video).
+        const bool wide = sw_format == AV_PIX_FMT_P010 || sw_format == AV_PIX_FMT_P210;
+        vc->usage = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_SAMPLED_BIT | (wide ? 0 : VK_IMAGE_USAGE_STORAGE_BIT) |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
         const int result = av_hwframe_ctx_init(ref);
         if (result < 0) { av_buffer_unref(&ref); pools.frames.erase(key); AvCheck(result, "Initialize Mac Vulkan frame pool"); }
@@ -108,7 +133,9 @@ NativeFrame* State(const AVFrame* frame) {
     if (fc->user_opaque != &native_pool_tag) return nullptr;
     return static_cast<NativeFrame*>(av_buffer_get_opaque(frame->buf[0]));
 }
-AVFrame* Wrap(AVBufferRef* device, CVPixelBufferRef pixel, bool nv12, bool writable) {
+AVFrame* Wrap(AVBufferRef* device, CVPixelBufferRef pixel, AVPixelFormat sw_format, bool writable) {
+    const SurfaceFormat surface = Describe(sw_format);
+    const bool planar = surface.planes == 2;
     @autoreleasepool {
         const int width = static_cast<int>(CVPixelBufferGetWidth(pixel));
         const int height = static_cast<int>(CVPixelBufferGetHeight(pixel));
@@ -116,10 +143,10 @@ AVFrame* Wrap(AVBufferRef* device, CVPixelBufferRef pixel, bool nv12, bool writa
             throw std::invalid_argument("Mac GPU frames require IOSurface-backed pixels");
         auto state = std::make_unique<NativeFrame>();
         state->pixel = CVPixelBufferRetain(pixel);
-        state->count = nv12 ? 2 : 1;
+        state->count = surface.planes;
         state->allocation = av_frame_alloc();
         if (!state->allocation) throw std::bad_alloc();
-        AVBufferRef* pool = Pool(device, width, height, nv12);
+        AVBufferRef* pool = Pool(device, width, height, sw_format);
         const int allocated = av_hwframe_get_buffer(pool, state->allocation, 0);
         av_buffer_unref(&pool);
         AvCheck(allocated, "Allocate Mac Vulkan frame synchronization");
@@ -141,10 +168,10 @@ AVFrame* Wrap(AVBufferRef* device, CVPixelBufferRef pixel, bool nv12, bool writa
         NSDictionary* attributes = @{(id)kCVMetalTextureUsage: @(MTLTextureUsageShaderRead |
             (writable ? MTLTextureUsageShaderWrite : 0))};
         for (int i = 0; i < state->count; ++i) {
-            const auto w = nv12 ? CVPixelBufferGetWidthOfPlane(pixel, i) : size_t(width);
-            const auto h = nv12 ? CVPixelBufferGetHeightOfPlane(pixel, i) : size_t(height);
-            const auto format = nv12 ? (i ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm) : MTLPixelFormatRGBA8Unorm;
-            if (nv12) {
+            const auto w = planar ? CVPixelBufferGetWidthOfPlane(pixel, i) : size_t(width);
+            const auto h = planar ? CVPixelBufferGetHeightOfPlane(pixel, i) : size_t(height);
+            const auto format = surface.metal[i];
+            if (planar) {
                 if (CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, state->cache, pixel,
                     (CFDictionaryRef)attributes, format, w, h, i, &state->textures[i]) != kCVReturnSuccess)
                     throw std::runtime_error("Map Core Video pixel planes to Metal");
@@ -164,7 +191,7 @@ AVFrame* Wrap(AVBufferRef* device, CVPixelBufferRef pixel, bool nv12, bool writa
             texture.mtlTexture = state->Texture(i);
             VkImageCreateInfo create{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
             create.pNext = &texture; create.imageType = VK_IMAGE_TYPE_2D;
-            create.format = nv12 ? (i ? VK_FORMAT_R8G8_UNORM : VK_FORMAT_R8_UNORM) : VK_FORMAT_R8G8B8A8_UNORM;
+            create.format = surface.vulkan[i];
             create.extent = {uint32_t(w), uint32_t(h), 1}; create.mipLevels = create.arrayLayers = 1;
             create.samples = VK_SAMPLE_COUNT_1_BIT; create.tiling = VK_IMAGE_TILING_OPTIMAL;
             create.usage = VK_IMAGE_USAGE_SAMPLED_BIT | (writable ? VK_IMAGE_USAGE_STORAGE_BIT : 0);
@@ -174,7 +201,7 @@ AVFrame* Wrap(AVBufferRef* device, CVPixelBufferRef pixel, bool nv12, bool writa
         for (int i = 0; i < state->count; ++i) {
             state->image->img[i] = state->imported[i];
             state->image->mem[i] = VK_NULL_HANDLE;
-            state->image->size[i] = nv12 ? CVPixelBufferGetBytesPerRowOfPlane(pixel, i) * CVPixelBufferGetHeightOfPlane(pixel, i)
+            state->image->size[i] = planar ? CVPixelBufferGetBytesPerRowOfPlane(pixel, i) * CVPixelBufferGetHeightOfPlane(pixel, i)
                 : CVPixelBufferGetBytesPerRow(pixel) * height;
             state->image->offset[i] = 0;
             state->image->layout[i] = writable ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_PREINITIALIZED;
@@ -215,6 +242,22 @@ int64_t MacVulkanFrameBytes(const AVFrame* frame) {
     return static_cast<int64_t>(std::min<uint64_t>(size, std::numeric_limits<int64_t>::max()));
 }
 bool IsMacVulkanFrame(const AVFrame* frame) { return State(frame) != nullptr; }
+AVPixelFormat MacSurfaceFormat(uint32_t core_video_format) {
+    switch (core_video_format) {
+        case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+        case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
+            return AV_PIX_FMT_NV12;
+        // 10-bit HEVC/AV1 decode (iPhone HDR): 16-bit samples, data in the high bits.
+        case kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange:
+        case kCVPixelFormatType_420YpCbCr10BiPlanarFullRange:
+            return AV_PIX_FMT_P010;
+        case kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange:
+        case kCVPixelFormatType_422YpCbCr10BiPlanarFullRange:
+            return AV_PIX_FMT_P210;
+        default:
+            return AV_PIX_FMT_NONE;
+    }
+}
 void WaitMacVulkanFrame(const AVFrame* frame) {
     auto* state = State(frame);
     if (!state) throw std::invalid_argument("Not a shared Mac Vulkan frame");
@@ -225,13 +268,13 @@ AVFrame* ImportVideoToolboxFrame(const AVFrame* frame, bool writable) {
     if (!frame || frame->format != AV_PIX_FMT_VIDEOTOOLBOX || !frame->data[3])
         throw std::invalid_argument("Expected a VideoToolbox frame");
     auto pixel = reinterpret_cast<CVPixelBufferRef>(frame->data[3]);
-    const auto type = CVPixelBufferGetPixelFormatType(pixel);
-    if (type != kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange && type != kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
-        throw std::runtime_error("Mac Vulkan currently supports 8-bit NV12 decode/encode surfaces");
+    const AVPixelFormat sw_format = MacSurfaceFormat(CVPixelBufferGetPixelFormatType(pixel));
+    if (sw_format == AV_PIX_FMT_NONE)
+        throw std::runtime_error("Mac Vulkan supports NV12, P010 and P210 decode/encode surfaces");
     AVBufferRef* device = nullptr;
     AvCheck(CreateSharedVulkanDevice(&device), "Create Mac compositor device");
     AVFrame* result = nullptr;
-    try { result = Wrap(device, pixel, true, writable); } catch (...) { av_buffer_unref(&device); throw; }
+    try { result = Wrap(device, pixel, sw_format, writable); } catch (...) { av_buffer_unref(&device); throw; }
     av_buffer_unref(&device);
     const int props = av_frame_copy_props(result, frame);
     if (props < 0) { av_frame_free(&result); AvCheck(props, "Copy VideoToolbox metadata"); }
@@ -245,7 +288,7 @@ AVFrame* AllocateMacVulkanFrame(AVBufferRef* device, int width, int height, bool
         if (CVPixelBufferCreate(kCFAllocatorDefault, width, height, type, (CFDictionaryRef)attrs, &pixel) != kCVReturnSuccess)
             throw std::runtime_error("Allocate shared compositor IOSurface");
         AVFrame* frame = nullptr;
-        try { frame = Wrap(device, pixel, nv12, true); } catch (...) { CVPixelBufferRelease(pixel); throw; }
+        try { frame = Wrap(device, pixel, nv12 ? AV_PIX_FMT_NV12 : AV_PIX_FMT_RGBA, true); } catch (...) { CVPixelBufferRelease(pixel); throw; }
         CVPixelBufferRelease(pixel);
         return frame;
     }
@@ -276,11 +319,11 @@ int ReadMacVulkanFrame(AVFrame* destination, const AVFrame* source) {
         if (!completed) return AVERROR_EXTERNAL;
     }
     if (CVPixelBufferLockBaseAddress(state->pixel, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess) return AVERROR_EXTERNAL;
-    const bool nv12 = destination->format == AV_PIX_FMT_NV12;
+    const bool planar = state->count == 2;
     const uint8_t* data[4]{}; int strides[4]{};
-    for (int i = 0; i < (nv12 ? 2 : 1); ++i) {
-        data[i] = static_cast<const uint8_t*>(nv12 ? CVPixelBufferGetBaseAddressOfPlane(state->pixel, i) : CVPixelBufferGetBaseAddress(state->pixel));
-        strides[i] = static_cast<int>(nv12 ? CVPixelBufferGetBytesPerRowOfPlane(state->pixel, i) : CVPixelBufferGetBytesPerRow(state->pixel));
+    for (int i = 0; i < state->count; ++i) {
+        data[i] = static_cast<const uint8_t*>(planar ? CVPixelBufferGetBaseAddressOfPlane(state->pixel, i) : CVPixelBufferGetBaseAddress(state->pixel));
+        strides[i] = static_cast<int>(planar ? CVPixelBufferGetBytesPerRowOfPlane(state->pixel, i) : CVPixelBufferGetBytesPerRow(state->pixel));
     }
     av_image_copy(destination->data, destination->linesize, data, strides, AVPixelFormat(destination->format), source->width, source->height);
     CVPixelBufferUnlockBaseAddress(state->pixel, kCVPixelBufferLock_ReadOnly);

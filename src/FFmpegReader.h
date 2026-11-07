@@ -27,6 +27,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <memory>
+#include <vector>
 #include "AudioLocation.h"
 #include "CacheMemory.h"
 #include "Clip.h"
@@ -103,6 +104,8 @@ namespace openshot {
 	 * r.Close();
 	 * @endcode
 	 */
+	namespace color { class SdrConverter; }
+
 	class FFmpegReader : public ReaderBase {
 	private:
 		std::string path;
@@ -173,6 +176,9 @@ namespace openshot {
 
 		// Cached conversion contexts and frames for performance
 		SwsContext *img_convert_ctx = nullptr;        ///< Cached video scaler context
+		double hdr_peak_nits = 0.0;                   ///< HDR10 content peak from metadata (0 = unknown)
+		std::shared_ptr<const color::SdrConverter> sdr_converter; ///< HDR/wide gamut to SDR (CPU path)
+		std::vector<uint16_t> hdr_buffer;             ///< 16-bit RGBA scratch for SDR conversion
 		SWRCONTEXT *avr_ctx = nullptr;                ///< Cached audio resample context
 		AVFrame *pFrameRGB_cached = nullptr;          ///< Temporary frame used for video conversion
 

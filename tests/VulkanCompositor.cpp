@@ -1,5 +1,6 @@
 #ifdef __APPLE__
 #include "MacVulkanInterop.h"
+#include <CoreVideo/CoreVideo.h>
 #endif
 // Copyright (c) 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
@@ -7,6 +8,9 @@
 #include "VulkanCompositor.h"
 #include "VulkanFrameImage.h"
 #include "VulkanEncodeConverter.h"
+#include "ColorManagement.h"
+#include "Settings.h"
+#include <array>
 #include "GpuDevices.h"
 #include "GpuMetrics.h"
 #include "FrameScope.h"
@@ -352,7 +356,7 @@ TEST_CASE("Vulkan affine surfaces preserve alpha color and ownership", "[vulkan]
     CHECK(blended.alpha()==255);
     CHECK(image.pixelColor(0,0)==QColor(Qt::blue));
     CHECK(second->Materialize().pixelColor(0,0)==QColor(Qt::red));
-    // Export conversion remains on the GPU and produces limited-range BT.601 NV12.
+    // Export conversion remains on the GPU and produces limited-range NV12 (BT.601 at this SD size).
     auto encoded = openshot::ConvertVulkanToNV12(second);
     auto encoded_surface = std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(encoded);
     REQUIRE(encoded_surface);
@@ -500,10 +504,10 @@ TEST_CASE("Vulkan high quality reader resizing uses bicubic antialiasing", "[vul
         uint8_t* output[]={reference.bits(),nullptr,nullptr,nullptr};
         int strides[]={reference.bytesPerLine(),0,0,0};
         REQUIRE(sws_scale(scaler,cpu->data,cpu->linesize,0,32,output,strides)==size.height());
-        auto high=processor.Process(gpu.get(),size.width(),size.height(),true);
+        auto high=processor.Process(gpu.get(),size.width(),size.height(),openshot::color::SourceColor(),true);
         REQUIRE(std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(high));
         auto high_image=high->Materialize();
-        auto low_image=processor.Process(gpu.get(),size.width(),size.height(),false)->Materialize();
+        auto low_image=processor.Process(gpu.get(),size.width(),size.height(),openshot::color::SourceColor(),false)->Materialize();
         double high_error=0,low_error=0;
         for(int y=0;y<size.height();++y)for(int x=0;x<size.width();++x)for(int channel=0;channel<3;++channel){
             const int expected=reference.constScanLine(y)[4*x+channel];
@@ -1207,3 +1211,182 @@ TEST_CASE("Video masks stay on Vulkan for Mask and effect masks", "[vulkan][hard
         }
     }
 }
+
+TEST_CASE("Vulkan decoding converts SDR, HLG and PQ charts like the CPU path", "[vulkan][hardware][color]") {
+    if(!VulkanAvailable()) return;
+    struct DecoderSetting {
+        int previous=openshot::Settings::Instance()->HARDWARE_DECODER;
+        ~DecoderSetting(){openshot::Settings::Instance()->HARDWARE_DECODER=previous;}
+    } restore;
+    // Mean of a flat patch interior; see tests/generate-color-charts.py.
+    auto patch=[](std::shared_ptr<openshot::Frame> frame,int index){
+        const int x0=(index%4)*80+30,y0=(index/4)*48+18;
+        std::array<long,3> sum{};
+        for(int y=y0;y<y0+12;++y)for(int x=x0;x<x0+20;++x)for(int c=0;c<3;++c)
+            sum[c]+=frame->GetPixels(y)[x*4+c];
+        return std::array<int,3>{int(sum[0]/240),int(sum[1]/240),int(sum[2]/240)};
+    };
+    for(const char* chart : {"color-chart-sdr-bt709.mp4","color-chart-hlg.mp4","color-chart-pq.mp4"}) {
+        const std::string path=std::string(TEST_MEDIA_PATH)+chart;
+        // The CPU pipeline is selected per reader when it opens.
+        setenv("OPENSHOT_RENDER_BACKEND","cpu",1);
+        openshot::FFmpegReader cpu_reader(path);
+        cpu_reader.Open();
+        unsetenv("OPENSHOT_RENDER_BACKEND");
+        auto cpu=cpu_reader.GetFrame(2);
+        REQUIRE_FALSE(cpu->GetDeferredImage());
+        openshot::Settings::Instance()->HARDWARE_DECODER=1;
+        openshot::FFmpegReader gpu_reader(path);
+        gpu_reader.Open();
+        auto gpu=gpu_reader.GetFrame(2);
+        // 10-bit P010 surfaces stay on the GPU instead of falling back to software decode.
+#ifdef __APPLE__
+        // VideoToolbox decodes H.264 and HEVC Main10 on every supported Mac.
+        REQUIRE(gpu->GetDeferredImage());
+#else
+        if(!gpu->GetDeferredImage()) {
+            WARN("Skipping Vulkan test: this device does not decode " << chart << " with Vulkan");
+            continue;
+        }
+#endif
+        for(int i=0;i<13;++i) {
+            const auto expected=patch(cpu,i),actual=patch(gpu,i);
+            INFO(chart << " patch " << i << " cpu (" << expected[0] << "," << expected[1] << "," << expected[2]
+                 << ") gpu (" << actual[0] << "," << actual[1] << "," << actual[2] << ")");
+            for(int c=0;c<3;++c) CHECK(std::abs(actual[c]-expected[c])<=3);
+        }
+    }
+}
+
+TEST_CASE("Vulkan export encodes and tags HD with BT.709", "[vulkan][hardware][color]") {
+    if(!VulkanAvailable()) return;
+    QImage red(1280,720,QImage::Format_RGBA8888_Premultiplied);
+    red.fill(QColor(255,0,0));
+    auto encoded=std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(
+        openshot::ConvertVulkanToNV12(openshot::UploadVulkanImage(red)));
+    REQUIRE(encoded);
+    const AVFrame* nv12=encoded->GetFrame();
+    CHECK(nv12->colorspace==AVCOL_SPC_BT709);
+    CHECK(nv12->color_primaries==AVCOL_PRI_BT709);
+    CHECK(nv12->color_trc==AVCOL_TRC_BT709);
+    CHECK(nv12->color_range==AVCOL_RANGE_MPEG);
+    Frame downloaded(av_frame_alloc());
+    REQUIRE(downloaded);
+#ifdef __APPLE__
+    REQUIRE(openshot::ReadMacVulkanFrame(downloaded.get(), nv12) >= 0);
+#else
+    REQUIRE(av_hwframe_transfer_data(downloaded.get(), nv12, 0) >= 0);
+#endif
+    // BT.709 limited range red: Y 63, Cb 102, Cr 240 (BT.601 would be 81, 90, 240).
+    const int y=downloaded->data[0][100*downloaded->linesize[0]+100];
+    const int u=downloaded->data[1][50*downloaded->linesize[1]+100];
+    const int v=downloaded->data[1][50*downloaded->linesize[1]+101];
+    CHECK(y>=62); CHECK(y<=64);
+    CHECK(u>=101); CHECK(u<=103);
+    CHECK(v>=239); CHECK(v<=241);
+}
+
+#ifdef __APPLE__
+namespace {
+// A Core Video 4:2:0 biplanar buffer filled with one Y'CbCr value per half
+// (left, right), as VideoToolbox returns decoded frames. 10-bit formats keep
+// samples in the high bits of 16-bit words, like P010.
+struct PixelBuffer {
+    CVPixelBufferRef pixel=nullptr;
+    PixelBuffer(OSType type,int width,int height,std::array<int,3> left,std::array<int,3> right,int bits) {
+        const void* keys[]={kCVPixelBufferIOSurfacePropertiesKey,kCVPixelBufferMetalCompatibilityKey};
+        CFDictionaryRef empty=CFDictionaryCreate(kCFAllocatorDefault,nullptr,nullptr,0,
+            &kCFTypeDictionaryKeyCallBacks,&kCFTypeDictionaryValueCallBacks);
+        const void* values[]={empty,kCFBooleanTrue};
+        CFDictionaryRef attributes=CFDictionaryCreate(kCFAllocatorDefault,keys,values,2,
+            &kCFTypeDictionaryKeyCallBacks,&kCFTypeDictionaryValueCallBacks);
+        const CVReturn created=CVPixelBufferCreate(kCFAllocatorDefault,width,height,type,attributes,&pixel);
+        CFRelease(attributes);CFRelease(empty);
+        REQUIRE(created==kCVReturnSuccess);
+        REQUIRE(CVPixelBufferLockBaseAddress(pixel,0)==kCVReturnSuccess);
+        const int shift=bits>8?16-bits:0;
+        auto store=[&](uint8_t* row,int x,int value){
+            if(bits>8) reinterpret_cast<uint16_t*>(row)[x]=uint16_t(value<<shift);
+            else row[x]=uint8_t(value);
+        };
+        for(int plane=0;plane<2;++plane) {
+            auto* base=static_cast<uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixel,plane));
+            const size_t stride=CVPixelBufferGetBytesPerRowOfPlane(pixel,plane);
+            const int plane_width=int(CVPixelBufferGetWidthOfPlane(pixel,plane));
+            const int plane_height=int(CVPixelBufferGetHeightOfPlane(pixel,plane));
+            for(int y=0;y<plane_height;++y)for(int x=0;x<plane_width;++x) {
+                const auto& value=x<plane_width/2?left:right;
+                if(plane==0) store(base+y*stride,x,value[0]);
+                else { store(base+y*stride,2*x,value[1]); store(base+y*stride,2*x+1,value[2]); }
+            }
+        }
+        CVPixelBufferUnlockBaseAddress(pixel,0);
+    }
+    ~PixelBuffer(){ if(pixel) CVPixelBufferRelease(pixel); }
+    // An FFmpeg VideoToolbox frame referencing this buffer, as the decoder returns.
+    Frame Wrap(AVColorSpace matrix,AVColorTransferCharacteristic trc,AVColorPrimaries primaries) const {
+        Frame frame(av_frame_alloc());
+        REQUIRE(frame);
+        frame->format=AV_PIX_FMT_VIDEOTOOLBOX;
+        frame->width=int(CVPixelBufferGetWidth(pixel));frame->height=int(CVPixelBufferGetHeight(pixel));
+        frame->data[3]=reinterpret_cast<uint8_t*>(pixel);
+        frame->colorspace=matrix;frame->color_trc=trc;frame->color_primaries=primaries;
+        frame->color_range=AVCOL_RANGE_MPEG;
+        return frame;
+    }
+};
+}
+
+TEST_CASE("Mac VideoToolbox surfaces map to shareable FFmpeg layouts", "[vulkan][hardware][mac][color]") {
+    CHECK(openshot::MacSurfaceFormat(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange)==AV_PIX_FMT_NV12);
+    CHECK(openshot::MacSurfaceFormat(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)==AV_PIX_FMT_NV12);
+    CHECK(openshot::MacSurfaceFormat(kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange)==AV_PIX_FMT_P010);
+    CHECK(openshot::MacSurfaceFormat(kCVPixelFormatType_420YpCbCr10BiPlanarFullRange)==AV_PIX_FMT_P010);
+    CHECK(openshot::MacSurfaceFormat(kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange)==AV_PIX_FMT_P210);
+    CHECK(openshot::MacSurfaceFormat(kCVPixelFormatType_32BGRA)==AV_PIX_FMT_NONE);
+}
+
+TEST_CASE("Mac 10-bit VideoToolbox surfaces convert on the GPU", "[vulkan][hardware][mac][color]") {
+    if(!VulkanAvailable()) return;
+    // Left half: BT.709 limited-range red (Y'CbCr 250, 409, 960 at 10 bits).
+    // Right half: 75% grey, the HLG reference white (Y' 721, neutral chroma).
+    const std::array<int,3> red{250,409,960},grey{721,512,512};
+    for(const OSType type : {kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange,kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange}) {
+        INFO("Core Video format " << type);
+        PixelBuffer buffer(type,64,32,red,grey,10);
+        openshot::VulkanFrameProcessor processor;
+
+        // SDR BT.709: exercises 16-bit plane mapping and 10-bit scaling.
+        auto sdr=buffer.Wrap(AVCOL_SPC_BT709,AVCOL_TRC_BT709,AVCOL_PRI_BT709);
+        const auto sdr_color=openshot::color::DescribeFrame(sdr.get(),64,32);
+        auto surface=processor.Process(sdr.get(),64,32,sdr_color);
+        REQUIRE(std::dynamic_pointer_cast<const openshot::VulkanFrameImage>(surface));
+        QImage image=surface->Materialize();
+        const QColor left=image.pixelColor(8,16),right=image.pixelColor(56,16);
+        INFO("SDR left " << left.name().toStdString() << " right " << right.name().toStdString());
+        CHECK(left.red()>=252);CHECK(left.green()<=3);CHECK(left.blue()<=3);
+        // 75% grey without HDR conversion: (721-64)/876 = 0.75 -> 191.
+        CHECK(std::abs(right.red()-191)<=2);CHECK(std::abs(right.green()-191)<=2);CHECK(std::abs(right.blue()-191)<=2);
+
+        // HLG BT.2020: reference white maps to the tone curve's SDR white.
+        auto hlg=buffer.Wrap(AVCOL_SPC_BT2020_NCL,AVCOL_TRC_ARIB_STD_B67,AVCOL_PRI_BT2020);
+        const auto hlg_color=openshot::color::DescribeFrame(hlg.get(),64,32);
+        REQUIRE(hlg_color.NeedsConversion());
+        image=processor.Process(hlg.get(),64,32,hlg_color)->Materialize();
+        const int white=int(std::lround(255.0*std::pow(openshot::color::ToneMap(1.0f,hlg_color.RelativePeak()),1.0/2.4)));
+        const QColor hlg_grey=image.pixelColor(56,16);
+        INFO("HLG grey " << hlg_grey.name().toStdString() << " expected " << white);
+        CHECK(std::abs(hlg_grey.red()-white)<=3);CHECK(std::abs(hlg_grey.green()-white)<=3);CHECK(std::abs(hlg_grey.blue()-white)<=3);
+
+        // CPU readback of the shared surface keeps the 10-bit samples.
+        Frame imported(openshot::ImportVideoToolboxFrame(sdr.get()));
+        REQUIRE(imported);
+        Frame readback(av_frame_alloc());
+        REQUIRE(readback);
+        REQUIRE(openshot::ReadMacVulkanFrame(readback.get(),imported.get())>=0);
+        CHECK(readback->format==(type==kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange?AV_PIX_FMT_P010:AV_PIX_FMT_P210));
+        CHECK(reinterpret_cast<const uint16_t*>(readback->data[0]+16*readback->linesize[0])[8]==uint16_t(250<<6));
+        CHECK(reinterpret_cast<const uint16_t*>(readback->data[0]+16*readback->linesize[0])[56]==uint16_t(721<<6));
+    }
+}
+#endif
