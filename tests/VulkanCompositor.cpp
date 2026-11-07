@@ -48,7 +48,7 @@ using Frame=std::unique_ptr<AVFrame,FrameDelete>;
 // CTest reports this message as skipped; see tests/CMakeLists.txt.
 bool VulkanAvailable() {
     if(!openshot::VulkanRenderingEnabled()) {
-        WARN("Skipping Vulkan test: OPENSHOT_RENDER_BACKEND=cpu");
+        WARN("Skipping Vulkan test: CPU mode, or no Vulkan library");
         return false;
     }
     AVBufferRef* device=nullptr;
@@ -713,7 +713,7 @@ TEST_CASE("Saved GPU preferences reach the native runtime environment", "[vulkan
     CHECK(std::string(std::getenv("OPENSHOT_VULKAN_DEVICE")) == "Example GPU");
     CHECK_FALSE(openshot::VulkanRenderingEnabled());
     openshot::ConfigureGpuEnvironment("vulkan", "");
-    CHECK(openshot::VulkanRenderingEnabled());
+    CHECK(std::string(std::getenv("OPENSHOT_RENDER_BACKEND")) == "vulkan");
     CHECK(std::getenv("OPENSHOT_VULKAN_DEVICE") == nullptr);
 }
 

@@ -21,6 +21,7 @@ extern "C" {
 #include <libavutil/error.h>
 #include <libavutil/pixfmt.h>
 }
+#include "VulkanLoader.h"
 namespace openshot {
 namespace {
 const char native_pool_tag = 0;

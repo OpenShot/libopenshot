@@ -36,6 +36,7 @@
 extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
 }
+#include "../VulkanLoader.h"
 
 namespace openshot {
 namespace {

@@ -12,7 +12,7 @@ extern "C" {
 
 TEST_CASE("A lost GPU device moves open readers and new work to the CPU", "[vulkan][recovery]") {
     if (!openshot::VulkanRenderingEnabled()) {
-        WARN("Skipping Vulkan test: OPENSHOT_RENDER_BACKEND=cpu");
+        WARN("Skipping Vulkan test: CPU mode, or no Vulkan library");
         return;
     }
     AVBufferRef* device = nullptr;

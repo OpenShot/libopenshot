@@ -28,6 +28,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
+#include "VulkanLoader.h"
 namespace openshot {
 namespace {
 void Check(int result, const char* operation) {
@@ -84,7 +85,7 @@ void RecordVulkanUploadFailure() {
 }
 bool VulkanRenderingEnabled() {
     const char* backend = std::getenv("OPENSHOT_RENDER_BACKEND");
-    return !(backend && std::strcmp(backend, "cpu") == 0) && !VulkanDeviceLost();
+    return !(backend && std::strcmp(backend, "cpu") == 0) && !VulkanDeviceLost() && LoadVulkan();
 }
 struct VulkanFrameImage::Impl {
     OwnedFrame frame;

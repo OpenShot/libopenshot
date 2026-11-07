@@ -93,7 +93,7 @@ struct Frames {
 TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[vulkan][presentation]") {
     // CTest reports "Skipping Vulkan test:" as skipped; see tests/CMakeLists.txt.
     if (!openshot::VulkanRenderingEnabled()) {
-        WARN("Skipping Vulkan test: OPENSHOT_RENDER_BACKEND=cpu");
+        WARN("Skipping Vulkan test: CPU mode, or no Vulkan library");
         return;
     }
     const QByteArray platform = qgetenv("QT_QPA_PLATFORM");

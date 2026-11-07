@@ -25,6 +25,7 @@ extern "C" {
 #include <libavutil/error.h>
 #include <libavutil/pixdesc.h>
 }
+#include "VulkanLoader.h"
 // SPIR-V generated from src/vulkan/*.comp at build time.
 #include "affine.comp.h"
 #include "encode_nv12.comp.h"

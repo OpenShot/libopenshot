@@ -18,12 +18,15 @@ extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
 #include <libavutil/error.h>
 }
+#include "VulkanLoader.h"
 namespace openshot {
 namespace {
 // A temporary instance for listing devices; FFmpeg keeps its own for rendering.
 struct ListingInstance {
     VkInstance instance = VK_NULL_HANDLE;
     ListingInstance() {
+        if (!LoadVulkan())
+            return;
         VkApplicationInfo app = {};
         app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         app.apiVersion = VK_API_VERSION_1_1;
@@ -215,6 +218,8 @@ int CreateSharedVulkanDevice(AVBufferRef** output) {
         if (shared.tried)
             return AVERROR(ENODEV);
         shared.tried = true;
+        if (!LoadVulkan())
+            return AVERROR(ENODEV);
 #ifdef __APPLE__
         // Work around imported-texture argument-buffer writes on older Intel
         // Metal drivers. An explicit user setting still takes precedence.
