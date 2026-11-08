@@ -796,6 +796,14 @@ void FFmpegReader::Open() {
 		const int final_cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 2);
 		working_cache.SetMaxBytesFromInfo(working_cache_frames, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(final_cache_frames, info.width, info.height, info.sample_rate, info.channels);
+		if (!info.has_video && info.has_audio && info.sample_rate > 0 && info.channels > 0 && info.fps.ToDouble() > 0.0) {
+			// Audio-only frames carry no image, so a width x height budget is never
+			// reached. The cache would then keep every frame of the file, and since
+			// CacheMemory rescans its frames on each insert, long reads turn quadratic.
+			const int64_t samples_per_frame = static_cast<int64_t>(std::ceil(info.sample_rate / info.fps.ToDouble()));
+			const int64_t audio_frame_bytes = samples_per_frame * info.channels * static_cast<int64_t>(sizeof(float));
+			final_cache.SetMaxBytes(final_cache_frames * audio_frame_bytes);
+		}
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 		if (hw_de_on && hw_de_supported) {
 			// Full-resolution hardware images consume device memory, not RAM.
