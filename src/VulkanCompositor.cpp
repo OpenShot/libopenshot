@@ -9,6 +9,7 @@
 #include "MacVulkanInterop.h"
 #endif
 #include <algorithm>
+#include <iterator>
 #include <array>
 #include <atomic>
 #include <bitset>
@@ -208,7 +209,7 @@ class Pipeline {
         VkCheck(to_device?vkFlushMappedMemoryRanges(device,1,&range):vkInvalidateMappedMemoryRanges(device,1,&range),"Synchronize shader buffer");
     }
 public:
-    Pipeline(AVBufferRef* device_owner,bool encode=false):encode_nv12(encode) {
+    explicit Pipeline(AVBufferRef* device_owner,bool encode=false):encode_nv12(encode) {
         device_ref=av_buffer_ref(device_owner);
         if(!device_ref) throw std::bad_alloc();
         device_context=reinterpret_cast<AVHWDeviceContext*>(device_ref->data);
@@ -433,7 +434,7 @@ public:
             Sync(slot.data,true);
             slot.data_owner=effect->data_owner;
         }
-        const VkDeviceSize count_bytes=scope?effect->counts->size()*sizeof(uint32_t):0;
+        const VkDeviceSize count_bytes=effect && effect->counts?effect->counts->size()*sizeof(uint32_t):0;
         if(scope) {
             Reserve(slot.counts,count_bytes,VK_BUFFER_USAGE_STORAGE_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_SRC_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 0,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -447,13 +448,13 @@ public:
                 all.push_back(extra);
         std::sort(all.begin(),all.end(),[](const AVFrame* a,const AVFrame* b){return std::less<uint8_t*>()(a->data[0],b->data[0]);});
         std::vector<std::unique_ptr<LockedFrame>> locks;
-        for(auto* f:all) locks.emplace_back(new LockedFrame(f));
+        std::transform(all.begin(),all.end(),std::back_inserter(locks),
+            [](const AVFrame* f){return std::make_unique<LockedFrame>(f);});
         auto* sf=reinterpret_cast<AVVkFrame*>(src->data[0]);
         auto* of=reinterpret_cast<AVVkFrame*>(output->data[0]);
         const bool separate_nv12 = p.modes[0]==1 && sf->img[1]!=VK_NULL_HANDLE && sf->img[1]!=sf->img[0];
         if(separate_nv12) plane_count=2;
         const auto* svc=reinterpret_cast<const AVVulkanFramesContext*>(src_fc->hwctx);
-        auto& owned_views=slot.views;
         VkCommandBuffer cmd=slot.cmd;
         const VkDescriptorSet set=slot.set;
         try {
@@ -469,7 +470,7 @@ public:
             }
             std::array<VkImageView,6> views{};
             auto make_view=[&](VkImage image,VkFormat format,VkImageAspectFlags aspect){
-                auto view=View(image,format,aspect);owned_views.push_back(view);return view;
+                auto view=View(image,format,aspect);slot.views.push_back(view);return view;
             };
             if(p.modes[0]==1){
                 views[0]=make_view(sf->img[0],wide?VK_FORMAT_R16_UNORM:VK_FORMAT_R8_UNORM,separate_nv12?VK_IMAGE_ASPECT_COLOR_BIT:VK_IMAGE_ASPECT_PLANE_0_BIT);

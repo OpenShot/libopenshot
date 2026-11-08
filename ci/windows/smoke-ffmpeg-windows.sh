@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
 set -euo pipefail
 arch=${1:?mingw64 or mingw32}
 prefix=${PREFIX:-/c/runner-setup/ffmpeg-7.1.3-$arch}

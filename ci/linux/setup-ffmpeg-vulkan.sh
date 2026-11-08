@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # Install FFmpeg with Vulkan (plus the codecs the focal AppImage ships) into
 # /opt, without touching the system FFmpeg used by the CPU-only builds.
 # Ubuntu 20.04 (focal). Run as a sudo-capable user. Safe to re-run.

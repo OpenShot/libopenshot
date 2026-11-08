@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Run comparable CPU/GPU timeline workloads sequentially and retain raw evidence.
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""
+Run comparable CPU/GPU timeline workloads sequentially and retain raw evidence.
 
 Example (inherit the Vulkan ICD and FFmpeg library environment):
   python3 examples/run-timeline-benchmarks.py --cpu-build build --vulkan-build build-vk \
@@ -15,7 +18,8 @@ import platform
 import re
 import shutil
 import statistics
-import subprocess
+# Local developer tools use explicit argument lists, never a shell.
+import subprocess  # nosec B404
 import sys
 
 RESULT = re.compile(
@@ -26,11 +30,99 @@ RESULT = re.compile(
 
 def capture(command, timeout=20):
     try:
-        result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+        # Developer-selected local tools run with argument lists, never a shell.
+        result = subprocess.run(command, text=True, stdout=subprocess.PIPE,  # nosec B603
                                 stderr=subprocess.STDOUT, timeout=timeout)
         return {"command": command, "returncode": result.returncode, "output": result.stdout}
     except (OSError, subprocess.TimeoutExpired) as error:
         return {"command": command, "error": str(error)}
+
+
+def validate_result(row, frames, layers, readback):
+    """Reject incomplete runs and unexpected CPU fallback before recording FPS."""
+    match = RESULT.search(row.get("output", ""))
+    if row.get("returncode") == 0 and match:
+        got_frames, got_layers, got_readback, deferred, seconds, fps = match.groups()
+        row.update(frames=int(got_frames), deferred_frames=int(deferred),
+                   seconds=float(seconds), fps=float(fps))
+        row["valid"] = (int(got_frames) == frames and int(got_layers) == layers
+                        and int(got_readback) == readback and float(seconds) > 0
+                        and (row["backend"] != "vulkan" or int(deferred) == frames))
+        if not row["valid"]:
+            row["error"] = "Incomplete workload or Vulkan CPU fallback detected"
+    else:
+        row["valid"] = False
+
+
+def verify_image(row, image_path, cpu_images, layers, readback):
+    """Compare a GPU result with the preceding CPU trial of the same workload."""
+    from PIL import Image, ImageChops, ImageStat
+    backend = row["backend"]
+    try:
+        with Image.open(image_path) as loaded:
+            pixels = loaded.convert("RGB")
+        means = ImageStat.Stat(pixels).mean
+        row["image"] = {"path": str(image_path), "size": pixels.size, "mean_rgb": means}
+        if backend == "cpu":
+            cpu_images[(layers, readback)] = pixels
+        else:
+            reference = cpu_images[(layers, readback)]
+            if pixels.size != reference.size:
+                raise ValueError("GPU image dimensions differ from CPU")
+            row["image"]["cpu_mae_rgb"] = ImageStat.Stat(ImageChops.difference(pixels, reference)).mean
+            reference_means = ImageStat.Stat(reference).mean
+            if sum(reference_means) > 3 and sum(means) < 0.1 * sum(reference_means):
+                raise ValueError("GPU image is black/near-black while matching CPU image is not")
+    except (OSError, ValueError) as error:
+        row["valid"] = False
+        row["error"] = str(error)
+
+
+def summarize(backend, layers, readback, successes):
+    """Keep failed trials out of the aggregate measurements."""
+    return {"backend": backend, "layers": layers, "readback": readback,
+            "valid_runs": len(successes),
+            "median_fps": statistics.median(successes) if successes else None,
+            "min_fps": min(successes) if successes else None,
+            "max_fps": max(successes) if successes else None}
+
+
+def measure(args, binaries, video, report, output):
+    """Run sequential trials, retaining CPU images for the GPU comparisons."""
+    def save():
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(report, indent=2) + "\n")
+
+    if args.verify_images:
+        image_dir = output.parent / (output.stem + "-frames")
+        image_dir.mkdir(parents=True, exist_ok=True)
+    cpu_images = {}
+    failed = False
+    for layers in (1, 2):
+        for readback in (0, 1):
+            for backend, binary in binaries.items():
+                successes = []
+                for trial in range(1, args.runs + 1):
+                    command = [str(binary), str(video), str(args.frames), str(layers), str(readback)]
+                    image_path = None
+                    if args.verify_images:
+                        image_path = image_dir / f"{backend}-layers{layers}-readback{readback}-run{trial}.png"
+                        command.append(str(image_path))
+                    evidence = capture(command, args.timeout)
+                    row = {"backend": backend, "layers": layers, "readback": readback,
+                           "trial": trial, **evidence}
+                    validate_result(row, args.frames, layers, readback)
+                    if row["valid"] and image_path:
+                        verify_image(row, image_path, cpu_images, layers, readback)
+                    failed |= not row["valid"]
+                    if row["valid"]:
+                        successes.append(row["fps"])
+                    report["measurements"].append(row)
+                    print(f"{backend} layers={layers} readback={readback} trial={trial}: "
+                          f"{row.get('fps', 'no result')} FPS valid={row['valid']}", flush=True)
+                    save()
+                report["summary"].append(summarize(backend, layers, readback, successes))
+    return failed
 
 
 def main():
@@ -83,75 +175,10 @@ def main():
     if shutil.which("nvidia-smi"):
         report["gpu_processes"] = capture(["nvidia-smi", "--query-compute-apps=pid,process_name,used_gpu_memory", "--format=csv,noheader"])
 
-    def save():
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(report, indent=2) + "\n")
-
-    if args.verify_images:
-        from PIL import Image, ImageChops, ImageStat
-        image_dir = output.parent / (output.stem + "-frames")
-        image_dir.mkdir(parents=True, exist_ok=True)
-    cpu_images = {}
-    failed = False
-    for layers in (1, 2):
-        for readback in (0, 1):
-            for backend, binary in binaries.items():
-                successes = []
-                for trial in range(1, args.runs + 1):
-                    command = [str(binary), str(video), str(args.frames), str(layers), str(readback)]
-                    image_path = None
-                    if args.verify_images:
-                        image_path = image_dir / f"{backend}-layers{layers}-readback{readback}-run{trial}.png"
-                        command.append(str(image_path))
-                    evidence = capture(command, args.timeout)
-                    row = {"backend": backend, "layers": layers, "readback": readback,
-                           "trial": trial, **evidence}
-                    match = RESULT.search(evidence.get("output", ""))
-                    if evidence.get("returncode") == 0 and match:
-                        frames, got_layers, got_readback, deferred, seconds, fps = match.groups()
-                        row.update(frames=int(frames), deferred_frames=int(deferred),
-                                   seconds=float(seconds), fps=float(fps))
-                        row["valid"] = (int(frames) == args.frames and int(got_layers) == layers
-                                        and int(got_readback) == readback and float(seconds) > 0
-                                        and (backend != "vulkan" or int(deferred) == args.frames))
-                        if not row["valid"]:
-                            row["error"] = "Incomplete workload or Vulkan CPU fallback detected"
-                    else:
-                        row["valid"] = False
-                    if row["valid"] and image_path:
-                        try:
-                            with Image.open(image_path) as loaded:
-                                pixels = loaded.convert("RGB")
-                            means = ImageStat.Stat(pixels).mean
-                            row["image"] = {"path": str(image_path), "size": pixels.size, "mean_rgb": means}
-                            if backend == "cpu":
-                                cpu_images[(layers, readback)] = pixels
-                            else:
-                                reference = cpu_images[(layers, readback)]
-                                if pixels.size != reference.size:
-                                    raise ValueError("GPU image dimensions differ from CPU")
-                                row["image"]["cpu_mae_rgb"] = ImageStat.Stat(ImageChops.difference(pixels, reference)).mean
-                                reference_means = ImageStat.Stat(reference).mean
-                                if sum(reference_means) > 3 and sum(means) < 0.1 * sum(reference_means):
-                                    raise ValueError("GPU image is black/near-black while matching CPU image is not")
-                        except (OSError, ValueError) as error:
-                            row["valid"] = False
-                            row["error"] = str(error)
-                    failed |= not row["valid"]
-                    if row["valid"]:
-                        successes.append(row["fps"])
-                    report["measurements"].append(row)
-                    print(f"{backend} layers={layers} readback={readback} trial={trial}: "
-                          f"{row.get('fps', 'no result')} FPS valid={row['valid']}", flush=True)
-                    save()
-                report["summary"].append({"backend": backend, "layers": layers, "readback": readback,
-                    "valid_runs": len(successes),
-                    "median_fps": statistics.median(successes) if successes else None,
-                    "min_fps": min(successes) if successes else None,
-                    "max_fps": max(successes) if successes else None})
+    failed = measure(args, binaries, video, report, output)
     report["finished_utc"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     report["valid"] = not failed
-    save()
+    output.write_text(json.dumps(report, indent=2) + "\n")
     print(f"Results: {output}")
     return 1 if failed else 0
 

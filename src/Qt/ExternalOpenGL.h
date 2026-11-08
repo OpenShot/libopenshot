@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /*
 ** Copyright (c) 2013-2018 The Khronos Group Inc.
 **

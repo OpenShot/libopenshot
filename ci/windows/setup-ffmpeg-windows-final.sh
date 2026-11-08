@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # Run using C:\msys64\usr\bin\bash.exe. No pacman changes.
 # Usage: bash setup-ffmpeg-windows.sh mingw64|mingw32
 set -euo pipefail

@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #ifndef OPENSHOT_GPU_METRICS_H
 #define OPENSHOT_GPU_METRICS_H

@@ -18,6 +18,7 @@
 #include "FFmpegWriter.h"
 #include <QTemporaryDir>
 #include <algorithm>
+#include <numeric>
 #include "Clip.h"
 #include "effects/Saturation.h"
 #include "effects/Crop.h"
@@ -568,7 +569,9 @@ TEST_CASE("VideoToolbox export shares decoder compositor and encoder surfaces", 
         CHECK(verify.info.video_length==24);
         auto image=verify.GetFrame(12)->GetImage();
         REQUIRE(image); CHECK(image->width()==width); CHECK(image->height()==height);
+        REQUIRE(expected_frame);
         const auto expected = expected_frame->GetImage();
+        REQUIRE(expected);
         double error = 0, brightness = 0;
         int samples = 0;
         for (int y = 8; y < height; y += 16) {
@@ -1130,8 +1133,8 @@ TEST_CASE("Masked clip grading with a LUT and scopes stays on Vulkan", "[vulkan]
         scope.SetVideoRegionNormalized(0.25f,0.25f,0.5f,0.5f);
         scope.SetFrame(frame);
         REQUIRE(scope.HasVideo());
-        uint64_t counted=0;
-        for (auto bin : scope.GetVideoHistogramLumaBins()) counted+=bin;
+        const auto bins=scope.GetVideoHistogramLumaBins();
+        const uint64_t counted=std::accumulate(bins.begin(),bins.end(),uint64_t{0});
         CHECK(counted>0);
     }
     // A neutral grade applies only its LUT, still on the GPU.

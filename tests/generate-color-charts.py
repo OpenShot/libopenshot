@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 OpenShot Studios, LLC
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Generate the color chart fixtures used by tests/ColorManagement.cpp.
+"""
+Generate the color chart fixtures used by tests/ColorManagement.cpp.
 
 Each chart is a 4x4 grid of flat patches (160x96 px, 640x384 frame, 3 frames)
 with known colors, (near-)losslessly encoded:
@@ -16,7 +17,8 @@ last two patches are 600 and 1000 nit highlights.
 
 Usage: generate-color-charts.py [ffmpeg] [output_dir]  (needs numpy, libx264, libx265)
 """
-import subprocess
+# Local developer tools use explicit argument lists, never a shell.
+import subprocess  # nosec B404
 import sys
 
 import numpy as np
@@ -64,8 +66,9 @@ def write(name, rgb, k, bits, tags, encoder):
     planes = np.round(planes).clip(0, (1 << bits) - 1).astype(np.uint16 if bits > 8 else np.uint8)
     pix_in = "yuv444p10le" if bits > 8 else "yuv444p"
     pix_out = "yuv420p10le" if bits > 8 else "yuv420p"
+    # The developer selects FFmpeg; all encoding options are fixed arguments.
     subprocess.run([FFMPEG, "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", pix_in, "-s", f"{W}x{H}",
-                    "-r", "30", *tags, "-i", "-", *tags, "-pix_fmt", pix_out, *encoder, f"{OUT}/{name}"],
+                    "-r", "30", *tags, "-i", "-", *tags, "-pix_fmt", pix_out, *encoder, f"{OUT}/{name}"],  # nosec B603
                    input=planes.tobytes() * 3, check=True)
 
 

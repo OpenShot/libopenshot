@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+# SPDX-License-Identifier: LGPL-3.0-or-later
 set -euo pipefail
 arch=${1:?Specify mingw64 or mingw32}
 export PATH="/$arch/bin:/usr/bin:/c/Windows/System32:/c/Windows"

@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "VulkanFrameImage.h"
 #include <algorithm>
+#include <iterator>
 #include <atomic>
 #include <cerrno>
 #include <cstdio>
@@ -143,8 +144,8 @@ std::vector<std::string> VulkanDeviceCandidates() {
     std::stable_sort(ranked.begin(), ranked.end(),
         [](const auto& a, const auto& b) { return a.first < b.first; });
     std::vector<std::string> candidates;
-    for (const auto& device : ranked)
-        candidates.push_back(device.second);
+    std::transform(ranked.begin(), ranked.end(), std::back_inserter(candidates),
+        [](const auto& device) { return device.second; });
     return candidates;
 }
 
