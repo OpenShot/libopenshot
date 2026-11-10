@@ -34,6 +34,7 @@ target_link_libraries(openshot-benchmark openshot)
 ###  TEST SOURCE FILES
 ###
 set(OPENSHOT_TESTS
+  GpuMetrics
   AdaptivePreroll
   AudioDeviceManager
   AudioRecorder
@@ -47,6 +48,7 @@ set(OPENSHOT_TESTS
   Caption
   Clip
   Color
+  ColorManagement
   Coordinate
   DummyReader
   FFmpegCapabilities
@@ -64,6 +66,7 @@ set(OPENSHOT_TESTS
   QtImageReader
   QtTextReader
   ReaderBase
+  RendererBase
   NativeArm64ProcessOracle
   Settings
   ScreenCaptureReader
@@ -96,6 +99,10 @@ set(OPENSHOT_TESTS
   DenoiseImage
   WaveEffect
 )
+
+if(ENABLE_GPU_FRAME)
+  list(APPEND OPENSHOT_TESTS VulkanCompositor VulkanPresentation VulkanDeviceLost)
+endif()
 
 # The SIGPIPE crash-handler test is POSIX-only. Do not create an empty
 # Catch2 executable on Windows, where discovery registers a NOT_BUILT test.
@@ -185,7 +192,19 @@ foreach(tname ${OPENSHOT_TESTS})
       SKIP_REGULAR_EXPRESSION "Skipping VAAPI test:"
     )
   endif()
-  if(tname STREQUAL "QtTextReader")
+  if(tname MATCHES "^Vulkan")
+    # Same Vulkan headers as the library (newer than some system packages)
+    target_include_directories(openshot-${tname}-test PRIVATE ${Vulkan_INCLUDE_DIR})
+    if(APPLE)
+      # Tests build Core Video surfaces to exercise VideoToolbox interop.
+      target_link_libraries(openshot-${tname}-test "-framework CoreVideo" "-framework CoreFoundation")
+    endif()
+    # Report missing GPU, display or interop support as skipped, not passed.
+    list(APPEND test_properties
+      SKIP_REGULAR_EXPRESSION "Skipping Vulkan test:"
+    )
+  endif()
+  if(tname STREQUAL "QtTextReader" OR tname STREQUAL "RendererBase")
     # Pixel assertions need a font engine; Qt's minimal plugin has no font database.
     list(APPEND test_properties ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
   elseif(tname STREQUAL "Caption" OR tname STREQUAL "Timer")

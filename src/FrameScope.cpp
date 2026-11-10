@@ -11,6 +11,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "FrameScope.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "Logger.h"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -236,13 +240,29 @@ void FrameScope::analyze() {
 void FrameScope::analyze_video() {
 	// Frame images are always QImage::Format_RGBA8888_Premultiplied (enforced
 	// by Frame::AddImage). Pixel byte order is [R=0, G=1, B=2, A=3].
-	std::shared_ptr<QImage> image = frame->GetImage();
-	if (!image || image->isNull())
+	std::shared_ptr<QImage> image;
+	int width = 0;
+	int height = 0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// Analysis is read-only. Do not replace the shared preview/cache surface
+	// with mutable CPU pixels just because the scopes need to inspect it.
+	auto surface = frame->GetDeferredImage();
+	if (surface) {
+		width = surface->GetWidth();
+		height = surface->GetHeight();
+	} else
+#endif
+	{
+		image = frame->GetImage();
+		if (!image || image->isNull())
+			return;
+		width = image->width();
+		height = image->height();
+	}
+	if (width <= 0 || height <= 0)
 		return;
 
 	video_present = true;
-	const int width = image->width();
-	const int height = image->height();
 	int start_x = 0;
 	int end_x = width;
 	int start_y = 0;
@@ -265,6 +285,44 @@ void FrameScope::analyze_video() {
 	clipped_green = 0;
 	clipped_blue = 0;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (surface) {
+		try {
+			// Count on the GPU; only the counters return to the CPU.
+			const auto counts = ScopeVulkanImage(surface, QRect(start_x, start_y, video_width, video_height),
+				waveform_columns, waveform_bins, vectorscope_size);
+			auto next = counts.begin();
+			for (auto* values : {&histogram_luma, &histogram_red, &histogram_green, &histogram_blue,
+					&waveform_luma, &waveform_red, &waveform_green, &waveform_blue, &vectorscope}) {
+				std::copy_n(next, values->size(), values->begin());
+				next += static_cast<std::ptrdiff_t>(values->size());
+			}
+			// The summary follows from the histograms. Average luma uses bin
+			// centers, within half a bin of the CPU's exact sum.
+			double weighted = 0.0;
+			int64_t pixels = 0;
+			for (int bin = 0; bin < 256; ++bin) {
+				pixels += histogram_luma[bin];
+				weighted += static_cast<double>(bin) * histogram_luma[bin];
+			}
+			avg_luma = pixels > 0 ? weighted / (255.0 * static_cast<double>(pixels)) : 0.0;
+			for (int bin = 0; bin < 3; ++bin)
+				clipped_shadows += histogram_luma[bin];
+			for (int bin = 253; bin < 256; ++bin) {
+				clipped_highlights += histogram_luma[bin];
+				clipped_red += histogram_red[bin];
+				clipped_green += histogram_green[bin];
+				clipped_blue += histogram_blue[bin];
+			}
+			return;
+		} catch (const std::exception& error) {
+			Logger::Instance()->Log(std::string("Vulkan scope CPU fallback: ") + error.what());
+		}
+		image = std::make_shared<QImage>(surface->Materialize());
+		if (image->isNull())
+			return;
+	}
+#endif
 	const int bytes_per_line = image->bytesPerLine();
 	const unsigned char* bits = image->constBits();
 	const auto& inv_alpha = inv_alpha_lut();

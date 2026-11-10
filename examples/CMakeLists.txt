@@ -64,6 +64,10 @@ target_compile_definitions(openshot-example PRIVATE
 target_link_libraries(openshot-example openshot)
 
 add_executable(openshot-html-example ExampleHtml.cpp)
+add_executable(openshot-timeline-benchmark TimelineBenchmark.cpp)
+target_link_libraries(openshot-timeline-benchmark openshot)
+add_executable(openshot-export-benchmark TimelineExportBenchmark.cpp)
+target_link_libraries(openshot-export-benchmark openshot)
 target_link_libraries(openshot-html-example openshot Qt${QT_VERSION_MAJOR}::Gui)
 
 if(ENABLE_VULKAN_BENCHMARK)

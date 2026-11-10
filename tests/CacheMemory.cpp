@@ -21,6 +21,41 @@
 
 using namespace openshot;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace {
+class CacheTestSurface : public FrameImage {
+public:
+	mutable int reads = 0;
+	int GetWidth() const override { return 16; }
+	int GetHeight() const override { return 16; }
+	int64_t GetBytes() const override { return 1024; }
+	QImage Materialize() const override {
+		++reads;
+		QImage image(16, 16, QImage::Format_RGBA8888_Premultiplied);
+		image.fill(Qt::red);
+		return image;
+	}
+};
+}
+TEST_CASE("Hardware cache honors byte budget below the CPU frame floor", "[cache][gpu]") {
+	CacheMemory cache;
+	auto surface = std::make_shared<CacheTestSurface>();
+	for (int i = 1; i <= 5; ++i) {
+		auto frame = std::make_shared<Frame>();
+		frame->number = i;
+		frame->AddDeferredImage(surface);
+		cache.SetMaxBytes(frame->GetBytes() * 2);
+		cache.Add(frame);
+	}
+	CHECK(cache.Count() == 2);
+	CHECK(cache.GetBytes() <= cache.GetMaxBytes());
+	CHECK(surface->reads == 0);
+	CHECK_FALSE(cache.GetFrame(1));
+	REQUIRE(cache.GetFrame(5));
+	CHECK(cache.GetFrame(5)->GetImage()->pixelColor(0, 0) == QColor(Qt::red));
+}
+#endif
+
 TEST_CASE( "default constructor", "[libopenshot][cachememory]" )
 {
 	// Create cache object

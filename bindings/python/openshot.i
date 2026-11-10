@@ -110,6 +110,13 @@ class QWidget;
 #include "QtTextReader.h"
 #include "KeyFrame.h"
 #include "RendererBase.h"
+#if defined(OPENSHOT_ENABLE_GPU_FRAME)
+#include "Qt/VulkanOpenGLPresenter.h"
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "GpuDevices.h"
+#endif
+#include "GpuMetrics.h"
 #include "Settings.h"
 #include "TimelineBase.h"
 #include "Timeline.h"
@@ -520,6 +527,14 @@ static int openshot_swig_is_qwidget(PyObject *obj) {
 %include "KeyFrame.h"
 %include "AnimatedCurve.h"
 %include "RendererBase.h"
+#if defined(OPENSHOT_ENABLE_GPU_FRAME)
+%include "Qt/VulkanOpenGLPresenter.h"
+namespace openshot { void ReleaseVulkanMemory(); uint64_t VulkanFrameReadbackCount(); uint64_t VulkanUploadFailureCount(); }
+%include "GpuDevices.h"
+%template(GpuDeviceVector) std::vector<openshot::GpuDevice>;
+%template(StringVector) std::vector<std::string>;
+#endif
+%include "GpuMetrics.h"
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Qt/VideoCacheThread.h"

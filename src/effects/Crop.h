@@ -36,6 +36,9 @@ namespace openshot
 	 */
 	class Crop : public EffectBase
 	{
+	protected:
+		bool RendersOnVulkan() const override { return true; }
+
 	private:
 		/// Init effect settings
 		void init_effect_details();

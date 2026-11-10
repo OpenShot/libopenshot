@@ -1,0 +1,241 @@
+// Copyright (c) 2026 OpenShot Studios, LLC
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include "openshot_catch.h"
+#include "Frame.h"
+#include "VulkanFrameImage.h"
+#include "VulkanCompositor.h"
+#include "GpuDevices.h"
+#include "Qt/VideoRenderer.h"
+#include "Qt/VulkanOpenGLPresenter.h"
+#include <QApplication>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
+#include <QOpenGLWidget>
+#include <QPainter>
+#include <QThread>
+#include <QDebug>
+extern "C" {
+#include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_vulkan.h>
+}
+namespace {
+class Preview : public QOpenGLWidget {
+public:
+    openshot::VulkanOpenGLPresenter presenter{reinterpret_cast<uintptr_t>(this)};
+    bool nativeDraw = false;
+    bool textureStatePreserved = false;
+    void initializeGL() override {
+        auto* current = context();
+        typedef const GLubyte* (APIENTRYP GetString)(GLenum);
+        auto getString = reinterpret_cast<GetString>(current->getProcAddress("glGetString"));
+        qWarning() << "Presentation test Qt context:" << qVersion() << current->format()
+                   << "OpenGL ES:" << current->isOpenGLES()
+                   << "glCreateProgram:" << bool(current->getProcAddress("glCreateProgram"));
+        if (getString)
+            qWarning() << "Presentation test GL:" << reinterpret_cast<const char*>(getString(GL_VENDOR))
+                       << reinterpret_cast<const char*>(getString(GL_RENDERER))
+                       << reinterpret_cast<const char*>(getString(GL_VERSION));
+    }
+    void paintGL() override {
+        QPainter painter(this);
+        painter.fillRect(rect(), Qt::blue);
+        painter.beginNativePainting();
+        // Qt also uploads textures for popup labels and screenshot overlays.
+        // Native drawing must leave its texture binding intact.
+        auto* gl = context()->functions();
+        GLuint qtTextures[2] = {};
+        gl->glGenTextures(2, qtTextures);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, qtTextures[0]);
+#ifdef __APPLE__
+        GLuint qtRectangle = 0;
+        gl->glGenTextures(1, &qtRectangle);
+        gl->glBindTexture(GL_TEXTURE_RECTANGLE, qtRectangle);
+#endif
+        gl->glActiveTexture(GL_TEXTURE1);
+        gl->glBindTexture(GL_TEXTURE_2D, qtTextures[1]);
+        nativeDraw = presenter.Draw(0, 0, width() * devicePixelRatioF(), height() * devicePixelRatioF());
+        GLint active = 0, binding = 0, otherBinding = 0;
+        gl->glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+        gl->glActiveTexture(GL_TEXTURE1);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &otherBinding);
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_2D, &binding);
+        textureStatePreserved = binding == GLint(qtTextures[0]) && active == GL_TEXTURE1 &&
+                                otherBinding == GLint(qtTextures[1]);
+#ifdef __APPLE__
+        GLint rectangle = 0;
+        gl->glGetIntegerv(GL_TEXTURE_BINDING_RECTANGLE, &rectangle);
+        textureStatePreserved = textureStatePreserved && rectangle == GLint(qtRectangle);
+        gl->glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+        gl->glDeleteTextures(1, &qtRectangle);
+#endif
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
+        gl->glDeleteTextures(2, qtTextures);
+        painter.endNativePainting();
+        painter.fillRect(QRect(0, 0, 20, 20), Qt::green);
+    }
+};
+struct Frames {
+    AVBufferRef* device = nullptr;
+    AVBufferRef* pool = nullptr;
+    AVFrame* cpu = av_frame_alloc();
+    AVFrame* gpu = av_frame_alloc();
+    ~Frames() {
+        av_frame_free(&cpu);
+        av_frame_free(&gpu);
+        av_buffer_unref(&pool);
+        av_buffer_unref(&device);
+    }
+};
+}
+TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[vulkan][presentation]") {
+    // CTest reports "Skipping Vulkan test:" as skipped; see tests/CMakeLists.txt.
+    if (!openshot::VulkanRenderingEnabled()) {
+        WARN("Skipping Vulkan test: CPU mode, or no Vulkan library");
+        return;
+    }
+    const QByteArray platform = qgetenv("QT_QPA_PLATFORM");
+#ifdef __linux__
+    if ((platform.isEmpty() || platform.startsWith("xcb")) && !qEnvironmentVariableIsSet("DISPLAY") &&
+        !qEnvironmentVariableIsSet("WAYLAND_DISPLAY")) {
+        WARN("Skipping Vulkan test: presentation needs a display with OpenGL");
+        return;
+    }
+#endif
+    if (platform == "offscreen" || platform == "minimal") {
+        WARN("Skipping Vulkan test: presentation needs a native OpenGL display");
+        return;
+    }
+    Frames data;
+    if (openshot::CreateSharedVulkanDevice(&data.device) < 0) {
+        WARN("Skipping Vulkan test: no Vulkan device is available");
+        return;
+    }
+    int argc = 1;
+    char name[] = "vulkan-presentation";
+    char* argv[] = {name, nullptr};
+#ifdef _WIN32
+    // Match the editor: ANGLE/Direct3D cannot import Vulkan Win32 resources.
+    if (!qEnvironmentVariableIsSet("QT_OPENGL"))
+        qputenv("QT_OPENGL", "desktop");
+#endif
+    QApplication app(argc, argv);
+    data.pool = av_hwframe_ctx_alloc(data.device);
+    REQUIRE(data.pool);
+    auto pool = reinterpret_cast<AVHWFramesContext*>(data.pool->data);
+    pool->format = AV_PIX_FMT_VULKAN;
+    pool->sw_format = AV_PIX_FMT_RGBA;
+    pool->width = pool->height = 64;
+    REQUIRE(av_hwframe_ctx_init(data.pool) >= 0);
+    REQUIRE(av_hwframe_get_buffer(data.pool, data.gpu, 0) >= 0);
+    data.cpu->format = AV_PIX_FMT_RGBA;
+    data.cpu->width = data.cpu->height = 64;
+    REQUIRE(av_frame_get_buffer(data.cpu, 32) >= 0);
+    for (int y = 0; y < 64; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            auto p = data.cpu->data[0] + y * data.cpu->linesize[0] + x * 4;
+            p[0] = y < 32 ? 255 : 0; p[1] = 0; p[2] = y < 32 ? 0 : 255; p[3] = 255;
+        }
+    }
+    REQUIRE(av_hwframe_transfer_data(data.gpu, data.cpu, 0) >= 0);
+    auto frame = std::make_shared<openshot::Frame>();
+    frame->AddDeferredImage(std::make_shared<openshot::VulkanFrameImage>(data.gpu, true));
+    Preview widget;
+    widget.resize(128, 128);
+    VideoRenderer renderer;
+    renderer.OverrideWidget(reinterpret_cast<uintptr_t>(&widget));
+    widget.show();
+    QCoreApplication::processEvents();
+    auto* context = widget.context();
+    if (!context
+#ifdef _WIN32
+        || !context->hasExtension("GL_EXT_memory_object_win32") || !context->hasExtension("GL_EXT_semaphore_win32")
+#elif !defined(__APPLE__)
+        || !context->hasExtension("GL_EXT_memory_object_fd") || !context->hasExtension("GL_EXT_semaphore_fd")
+#endif
+    ) {
+        WARN("Skipping Vulkan test: OpenGL lacks Vulkan memory/semaphore interop");
+        return;
+    }
+    const auto readbacks = openshot::VulkanFrameReadbackCount();
+    renderer.paint(frame);
+    for (int i = 0; i < 20; ++i) {
+        QCoreApplication::processEvents();
+        QThread::msleep(5);
+    }
+    QImage image;
+    // Exercise both semaphore directions repeatedly; a single frame can hide
+    // a race where Vulkan consumes its own release signal before GL waits.
+    for (int i = 0; i < 64; ++i) {
+        image = widget.grabFramebuffer();
+        if (i == 0 && qEnvironmentVariableIsSet("OPENSHOT_PRESENTATION_CAPTURE"))
+            image.save(qEnvironmentVariable("OPENSHOT_PRESENTATION_CAPTURE"));
+        INFO("frame=" << i << " top=" << image.pixelColor(image.width()/2, image.height()/4).name().toStdString()
+             << " bottom=" << image.pixelColor(image.width()/2, 3*image.height()/4).name().toStdString());
+        REQUIRE(widget.nativeDraw);
+        CHECK(widget.textureStatePreserved);
+        REQUIRE(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
+        REQUIRE(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
+    }
+    REQUIRE(widget.nativeDraw);
+    CHECK(widget.textureStatePreserved);
+    CHECK(widget.presenter.NativeDraws() >= 64);
+    CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(widget.presenter.FallbackReason().empty());
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    REQUIRE(frame->GetDeferredImage());
+    REQUIRE_FALSE(image.isNull());
+    if (qEnvironmentVariableIsSet("OPENSHOT_PRESENTATION_CAPTURE"))
+        image.save(qEnvironmentVariable("OPENSHOT_PRESENTATION_CAPTURE"));
+    INFO("center=" << image.pixelColor(image.width()/2, image.height()/2).name().toStdString()
+        << " overlay=" << image.pixelColor(5, 5).name().toStdString());
+    CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
+    CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
+    CHECK(image.pixelColor(5, 5) == QColor(Qt::green));
+    // CPU-origin artwork follows upload -> compositor -> native presentation.
+    QImage artwork(64, 64, QImage::Format_RGBA8888_Premultiplied);
+    for (int y = 0; y < 64; ++y)
+        for (int x = 0; x < 64; ++x)
+            artwork.setPixelColor(x, y, y < 32 ? Qt::red : Qt::blue);
+    auto uploaded = openshot::UploadVulkanImage(artwork);
+    frame->AddDeferredImage(openshot::RenderVulkanImage(uploaded, nullptr, 64, 64, QTransform(), 1.0, Qt::transparent));
+    renderer.paint(frame);
+    for (int i = 0; i < 20; ++i) {
+        QCoreApplication::processEvents();
+        QThread::msleep(5);
+    }
+    image = widget.grabFramebuffer();
+    CHECK(widget.nativeDraw);
+    CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::red));
+    CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::blue));
+    // A new frame size replaces the presenter's shared OpenGL image.
+    QImage resized(96, 48, QImage::Format_RGBA8888_Premultiplied);
+    for (int y = 0; y < resized.height(); ++y)
+        for (int x = 0; x < resized.width(); ++x)
+            resized.setPixelColor(x, y, y < resized.height() / 2 ? Qt::blue : Qt::red);
+    frame->AddDeferredImage(openshot::RenderVulkanImage(openshot::UploadVulkanImage(resized), nullptr,
+                                                        96, 48, QTransform(), 1.0, Qt::transparent));
+    renderer.paint(frame);
+    for (int i = 0; i < 20; ++i) {
+        QCoreApplication::processEvents();
+        QThread::msleep(5);
+    }
+    image = widget.grabFramebuffer();
+    CHECK(widget.nativeDraw);
+    CHECK(widget.presenter.FallbackFrames() == 0);
+    CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::blue));
+    CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::red));
+    // Recovery must not read pixels from a dead device or throw through paintGL.
+    openshot::ReportVulkanResult(VK_ERROR_DEVICE_LOST);
+    CHECK_NOTHROW(widget.presenter.Present(frame));
+    CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
+    CHECK(widget.presenter.FallbackReason().find("device lost") != std::string::npos);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    widget.presenter.Clear();
+    CHECK_FALSE(widget.presenter.Draw(0, 0, 128, 128));
+    CHECK_FALSE(widget.presenter.FallbackReason().empty());
+}

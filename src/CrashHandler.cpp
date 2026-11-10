@@ -55,6 +55,23 @@ CrashHandler *CrashHandler::Instance()
 }
 
 #ifdef __MINGW32__
+// GpuDebug: with OPENSHOT_GPU_DEBUG set, save a small crash dump (thread
+// stacks only) to %USERPROFILE%\.openshot_qt for debugging test builds.
+static void writeMiniDump()
+{
+	const char* profile = getenv("USERPROFILE");
+	if (!getenv("OPENSHOT_GPU_DEBUG") || !profile)
+		return;
+	char path[MAX_PATH];
+	snprintf(path, sizeof(path), "%s\\.openshot_qt\\openshot-crash-%lu.dmp", profile, GetCurrentProcessId());
+	HANDLE file = CreateFileA(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (file == INVALID_HANDLE_VALUE)
+		return;
+	if (MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file, MiniDumpNormal, NULL, NULL, NULL))
+		fprintf(stderr, "Crash dump saved: %s\n", path);
+	CloseHandle(file);
+}
+
 // Windows exception handler
 void CrashHandler::abortHandler(int signum)
 {
@@ -76,6 +93,7 @@ void CrashHandler::abortHandler(int signum)
 
 	// Dump a stack trace.
 	printStackTrace(stderr, 63);
+	writeMiniDump();
 
 	// Quit
 	exit( signum );

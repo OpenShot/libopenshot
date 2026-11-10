@@ -46,6 +46,58 @@
 
 using namespace openshot;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace {
+class AudioOnlyGpuTestReader : public DummyReader {
+public:
+	AudioOnlyGpuTestReader() : DummyReader(Fraction(24, 1), 16, 16, 48000, 2, 5.0) {
+		info.has_video = false;
+		info.has_audio = true;
+	}
+	std::shared_ptr<Frame> GetFrame(int64_t n) override {
+		auto frame = std::make_shared<Frame>(n, 16, 16, "#00000000", 2000, 2);
+		frame->SampleRate(48000);
+		frame->ChannelsLayout(LAYOUT_STEREO);
+		frame->AddAudioSilence(2000);
+		return frame;
+	}
+};
+class ClipTestSurface : public FrameImage {
+public:
+	mutable int reads = 0;
+	int GetWidth() const override { return 16; }
+	int GetHeight() const override { return 16; }
+	int64_t GetBytes() const override { return 1024; }
+	QImage Materialize() const override {
+		++reads;
+		QImage image(16, 16, QImage::Format_RGBA8888_Premultiplied);
+		image.fill(Qt::red);
+		return image;
+	}
+};
+}
+TEST_CASE("Audio-only clip preserves deferred background", "[clip][gpu]") {
+	AudioOnlyGpuTestReader reader;
+	Clip clip(&reader);
+	clip.Open();
+	auto surface = std::make_shared<ClipTestSurface>();
+	auto background = std::make_shared<Frame>();
+	background->AddDeferredImage(surface);
+	auto result = clip.GetFrame(background, 1);
+	CHECK(surface->reads == 0);
+	CHECK(background->GetDeferredImage() == surface);
+	CHECK(result->GetDeferredImage() == surface);
+	reader.info.has_video = true;
+	clip.has_video = Keyframe(0.0);
+	TimelineInfoStruct options{};
+	auto audio = clip.GetFrame(background, 2, &options);
+	CHECK(surface->reads == 0);
+	CHECK(background->GetDeferredImage() == surface);
+	CHECK(audio->GetAudioSamplesCount() == 2000);
+	clip.Close();
+}
+#endif
+
 namespace {
 	struct ClipTransformCase {
 		ScaleType scale;

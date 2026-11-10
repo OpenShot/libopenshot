@@ -60,6 +60,7 @@ set(OPENSHOT_SOURCES
   ChunkReader.cpp
   ChunkWriter.cpp
   Color.cpp
+  ColorManagement.cpp
   Clip.cpp
   ClipBase.cpp
   Coordinate.cpp
@@ -185,6 +186,9 @@ set(CMAKE_MACOSX_RPATH 0)
 ############### CREATE LIBRARY #################
 # Create shared openshot library
 add_library(openshot SHARED)
+if(ENABLE_GPU_FRAME)
+  target_compile_definitions(openshot PUBLIC OPENSHOT_ENABLE_GPU_FRAME=1)
+endif()
 
 target_sources(openshot PRIVATE
   ${OPENSHOT_SOURCES}
@@ -237,7 +241,7 @@ add_feature_info("Wayland screen capture" OPENSHOT_WAYLAND_CAPTURE "Use the opti
 # Find JUCE-based openshot Audio libraries
 if(NOT TARGET OpenShot::Audio)
   # Only load if necessary (not for integrated builds)
-  find_package(OpenShotAudio 1.0.2 REQUIRED)
+  find_package(OpenShotAudio 1.1.0 REQUIRED)
 endif()
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
 
@@ -433,6 +437,8 @@ message(STATUS "Found Qt${QT_VERSION_MAJOR} ${Qt${QT_VERSION_MAJOR}Core_VERSION_
 set(QT_VERSION_STR ${Qt${QT_VERSION_MAJOR}Core_VERSION_STRING} CACHE STRING "Qt version linked with" FORCE)
 mark_as_advanced(QT_VERSION_STR)
 
+target_sources(openshot PRIVATE GpuMetrics.cpp)
+
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
 find_package(FFmpeg REQUIRED
@@ -441,6 +447,54 @@ find_package(FFmpeg REQUIRED
 )
 
 set(all_comps avcodec avdevice avformat avutil swscale)
+if(ENABLE_GPU_FRAME)
+  find_package(FFmpeg REQUIRED COMPONENTS avfilter)
+  list(APPEND all_comps avfilter)
+  target_sources(openshot PRIVATE VulkanFrameImage.cpp)
+  target_sources(openshot PRIVATE VulkanCompositor.cpp)
+  target_sources(openshot PRIVATE GpuDevices.cpp VulkanLoader.cpp)
+  if(APPLE)
+    enable_language(OBJCXX)
+    target_sources(openshot PRIVATE MacVulkanInterop.mm MacVulkanInterop.h Qt/VulkanOpenGLPresenterMac.mm Qt/VulkanOpenGLPresenter.h)
+    set_property(TARGET openshot PROPERTY OBJCXX_STANDARD 17)
+    target_link_libraries(openshot PRIVATE "-framework Foundation" "-framework CoreFoundation" objc "-framework Metal" "-framework CoreVideo" "-framework IOSurface" "-framework OpenGL")
+  else()
+    target_sources(openshot PRIVATE Qt/VulkanOpenGLPresenter.cpp Qt/VulkanOpenGLPresenter.h)
+  endif()
+  find_package(Vulkan REQUIRED)
+  find_program(GLSLANG_VALIDATOR glslangValidator)
+  if(NOT GLSLANG_VALIDATOR)
+    message(FATAL_ERROR "ENABLE_GPU_FRAME requires glslangValidator")
+  endif()
+  # Embed SPIR-V in the library so installed builds need no shader files.
+  set(VULKAN_SHADER_HEADERS)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vulkan")
+  foreach(shader affine encode_nv12)
+    set(shader_header "${CMAKE_CURRENT_BINARY_DIR}/vulkan/${shader}.comp.h")
+    add_custom_command(OUTPUT "${shader_header}"
+      COMMAND "${GLSLANG_VALIDATOR}" -V -S comp --vn "openshot_${shader}_spv"
+              -o "${shader_header}" "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp"
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp" VERBATIM)
+    list(APPEND VULKAN_SHADER_HEADERS "${shader_header}")
+  endforeach()
+  add_custom_target(openshot-vulkan-shaders DEPENDS ${VULKAN_SHADER_HEADERS})
+  add_dependencies(openshot openshot-vulkan-shaders)
+  target_include_directories(openshot PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/vulkan")
+  # Vulkan is loaded at runtime (VulkanLoader.cpp), so OpenShot starts without it.
+  # macOS links the MoltenVK it bundles; nothing to load there.
+  target_compile_definitions(openshot PRIVATE VK_NO_PROTOTYPES)
+  if(APPLE)
+    target_link_libraries(openshot PRIVATE Vulkan::Vulkan)
+  else()
+    target_include_directories(openshot PRIVATE ${Vulkan_INCLUDE_DIRS})
+    target_link_libraries(openshot PRIVATE ${CMAKE_DL_LIBS})
+  endif()
+  find_package(PkgConfig QUIET)
+  if(PKG_CONFIG_FOUND)
+    pkg_check_modules(VULKAN_FRAME_PC QUIET vulkan)
+    target_include_directories(openshot PRIVATE ${VULKAN_FRAME_PC_INCLUDE_DIRS})
+  endif()
+endif()
 set(version_comps avcodec avformat avutil)
 
 # Pick a resampler.  Prefer swresample if possible

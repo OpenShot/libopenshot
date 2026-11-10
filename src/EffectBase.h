@@ -25,6 +25,7 @@
 
 namespace openshot
 {
+	class FrameImage; // GPU surface; only produced in Vulkan builds
 	class ReaderBase;
 
 	/**
@@ -93,6 +94,13 @@ namespace openshot
 			return GetMaskImage(target_image, frame_number);
 		}
 
+		/// Resolve reader artwork without requiring CPU pixels from the target frame.
+		std::shared_ptr<QImage> ResolveReaderMaskImage(int width, int height, int64_t frame_number);
+
+		/// Reader mask as a GPU surface at the target size. Video masks decoded on
+		/// the GPU stay there; other masks are read on the CPU and uploaded.
+		std::shared_ptr<const FrameImage> ResolveReaderMaskSurface(int width, int height, int64_t frame_number);
+
 		/// Optional override for effects that need custom mask behavior.
 		virtual bool UseCustomMaskBlend(int64_t frame_number) const { return false; }
 
@@ -102,6 +110,13 @@ namespace openshot
 
 		/// Optional override for effects that apply mask processing inside GetFrame().
 		virtual bool HandlesMaskInternally() const { return false; }
+
+		/// Effects with a Vulkan path keep masked GPU frames on the GPU.
+		virtual bool RendersOnVulkan() const { return false; }
+
+		/// True when the custom mask blend is the squared "drive amount" blend,
+		/// which the GPU applies too.
+		virtual bool MaskDrivesAmount(int64_t frame_number) const { return false; }
 
 	public:
 		/// Parent effect (which properties will set this effect properties)

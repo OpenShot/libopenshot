@@ -13,6 +13,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdarg>
@@ -27,26 +28,46 @@
 #include "FFmpegUtilities.h"
 
 #include "FFmpegWriter.h"
+#include "FFmpegColorRange.h"
+#include "ColorManagement.h"
 #include "Exceptions.h"
 #include "Frame.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "GpuDevices.h"
+#include "VulkanFrameImage.h"
+#include "VulkanCompositor.h"
+#include "VulkanEncodeConverter.h"
+#ifdef __APPLE__
+#include "MacVulkanInterop.h"
+#endif
+#endif
 #include "OpenMPUtilities.h"
 #include "Settings.h"
 #include "Logger.h"
 
 using namespace openshot;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace {
+bool IsVulkanEncoder(const std::string& name) {
+	return name == "h264_vulkan" || name == "hevc_vulkan" || name == "av1_vulkan";
+}
+std::string SoftwareEncoder(const std::string& name) {
+	const std::vector<std::string> candidates = name == "h264_vulkan" ? std::vector<std::string>{"libx264", "libopenh264"}
+		: name == "hevc_vulkan" ? std::vector<std::string>{"libx265"}
+		: std::vector<std::string>{"libsvtav1", "libaom-av1", "librav1e"};
+	for (const auto& candidate : candidates)
+		if (avcodec_find_encoder_by_name(candidate.c_str())) return candidate;
+	return {};
+}
+}
+#endif
+
 // Multiplexer parameters temporary storage
 AVDictionary *mux_dict = NULL;
 
 #if USE_HW_ACCEL
-int hw_en_on = 1;					// Is set in UI
-int hw_en_supported = 0;	// Is set by FFmpegWriter
-AVPixelFormat hw_en_av_pix_fmt = AV_PIX_FMT_NONE;
-AVHWDeviceType hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-static AVBufferRef *hw_device_ctx = NULL;
-AVFrame *hw_frame = NULL;
-
-static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int64_t width, int64_t height)
+static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int64_t width, int64_t height, AVPixelFormat format)
 {
 	AVBufferRef *hw_frames_ref;
 	AVHWFramesContext *frames_ctx = NULL;
@@ -57,7 +78,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 		return -1;
 	}
 	frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
-	frames_ctx->format = hw_en_av_pix_fmt;
+	frames_ctx->format = format;
 	frames_ctx->sw_format = AV_PIX_FMT_NV12;
 	frames_ctx->width = width;
 	frames_ctx->height = height;
@@ -101,14 +122,44 @@ void FFmpegWriter::Open() {
 	if (!is_open) {
 		// Open the writer
 		is_open = true;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		gpu_export_failed = false;
+		gpu_export_logged = false;
+		// FFmpeg binds a GPU frame to the first CUDA context it is sent to. Start
+		// each export with fresh pools, so no frame is tied to an old encoder.
+		ReleaseVulkanMemory();
+#endif
 
 		// Prepare streams (if needed)
 		if (!prepare_streams)
 			PrepareStreams();
 
 		// Now that all the parameters are set, we can open the audio and video codecs and allocate the necessary encode buffers
-		if (info.has_video && video_st)
+		if (info.has_video && video_st) {
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && USE_HW_ACCEL
+			try {
+				open_video(oc, video_st);
+			} catch (const std::exception& error) {
+				// Choose the replacement before the muxer header is written.
+				// Switching encoders after packets are emitted is unsafe.
+				const auto fallback = IsVulkanEncoder(info.vcodec) ? SoftwareEncoder(info.vcodec) : std::string();
+				if (fallback.empty() || write_header) throw;
+				Logger::Instance()->Log("Vulkan encoder CPU fallback: " + std::string(error.what()) + "; using " + fallback, Logger::LevelWarning);
+				av_buffer_unref(&hw_device_ctx);
+				SetVideoOptions(true, fallback, info.fps, info.width, info.height, info.pixel_ratio,
+								info.interlaced_frame, info.top_field_first, info.video_bit_rate);
+				add_video_stream(video_st);
+				open_video(oc, video_st);
+			}
+#else
 			open_video(oc, video_st);
+#endif
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			Logger::Instance()->Log("GPU export setup: encoder=" + info.vcodec +
+				"; hardware encoding configured=" + (hw_en_on && hw_en_supported ? "yes" : "no") +
+				"; frame interop is checked when frames arrive", Logger::LevelInfo);
+#endif
+		}
 		if (info.has_audio && audio_st)
 			open_audio(oc, audio_st);
 
@@ -167,11 +218,31 @@ void FFmpegWriter::initialize_streams() {
 
 // Set video export options
 void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// Only encoders the probe opened are safe; some drivers and loaders crash.
+	const auto gpu_encoders = IsVulkanEncoder(codec) ? GpuEncoders() : std::vector<std::string>();
+	if (IsVulkanEncoder(codec) && (!USE_HW_ACCEL || std::find(gpu_encoders.begin(), gpu_encoders.end(), codec) == gpu_encoders.end())) {
+		const auto fallback = SoftwareEncoder(codec);
+		if (!fallback.empty()) {
+			Logger::Instance()->Log("Vulkan encoder unavailable; using CPU encoder " + fallback, Logger::LevelWarning);
+			codec = fallback;
+		}
+	}
+#endif
 	// Set the video options
 	if (codec.length() > 0) {
 		const AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
 #if USE_HW_ACCEL
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		if (IsVulkanEncoder(codec)) {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = hw_en_supported = true;
+			hw_en_av_pix_fmt = AV_PIX_FMT_VULKAN;
+			hw_en_av_device_type = AV_HWDEVICE_TYPE_VULKAN;
+		} else
+#endif
+		{
 #if defined(__linux__)
 		if (strstr(codec.c_str(), "_vaapi") != NULL) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -223,6 +294,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 #else  // unknown OS
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
 #endif //__linux__/_WIN32/__APPLE__
+		}
 #else // USE_HW_ACCEL
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
 #endif // USE_HW_ACCEL
@@ -1068,6 +1140,12 @@ void FFmpegWriter::WriteHeader() {
 }
 
 // Add a frame to the queue waiting to be encoded.
+void FFmpegWriter::WriteMeasuredFrame(ReaderBase* reader, int64_t number) {
+    gpu_metrics::Scope scope(true);
+    gpu_metrics::RecordExportFrame();
+    WriteFrame(reader->GetFrame(number));
+}
+
 void FFmpegWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame) {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -1119,6 +1197,7 @@ void FFmpegWriter::WriteFrameAt(std::shared_ptr<openshot::Frame> frame, int64_t 
 
 // Write all frames in the queue to the video file.
 void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
+    gpu_metrics::Reason gpu_reason("Encoder");
 	// Flip writing flag
 	is_writing = true;
 
@@ -1145,6 +1224,9 @@ void FFmpegWriter::write_frame(std::shared_ptr<Frame> frame) {
 			}
 
 			// Deallocate buffer and AVFrame
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			if (!frame_final->hw_frames_ctx)
+#endif
 			av_freep(&(frame_final->data[0]));
 			AV_FREE_FRAME(&frame_final);
 			av_frames.erase(frame);
@@ -1466,6 +1548,10 @@ void FFmpegWriter::Close() {
 		close_video(oc, video_st);
 	if (audio_st)
 		close_audio(oc, audio_st);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// Free pooled frames still tied to this encoder's CUDA context
+	ReleaseVulkanMemory();
+#endif
 
 	// Remove single software scaler
 	if (img_convert_ctx)
@@ -1640,7 +1726,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 }
 
 // Add a video output stream
-AVStream *FFmpegWriter::add_video_stream() {
+AVStream *FFmpegWriter::add_video_stream(AVStream* existing) {
 	// Find the video codec
 	const AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (codec == NULL)
@@ -1652,7 +1738,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	}
 
 	// Create a new video stream
-	AVStream* st = avformat_new_stream(oc, codec);
+	AVStream* st = existing ? existing : avformat_new_stream(oc, codec);
 	if (!st)
 		throw OutOfMemory("Could not allocate memory for the video stream.", path);
 
@@ -1672,9 +1758,11 @@ AVStream *FFmpegWriter::add_video_stream() {
 	c->sample_aspect_ratio.den = info.pixel_ratio.den;
 
 	/* Init video encoder options */
+	// VA-API AV1 supports bitrate control; the legacy AV1 quality conversion
+	// below clears the bitrate and uses a qp option this encoder does not expose.
 	if (info.video_bit_rate >= 1000
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
-		&& c->codec_id != AV_CODEC_ID_AV1
+		&& (c->codec_id != AV_CODEC_ID_AV1 || info.vcodec == "av1_vaapi" || info.vcodec == "av1_vulkan")
 #endif
 		) {
 		c->bit_rate = info.video_bit_rate;
@@ -1954,7 +2042,27 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 			Logger::Instance()->AppendDebugMethod(
 				"Encode Device not present, using default");
 		}
-		if (av_hwdevice_ctx_create(&hw_device_ctx,
+		// Encode on the card that renders, so VA-API can share its frames. That card
+		// may have no VA-API driver (e.g. NVIDIA in a hybrid laptop); then use the
+		// device chosen above.
+		bool device_created = false;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		if (hw_en_av_device_type == AV_HWDEVICE_TYPE_VULKAN) {
+			if (!VulkanRenderingEnabled() || CreateSharedVulkanDevice(&hw_device_ctx) < 0)
+				throw InvalidCodec("No Vulkan rendering device is available", path);
+			device_created = true;
+		}
+#endif
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__linux__)
+		if (hw_en_av_device_type == AV_HWDEVICE_TYPE_VAAPI && VulkanRenderingEnabled()) {
+			const std::string render_node = ActiveGpuDevice().render_node;
+			device_created = !render_node.empty() &&
+				av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type, render_node.c_str(), NULL, 0) >= 0;
+			if (!render_node.empty() && !device_created)
+				Logger::Instance()->Log("No VA-API on " + render_node + "; encoding on the default VA-API device", Logger::LevelWarning);
+		}
+#endif
+		if (!device_created && av_hwdevice_ctx_create(&hw_device_ctx,
 				hw_en_av_device_type, adapter_ptr, NULL, 0) < 0)
 		{
 			Logger::Instance()->AppendDebugMethod(
@@ -2006,13 +2114,23 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 			}
 		}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		const bool vulkan_encoder = hw_en_av_pix_fmt == AV_PIX_FMT_VULKAN;
+#else
+		const bool vulkan_encoder = false;  // Older FFmpeg has no AV_PIX_FMT_VULKAN
+#endif
 		switch (video_codec_ctx->codec_id) {
 			case AV_CODEC_ID_H264:
 				video_codec_ctx->max_b_frames = 0;  // At least this GPU doesn't support b-frames
-				video_codec_ctx->profile = AV_PROFILE_H264_CONSTRAINED_BASELINE;
-				av_opt_set(video_codec_ctx->priv_data, "preset", "slow", 0);
-				av_opt_set(video_codec_ctx->priv_data, "tune", "zerolatency", 0);
-				av_opt_set(video_codec_ctx->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
+				if (!vulkan_encoder) {
+					video_codec_ctx->profile = AV_PROFILE_H264_CONSTRAINED_BASELINE;
+					av_opt_set(video_codec_ctx->priv_data, "preset", "slow", 0);
+					if (hw_en_av_pix_fmt == AV_PIX_FMT_CUDA)
+						av_opt_set_int(video_codec_ctx->priv_data, "zerolatency", 1, 0);
+					else
+						av_opt_set(video_codec_ctx->priv_data, "tune", "zerolatency", 0);
+					av_opt_set(video_codec_ctx->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
+				}
 				break;
 			case AV_CODEC_ID_HEVC:
 				// tested to work with defaults
@@ -2029,7 +2147,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 
 		// set hw_frames_ctx for encoder's AVCodecContext
 		int err;
-		if ((err = set_hwframe_ctx(video_codec_ctx, hw_device_ctx, info.width, info.height)) < 0)
+		if ((err = set_hwframe_ctx(video_codec_ctx, hw_device_ctx, info.width, info.height, hw_en_av_pix_fmt)) < 0)
 		{
 			Logger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::open_video (set_hwframe_ctx) ERROR faled to set hwframe context",
@@ -2050,6 +2168,24 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 			video_codec_ctx->codec_tag = MKTAG('h', 'v', 'c', '1');
 		}
 #endif
+
+	// Tag YUV outputs so players decode them as rendered: SDR BT.709 color,
+	// with the matrix players assume for this size (BT.709 for HD, BT.601 for
+	// SD). RGB outputs are left untagged.
+	{
+		const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(video_codec_ctx->pix_fmt);
+		const bool hardware = desc && (desc->flags & AV_PIX_FMT_FLAG_HWACCEL);
+		const bool rgb = desc && !hardware && (desc->flags & (AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL));
+		const bool gray = desc && !hardware && desc->nb_components <= 2;
+		if (desc && !rgb && !gray) {
+			bool full_range = false;
+			NormalizeDeprecatedPixFmt(video_codec_ctx->pix_fmt, full_range);
+			video_codec_ctx->color_primaries = AVCOL_PRI_BT709;
+			video_codec_ctx->color_trc = AVCOL_TRC_BT709;
+			video_codec_ctx->colorspace = color::EncodeMatrix(info.width, info.height);
+			video_codec_ctx->color_range = full_range ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+		}
+	}
 
 	/* open the codec */
 	if (avcodec_open2(video_codec_ctx, codec, &opts) < 0)
@@ -2610,6 +2746,102 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 	if (src_w == 1 && src_h == 1)
 		return;
 
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__) && USE_HW_ACCEL
+    if (!gpu_export_failed && hw_en_on && hw_en_supported &&
+        video_codec_ctx->pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX && video_codec_ctx->hw_frames_ctx) {
+        auto surface = frame->GetDeferredImage();
+        if (surface) {
+            AVFrame* encoded = av_frame_alloc();
+            try {
+                if (!encoded) throw std::bad_alloc();
+                auto native = std::dynamic_pointer_cast<const VulkanFrameImage>(surface);
+                const auto* context = native ? reinterpret_cast<const AVHWFramesContext*>(native->GetFrame()->hw_frames_ctx->data) : nullptr;
+                if (src_w != info.width || src_h != info.height || !context || context->sw_format != AV_PIX_FMT_RGBA) {
+                    QTransform scale;
+                    scale.scale(double(info.width) / src_w, double(info.height) / src_h);
+                    surface = RenderVulkanImage(surface, nullptr, info.width, info.height, scale, 1.0, Qt::black);
+                }
+                // Render directly into the encoder's own Core Video pixel buffer.
+                // No CPU download, upload, or separate NV12 image copy is needed.
+                const int allocated = av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, encoded, 0);
+                if (allocated < 0) throw std::runtime_error("Allocate VideoToolbox encoder frame: " + av_err2string(allocated));
+                std::unique_ptr<AVFrame, void(*)(AVFrame*)> target(ImportVideoToolboxFrame(encoded, true),
+                    [](AVFrame* value) { av_frame_free(&value); });
+                auto converted = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface, target.get()));
+                if (!converted) throw std::runtime_error("No shared VideoToolbox conversion result");
+                // VideoToolbox does not consume Vulkan timeline semaphores. Retire
+                // GPU writes before handing the same IOSurface to its encoder.
+                WaitMacVulkanFrame(converted->GetFrame());
+                const int copied = av_frame_copy_props(encoded, converted->GetFrame());
+                if (copied < 0) throw std::bad_alloc();
+                add_avframe(frame, encoded);
+                encoded = nullptr; // add_avframe owns the retained encoder frame.
+                if (!gpu_export_logged) {
+                    gpu_export_logged = true;
+                    Logger::Instance()->Log("Vulkan export: encoder-owned VideoToolbox IOSurface (no CPU copy)", Logger::LevelInfo);
+                }
+                return;
+            } catch (const std::exception& error) {
+                av_frame_free(&encoded);
+                gpu_export_failed = true;
+                Logger::Instance()->Log(std::string("VideoToolbox GPU export CPU fallback: ") + error.what(), Logger::LevelWarning);
+            }
+        }
+    }
+#endif
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && USE_HW_ACCEL
+	// Native Vulkan writes directly into encoder-owned NV12. NVENC retains its
+	// device-to-device transfer path; other encoders use the established CPU path.
+	const bool native_vulkan = video_codec_ctx->pix_fmt == AV_PIX_FMT_VULKAN;
+	if (!gpu_export_failed && hw_en_on && hw_en_supported && video_codec_ctx->hw_frames_ctx &&
+		(native_vulkan || video_codec_ctx->pix_fmt == AV_PIX_FMT_CUDA)) {
+		auto surface = frame->GetDeferredImage();
+		if (surface) {
+			AVFrame* encoded = nullptr;
+			try {
+				auto native = std::dynamic_pointer_cast<const VulkanFrameImage>(surface);
+				const auto* context = native ? reinterpret_cast<const AVHWFramesContext*>(native->GetFrame()->hw_frames_ctx->data) : nullptr;
+				if (src_w != info.width || src_h != info.height || !context || context->sw_format != AV_PIX_FMT_RGBA) {
+					QTransform scale;
+					scale.scale(double(info.width) / src_w, double(info.height) / src_h);
+					surface = RenderVulkanImage(surface, nullptr, info.width, info.height, scale, 1.0, Qt::black);
+				}
+				// NVENC keeps its existing separate-plane conversion and GPU
+				// transfer. Native Vulkan writes into the encoder's own frame.
+				std::shared_ptr<const VulkanFrameImage> nv12;
+				if (!native_vulkan)
+					nv12 = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface));
+				encoded = av_frame_alloc();
+				if (!encoded) throw std::bad_alloc();
+				const int allocated = av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, encoded, 0);
+				if (allocated < 0) throw std::runtime_error("Allocate encoder frame: " + av_err2string(allocated));
+				if (native_vulkan) {
+					nv12 = std::dynamic_pointer_cast<const VulkanFrameImage>(ConvertVulkanToNV12(surface, encoded));
+				} else {
+					const int status = av_hwframe_transfer_data(encoded, nv12->GetFrame(), 0);
+					if (status < 0) throw std::runtime_error("Vulkan/CUDA export transfer failed: " + av_err2string(status));
+				}
+
+				av_frame_copy_props(encoded, nv12->GetFrame());
+				add_avframe(frame, encoded);
+				if (!gpu_export_logged) {
+					gpu_export_logged = true;
+					Logger::Instance()->Log(native_vulkan ? "Vulkan export: encoder-owned GPU frames (no copy)"
+						: "Vulkan export: GPU transfer to NVENC", Logger::LevelInfo);
+				}
+				return;
+			} catch (const std::exception& error) {
+				av_frame_free(&encoded);
+				// Interop only touches the temporary scaled/NV12 surfaces. The readback
+				// below waits on the frame surface's semaphores, so it sees finished
+				// pixels; keep this export on the CPU path.
+				gpu_export_failed = true;
+				Logger::Instance()->Log(std::string("Vulkan export CPU fallback: ") + error.what(), Logger::LevelWarning);
+			}
+		}
+	}
+#endif
+
 	// Point persistent_src_frame->data to RGBA pixels
 	const uchar* pixels = frame->GetPixels();
 	if (!persistent_src_frame) {
@@ -2684,6 +2916,13 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 		);
 		if (!img_convert_ctx)
 			throw ErrorEncodingVideo("Could not initialize sws context", -1);
+		// Encode with the matrix and range tagged in open_video().
+		bool dst_full_range = false;
+		NormalizeDeprecatedPixFmt(dst_fmt, dst_full_range);
+		const int* coefficients = sws_getCoefficients(
+			color::SwsColorspace(color::EncodeMatrix(info.width, info.height)));
+		sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients,
+			dst_full_range ? 1 : 0, 0, 1 << 16, 1 << 16);
 	}
 
 	// Scale RGBA → dst_fmt into persistent_dst_buffer
@@ -2798,21 +3037,25 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = video_timestamp;
 #if USE_HW_ACCEL
-		if (hw_en_on && hw_en_supported) {
+		if (hw_en_on && hw_en_supported
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			&& !frame_final->hw_frames_ctx
+#endif
+		) {
 			if (!(hw_frame = av_frame_alloc())) {
-				std::clog << "Error code: av_hwframe_alloc\n";
+				throw OutOfMemory("Could not allocate hardware upload frame", path);
 			}
 			if (av_hwframe_get_buffer(video_codec_ctx->hw_frames_ctx, hw_frame, 0) < 0) {
-				std::clog << "Error code: av_hwframe_get_buffer\n";
-			}
-			if (!hw_frame->hw_frames_ctx) {
-				std::clog << "Error hw_frames_ctx.\n";
+				av_frame_free(&hw_frame);
+				throw ErrorEncodingVideo("Could not allocate hardware upload buffer", -1);
 			}
 			// Keep the hardware format assigned by av_hwframe_get_buffer().
 			// NV12 describes the CPU source, not the encoder surface.
 			if ( av_hwframe_transfer_data(hw_frame, frame_final, 0) < 0) {
-				std::clog << "Error while transferring frame data to surface.\n";
+				av_frame_free(&hw_frame);
+				throw ErrorEncodingVideo("Could not upload CPU frame to encoder", -1);
 			}
+			gpu_metrics::Record(gpu_metrics::Upload);
 			av_frame_copy_props(hw_frame, frame_final);
 		}
 #endif // USE_HW_ACCEL
@@ -2825,12 +3068,23 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 	#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
-			ret = avcodec_send_frame(video_codec_ctx, hw_frame);  //hw_frame!!!
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			ret = avcodec_send_frame(video_codec_ctx, frame_final->hw_frames_ctx ? frame_final : hw_frame);
+#else
+			ret = avcodec_send_frame(video_codec_ctx, hw_frame);
+#endif
 		} else
 	#endif // USE_HW_ACCEL
 		{
 			ret = avcodec_send_frame(video_codec_ctx, frame_final);
 		}
+        if (ret >= 0) {
+#if USE_HW_ACCEL
+            gpu_metrics::Record(hw_en_on && hw_en_supported ? gpu_metrics::EncodeGpu : gpu_metrics::EncodeCpu);
+#else
+            gpu_metrics::Record(gpu_metrics::EncodeCpu);
+#endif
+        }
 		error_code = ret;
 		if (ret < 0 ) {
 			Logger::Instance()->AppendDebugMethod(

@@ -20,6 +20,12 @@
 
 using namespace openshot;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 namespace {
 constexpr float kInv255 = 1.0f / 255.0f;
 
@@ -219,11 +225,16 @@ void ColorGrade::sync_lut_effect() {
 	lut_dirty = false;
 }
 
-std::shared_ptr<openshot::Frame> ColorGrade::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-	if (!frame_image)
+std::shared_ptr<openshot::Frame> ColorGrade::apply_lut(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+	if (lut_path.empty() || lut_intensity.GetValue(frame_number) <= 0.0)
 		return frame;
+	sync_lut_effect();
+	// Let the LUT upload clip images itself, as ColorGrade does.
+	lut_effect.ParentClip(ParentClip());
+	return lut_effect.GetFrame(frame, frame_number);
+}
 
+std::shared_ptr<openshot::Frame> ColorGrade::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
 	const float temperature_value = std::max(-1.0f, std::min(1.0f, static_cast<float>(temperature.GetValue(frame_number))));
 	const float tint_value = std::max(-1.0f, std::min(1.0f, static_cast<float>(tint.GetValue(frame_number))));
 	const float exposure_value = std::max(-4.0f, std::min(4.0f, static_cast<float>(exposure.GetValue(frame_number))));
@@ -244,11 +255,7 @@ std::shared_ptr<openshot::Frame> ColorGrade::GetFrame(std::shared_ptr<openshot::
 		curve_red.enabled.GetValue(frame_number) < 0.5 &&
 		curve_green.enabled.GetValue(frame_number) < 0.5 &&
 		curve_blue.enabled.GetValue(frame_number) < 0.5) {
-		if (!lut_path.empty() && lut_intensity.GetValue(frame_number) > 0.0) {
-			sync_lut_effect();
-			return lut_effect.GetFrame(frame, frame_number);
-		}
-		return frame;
+		return apply_lut(frame, frame_number);
 	}
 	const float exposure_gain = std::pow(2.0f, exposure_value);
 	const float contrast_factor = std::max(0.0f, 1.0f + contrast_value);
@@ -260,6 +267,32 @@ std::shared_ptr<openshot::Frame> ColorGrade::GetFrame(std::shared_ptr<openshot::
 	const WheelBiasParams shadows_wheel = wheels_enabled ? build_wheel_bias(wheels.shadows, frame_number) : WheelBiasParams{0.0f, 0.0f, 0.0f};
 	const WheelBiasParams midtones_wheel = wheels_enabled ? build_wheel_bias(wheels.midtones, frame_number) : WheelBiasParams{0.0f, 0.0f, 0.0f};
 	const WheelBiasParams highlights_wheel = wheels_enabled ? build_wheel_bias(wheels.highlights, frame_number) : WheelBiasParams{0.0f, 0.0f, 0.0f};
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    // Masks are blended by EffectBase::ProcessFrame, also on the GPU.
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data) surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                const VulkanGradeParameters parameters{
+                    {temperature_value,tint_value,exposure_gain,contrast_factor,shadows_value,highlights_value,
+                     saturation_value,vibrance_value,mix_value},
+                    {global_wheel.red_delta,global_wheel.green_delta,global_wheel.blue_delta,
+                     shadows_wheel.red_delta,shadows_wheel.green_delta,shadows_wheel.blue_delta,
+                     midtones_wheel.red_delta,midtones_wheel.green_delta,midtones_wheel.blue_delta,
+                     highlights_wheel.red_delta,highlights_wheel.green_delta,highlights_wheel.blue_delta},
+                    {curve_all_lut,curve_red_lut,curve_green_lut,curve_blue_lut}};
+                frame->AddDeferredImage(GradeVulkanImage(surface,parameters));
+                return apply_lut(frame, frame_number);
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan grading CPU fallback: ") + error.what());
+        }
+    }
+#endif
+    auto frame_image = frame->GetImage();
+    if (!frame_image) return frame;
 
 	static const std::array<float, 256> inv_alpha = [] {
 		std::array<float, 256> lut{};
@@ -384,12 +417,7 @@ std::shared_ptr<openshot::Frame> ColorGrade::GetFrame(std::shared_ptr<openshot::
 		}
 	}
 
-	if (!lut_path.empty() && lut_intensity.GetValue(frame_number) > 0.0) {
-		sync_lut_effect();
-		frame = lut_effect.GetFrame(frame, frame_number);
-	}
-
-	return frame;
+	return apply_lut(frame, frame_number);
 }
 
 std::string ColorGrade::Json() const {

@@ -27,6 +27,47 @@
 
 using namespace openshot;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace {
+class MapperSurface : public FrameImage {
+public:
+	mutable int reads = 0;
+	int GetWidth() const override { return 16; }
+	int GetHeight() const override { return 16; }
+	int64_t GetBytes() const override { return 1024; }
+	QImage Materialize() const override {
+		++reads;
+		QImage result(16, 16, QImage::Format_RGBA8888_Premultiplied);
+		result.fill(Qt::red);
+		return result;
+	}
+};
+class SurfaceReader : public DummyReader {
+public:
+	std::shared_ptr<MapperSurface> surface = std::make_shared<MapperSurface>();
+	SurfaceReader() : DummyReader(Fraction(24, 1), 16, 16, 48000, 2, 5.0) {}
+	std::shared_ptr<Frame> GetFrame(int64_t number) override {
+		auto frame = DummyReader::GetFrame(number);
+		frame->AddDeferredImage(surface);
+		return frame;
+	}
+};
+}
+
+TEST_CASE("Progressive frame mapping retains deferred image storage", "[libopenshot][framemapper]") {
+	SurfaceReader reader;
+	FrameMapper mapper(&reader, Fraction(30, 1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
+	mapper.Open();
+	for (int i = 1; i <= 8; ++i) {
+		auto frame = mapper.GetFrame(i);
+		REQUIRE(frame->GetDeferredImage() == reader.surface);
+		CHECK(frame->number == i);
+	}
+	CHECK(reader.surface->reads == 0);
+	mapper.Close();
+}
+#endif
+
 TEST_CASE( "NoOp_GetMappedFrame", "[libopenshot][framemapper]" )
 {
 	// Create a reader

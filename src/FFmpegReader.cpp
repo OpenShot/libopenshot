@@ -13,6 +13,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include <thread>	// for std::this_thread::sleep_for
 #include <chrono>	// for std::chrono::milliseconds
 #include <algorithm>
@@ -24,10 +25,19 @@
 
 #include "FFmpegUtilities.h"
 #include "FFmpegColorRange.h"
+#include "ColorManagement.h"
+
+extern "C" {
+#include <libavutil/mastering_display_metadata.h>
+}
 #include "PreviewSize.h"
 #include "effects/CropHelpers.h"
 
 #include "FFmpegReader.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "GpuDevices.h"
+#include "VulkanFrameImage.h"
+#endif
 #include "Exceptions.h"
 #include "MemoryTrim.h"
 #include "Timeline.h"
@@ -142,6 +152,20 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 // Get hardware pix format
 static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__)
+    if (ctx->hw_device_ctx && reinterpret_cast<AVHWDeviceContext*>(ctx->hw_device_ctx->data)->type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX) {
+        for (auto format = pix_fmts; *format != AV_PIX_FMT_NONE; ++format)
+            if (*format == AV_PIX_FMT_VIDEOTOOLBOX) return *format;
+        return avcodec_default_get_format(ctx, pix_fmts);
+    }
+#endif
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (ctx->hw_device_ctx && reinterpret_cast<AVHWDeviceContext*>(ctx->hw_device_ctx->data)->type == AV_HWDEVICE_TYPE_VULKAN) {
+		for (auto format = pix_fmts; *format != AV_PIX_FMT_NONE; ++format)
+			if (*format == AV_PIX_FMT_VULKAN) return *format;
+		return avcodec_default_get_format(ctx, pix_fmts);
+	}
+#endif
 	const enum AVPixelFormat *p;
 
 	// Prefer only the format matching the selected hardware decoder
@@ -247,6 +271,12 @@ void FFmpegReader::Open() {
 		pFormatCtx = NULL;
 		{
 			hw_de_on = (!force_sw_decode && openshot::Settings::Instance()->HARDWARE_DECODER != 0 ? 1 : 0);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			// GPU builds decode through Vulkan unless the CPU backend is selected
+			// at runtime. Decode failures reopen this reader in software.
+			hw_de_on = !force_sw_decode && VulkanRenderingEnabled();
+			vulkan_processor.reset();
+#endif
 			hw_decode_failed = false;
 			hw_decode_error_count = 0;
 			hw_decode_succeeded = false;
@@ -300,6 +330,17 @@ void FFmpegReader::Open() {
 
 			// Get codec and codec context from stream
 			const AVCodec *pCodec = avcodec_find_decoder(codecId);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			// Full FFmpeg builds prefer libdav1d for AV1, but that decoder cannot
+			// produce Vulkan frames. Keep it as the default for software retries.
+			if (codecId == AV_CODEC_ID_AV1 && hw_de_on && VulkanAv1DecodeSupported()) {
+				const AVCodec* native_av1 = avcodec_find_decoder_by_name("av1");
+				if (native_av1)
+					pCodec = native_av1;
+			}
+#endif
+			if (!pCodec)
+				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			AVDictionary *opts = NULL;
 			int retry_decode_open = 2;
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
@@ -309,6 +350,21 @@ void FFmpegReader::Open() {
 				if (hw_de_on && (retry_decode_open==2)) {
 					// Up to here no decision is made if hardware or software decode
 					hw_de_supported = IsHardwareDecodeSupported(pCodecCtx->codec_id);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					hw_de_supported = 0;
+					for (int index = 0; const AVCodecHWConfig* config = avcodec_get_hw_config(pCodec, index); ++index) {
+						if (config->device_type ==
+#ifdef __APPLE__
+                            AV_HWDEVICE_TYPE_VIDEOTOOLBOX &&
+#else
+                            AV_HWDEVICE_TYPE_VULKAN &&
+#endif
+							(config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) {
+							hw_de_supported = 1;
+							break;
+						}
+					}
+#endif
 				}
 #endif
 				retry_decode_open = 0;
@@ -316,14 +372,15 @@ void FFmpegReader::Open() {
 				// Set number of threads equal to number of processors (not to exceed 16)
 				pCodecCtx->thread_count = std::min(FF_VIDEO_NUM_PROCESSORS, 16);
 
-				if (pCodec == NULL) {
-					throw InvalidCodec("A valid video codec could not be found for this file.", path);
-				}
-
 				// Init options
 				av_dict_set(&opts, "strict", "experimental", 0);
 #if USE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					// Vulkan decode surfaces must not be held by frame-thread workers
+					// while the consumer waits on their timeline semaphores.
+					pCodecCtx->thread_type = FF_THREAD_SLICE;
+#endif
 					// Open Hardware Acceleration
 					int i_decoder_hw = 0;
 					char adapter[256];
@@ -413,9 +470,21 @@ void FFmpegReader::Open() {
 						Logger::Instance()->AppendDebugMethod("Decode Device not present using default");
 					}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#ifdef __APPLE__
+                    hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+#else
+					hw_de_av_device_type = AV_HWDEVICE_TYPE_VULKAN;
+#endif
+					adapter_ptr = nullptr;
+#endif
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && !defined(__APPLE__)
+					if (CreateSharedVulkanDevice(&hw_device_ctx) >= 0) {
+#else
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+#endif
 						const char* hw_name = av_hwdevice_get_type_name(hw_de_av_device_type);
 						std::string hw_msg = "HW decode active: ";
 						hw_msg += (hw_name ? hw_name : "unknown");
@@ -453,7 +522,12 @@ void FFmpegReader::Open() {
 					}
 					else {
 						Logger::Instance()->Log("HW decode active: no (falling back to software)");
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+						hw_de_supported = 0;
+						pCodecCtx->get_format = avcodec_default_get_format;
+#else
 						throw InvalidCodec("Hardware device create failed.", path);
+#endif
 					}
 				}
 #endif // USE_HW_ACCEL
@@ -485,6 +559,9 @@ void FFmpegReader::Open() {
 					((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
 					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,hwconfig);
 #endif // ENABLE_VAAPI
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+#endif
 					if (constraints) {
 						if (pCodecCtx->coded_width < constraints->min_width  	||
 								pCodecCtx->coded_height < constraints->min_height ||
@@ -656,10 +733,26 @@ void FFmpegReader::Open() {
 		}
 
 		// Process video stream side data (rotation, spherical metadata, etc)
+		hdr_peak_nits = 0.0;
+		sdr_converter.reset();
 		for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++) {
 			AVStream* st = pFormatCtx->streams[i];
 			if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
 				size_t side_data_size = 0;
+				if (static_cast<int>(i) == videoStream) {
+					// HDR10 static metadata sets the tone mapping peak (MaxCLL, then mastering peak).
+					const uint8_t *light = ffmpeg_stream_get_side_data(
+						st, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, &side_data_size);
+					if (light && side_data_size >= sizeof(AVContentLightMetadata))
+						hdr_peak_nits = reinterpret_cast<const AVContentLightMetadata *>(light)->MaxCLL;
+					const uint8_t *mastering = ffmpeg_stream_get_side_data(
+						st, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, &side_data_size);
+					if (hdr_peak_nits <= 0.0 && mastering && side_data_size >= sizeof(AVMasteringDisplayMetadata)) {
+						const auto *display = reinterpret_cast<const AVMasteringDisplayMetadata *>(mastering);
+						if (display->has_luminance && display->max_luminance.den > 0)
+							hdr_peak_nits = av_q2d(display->max_luminance);
+					}
+				}
 				const uint8_t *displaymatrix = ffmpeg_stream_get_side_data(
 					st, AV_PKT_DATA_DISPLAYMATRIX, &side_data_size);
 				if (displaymatrix &&
@@ -703,6 +796,24 @@ void FFmpegReader::Open() {
 		const int final_cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 2);
 		working_cache.SetMaxBytesFromInfo(working_cache_frames, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(final_cache_frames, info.width, info.height, info.sample_rate, info.channels);
+		if (!info.has_video && info.has_audio && info.sample_rate > 0 && info.channels > 0 && info.fps.ToDouble() > 0.0) {
+			// Audio-only frames carry no image, so a width x height budget is never
+			// reached. The cache would then keep every frame of the file, and since
+			// CacheMemory rescans its frames on each insert, long reads turn quadratic.
+			const int64_t samples_per_frame = static_cast<int64_t>(std::ceil(info.sample_rate / info.fps.ToDouble()));
+			const int64_t audio_frame_bytes = samples_per_frame * info.channels * static_cast<int64_t>(sizeof(float));
+			final_cache.SetMaxBytes(final_cache_frames * audio_frame_bytes);
+		}
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		if (hw_de_on && hw_de_supported) {
+			// Full-resolution hardware images consume device memory, not RAM.
+			// Bound each reader cache independently of FPS/thread-count heuristics.
+			constexpr int64_t gpu_cache_bytes = 256LL * 1024 * 1024;
+			// Pending video/audio frames cannot be evicted before they are paired.
+			// Keep the existing working-cache budget; bound finalized images below.
+			final_cache.SetMaxBytes(std::min(final_cache.GetMaxBytes(), gpu_cache_bytes));
+		}
+#endif
 
 		// Scan PTS for any offsets (i.e. non-zero starting streams). At least 1 stream must start at zero timestamp.
 		// This method allows us to shift timestamps to ensure at least 1 stream is starting at zero.
@@ -733,6 +844,9 @@ void FFmpegReader::Close() {
 
 		// Mark as "closed"
 		is_open = false;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		vulkan_processor.reset();
+#endif
 
 		// Keep track of most recent packet
 		AVPacket *recent_packet = packet;
@@ -1252,6 +1366,14 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 		// Prevent async calls to the remainder of this code
 		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
+#if USE_HW_ACCEL && defined(OPENSHOT_ENABLE_GPU_FRAME)
+		// A lost GPU device cannot decode; reopen this reader on the CPU.
+		if (hw_de_on && !force_sw_decode && VulkanDeviceLost()) {
+			hw_decode_failed = true;
+			ReopenWithoutHardwareDecode(requested_frame);
+		}
+#endif
+
 		// Check the cache a 2nd time (due to the potential previous lock)
 		frame = final_cache.GetFrame(requested_frame);
 		if (frame) {
@@ -1460,7 +1582,11 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 			// Copy and return the largest processed frame (assuming it was the last in the video file)
 			std::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
 			if (frame->has_image_data) {
-				f->AddImage(std::make_shared<QImage>(frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+				if (auto surface = frame->GetDeferredImage()) f->AddDeferredImage(surface);
+				else
+#endif
+				f->AddImage(std::make_shared<QImage>(*frame->GetImage()));
 			}
 
 			// Use solid color (if no image data found)
@@ -1478,10 +1604,18 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 			std::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
 			if (last_final_video_frame && last_final_video_frame->has_image_data
 				&& last_final_video_frame->number <= requested_frame) {
-				f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+				if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+				else
+#endif
+				f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 			} else if (last_video_frame && last_video_frame->has_image_data
 				&& last_video_frame->number <= requested_frame) {
-				f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+				if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+				else
+#endif
+				f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 			} else {
 				f->AddColor(info.width, info.height, "#000");
 			}
@@ -1565,8 +1699,16 @@ bool FFmpegReader::GetAVFrame() {
 
 	#if USE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__)
+        hw_de_av_pix_fmt = AV_PIX_FMT_VIDEOTOOLBOX;
+        hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+#elif defined(OPENSHOT_ENABLE_GPU_FRAME)
+		hw_de_av_pix_fmt = AV_PIX_FMT_VULKAN;
+		hw_de_av_device_type = AV_HWDEVICE_TYPE_VULKAN;
+#else
 		hw_de_av_pix_fmt = hw_de_av_pix_fmt_global;
 		hw_de_av_device_type = hw_de_av_device_type_global;
+#endif
 	#endif // USE_HW_ACCEL
 		if (send_packet_err < 0 && send_packet_err != AVERROR_EOF) {
 			Logger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet: Not sent [" + av_err2string(send_packet_err) + "])", "send_packet_err", send_packet_err, "send_packet_pts", send_packet_pts);
@@ -1634,6 +1776,15 @@ bool FFmpegReader::GetAVFrame() {
 #if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported) {
 				int err;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+				if ((next_frame2->format == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+                     || next_frame2->format == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+                    )) {
+					decoded_frame = next_frame2;
+				} else
+#endif
 				if (next_frame2->format == hw_de_av_pix_fmt) {
 					if ((err = av_hwframe_transfer_data(next_frame, next_frame2, 0)) < 0) {
 						Logger::Instance()->AppendDebugMethod(
@@ -1672,7 +1823,11 @@ bool FFmpegReader::GetAVFrame() {
 				decoded_frame = next_frame2;
 			}
 
-			if (!decoded_frame->data[0]) {
+			if (!decoded_frame->data[0]
+#if defined(OPENSHOT_ENABLE_GPU_FRAME) && defined(__APPLE__)
+                && !(decoded_frame->format == AV_PIX_FMT_VIDEOTOOLBOX && decoded_frame->data[3])
+#endif
+            ) {
 				Logger::Instance()->AppendDebugMethod(
 					"FFmpegReader::GetAVFrame (Decoded frame missing image data)",
 					"format", decoded_frame->format,
@@ -1688,10 +1843,38 @@ bool FFmpegReader::GetAVFrame() {
 			hw_decode_error_count = 0;
 #if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported && !force_sw_decode) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+				const bool previously_decoded_on_gpu = hw_decode_succeeded;
+				hw_decode_succeeded = hw_decode_succeeded || (next_frame2->format == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+                     || next_frame2->format == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+                    );
+				if (!previously_decoded_on_gpu && hw_decode_succeeded)
+					Logger::Instance()->Log("GPU decode confirmed: " + info.vcodec + "; " +
+						(next_frame2->format == AV_PIX_FMT_VULKAN ? "Vulkan" : "VideoToolbox") + "; " + path,
+						Logger::LevelInfo);
+#else
 				hw_decode_succeeded = true;
+#endif
 			}
 #endif
+            const auto* metrics_format = av_pix_fmt_desc_get(static_cast<AVPixelFormat>(next_frame2->format));
+            if (!info.has_single_image)
+                gpu_metrics::Record(metrics_format && (metrics_format->flags & AV_PIX_FMT_FLAG_HWACCEL)
+                    ? gpu_metrics::DecodeGpu : gpu_metrics::DecodeCpu);
 			packet_status.video_decoded++;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			// Cover art and still images are decoded on the CPU by design.
+			if (packet_status.video_decoded == 1 && !hw_decode_succeeded && !info.has_single_image)
+				Logger::Instance()->Log("GPU decode not observed: CPU video frame received; codec=" +
+					info.vcodec + "; " + path, Logger::LevelInfo);
+#endif
+
+			// HDR10 metadata may only arrive with frames. Keep the first value so
+			// tone mapping does not change from frame to frame.
+			if (hdr_peak_nits <= 0.0)
+				hdr_peak_nits = color::FramePeakNits(decoded_frame);
 
 			// Allocate image (align 32 for simd)
 			AVPixelFormat decoded_pix_fmt = (AVPixelFormat)(decoded_frame->format);
@@ -1699,6 +1882,16 @@ bool FFmpegReader::GetAVFrame() {
 				decoded_pix_fmt = (AVPixelFormat)(pStream->codecpar->format);
 			const int decoded_width = decoded_frame->width > 0 ? decoded_frame->width : info.width;
 			const int decoded_height = decoded_frame->height > 0 ? decoded_frame->height : info.height;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			if (decoded_pix_fmt == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+                || decoded_pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+            ) {
+				if (av_frame_ref(pFrame, decoded_frame) < 0)
+					throw OutOfMemory("Failed to retain Vulkan frame", path);
+			} else {
+#endif
 			if (AV_ALLOCATE_IMAGE(pFrame, decoded_pix_fmt, decoded_width, decoded_height) <= 0) {
 				throw OutOfMemory("Failed to allocate image buffer", path);
 			}
@@ -1712,6 +1905,9 @@ bool FFmpegReader::GetAVFrame() {
 			pFrame->color_primaries = decoded_frame->color_primaries;
 			pFrame->color_trc = decoded_frame->color_trc;
 			pFrame->chroma_location = decoded_frame->chroma_location;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+			}
+#endif
 
 			// Get display PTS from video frame, often different than packet->pts.
 			// Sending packets to the decoder (i.e. packet->pts) is async,
@@ -2018,6 +2214,39 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		}
 	}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (pFrame && (pFrame->format == AV_PIX_FMT_VULKAN
+#ifdef __APPLE__
+        || pFrame->format == AV_PIX_FMT_VIDEOTOOLBOX
+#endif
+    )) {
+		try {
+			if (!vulkan_processor) vulkan_processor = std::make_shared<VulkanFrameProcessor>();
+			auto f = CreateFrame(current_frame);
+			f->AddDeferredImage(vulkan_processor->Process(pFrame, width, height,
+				color::DescribeFrame(pFrame, src_width, src_height, hdr_peak_nits),
+				openshot::Settings::Instance()->HIGH_QUALITY_SCALING));
+            gpu_metrics::Record(gpu_metrics::RenderGpu);
+			if (ApplyOrientationMetadata() && std::fabs(source_rotation) >= 0.0001)
+				Logger::Instance()->AppendDebugMethod("Vulkan reader: source orientation requires scaled CPU readback");
+			ApplyFrameOrientation(f);
+			if (first_video_frame == 0 && !is_seeking) first_video_frame = current_frame;
+			working_cache.Add(f);
+			last_video_frame = f;
+			RemoveAVFrame(pFrame);
+			pFrame = nullptr;
+			video_pts_seconds = (double(video_pts) * info.video_timebase.ToDouble()) + pts_offset_seconds;
+			return;
+		} catch (const std::exception& error) {
+			Logger::Instance()->Log(std::string("Vulkan processing failed; retrying software decode: ") + error.what(), Logger::LevelWarning);
+			hw_decode_failed = true;
+			RemoveAVFrame(pFrame);
+			pFrame = nullptr;
+			return;
+		}
+	}
+#endif
+
 	// Determine required buffer size and allocate buffer
 	const int bytes_per_pixel = 4;
 	int raw_buffer_size = (width * height * bytes_per_pixel) + 128;
@@ -2027,21 +2256,36 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	int buffer_size = ((raw_buffer_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
 	buffer = (unsigned char*) aligned_malloc(buffer_size, ALIGNMENT);
 
-	// Copy picture data from one AVFrame (or AVPicture) to another one.
-	AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
+	// HDR (PQ/HLG) and BT.2020 sources keep 16 bits through scaling, then
+	// convert to SDR BT.709. Other sources convert straight to RGBA8.
+	const color::SourceColor source_color = color::DescribeFrame(pFrame, src_width, src_height, hdr_peak_nits);
+	const bool convert_color = source_color.NeedsConversion();
+	const AVPixelFormat rgb_pix_fmt = convert_color ? AV_PIX_FMT_RGBA64 : PIX_FMT_RGBA;
+	if (convert_color) {
+		hdr_buffer.resize(size_t(width) * height * 4);
+		av_image_fill_arrays(pFrameRGB->data, pFrameRGB->linesize,
+			reinterpret_cast<uint8_t*>(hdr_buffer.data()), AV_PIX_FMT_RGBA64, width, height, 1);
+		const auto* previous = sdr_converter ? &sdr_converter->Source() : nullptr;
+		if (!previous || previous->transfer != source_color.transfer || previous->bt2020 != source_color.bt2020 ||
+			previous->RelativePeak() != source_color.RelativePeak())
+			sdr_converter = std::make_shared<const color::SdrConverter>(source_color);
+	} else {
+		// Copy picture data from one AVFrame (or AVPicture) to another one.
+		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
+	}
 
 	int scale_mode = SWS_FAST_BILINEAR;
 	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
 		scale_mode = SWS_BICUBIC;
 	}
-	img_convert_ctx = sws_getCachedContext(img_convert_ctx, src_width, src_height, src_pix_fmt, width, height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+	img_convert_ctx = sws_getCachedContext(img_convert_ctx, src_width, src_height, src_pix_fmt, width, height, rgb_pix_fmt, scale_mode, NULL, NULL, NULL);
 	if (!img_convert_ctx)
 		throw OutOfMemory("Failed to initialize sws context", path);
-	const int *src_coeff = sws_getCoefficients(SWS_CS_DEFAULT);
-	const int *dst_coeff = sws_getCoefficients(SWS_CS_DEFAULT);
+	// Decode with the source's tagged YUV matrix (BT.601 when untagged).
+	const int *coefficients = sws_getCoefficients(color::SwsColorspace(source_color.matrix));
 	const int dst_full_range = 1; // RGB outputs are full-range
-	sws_setColorspaceDetails(img_convert_ctx, src_coeff, src_full_range ? 1 : 0,
-							 dst_coeff, dst_full_range, 0, 1 << 16, 1 << 16);
+	sws_setColorspaceDetails(img_convert_ctx, coefficients, src_full_range ? 1 : 0,
+							 coefficients, dst_full_range, 0, 1 << 16, 1 << 16);
 
 	if (!pFrame || !pFrame->data[0] || pFrame->linesize[0] <= 0) {
 #if USE_HW_ACCEL
@@ -2064,6 +2308,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	}
 
 	// Resize / Convert to RGB
+	gpu_metrics::Record(gpu_metrics::RenderCpu);
 	const int scaled_lines = sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0,
 			  original_height, pFrameRGB->data, pFrameRGB->linesize);
 	if (scaled_lines <= 0) {
@@ -2086,6 +2331,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		pFrame = NULL;
 		return;
 	}
+
+	if (convert_color)
+		sdr_converter->Convert(hdr_buffer.data(), pFrameRGB->linesize[0], buffer, width * bytes_per_pixel, width, height);
 
 	// Create or get the existing frame object
 	std::shared_ptr<Frame> f = CreateFrame(current_frame);
@@ -2821,7 +3069,11 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 				// visual order, especially when decode/prefetch is out-of-order.
 				std::shared_ptr<Frame> previous_frame_instance = final_cache.GetFrame(f->number - 1);
 				if (previous_frame_instance && previous_frame_instance->has_image_data) {
-					f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = previous_frame_instance->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
 				}
 
 				// Fall back to last finalized timeline image (survives cache churn).
@@ -2829,7 +3081,11 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					&& last_final_video_frame
 					&& last_final_video_frame->has_image_data
 					&& last_final_video_frame->number <= f->number) {
-					f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 				}
 
 				// Fall back to the last decoded image only when it is not from the future.
@@ -2837,7 +3093,11 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					&& last_video_frame
 					&& last_video_frame->has_image_data
 					&& last_video_frame->number <= f->number) {
-					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				}
 
 				// Last-resort fallback if no prior image is available.
@@ -2850,8 +3110,10 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			}
 		}
 
+		// Every frame waiting for its audio keeps a decoded image, so keep this margin
+		// small: 0.25 sec covers partial and delayed audio packets.
 		double audio_pts_diff = audio_pts_seconds - frame_pts_seconds;
-		if ((frame_pts_seconds < audio_pts_seconds && audio_pts_diff > 1.0)
+		if ((frame_pts_seconds < audio_pts_seconds && audio_pts_diff > 0.25)
 		   || (recent_pts_diff > 1.5)
 		   || packet_status.audio_eof || packet_status.end_of_file) {
 			// Audio stream is past this frame (so it must be done)
@@ -2886,21 +3148,35 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			if (info.has_single_image) {
 				// For still-image video (including attached cover art), reuse the most
 				// recent image so playback does not stall waiting for video EOF.
+				// QImage copies share pixels until written, and keep the cache key
+				// that lets the GPU reuse one upload instead of one per frame.
 				std::shared_ptr<Frame> previous_frame_instance = final_cache.GetFrame(f->number - 1);
 				if (previous_frame_instance && previous_frame_instance->has_image_data) {
-					f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = previous_frame_instance->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_final_video_frame
 					&& last_final_video_frame->has_image_data
 					&& last_final_video_frame->number <= f->number) {
-					f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_video_frame
 					&& last_video_frame->has_image_data
 					&& last_video_frame->number <= f->number) {
-					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				}
 			}
 
@@ -2910,19 +3186,31 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			if (!f->has_image_data && is_video_ready && is_audio_ready) {
 				std::shared_ptr<Frame> previous_frame_instance = final_cache.GetFrame(f->number - 1);
 				if (previous_frame_instance && previous_frame_instance->has_image_data) {
-					f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = previous_frame_instance->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_final_video_frame
 					&& last_final_video_frame->has_image_data
 					&& last_final_video_frame->number <= f->number) {
-					f->AddImage(std::make_shared<QImage>(last_final_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = last_final_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*last_final_video_frame->GetImage()));
 				}
 				if (!f->has_image_data
 					&& last_video_frame
 					&& last_video_frame->has_image_data
 					&& last_video_frame->number <= f->number) {
-					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+					if (auto surface = last_video_frame->GetDeferredImage()) f->AddDeferredImage(surface);
+					else
+#endif
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				}
 			}
 
@@ -3049,6 +3337,13 @@ void FFmpegReader::CheckFPS() {
 void FFmpegReader::RemoveAVFrame(AVFrame *remove_frame) {
 	// Remove pFrame (if exists)
 	if (remove_frame) {
+		// Referenced hardware frames release their image through AVBufferRef.
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		if (remove_frame->hw_frames_ctx) {
+			av_frame_free(&remove_frame);
+			return;
+		}
+#endif
 		// Free memory
 		av_freep(&remove_frame->data[0]);
 #ifndef WIN32

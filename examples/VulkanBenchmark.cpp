@@ -2267,6 +2267,7 @@ static BenchmarkOptions ParseOptions(int argc, char* argv[]) {
 				<< "Usage: openshot-vulkan-benchmark [--video <path>] [--overlay <path>] [--frames <n>]\n"
 				<< "                                  [--mode <preview|export>] [--vaapi-device <path>] [--row <name>]\n"
 				<< "                                  [--dump-dir <dir>] [--dump-every <n>]\n"
+				<< "                                  [--cpu-only | --vulkan-only] (select compositor)\n"
 				<< "Rows: CPU->CPU, CPU->Vk, VAAPI->CPU, VAAPI->Vk, CUDA->CPU, CUDA->Vk, Vulkan->CPU, VulkanDirect->Vk\n";
 			std::exit(0);
 		} else {
@@ -2312,7 +2313,9 @@ int main(int argc, char* argv[]) {
 		const QImage overlay_image = LoadOverlayImage(options);
 		std::vector<BenchmarkResult> results;
 		auto row_enabled = [&](const std::string& name) {
-			return options.row_name.empty() || options.row_name == name;
+			const bool vulkan_composite = name.size() >= 4 && name.compare(name.size() - 4, 4, "->Vk") == 0;
+			return (vulkan_composite ? options.run_vulkan : options.run_cpu) &&
+				(options.row_name.empty() || options.row_name == name);
 		};
 		auto run_row = [&](BenchmarkResult (*fn)(const BenchmarkOptions&, const QImage&),
 						   const std::string& fallback_name) {
@@ -2393,7 +2396,7 @@ int main(int argc, char* argv[]) {
 			add_unavailable_row("VulkanDirect->Vk", "Vulkan runtime unavailable");
 		}
 		if (results.empty())
-			throw std::runtime_error("Unknown row name: " + options.row_name);
+			throw std::runtime_error("No rows selected: check --row and compositor filters");
 
 		for (const auto& result : results) {
 			result.stats.Print(result.name + " / " + result.decode_backend + " / " + result.composite_backend);
@@ -2406,6 +2409,10 @@ int main(int argc, char* argv[]) {
 		std::cout << "\nMatrix Summary\n";
 		PrintResultTable(results);
 
+		const bool processed_frames = std::any_of(results.begin(), results.end(),
+			[](const BenchmarkResult& result) { return !result.skipped && result.stats.frames > 0; });
+		if (!processed_frames)
+			throw std::runtime_error("No benchmark row successfully processed frames");
 		return 0;
 	} catch (const std::exception& exc) {
 		std::cerr << "Benchmark failed: " << exc.what() << "\n";

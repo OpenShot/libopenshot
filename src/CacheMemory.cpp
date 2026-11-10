@@ -255,7 +255,19 @@ void CacheMemory::CleanUp()
 		// Create a scoped lock, to protect the cache from multiple threads
 		const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
-		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
+		size_t retained_frames = 20;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+		// A CPU-oriented twenty-frame floor can pin gigabytes of GPU memory
+		// across reader, mapper and timeline caches. Honor byte budgets for
+		// caches holding hardware surfaces while retaining the newest frame.
+		for (const auto& entry : frames) {
+			if (entry.second->GetDeferredImage()) {
+				retained_frames = 1;
+				break;
+			}
+		}
+#endif
+		while (GetBytes() > max_bytes && frame_numbers.size() > retained_frames)
 		{
 			// Get the oldest frame number.
 			int64_t frame_to_remove = frame_numbers.back();

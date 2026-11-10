@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "GpuMetrics.h"
 #include "Timeline.h"
 #include "PreviewSize.h"
 
@@ -76,6 +77,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	final_cache = new CacheMemory();
 	const int cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 4);
 	final_cache->SetMaxBytesFromInfo(cache_frames, info.width, info.height, info.sample_rate, info.channels);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	final_cache->SetMaxBytes(std::min<int64_t>(final_cache->GetMaxBytes(), 256LL * 1024 * 1024));
+#endif
 }
 
 // Delegating constructor that copies parameters from a provided ReaderInfo
@@ -209,6 +213,9 @@ Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) 
 	final_cache = new CacheMemory();
 	const int cache_frames = std::max(Settings::Instance()->CACHE_MIN_FRAMES, OPEN_MP_NUM_PROCESSORS * 4);
 	final_cache->SetMaxBytesFromInfo(cache_frames, info.width, info.height, info.sample_rate, info.channels);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	final_cache->SetMaxBytes(std::min<int64_t>(final_cache->GetMaxBytes(), 256LL * 1024 * 1024));
+#endif
 }
 
 Timeline::~Timeline() {
@@ -599,7 +606,9 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 				"does_effect_intersect", does_effect_intersect);
 
 			// Apply the effect to this frame
+			gpu_metrics::Reason gpu_reason("Effect");
 			frame = effect->ProcessFrame(frame, effect_frame_number);
+			if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
 		}
 
 	} // end effect loop
@@ -979,6 +988,7 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
+    gpu_metrics::Scope gpu_scope(gpu_metrics_export);
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;

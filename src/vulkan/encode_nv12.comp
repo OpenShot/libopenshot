@@ -1,0 +1,33 @@
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#version 450
+layout(local_size_x=16,local_size_y=16) in;
+layout(binding=0) uniform sampler2D source_image;
+layout(binding=3,r8) uniform writeonly image2D output_y;
+layout(binding=4,rg8) uniform writeonly image2D output_uv;
+layout(push_constant) uniform Parameters {
+    vec4 matrix_x, matrix_y, coeffs, extra, clear;
+    ivec4 sizes, modes;
+} p;
+// Limited-range output with the writer's matrix (coeffs.xy = Kr, Kb), as
+// FFmpegWriter's swscale path encodes.
+vec3 yuv(vec3 rgb) {
+    float kr=p.coeffs.x,kb=p.coeffs.y;
+    float y=dot(rgb,vec3(kr,1.0-kr-kb,kb));
+    return vec3(y*219.0/255.0+16.0/255.0,
+                (rgb.b-y)/(2.0*(1.0-kb))*224.0/255.0+128.0/255.0,
+                (rgb.r-y)/(2.0*(1.0-kr))*224.0/255.0+128.0/255.0);
+}
+void main() {
+    ivec2 at=ivec2(gl_GlobalInvocationID.xy);
+    if(any(greaterThanEqual(at,p.sizes.xy))) return;
+    vec3 value=yuv(texelFetch(source_image,at,0).rgb);
+    imageStore(output_y,at,vec4(value.x,0,0,1));
+    if((at.x%2==0)&&(at.y%2==0)) {
+        vec3 rgb=vec3(0);
+        for(int y=0;y<2;++y) for(int x=0;x<2;++x)
+            rgb+=texelFetch(source_image,min(at+ivec2(x,y),p.sizes.xy-1),0).rgb;
+        vec3 chroma=yuv(rgb*0.25);
+        imageStore(output_uv,at/2,vec4(chroma.yz,0,1));
+    }
+}

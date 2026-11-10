@@ -31,6 +31,36 @@ using namespace std;
 using namespace openshot;
 
 
+namespace {
+// Waveform extraction reads every frame exactly once, front to back, so a large
+// reader cache only costs memory (and, because CacheMemory sizes are rescanned on
+// every insert, time). Keep readers owned by the waveformer nearly cache-free.
+constexpr int64_t WAVEFORM_READER_CACHE_BYTES = 2 * 1024 * 1024;
+
+void LimitWaveformReaderCache(ReaderBase* reader)
+{
+	if (!reader) {
+		return;
+	}
+	if (CacheBase* cache = reader->GetCache()) {
+		cache->SetMaxBytes(WAVEFORM_READER_CACHE_BYTES);
+	}
+}
+
+// Linearly interpolate a keyframe at a fractional (1-based) frame position
+double KeyframeValueAt(const Keyframe& keyframe, double frame)
+{
+	const double floor_frame = std::floor(frame);
+	const int64_t index = static_cast<int64_t>(floor_frame);
+	const double value = keyframe.GetValue(index);
+	const double fraction = frame - floor_frame;
+	if (fraction <= 0.0) {
+		return value;
+	}
+	return value + (keyframe.GetValue(index + 1) - value) * fraction;
+}
+}
+
 // Default constructor
 AudioWaveformer::AudioWaveformer(ReaderBase* new_reader) :
 	reader(new_reader),
@@ -81,9 +111,20 @@ AudioWaveformData AudioWaveformer::ExtractSamples(int channel, int num_per_secon
 	return base;
 }
 
+// Extract the mixed envelope plus one envelope per channel, in a single decode pass
+AudioWaveformData AudioWaveformer::ExtractChannelSamples(int num_per_second, bool normalize) {
+	AudioWaveformData data;
+	if (!reader) {
+		return data;
+	}
+	ReaderBase* source = ResolveWaveformReader();
+	return ExtractSamplesFromReader(source, -1, num_per_second, normalize, true);
+}
+
 AudioWaveformData AudioWaveformer::ExtractSamples(const std::string& path, int channel, int num_per_second, bool normalize) {
 	FFmpegReader temp_reader(path);
 	temp_reader.Open();
+	LimitWaveformReaderCache(&temp_reader);
 	// Disable video for speed
 	bool has_video = temp_reader.info.has_video;
 	temp_reader.info.has_video = false;
@@ -102,6 +143,7 @@ AudioWaveformData AudioWaveformer::ExtractSamples(const std::string& path,
 												  bool normalize) {
 	FFmpegReader temp_reader(path);
 	temp_reader.Open();
+	LimitWaveformReaderCache(&temp_reader);
 	bool has_video = temp_reader.info.has_video;
 	temp_reader.info.has_video = false;
 	Fraction source_fps = temp_reader.info.fps;
@@ -121,81 +163,14 @@ AudioWaveformData AudioWaveformer::ApplyKeyframes(const AudioWaveformData& base,
 												  int channel,
 												  bool normalize) {
 	AudioWaveformData data;
-	if (num_per_second <= 0) {
+	if (source_fps.ToDouble() <= 0.0) {
 		return data;
 	}
-
-	double project_fps_value = project_fps.ToDouble();
-	double source_fps_value = source_fps.ToDouble();
-	if (project_fps_value <= 0.0 || source_fps_value <= 0.0) {
-		return data;
-	}
-
 	if (channel != -1 && (channel < 0 || channel >= source_channels)) {
 		return data;
 	}
 
-	size_t base_total = base.max_samples.size();
-	if (base_total == 0) {
-		return data;
-	}
-
-	// Determine output duration from time curve (if any). Time curves are in project-frame domain.
-	int64_t output_frames = 0;
-	if (time_keyframe && time_keyframe->GetCount() > 0) {
-		output_frames = time_keyframe->GetLength();
-	}
-	if (output_frames <= 0) {
-		// Default to source duration derived from base waveform length
-		double source_duration = static_cast<double>(base_total) / static_cast<double>(num_per_second);
-		output_frames = static_cast<int64_t>(std::llround(source_duration * project_fps_value));
-	}
-	double output_duration_seconds = static_cast<double>(output_frames) / project_fps_value;
-	int total_samples = static_cast<int>(std::ceil(output_duration_seconds * num_per_second));
-
-	if (total_samples <= 0) {
-		return data;
-	}
-
-	data.resize(total_samples);
-	data.zero(total_samples);
-
-	for (int i = 0; i < total_samples; ++i) {
-		double out_time = static_cast<double>(i) / static_cast<double>(num_per_second);
-		// Time keyframes are defined in project-frame domain; evaluate using project frames
-		double project_frame = out_time * project_fps_value;
-		double mapped_project_frame = time_keyframe ? time_keyframe->GetValue(project_frame) : project_frame;
-		// Convert mapped project frame to seconds (project FPS), then to waveform index
-		double source_time = mapped_project_frame / project_fps_value;
-		double source_index = source_time * static_cast<double>(num_per_second);
-
-		// Sample base waveform (nearest with simple linear blend)
-		int idx0 = static_cast<int>(std::floor(source_index));
-		int idx1 = idx0 + 1;
-		double frac = source_index - static_cast<double>(idx0);
-
-		float max_sample = 0.0f;
-		float rms_sample = 0.0f;
-		if (idx0 >= 0 && idx0 < static_cast<int>(base_total)) {
-			max_sample = base.max_samples[idx0];
-			rms_sample = base.rms_samples[idx0];
-		}
-		if (idx1 >= 0 && idx1 < static_cast<int>(base_total)) {
-			max_sample = static_cast<float>((1.0 - frac) * max_sample + frac * base.max_samples[idx1]);
-			rms_sample = static_cast<float>((1.0 - frac) * rms_sample + frac * base.rms_samples[idx1]);
-		}
-
-		double gain = 1.0;
-		if (volume_keyframe) {
-			double project_frame = out_time * project_fps_value;
-			gain = volume_keyframe->GetValue(project_frame);
-		}
-		max_sample = static_cast<float>(max_sample * gain);
-		rms_sample = static_cast<float>(rms_sample * gain);
-
-		data.max_samples[i] = max_sample;
-		data.rms_samples[i] = rms_sample;
-	}
+	data = ApplyKeyframes(base.max_samples, base.rms_samples, time_keyframe, volume_keyframe, project_fps, num_per_second);
 
 	if (normalize) {
 		float samples_max = 0.0f;
@@ -203,14 +178,106 @@ AudioWaveformData AudioWaveformer::ApplyKeyframes(const AudioWaveformData& base,
 			samples_max = std::max(samples_max, std::abs(v));
 		}
 		if (samples_max > 0.0f) {
-			data.scale(total_samples, 1.0f / samples_max);
+			data.scale(static_cast<int>(data.max_samples.size()), 1.0f / samples_max);
 		}
 	}
 
 	return data;
 }
 
-AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_reader, int channel, int num_per_second, bool normalize) {
+AudioWaveformData AudioWaveformer::ApplyKeyframes(const std::vector<float>& max_samples,
+												  const std::vector<float>& rms_samples,
+												  const Keyframe* time_keyframe,
+												  const Keyframe* volume_keyframe,
+												  const Fraction& project_fps,
+												  int num_per_second) {
+	AudioWaveformData data;
+	if (num_per_second <= 0) {
+		return data;
+	}
+
+	const double project_fps_value = project_fps.ToDouble();
+	if (project_fps_value <= 0.0) {
+		return data;
+	}
+
+	const size_t base_total = max_samples.size();
+	if (base_total == 0) {
+		return data;
+	}
+	const size_t rms_total = std::min(rms_samples.size(), base_total);
+
+	// A single point cannot remap time, and an empty volume curve has no gain to apply
+	if (time_keyframe && time_keyframe->GetCount() < 2) {
+		time_keyframe = nullptr;
+	}
+	if (volume_keyframe && volume_keyframe->GetCount() < 1) {
+		volume_keyframe = nullptr;
+	}
+
+	// Output duration follows the time curve (project frames), otherwise the source envelope
+	int64_t total_samples = static_cast<int64_t>(base_total);
+	if (time_keyframe) {
+		const int64_t output_frames = time_keyframe->GetLength();
+		if (output_frames <= 0) {
+			return data;
+		}
+		const double output_duration_seconds = static_cast<double>(output_frames) / project_fps_value;
+		total_samples = static_cast<int64_t>(std::ceil(output_duration_seconds * num_per_second));
+	}
+	if (total_samples <= 0) {
+		return data;
+	}
+
+	data.max_samples.assign(static_cast<size_t>(total_samples), 0.0f);
+	data.rms_samples.assign(static_cast<size_t>(total_samples), 0.0f);
+
+	const double frames_per_sample = project_fps_value / static_cast<double>(num_per_second);
+	const double samples_per_frame = static_cast<double>(num_per_second) / project_fps_value;
+
+	for (int64_t i = 0; i < total_samples; ++i) {
+		// 1-based project frame at this output sample (keyframes use 1-based frame numbers)
+		const double project_frame = static_cast<double>(i) * frames_per_sample + 1.0;
+
+		double source_index = static_cast<double>(i);
+		if (time_keyframe) {
+			const double mapped_frame = KeyframeValueAt(*time_keyframe, project_frame);
+			source_index = (mapped_frame - 1.0) * samples_per_frame;
+		}
+
+		// Sample base waveform (nearest with simple linear blend)
+		const int64_t idx0 = static_cast<int64_t>(std::floor(source_index));
+		const int64_t idx1 = idx0 + 1;
+		const double frac = source_index - static_cast<double>(idx0);
+
+		float max_sample = 0.0f;
+		float rms_sample = 0.0f;
+		if (idx0 >= 0 && idx0 < static_cast<int64_t>(base_total)) {
+			max_sample = max_samples[idx0];
+			if (idx0 < static_cast<int64_t>(rms_total)) {
+				rms_sample = rms_samples[idx0];
+			}
+		}
+		if (frac > 0.0 && idx1 >= 0 && idx1 < static_cast<int64_t>(base_total)) {
+			max_sample = static_cast<float>((1.0 - frac) * max_sample + frac * max_samples[idx1]);
+			if (idx1 < static_cast<int64_t>(rms_total)) {
+				rms_sample = static_cast<float>((1.0 - frac) * rms_sample + frac * rms_samples[idx1]);
+			}
+		}
+
+		double gain = 1.0;
+		if (volume_keyframe) {
+			gain = std::abs(KeyframeValueAt(*volume_keyframe, project_frame));
+		}
+
+		data.max_samples[i] = static_cast<float>(max_sample * gain);
+		data.rms_samples[i] = static_cast<float>(rms_sample * gain);
+	}
+
+	return data;
+}
+
+AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_reader, int channel, int num_per_second, bool normalize, bool per_channel) {
 	AudioWaveformData data;
 
 	if (!source_reader || num_per_second <= 0) {
@@ -220,6 +287,9 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 	// Open reader (if needed)
 	if (!source_reader->IsOpen()) {
 		source_reader->Open();
+		if (source_reader == detached_reader.get()) {
+			LimitWaveformReaderCache(source_reader);
+		}
 	}
 
 	const auto retry_delay = std::chrono::milliseconds(100);
@@ -245,13 +315,9 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 		}
 	};
 
-	int sample_rate = source_reader->info.sample_rate;
+	int64_t sample_rate = source_reader->info.sample_rate;
 	if (sample_rate <= 0) {
 		sample_rate = num_per_second;
-	}
-	int sample_divisor = sample_rate / num_per_second;
-	if (sample_divisor <= 0) {
-		sample_divisor = 1;
 	}
 
 	// Determine length of video frames (for waveform)
@@ -276,15 +342,20 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 		return data;
 	}
 
-	const bool known_duration = reader_duration > 0.0f && reader_video_length > 0;
-	int total_samples = known_duration ? static_cast<int>(std::ceil(reader_duration * num_per_second)) : 0;
-	if (source_reader->info.channels == 0) {
+	const int reader_channels = source_reader->info.channels;
+	if (reader_channels <= 0) {
 		return data;
 	}
 
-	if (channel != -1 && (channel < 0 || channel >= source_reader->info.channels)) {
+	if (channel != -1 && (channel < 0 || channel >= reader_channels)) {
 		return data;
 	}
+
+	// Per-channel envelopes describe every source channel, so they need all channels
+	per_channel = per_channel && channel == -1;
+
+	const bool known_duration = reader_duration > 0.0f && reader_video_length > 0;
+	const int total_samples = known_duration ? static_cast<int>(std::ceil(reader_duration * num_per_second)) : 0;
 
 	// Resize and clear audio buffers when duration is known. Some audio-only
 	// formats, especially raw FLAC, may not expose a container duration even
@@ -296,104 +367,146 @@ AudioWaveformData AudioWaveformer::ExtractSamplesFromReader(ReaderBase* source_r
 		data.max_samples.reserve(num_per_second);
 		data.rms_samples.reserve(num_per_second);
 	}
+	if (per_channel) {
+		data.channel_max_samples.assign(reader_channels, std::vector<float>(known_duration ? total_samples : 0, 0.0f));
+		data.channel_rms_samples.assign(reader_channels, std::vector<float>(known_duration ? total_samples : 0, 0.0f));
+	}
+
+	// Channels which contribute to the requested envelope
+	std::vector<int> selected_channels;
+	for (int channel_index = 0; channel_index < reader_channels; channel_index++) {
+		if (channel == -1 || channel == channel_index) {
+			selected_channels.push_back(channel_index);
+		}
+	}
+
+	// Per-channel accumulators for the current chunk
+	std::vector<float> chunk_max(reader_channels, 0.0f);
+	std::vector<double> chunk_squared_sum(reader_channels, 0.0);
+	std::vector<const float*> channel_samples(reader_channels, nullptr);
+
+	// Chunk k covers source samples [boundary(k - 1), boundary(k)). Boundaries are rounded
+	// from the exact rational position, so rates like 44100 / 200 = 220.5 never drift.
+	auto chunk_boundary = [&](int64_t chunk_index) -> int64_t {
+		return ((chunk_index + 1) * sample_rate + num_per_second / 2) / num_per_second;
+	};
 
 	int extracted_index = 0;
-	int sample_index = 0;
+	int64_t samples_read = 0;
+	int64_t chunk_sample_count = 0;
+	int64_t next_boundary = std::max<int64_t>(1, chunk_boundary(0));
 	float samples_max = 0.0f;
-	float chunk_max = 0.0f;
-	double chunk_squared_sum = 0.0;
 
-	int channel_count = (channel == -1) ? source_reader->info.channels : 1;
-	std::vector<float*> channels(source_reader->info.channels, nullptr);
 	const double frame_rate = fps_value > 0.0 ? fps_value : 30.0;
 	const int64_t max_unknown_frames = static_cast<int64_t>(std::ceil(frame_rate * 60.0 * 60.0 * 12.0));
 	int empty_audio_frames = 0;
 
-	auto append_sample = [&](float max_sample, float rms_sample) {
-		if (known_duration) {
-			if (extracted_index >= total_samples) {
-				return;
-			}
-			data.max_samples[extracted_index] = max_sample;
-			data.rms_samples[extracted_index] = rms_sample;
-		} else {
-			data.max_samples.push_back(max_sample);
-			data.rms_samples.push_back(rms_sample);
-		}
-		samples_max = std::max(samples_max, max_sample);
-		extracted_index++;
+	auto has_room = [&]() {
+		return !known_duration || extracted_index < total_samples;
 	};
 
-	try {
-		for (int64_t f = 1;
-			 (known_duration ? f <= reader_video_length && extracted_index < total_samples : f <= max_unknown_frames);
-			 f++) {
-			std::shared_ptr<openshot::Frame> frame = get_frame_with_retry(f);
-			if (!known_duration && frame && frame->number < f) {
+	// Store the current chunk as one envelope sample, then reset the accumulators
+	auto emit_chunk = [&]() {
+		if (chunk_sample_count <= 0) {
+			return;
+		}
+		if (has_room()) {
+			float mixed_max = 0.0f;
+			double mixed_squared_sum = 0.0;
+			for (int channel_index : selected_channels) {
+				mixed_max = std::max(mixed_max, chunk_max[channel_index]);
+				mixed_squared_sum += chunk_squared_sum[channel_index];
+			}
+			const double mixed_count = static_cast<double>(chunk_sample_count) * static_cast<double>(selected_channels.size());
+			const float mixed_rms = static_cast<float>(std::sqrt(mixed_squared_sum / mixed_count));
+
+			if (known_duration) {
+				data.max_samples[extracted_index] = mixed_max;
+				data.rms_samples[extracted_index] = mixed_rms;
+			} else {
+				data.max_samples.push_back(mixed_max);
+				data.rms_samples.push_back(mixed_rms);
+			}
+			if (per_channel) {
+				for (int channel_index = 0; channel_index < reader_channels; channel_index++) {
+					const float channel_rms = static_cast<float>(std::sqrt(
+						chunk_squared_sum[channel_index] / static_cast<double>(chunk_sample_count)));
+					if (known_duration) {
+						data.channel_max_samples[channel_index][extracted_index] = chunk_max[channel_index];
+						data.channel_rms_samples[channel_index][extracted_index] = channel_rms;
+					} else {
+						data.channel_max_samples[channel_index].push_back(chunk_max[channel_index]);
+						data.channel_rms_samples[channel_index].push_back(channel_rms);
+					}
+				}
+			}
+			samples_max = std::max(samples_max, mixed_max);
+			extracted_index++;
+		}
+
+		std::fill(chunk_max.begin(), chunk_max.end(), 0.0f);
+		std::fill(chunk_squared_sum.begin(), chunk_squared_sum.end(), 0.0);
+		chunk_sample_count = 0;
+		next_boundary = std::max(samples_read + 1, chunk_boundary(extracted_index));
+	};
+
+	for (int64_t f = 1;
+		 (known_duration ? f <= reader_video_length && extracted_index < total_samples : f <= max_unknown_frames);
+		 f++) {
+		std::shared_ptr<openshot::Frame> frame = get_frame_with_retry(f);
+		if (!frame) {
+			break;
+		}
+		if (!known_duration && frame->number < f) {
+			break;
+		}
+		const int sample_count = frame->GetAudioSamplesCount();
+		if (sample_count <= 0) {
+			if (!known_duration && extracted_index > 0 && ++empty_audio_frames >= 3) {
 				break;
 			}
-			int sample_count = frame->GetAudioSamplesCount();
-			if (sample_count <= 0) {
-				if (!known_duration && extracted_index > 0 && ++empty_audio_frames >= 3) {
+			continue;
+		}
+		empty_audio_frames = 0;
+
+		const int frame_channels = frame->GetAudioChannelsCount();
+		for (int channel_index : selected_channels) {
+			channel_samples[channel_index] = channel_index < frame_channels ? frame->GetAudioSamples(channel_index) : nullptr;
+		}
+
+		int64_t offset = 0;
+		while (offset < sample_count) {
+			const int64_t span = std::min<int64_t>(sample_count - offset, next_boundary - samples_read);
+			for (int channel_index : selected_channels) {
+				const float* samples = channel_samples[channel_index];
+				if (!samples) {
+					continue;
+				}
+				float span_max = chunk_max[channel_index];
+				double span_squared_sum = chunk_squared_sum[channel_index];
+				for (int64_t s = offset; s < offset + span; s++) {
+					const float value = samples[s];
+					span_max = std::max(span_max, std::abs(value));
+					span_squared_sum += static_cast<double>(value) * static_cast<double>(value);
+				}
+				chunk_max[channel_index] = span_max;
+				chunk_squared_sum[channel_index] = span_squared_sum;
+			}
+			offset += span;
+			samples_read += span;
+			chunk_sample_count += span;
+
+			if (samples_read >= next_boundary) {
+				emit_chunk();
+				if (!has_room()) {
 					break;
 				}
-				continue;
-			}
-			empty_audio_frames = 0;
-
-			for (int channel_index = 0; channel_index < source_reader->info.channels; channel_index++) {
-				if (channel == channel_index || channel == -1) {
-					channels[channel_index] = frame->GetAudioSamples(channel_index);
-				}
-			}
-
-			for (int s = 0; s < sample_count; s++) {
-				for (int channel_index = 0; channel_index < source_reader->info.channels; channel_index++) {
-					if (channel == channel_index || channel == -1) {
-						float *samples = channels[channel_index];
-						if (!samples) {
-							continue;
-						}
-						float abs_sample = std::abs(samples[s]);
-						chunk_squared_sum += static_cast<double>(samples[s]) * static_cast<double>(samples[s]);
-						chunk_max = std::max(chunk_max, abs_sample);
-					}
-				}
-
-				sample_index += 1;
-
-				if (sample_index % sample_divisor == 0) {
-					float avg_squared_sum = 0.0f;
-					if (channel_count > 0) {
-						avg_squared_sum = static_cast<float>(chunk_squared_sum / static_cast<double>(sample_divisor * channel_count));
-					}
-
-					if (!known_duration || extracted_index < total_samples) {
-						append_sample(chunk_max, std::sqrt(avg_squared_sum));
-					}
-
-					sample_index = 0;
-					chunk_max = 0.0f;
-					chunk_squared_sum = 0.0;
-
-					if (known_duration && extracted_index >= total_samples) {
-						break;
-					}
-				}
 			}
 		}
-	} catch (...) {
-		throw;
 	}
 
-	if (sample_index > 0 && (!known_duration || extracted_index < total_samples)) {
-		float avg_squared_sum = 0.0f;
-		if (channel_count > 0) {
-			avg_squared_sum = static_cast<float>(chunk_squared_sum / static_cast<double>(sample_index * channel_count));
-		}
-
-		append_sample(chunk_max, std::sqrt(avg_squared_sum));
-	}
+	// Keep the trailing partial chunk (end of the media)
+	emit_chunk();
 
 	if (normalize && samples_max > 0.0f) {
 		float scale = 1.0f / samples_max;
