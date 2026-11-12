@@ -875,3 +875,31 @@ TEST_CASE("JSON keyframe loading preserves AddPoint semantics", "[libopenshot][k
     actual.SetJsonValue(data);
     CHECK(actual.JsonValue() == expected.JsonValue());
 }
+
+TEST_CASE("Single point patches preserve animation and Bezier handles", "[libopenshot][keyframe][live-edit]") {
+    openshot::Keyframe curve;
+    curve.AddPoint(1, 0, openshot::LINEAR);
+    curve.AddPoint(100, 1, openshot::BEZIER);
+    auto before = curve.JsonValue();
+    before["Points"][1]["handle_left"]["X"] = 0.2;
+    curve.SetJsonValue(before);
+    Json::Value patch;
+    patch["Point"]["co"]["X"] = 100;
+    patch["Point"]["co"]["Y"] = 2.0;
+    curve.SetJsonValue(patch);
+    CHECK(curve.GetCount() == 2);
+    CHECK(curve.GetValue(100) == 2.0);
+    CHECK(curve.JsonValue()["Points"][1]["interpolation"] == before["Points"][1]["interpolation"]);
+    CHECK(curve.JsonValue()["Points"][1]["handle_left"] == before["Points"][1]["handle_left"]);
+    patch["Point"]["co"]["X"] = 50;
+    curve.SetJsonValue(patch);
+    CHECK(curve.GetCount() == 3);
+    CHECK(curve.JsonValue()["Points"][1]["co"]["X"].asDouble() == 50);
+    auto saved = curve.JsonValue();
+    patch["Point"].removeMember("co");
+    CHECK_THROWS(curve.SetJsonValue(patch));
+    CHECK(curve.JsonValue() == saved);
+    curve.SetJsonValue(before);
+    CHECK(curve.GetCount() == 2);
+    CHECK(curve.GetValue(100) == 1.0);
+}

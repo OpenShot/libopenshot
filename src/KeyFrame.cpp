@@ -164,20 +164,10 @@ void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 
 // Get the index of a point by matching a coordinate
 int64_t Keyframe::FindIndex(Point p) const {
-	// loop through points, and find a matching coordinate
-	for (std::vector<Point>::size_type x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// find a match
-		if (p.co.X == existing_point.co.X && p.co.Y == existing_point.co.Y) {
-			// Remove the matching point, and break out of loop
-			return x;
-		}
-	}
-
-	// no matching point found
-	throw OutOfBoundsPoint("Invalid point requested", -1, Points.size());
+    const auto found = std::lower_bound(Points.begin(), Points.end(), p.co.X, IsPointBeforeX);
+    if (found != Points.end() && found->co.X == p.co.X && found->co.Y == p.co.Y)
+        return std::distance(Points.begin(), found);
+    throw OutOfBoundsPoint("Invalid point requested", -1, Points.size());
 }
 
 // Determine if point already exists
@@ -370,6 +360,18 @@ void Keyframe::SetJson(const std::string value) {
 
 // Load Json::Value into this object
 void Keyframe::SetJsonValue(Json::Value root) {
+    // Live edits carry one point; full Points arrays still replace the curve.
+    if (root.isObject() && root.isMember("Point") && !root.isMember("Points")) {
+        const auto& patch = root["Point"];
+        if (!patch.isObject() || !patch["co"].isObject() ||
+            !patch["co"]["X"].isNumeric() || !patch["co"]["Y"].isNumeric())
+            throw InvalidJSON("Invalid keyframe point patch");
+        auto found = std::lower_bound(Points.begin(), Points.end(), patch["co"]["X"].asDouble(), IsPointBeforeX);
+        Point point = found != Points.end() && found->co.X == patch["co"]["X"].asDouble() ? *found : Point();
+        point.SetJsonValue(patch);
+        AddPoint(point);
+        return;
+    }
 	// Clear existing points
 	Points.clear();
 

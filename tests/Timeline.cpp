@@ -2424,3 +2424,37 @@ TEST_CASE("JSON transform edits preserve other properties and multiple actions",
     CHECK(clip.alpha.GetValue(1) == Approx(0.5));
     timeline.RemoveClip(&clip);
 }
+
+TEST_CASE("Live transforms keep decoded cache and invalidate rendered frames", "[libopenshot][timeline][live-edit]") {
+    openshot::DummyReader reader(openshot::Fraction(30, 1), 64, 64, 48000, 2, 60.0);
+    openshot::Clip clip(&reader);
+    clip.Id("live");
+    openshot::Timeline timeline(64, 64, openshot::Fraction(30, 1), 48000, 2, openshot::LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    auto* mapped = dynamic_cast<openshot::FrameMapper*>(clip.Reader());
+    REQUIRE(mapped);
+    auto decoded = std::make_shared<openshot::Frame>(10, 64, 64, "red");
+    mapped->GetCache()->Add(decoded);
+    timeline.GetCache()->Add(std::make_shared<openshot::Frame>(10, 64, 64, "blue"));
+    const auto epoch = timeline.CacheEpoch();
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"scale_x":{"Point":{"co":{"X":10,"Y":0.5}}},"rotation":{"Point":{"co":{"X":10,"Y":30}}}}}])");
+    CHECK(clip.scale_x.GetValue(10) == 0.5);
+    CHECK(clip.rotation.GetValue(10) == 30);
+    CHECK(mapped->GetCache()->GetFrame(10) == decoded);
+    CHECK_FALSE(timeline.GetCache()->Contains(10));
+    CHECK(timeline.CacheEpoch() > epoch);
+    // Full visual curves use the same cache-preserving route (undo/redo).
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"scale_x":{"Points":[{"co":{"X":1,"Y":1}}]}}}])");
+    CHECK(clip.scale_x.GetCount() == 1);
+    CHECK(mapped->GetCache()->Contains(10));
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"scale_x":{"Points":[]},"origin_x":{"Points":[]},"rotation":{"Points":[]}}}])");
+    CHECK(clip.scale_x.GetValue(10) == 1.0);
+    CHECK(clip.origin_x.GetValue(10) == 0.5);
+    CHECK(clip.rotation.GetCount() == 1);
+    CHECK(mapped->GetCache()->Contains(10));
+    // Timing changes must still rebuild mapping and clear its cached frames.
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"start":0.5}}])");
+    CHECK_FALSE(mapped->GetCache()->Contains(10));
+    timeline.Close();
+}
