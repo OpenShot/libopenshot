@@ -603,6 +603,39 @@ public:
     }
 };
 
+TEST_CASE("disabling caching interrupts an in-flight window", "[VideoCacheThread][cancellation]") {
+    auto* settings = Settings::Instance();
+    struct Restore {
+        Settings* settings;
+        bool enabled;
+        ~Restore() { settings->ENABLE_PLAYBACK_CACHING = enabled; }
+    } restore{settings, settings->ENABLE_PLAYBACK_CACHING};
+    settings->ENABLE_PLAYBACK_CACHING = true;
+    GatedCacheTimeline timeline;
+    TestableVideoCacheThread thread;
+    thread.Reader(&timeline);
+    thread.setSpeed(1);
+    thread.setLastCachedIndex(0);
+    auto entered = timeline.entered.get_future();
+    auto fill = std::async(std::launch::async, [&] {
+        return thread.prefetchWindow(timeline.GetCache(), 1, 20, 1, &timeline);
+    });
+    const bool decoder_entered = entered.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    settings->ENABLE_PLAYBACK_CACHING = false;
+    timeline.release.set_value();
+    const bool full = fill.get();
+    REQUIRE(decoder_entered);
+    CHECK_FALSE(full);
+    CHECK(timeline.calls.load() == 1);
+    CHECK(timeline.GetCache()->Contains(1));
+    // A disabled fill must not fetch even its first frame.
+    CHECK_FALSE(thread.prefetchWindow(timeline.GetCache(), 2, 20, 1, &timeline));
+    CHECK(timeline.calls.load() == 1);
+    settings->ENABLE_PLAYBACK_CACHING = true;
+    thread.prefetchWindow(timeline.GetCache(), 2, 3, 1, &timeline);
+    CHECK(timeline.calls.load() == 3);
+}
+
 TEST_CASE("explicit seek supersedes an in-flight cache fill", "[VideoCacheThread][cancellation]") {
     GatedCacheTimeline timeline;
     TestableVideoCacheThread thread;
