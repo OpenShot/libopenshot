@@ -23,7 +23,7 @@ std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameI
 std::shared_ptr<const FrameImage> RenderVulkanImage(
     std::shared_ptr<const FrameImage> source, std::shared_ptr<const FrameImage> background,
     int width, int height, const QTransform& source_to_output, double opacity,
-    const QColor& clear = Qt::transparent, bool high_quality = false);
+    const QColor& clear = Qt::transparent, bool high_quality = false, double corner_radius = 0.0);
 /// Apply common and per-channel saturation, preserving premultiplied alpha.
 std::shared_ptr<const FrameImage> SaturateVulkanImage(
     std::shared_ptr<const FrameImage> source, const std::array<float, 4>& saturation);

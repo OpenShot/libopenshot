@@ -12,6 +12,7 @@
 
 #include "ScreenCaptureReader.h"
 #include "FFmpegColorRange.h"
+#include "ColorManagement.h"
 #include "CaptureAudioBuffer.h"
 
 #include <algorithm>
@@ -1144,7 +1145,8 @@ std::shared_ptr<Frame> ScreenCaptureReader::DecodeNextFrame(int64_t number)
 			throw InvalidFile("Unable to create capture pixel conversion context.", InputName());
 		}
 
-		const int* coefficients = sws_getCoefficients(SWS_CS_DEFAULT);
+		const int* coefficients = sws_getCoefficients(color::SwsColorspace(
+			color::DecodeMatrix(source_frame->colorspace, width, height)));
 		sws_setColorspaceDetails(sws_context, coefficients, src_full_range ? 1 : 0,
 			coefficients, 1, 0, 1 << 16, 1 << 16);
 
