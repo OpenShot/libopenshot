@@ -1584,7 +1584,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 			if (visual_only) {
                 for (const auto& name : values.getMemberNames()) {
                     auto& curve = *visual_properties.at(name);
-                    curve.SetJsonValue(values[name]);
+                    // Null fields are ignored by Clip::SetJsonValue too.
+                    if (!values[name].isNull())
+                        curve.SetJsonValue(values[name]);
                     // Match Clip::SetJsonValue when core transform curves are cleared.
                     if (curve.GetCount() == 0 && name != "alpha" && name != "shear_x" && name != "shear_y")
                         curve = Keyframe(name == "scale_x" || name == "scale_y" ? 1.0 :

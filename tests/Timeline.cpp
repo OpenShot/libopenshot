@@ -2444,6 +2444,13 @@ TEST_CASE("Live transforms keep decoded cache and invalidate rendered frames", "
     CHECK(mapped->GetCache()->GetFrame(10) == decoded);
     CHECK_FALSE(timeline.GetCache()->Contains(10));
     CHECK(timeline.CacheEpoch() > epoch);
+    // Null values must leave existing curves intact, like normal clip updates.
+    const auto scale_before_null = clip.scale_x.JsonValue();
+    const auto rotation_before_null = clip.rotation.JsonValue();
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"scale_x":null,"rotation":null}}])");
+    CHECK(clip.scale_x.JsonValue() == scale_before_null);
+    CHECK(clip.rotation.JsonValue() == rotation_before_null);
+    CHECK(mapped->GetCache()->GetFrame(10) == decoded);
     // Full visual curves use the same cache-preserving route (undo/redo).
     timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"scale_x":{"Points":[{"co":{"X":1,"Y":1}}]}}}])");
     CHECK(clip.scale_x.GetCount() == 1);
