@@ -114,6 +114,15 @@ namespace openshot {
 		int hw_de_on = 0; // Per-reader state for concurrent Vulkan/CPU readers.
 #endif
 
+		// MPEG-TS keyframes discovered during packet reading.
+		struct MPEGTSKeyframe {
+			int64_t pts;
+			int64_t dts;
+			int64_t byte_position;
+		};
+		std::vector<MPEGTSKeyframe> mpegts_keyframes;
+		bool preserve_mpegts_keyframes_on_open = false;
+
 		AVFormatContext *pFormatCtx;
 		int videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
