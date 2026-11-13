@@ -46,6 +46,16 @@ if os.name == 'nt' and hasattr(os, 'add_dll_directory'):
         if _key not in _seen:
             _dll_handles.append(os.add_dll_directory(_directory))
             _seen.add(_key)
+_project_dlls = []
+if os.name == 'nt':
+    import ctypes
+    # Select this build's project DLLs before Python can find installed copies.
+    for _variable, _name in (
+            ('OPENSHOT_TEST_AUDIO_DLL_DIR', 'libopenshot-audio.dll'),
+            ('OPENSHOT_TEST_DLL_DIR', 'libopenshot.dll')):
+        _directory = os.environ.get(_variable)
+        if _directory:
+            _project_dlls.append(ctypes.WinDLL(os.path.abspath(os.path.join(_directory, _name))))
 import openshot
 logger = openshot.Logger.Instance()
 assert openshot.ZmqLogger is openshot.Logger
