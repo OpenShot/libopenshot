@@ -13,6 +13,8 @@
 #ifndef OPENSHOT_FFMPEG_UTILITIES_H
 #define OPENSHOT_FFMPEG_UTILITIES_H
 
+#include <cstring>
+
 #include "Exceptions.h"
 #include "OpenShotVersion.h"  // For FFMPEG_USE_SWRESAMPLE
 
@@ -401,6 +403,22 @@ inline static int ffmpeg_stream_add_side_data(
             ctx = stream->codec;
     #define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec)
 #endif
+
+// Recognize AMD AMF video encoder names, independently of FFmpeg support.
+inline static bool ffmpeg_is_amf_encoder(const char* name) {
+    if (name == nullptr)
+        return false;
+
+    return std::strcmp(name, "h264_amf") == 0 ||
+           std::strcmp(name, "hevc_amf") == 0 ||
+           std::strcmp(name, "av1_amf") == 0;
+}
+
+// Report FFmpeg registration only, not AMD GPU or driver availability.
+inline static bool ffmpeg_amf_encoder_is_compiled(const char* name) {
+    return ffmpeg_is_amf_encoder(name) &&
+           avcodec_find_encoder_by_name(name) != nullptr;
+}
 
 // Aligned memory allocation helpers (cross-platform)
 #if defined(_WIN32)
