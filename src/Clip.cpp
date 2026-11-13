@@ -1475,8 +1475,7 @@ std::shared_ptr<const VulkanFrameImage> VulkanSource(const std::shared_ptr<Frame
 }
 bool Clip::apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame, QSize timeline_size)
 {
-	if (!frame->has_image_data || composite != COMPOSITE_SOURCE_OVER ||
-		corner_radius.GetValue(frame->number) != 0.0 || display != FRAME_DISPLAY_NONE)
+	if (!frame->has_image_data || composite != COMPOSITE_SOURCE_OVER || display != FRAME_DISPLAY_NONE)
 		return false;
 	// Effects applied after keyframes (and timeline transitions/masks) need the transformed layer
 	for (auto effect : effects)
@@ -1493,7 +1492,7 @@ bool Clip::apply_vulkan_layer(std::shared_ptr<Frame> frame, std::shared_ptr<Fram
 	try {
 		background_frame->AddDeferredImage(RenderVulkanImage(source, background, timeline_size.width(),
 			timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
-			alpha.GetValue(frame->number), clear));
+			alpha.GetValue(frame->number), clear, false, corner_radius.GetValue(frame->number)));
 		gpu_metrics::Record(gpu_metrics::RenderGpu);
 		return true;
 	} catch (const std::exception& error) {
@@ -1512,13 +1511,12 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	}
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	if (composite == COMPOSITE_SOURCE_OVER &&
-		corner_radius.GetValue(frame->number) == 0.0 && display == FRAME_DISPLAY_NONE) {
+	if (composite == COMPOSITE_SOURCE_OVER && display == FRAME_DISPLAY_NONE) {
 		if (auto source = VulkanSource(frame)) {
 			try {
 				frame->AddDeferredImage(RenderVulkanImage(source, nullptr, timeline_size.width(),
 					timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
-					alpha.GetValue(frame->number)));
+					alpha.GetValue(frame->number), Qt::transparent, false, corner_radius.GetValue(frame->number)));
 				gpu_metrics::Record(gpu_metrics::RenderGpu);
 				return;
 			} catch (const std::exception& error) {

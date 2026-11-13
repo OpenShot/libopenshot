@@ -1537,6 +1537,22 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 		}
 	}
 
+    // Visual edits change compositing, never the source frame/audio mapping.
+    std::unordered_map<std::string, Keyframe*> visual_properties;
+    if (existing_clip) {
+        visual_properties = {{"scale_x", &existing_clip->scale_x}, {"scale_y", &existing_clip->scale_y},
+            {"location_x", &existing_clip->location_x}, {"location_y", &existing_clip->location_y},
+            {"rotation", &existing_clip->rotation}, {"shear_x", &existing_clip->shear_x},
+            {"shear_y", &existing_clip->shear_y}, {"origin_x", &existing_clip->origin_x},
+            {"origin_y", &existing_clip->origin_y}, {"alpha", &existing_clip->alpha},
+            {"margin", &existing_clip->margin}, {"corner_radius", &existing_clip->corner_radius}};
+    }
+    const auto& values = change["value"];
+    bool visual_only = values.isObject() && !values.empty();
+    if (visual_only)
+        for (const auto& name : values.getMemberNames())
+            if (!visual_properties.count(name)) { visual_only = false; break; }
+
 	// Determine type of change operation
 	if (change_type == "insert") {
 
@@ -1565,7 +1581,20 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 			int64_t old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
 
 			// Update clip properties from JSON
-			existing_clip->SetJsonValue(std::move(change["value"]));
+			if (visual_only) {
+                for (const auto& name : values.getMemberNames()) {
+                    auto& curve = *visual_properties.at(name);
+                    // Null fields are ignored by Clip::SetJsonValue too.
+                    if (!values[name].isNull())
+                        curve.SetJsonValue(values[name]);
+                    // Match Clip::SetJsonValue when core transform curves are cleared.
+                    if (curve.GetCount() == 0 && name != "alpha" && name != "shear_x" && name != "shear_y")
+                        curve = Keyframe(name == "scale_x" || name == "scale_y" ? 1.0 :
+                                         name == "origin_x" || name == "origin_y" ? 0.5 : 0.0);
+                }
+            } else {
+                existing_clip->SetJsonValue(std::move(change["value"]));
+            }
 
 			// Calculate new start and end frames after the update
 			int64_t new_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
@@ -1573,10 +1602,11 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 			// Remove both the old and new ranges from the timeline cache
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
-			final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
+            if (new_starting_frame != old_starting_frame || new_ending_frame != old_ending_frame)
+                final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 
 			// Apply framemapper (or update existing framemapper)
-			if (auto_map_clips) {
+			if (auto_map_clips && !visual_only) {
 				apply_mapper_to_clip(existing_clip);
 			}
 		}
@@ -1597,7 +1627,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 	}
 
 	// Re-Sort Clips (since they likely changed)
-	sort_clips();
+	if (change_type != "update" || !visual_only)
+        sort_clips();
 }
 
 // Apply JSON diff to effects

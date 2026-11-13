@@ -378,8 +378,10 @@ public:
             std::copy_n(effect->values.begin(),4,p.effect);
             // Effects render over transparent. Reuse clear and the unused matrix
             // component to stay within Vulkan's guaranteed 128-byte limit.
-            std::copy_n(effect->values.begin()+4,4,p.clear);
-            p.matrix_x[3]=effect->values[8];
+            if (effect->mode != 0) {
+                std::copy_n(effect->values.begin()+4,4,p.clear);
+                p.matrix_x[3]=effect->values[8];
+            }
         }
         int plane_count=0;
         const AVPixelFormat sw_format=src_fc->sw_format;
@@ -628,8 +630,11 @@ std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameI
 }
 std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameImage> source,
     std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,
-    double opacity,const QColor& clear,bool high_quality) {
-    return RenderImage(source,background,width,height,matrix,opacity,clear,high_quality,nullptr);
+    double opacity,const QColor& clear,bool high_quality,double corner_radius) {
+    EffectParameters rounded{0};
+    rounded.values[0] = float(std::clamp(corner_radius, 0.0, 0.5) *
+                              std::min(source->GetWidth(), source->GetHeight()));
+    return RenderImage(source,background,width,height,matrix,opacity,clear,high_quality,rounded.values[0] > 0 ? &rounded : nullptr);
 }
 std::shared_ptr<const FrameImage> SaturateVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<float,4>& saturation) {

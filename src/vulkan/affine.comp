@@ -198,6 +198,15 @@ void main() {
     vec4 front=vec4(0);
     if(all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)))) {
         front=load_source(src/vec2(p.sizes.zw));
+        if(p.modes.w==0 && p.effect.x>0.0) {
+            // Clip in source coordinates, before the affine transform, as Qt does.
+            vec2 half_size=vec2(p.sizes.zw)*0.5;
+            float radius=p.effect.x;
+            vec2 q=abs(src-half_size)-(half_size-vec2(radius));
+            float distance=length(max(q,vec2(0)))+min(max(q.x,q.y),0.0)-radius;
+            float footprint=max(length(p.matrix_x.xy),length(p.matrix_y.xy));
+            front*=clamp(0.5-distance/max(footprint,0.0001),0.0,1.0);
+        }
         if(p.modes.w==1 && front.a>0.0) {
             // Match Saturation's integer rounding and fixed-point brightness.
             int alpha=int(round(front.a*255.0));

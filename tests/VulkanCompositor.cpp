@@ -235,6 +235,78 @@ TEST_CASE("NVENC export accepts CPU and Vulkan frames without changing the reque
         }
     }
 }
+TEST_CASE("Rounded webcam overlays remain GPU resident", "[vulkan][hardware][capture][rounded]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(64, 64, QImage::Format_RGBA8888_Premultiplied);
+    pixels.fill(Qt::red);
+    auto surface = openshot::UploadVulkanImage(pixels);
+    PatternReader reader(surface, true);
+    openshot::Clip clip(&reader);
+    clip.corner_radius = openshot::Keyframe(0.25);
+    clip.scale_x = openshot::Keyframe(0.75);
+    clip.scale_y = openshot::Keyframe(0.75);
+    openshot::Timeline timeline(64, 64, openshot::Fraction(24, 1), 48000, 2, openshot::LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    openshot::ResetGpuMetrics();
+    auto frame = timeline.GetFrame(1);
+    REQUIRE(frame->GetDeferredImage());
+    Json::Reader parser;
+    Json::Value metrics;
+    REQUIRE(parser.parse(openshot::GpuMetricsSnapshot(), metrics));
+    CHECK(metrics["readbacks"].asUInt64() == 0);
+    CHECK(metrics["render_cpu"].asUInt64() == 0);
+    auto image = frame->GetImage();
+    CHECK(image->pixelColor(32, 32).red() > 240);
+    CHECK(image->pixelColor(9, 9).red() < 15);
+    timeline.Close();
+    // Also exercise layer compositing over an existing GPU background.
+    pixels.fill(Qt::blue);
+    auto background = openshot::UploadVulkanImage(pixels);
+    auto rounded = openshot::RenderVulkanImage(surface, background, 64, 64,
+        QTransform(), 1.0, Qt::transparent, false, 0.25);
+    auto result = rounded->Materialize();
+    CHECK(result.pixelColor(32, 32) == QColor(Qt::red));
+    CHECK(result.pixelColor(0, 0) == QColor(Qt::blue));
+}
+TEST_CASE("Vulkan capture encoding uploads CPU frames without readback", "[vulkan][hardware][writer][capture]") {
+    if (!VulkanAvailable()) return;
+    const auto encoders = openshot::GpuEncoders();
+    if (std::find(encoders.begin(), encoders.end(), "h264_vulkan") == encoders.end()) {
+        WARN("Skipping Vulkan test: no native Vulkan H.264 encoder");
+        return;
+    }
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    openshot::FFmpegWriter writer(directory.filePath("capture.mp4").toStdString());
+    writer.SetVideoOptions(true, "h264_vulkan", openshot::Fraction(24, 1), 256, 256,
+                           openshot::Fraction(1, 1), false, false, 1000000);
+    writer.Open();
+    REQUIRE(writer.info.vcodec == "h264_vulkan");
+    const auto readbacks = openshot::VulkanFrameReadbackCount();
+    openshot::ResetGpuMetrics(false);
+    for (int n = 1; n <= 3; ++n) {
+        auto frame = std::make_shared<openshot::Frame>(n, 256, 256, "red");
+        REQUIRE_FALSE(frame->GetDeferredImage());
+        writer.WriteFrameAt(frame, n);
+        CHECK(frame->GetImage()->pixelColor(128, 128) == QColor(Qt::red));
+    }
+    writer.Close();
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    Json::Reader parser;
+    Json::Value metrics;
+    REQUIRE(parser.parse(openshot::GpuMetricsSnapshot(false), metrics));
+    CHECK(metrics["uploads"].asUInt64() == 3);
+    CHECK(metrics["encode_gpu"].asUInt64() == 3);
+    CHECK(metrics["encode_cpu"].asUInt64() == 0);
+    openshot::FFmpegReader reader(directory.filePath("capture.mp4").toStdString());
+    reader.Open();
+    const auto pixel = reader.GetFrame(2)->GetImage()->pixelColor(128, 128);
+    CHECK(pixel.red() > 230);
+    CHECK(pixel.green() < 25);
+    CHECK(pixel.blue() < 25);
+    reader.Close();
+}
 TEST_CASE("Vulkan export accepts CPU frames and keeps writers independent", "[vulkan][writer][fallback]") {
     // Run this with OPENSHOT_RENDER_BACKEND=cpu, an invalid Vulkan device, or
     // an older FFmpeg too: the requested codec must fall back before the header.

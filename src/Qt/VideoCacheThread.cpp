@@ -527,6 +527,11 @@ namespace openshot
         while ((dir > 0 && next_frame <= window_end) ||
                (dir < 0 && next_frame >= window_begin))
         {
+            // A live edit can disable caching during this fill. Yield after
+            // the current frame instead of continuing to contend for the
+            // timeline's decoder lock until the whole window is filled.
+            if (!Settings::Instance()->ENABLE_PLAYBACK_CACHING)
+                return false;
             if (threadShouldExit()) {
                 break;
             }
