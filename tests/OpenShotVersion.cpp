@@ -1,4 +1,12 @@
+/**
+ * @file
+ * @brief Verify that libopenshot reports the loaded audio library version.
+ * @author OpenShot Studios, LLC
+ */
+
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
+
 #include "openshot_catch.h"
 #include "OpenShotVersion.h"
 #include <OpenShotAudioVersion.h>
