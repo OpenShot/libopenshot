@@ -130,6 +130,26 @@ The source code is divided up into the following folders.
 ### thirdparty/
    * This folder contains code not written by the OpenShot team. For example, jsoncpp, an open-source JSON parser.
 
+## ZeroMQ Dependency Clarification
+
+Current libopenshot logging uses standard C++ facilities and does
+not require ZeroMQ or the Python `pyzmq` module.
+
+The historical `ZmqLogger` interface remains as a deprecated
+compatibility alias. Its presence does not imply that ZeroMQ
+must be installed.
+
+Consequently, `python3-zmq`, `libzmq3-dev`, and `cppzmq-dev`
+are not mandatory dependencies for the current libopenshot
+logging implementation.
+
+Python environments are isolated: installing `python3-zmq`
+through the operating system package manager does not
+necessarily make `zmq` importable inside a Python virtual
+environment.
+
+For additional information, see [Logging](logging.rst).
+
 ## Install Dependencies
 
 In order to actually compile libopenshot, we need to install some dependencies on your system. The easiest 
