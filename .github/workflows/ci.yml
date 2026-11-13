@@ -32,7 +32,7 @@ jobs:
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # Work around a codecov issue detecting commit SHAs
           # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
@@ -55,7 +55,7 @@ jobs:
           echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout OpenShotAudio
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: OpenShot/libopenshot-audio
           ref: ${{ steps.audio-branch.outputs.ref }}
@@ -63,7 +63,7 @@ jobs:
 
       - name: Checkout Resvg
         if: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: RazrFalcon/resvg
           path: resvg
