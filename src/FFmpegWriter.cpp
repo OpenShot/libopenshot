@@ -1164,6 +1164,8 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame) {
 }
 
 void FFmpegWriter::WriteFrameAt(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+    // Timestamped live capture belongs to the live inspector, not export reports.
+    gpu_metrics::Scope capture_scope(false);
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw WriterClosed("The FFmpegWriter is closed.  Call Open() before calling this method.", path);
@@ -2796,9 +2798,12 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 	if (!gpu_export_failed && hw_en_on && hw_en_supported && video_codec_ctx->hw_frames_ctx &&
 		(native_vulkan || video_codec_ctx->pix_fmt == AV_PIX_FMT_CUDA)) {
 		auto surface = frame->GetDeferredImage();
-		if (surface) {
+		if (surface || native_vulkan) {
 			AVFrame* encoded = nullptr;
 			try {
+				// Live capture starts in CPU memory. Upload once, then let the GPU
+				// convert RGBA directly into the encoder's NV12 surface.
+				if (!surface) surface = UploadVulkanImage(*frame->GetImage());
 				auto native = std::dynamic_pointer_cast<const VulkanFrameImage>(surface);
 				const auto* context = native ? reinterpret_cast<const AVHWFramesContext*>(native->GetFrame()->hw_frames_ctx->data) : nullptr;
 				if (src_w != info.width || src_h != info.height || !context || context->sw_format != AV_PIX_FMT_RGBA) {
