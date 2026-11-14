@@ -12,8 +12,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "OpenShotVersion.h"
+#include <OpenShotAudioVersion.h>
 
 namespace openshot {
+    std::string GetAudioVersion() {
+        return openshot_audio::GetVersion();
+    }
+
     OpenShotVersion GetVersion() {
         return openshot::Version;
     }

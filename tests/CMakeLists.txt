@@ -34,6 +34,7 @@ target_link_libraries(openshot-benchmark openshot)
 ###  TEST SOURCE FILES
 ###
 set(OPENSHOT_TESTS
+  OpenShotVersion
   GpuMetrics
   AdaptivePreroll
   AudioDeviceManager
