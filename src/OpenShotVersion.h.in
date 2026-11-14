@@ -60,6 +60,9 @@ namespace openshot
 
 	/// Get the current version number of libopenshot (major, minor, and build number)
 	openshot::OpenShotVersion GetVersion();
+
+	/// Full version of the loaded libopenshot-audio, including development suffixes.
+	std::string GetAudioVersion();
 }
 
 #endif // OPENSHOT_VERSION_H
