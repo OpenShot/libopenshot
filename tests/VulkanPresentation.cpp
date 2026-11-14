@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "openshot_catch.h"
 #include "Frame.h"
+#include "Clip.h"
+#include "Timeline.h"
+#include "FFmpegReader.h"
+#include "effects/Caption.h"
 #include "VulkanFrameImage.h"
 #include "VulkanCompositor.h"
 #include "GpuDevices.h"
@@ -229,6 +233,32 @@ TEST_CASE("Vulkan presentation keeps image on GPU and preserves Qt overlays", "[
     CHECK(widget.presenter.FallbackFrames() == 0);
     CHECK(image.pixelColor(image.width()/2, image.height()/4) == QColor(Qt::blue));
     CHECK(image.pixelColor(image.width()/2, 3*image.height()/4) == QColor(Qt::red));
+    // H.264 decode -> Caption -> timeline transform -> native presentation.
+    // Cue changes, repeated cues, and empty frames must all retain GPU pixels.
+    openshot::FFmpegReader reader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+    openshot::Caption caption("00:00.000 --> 00:00.500\nVulkan caption");
+    caption.top = openshot::Keyframe(0.3);
+    openshot::Clip clip(&reader);
+    clip.AddEffect(&caption);
+    openshot::Timeline timeline(640, 360, openshot::Fraction(24, 1), 48000, 2, openshot::LAYOUT_STEREO);
+    timeline.SetMaxSize(640, 360);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    for (int n : {2, 8, 9, 24}) {
+        auto captioned = timeline.GetFrame(n);
+        REQUIRE(captioned->GetDeferredImage());
+        renderer.paint(captioned);
+        QCoreApplication::processEvents();
+        image = widget.grabFramebuffer();
+        CHECK(widget.nativeDraw);
+        CHECK(widget.presenter.FallbackFrames() == 0);
+        CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+        REQUIRE(captioned->GetDeferredImage());
+    }
+    CHECK(reader.HardwareDecodeSuccessful());
+    timeline.Close();
+    clip.RemoveEffect(&caption);
+
     // Recovery must not read pixels from a dead device or throw through paintGL.
     openshot::ReportVulkanResult(VK_ERROR_DEVICE_LOST);
     CHECK_NOTHROW(widget.presenter.Present(frame));
