@@ -22,6 +22,7 @@
 #endif
 
 #include <QDataStream>
+#include <QIODevice>
 #include <QGuiApplication>
 #include <QString>
 #include <QPoint>
