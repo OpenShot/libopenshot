@@ -16,6 +16,8 @@
 #include "openshot_catch.h"
 #include <QApplication>
 #include <QFontDatabase>
+#include <QPainter>
+#include <algorithm>
 #include "effects/Caption.h"
 #include "Clip.h"
 #include "Frame.h"
@@ -291,3 +293,259 @@ TEST_CASE("caption effect", "[libopenshot][caption]") {
     // Close QApplication
     app.quit();
 }
+
+TEST_CASE("Caption fades composite the complete overlay on the CPU", "[caption]") {
+    int argc = 1;
+    char name[] = "caption-fade-test";
+    char* argv[] = {name, nullptr};
+    QApplication app(argc, argv);
+    openshot::Timeline timeline(600, 300, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
+    openshot::Caption caption("00:00.000 --> 00:02.000\nComplete caption");
+    timeline.AddEffect(&caption);
+    caption.top = openshot::Keyframe(0.2);
+    caption.background_alpha = openshot::Keyframe(0.8);
+    caption.background = openshot::Color("#204080");
+    caption.stroke_width = openshot::Keyframe(4.0);
+    auto full = std::make_shared<openshot::Frame>(13, 600, 300, "#00000000");
+    auto transparent = std::make_shared<QImage>(600, 300, QImage::Format_RGBA8888_Premultiplied);
+    transparent->fill(Qt::transparent);
+    full->AddImage(transparent);
+    caption.GetFrame(full, 13);
+    const QImage overlay = full->GetImage()->copy();
+    caption.fade_in = openshot::Keyframe(1.0);
+    caption.fade_out = openshot::Keyframe(1.0);
+    const std::vector<std::pair<int, double>> samples = {
+        {1, 0.0}, {7, 0.25}, {13, 0.5}, {19, 0.75}, {25, 23.0 / 24.0},
+        {36, 0.5}, {48, 0.0}, {49, 0.0}, {13, 0.5}};
+    for (const auto& sample : samples) {
+        INFO("Frame " << sample.first);
+        QImage expected(600, 300, QImage::Format_RGBA8888_Premultiplied);
+        expected.fill(QColor(90, 30, 60, 210));
+        auto frame = std::make_shared<openshot::Frame>(sample.first, 600, 300, "#00000000");
+        frame->AddImage(std::make_shared<QImage>(expected));
+        QPainter painter(&expected);
+        painter.setOpacity(sample.second);
+        painter.drawImage(0, 0, overlay);
+        painter.end();
+        caption.GetFrame(frame, sample.first);
+        const auto actual = frame->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+        int largest_error = 0;
+        for (int y = 0; y < actual.height(); ++y)
+            for (int x = 0; x < actual.width() * 4; ++x)
+                largest_error = std::max(largest_error, std::abs(int(actual.constScanLine(y)[x]) - int(expected.constScanLine(y)[x])));
+        CHECK(largest_error <= 2);
+    }
+    timeline.RemoveEffect(&caption);
+}
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanFrameImage.h"
+#include "GpuMetrics.h"
+#include "GpuDevices.h"
+#include "FFmpegReader.h"
+#include "FFmpegWriter.h"
+#include "QtImageReader.h"
+#include <QTemporaryDir>
+#include <algorithm>
+
+namespace {
+int CaptionPixelError(const std::shared_ptr<openshot::Frame>& cpu,
+                      const std::shared_ptr<openshot::Frame>& gpu) {
+    const auto expected = cpu->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+    const auto actual = gpu->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+    int largest_error = 0;
+    for (int y = 0; y < actual.height(); ++y)
+        for (int x = 0; x < actual.width() * 4; ++x)
+            largest_error = std::max(largest_error, std::abs(int(actual.constScanLine(y)[x]) - int(expected.constScanLine(y)[x])));
+    return largest_error;
+}
+}
+
+TEST_CASE("Vulkan captions preserve video surfaces and match CPU rendering", "[caption][vulkan]") {
+    if (!openshot::VulkanRenderingEnabled() || openshot::ActiveGpuDevice().name.empty()) {
+        WARN("Skipping Vulkan test: no Vulkan device is available");
+        return;
+    }
+    int argc = 1;
+    char name[] = "caption-test";
+    char* argv[] = {name, nullptr};
+    QApplication app(argc, argv);
+    openshot::Timeline timeline(600, 300, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
+    openshot::Caption caption("00:01.000 --> 00:03.000\nFirst caption\nSecond line\n\n"
+                              "00:03.500 --> 00:04.000\nNext cue");
+    timeline.AddEffect(&caption);
+    caption.top = openshot::Keyframe(0.2);
+    caption.bottom = openshot::Keyframe(0.15);
+    caption.background_alpha = openshot::Keyframe(0.6);
+    caption.font_alpha = openshot::Keyframe(0.7);
+    caption.stroke_width = openshot::Keyframe(2.0);
+    caption.fade_in = openshot::Keyframe(0.5);
+    caption.fade_out = openshot::Keyframe(0.5);
+    caption.font_size.AddPoint(40, 30.0, openshot::LINEAR);
+    caption.font_size.AddPoint(60, 45.0, openshot::LINEAR);
+
+    // A partially transparent source also checks premultiplied source-over.
+    QImage input(600, 300, QImage::Format_RGBA8888_Premultiplied);
+    input.fill(QColor(25, 65, 110, 180));
+    int iteration = 0;
+    for (int n : {1, 25, 30, 40, 40, 41, 40, 65, 72, 73, 85, 90, 96, 97}) {
+        // Change the video under repeated cues to detect accidental video caching.
+        input.fill(iteration++ % 2 ? QColor(25, 65, 110, 180) : QColor(90, 30, 60, 210));
+        auto surface = openshot::UploadVulkanImage(input);
+        INFO("Frame " << n);
+        auto cpu = std::make_shared<openshot::Frame>(n, 600, 300, "#00000000");
+        cpu->AddImage(std::make_shared<QImage>(input));
+        caption.GetFrame(cpu, n);
+        auto gpu = std::make_shared<openshot::Frame>(n, 600, 300, "#00000000");
+        gpu->AddDeferredImage(surface);
+        const auto before = openshot::VulkanFrameReadbackCount();
+        caption.ProcessFrame(gpu, n);
+        REQUIRE(gpu->GetDeferredImage());
+        CHECK(openshot::VulkanFrameReadbackCount() == before);
+        if (n == 1 || n == 73 || n == 97)
+            CHECK(gpu->GetDeferredImage() == surface);
+        CHECK(CaptionPixelError(cpu, gpu) <= 3);
+    }
+
+    // Editing text/style and changing resolution must invalidate a static cue.
+    caption.fade_in = openshot::Keyframe(0.0);
+    caption.fade_out = openshot::Keyframe(0.0);
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    QImage mask(600, 300, QImage::Format_RGB888);
+    mask.fill(QColor(128, 128, 128));
+    const auto mask_path = directory.filePath("mask.png").toStdString();
+    REQUIRE(mask.save(QString::fromStdString(mask_path)));
+    for (int pass = 0; pass < 6; ++pass) {
+        INFO("Edit pass " << pass);
+        if (pass == 1) caption.CaptionText("00:00.000 --> 00:10.000\nChanged caption");
+        if (pass == 2) caption.color = openshot::Color("#ff0000");
+        if (pass == 4) caption.MaskReader(new openshot::QtImageReader(mask_path));
+        if (pass == 5) caption.mask_invert = true;
+        const int width = pass == 3 ? 300 : 600;
+        QImage pixels(width, 300, QImage::Format_RGBA8888_Premultiplied);
+        pixels.fill(Qt::black);
+        auto cpu = std::make_shared<openshot::Frame>(40, width, 300, "#000000");
+        cpu->AddImage(std::make_shared<QImage>(pixels));
+        caption.ProcessFrame(cpu, 40);
+        auto gpu = std::make_shared<openshot::Frame>(40, width, 300, "#000000");
+        gpu->AddDeferredImage(openshot::UploadVulkanImage(pixels));
+        const auto before = openshot::VulkanFrameReadbackCount();
+        caption.ProcessFrame(gpu, 40);
+        REQUIRE(gpu->GetDeferredImage());
+        CHECK(openshot::VulkanFrameReadbackCount() == before);
+        CHECK(CaptionPixelError(cpu, gpu) <= 3);
+    }
+    timeline.RemoveEffect(&caption);
+}
+
+TEST_CASE("Vulkan Caption fades reuse one uploaded overlay", "[caption][vulkan]") {
+    if (!openshot::VulkanRenderingEnabled() || openshot::ActiveGpuDevice().name.empty()) {
+        WARN("Skipping Vulkan test: no Vulkan device is available");
+        return;
+    }
+    int argc = 1;
+    char name[] = "caption-upload-test";
+    char* argv[] = {name, nullptr};
+    QApplication app(argc, argv);
+    openshot::Timeline timeline(600, 300, openshot::Fraction(24, 1), 44100, 2, openshot::LAYOUT_STEREO);
+    openshot::Caption caption("00:00.000 --> 00:02.000\nOne uploaded caption");
+    timeline.AddEffect(&caption);
+    caption.top = openshot::Keyframe(0.2);
+    caption.background_alpha = openshot::Keyframe(0.8);
+    caption.fade_in = openshot::Keyframe(0.5);
+    caption.fade_out = openshot::Keyframe(0.5);
+    QImage input(600, 300, QImage::Format_RGBA8888_Premultiplied);
+    input.fill(Qt::black);
+    auto surface = openshot::UploadVulkanImage(input);
+    openshot::ResetGpuMetrics();
+    const auto readbacks = openshot::VulkanFrameReadbackCount();
+    for (int n = 1; n <= 49; ++n) {
+        openshot::gpu_metrics::Scope scope(false);
+        auto frame = std::make_shared<openshot::Frame>(n, 600, 300, "#000000");
+        frame->AddDeferredImage(surface);
+        caption.GetFrame(frame, n);
+        REQUIRE(frame->GetDeferredImage());
+    }
+    auto counts = openshot::stringToJson(openshot::GpuMetricsSnapshot());
+    CHECK(counts["uploads"].asUInt64() == 1);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    // A style edit must still produce a new raster/upload.
+    caption.color = openshot::Color("#ff0000");
+    {
+        openshot::gpu_metrics::Scope scope(false);
+        auto frame = std::make_shared<openshot::Frame>(13, 600, 300, "#000000");
+        frame->AddDeferredImage(surface);
+        caption.GetFrame(frame, 13);
+    }
+    counts = openshot::stringToJson(openshot::GpuMetricsSnapshot());
+    CHECK(counts["uploads"].asUInt64() == 2);
+    CHECK(openshot::VulkanFrameReadbackCount() == readbacks);
+    timeline.RemoveEffect(&caption);
+}
+
+TEST_CASE("Vulkan H264 decode caption encode requires no video readbacks", "[caption][vulkan][hardware][writer]") {
+    if (!openshot::VulkanRenderingEnabled() || openshot::ActiveGpuDevice().name.empty()) {
+        WARN("Skipping Vulkan test: no Vulkan device is available");
+        return;
+    }
+    const auto encoders = openshot::GpuEncoders();
+    const auto encoder = std::find(encoders.begin(), encoders.end(), "h264_vulkan") != encoders.end()
+        ? "h264_vulkan" : "h264_nvenc";
+    if (std::find(encoders.begin(), encoders.end(), encoder) == encoders.end()) {
+        WARN("Skipping Vulkan test: no GPU H.264 encoder");
+        return;
+    }
+    int argc = 1;
+    char name[] = "caption-export-test";
+    char* argv[] = {name, nullptr};
+    QApplication app(argc, argv);
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    openshot::FFmpegReader reader(TEST_MEDIA_PATH "sintel_trailer-720p.mp4");
+    openshot::Caption caption("00:00.000 --> 00:00.500\nVulkan caption\nSecond line");
+    caption.top = openshot::Keyframe(0.25);
+    caption.background_alpha = openshot::Keyframe(0.7);
+    caption.fade_in = openshot::Keyframe(0.2);
+    caption.fade_out = openshot::Keyframe(0.2);
+    openshot::Clip clip(&reader);
+    clip.AddEffect(&caption);
+    openshot::Timeline timeline(640, 360, openshot::Fraction(24, 1), 48000, 2, openshot::LAYOUT_STEREO);
+    timeline.SetMaxSize(640, 360);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    const auto path = directory.filePath("caption.mp4").toStdString();
+    openshot::FFmpegWriter writer(path);
+    writer.SetVideoOptions(true, encoder, openshot::Fraction(24, 1), 640, 360,
+                           openshot::Fraction(1, 1), false, false, 2000000);
+    writer.Open();
+    REQUIRE(writer.info.vcodec == encoder);
+    std::shared_ptr<openshot::Frame> reference;
+    const auto before = openshot::VulkanFrameReadbackCount();
+    for (int n = 1; n <= 24; ++n) {
+        auto frame = timeline.GetFrame(n);
+        REQUIRE(frame->GetDeferredImage());
+        writer.WriteFrame(frame);
+        REQUIRE(frame->GetDeferredImage());
+        if (n == 8) reference = frame;
+    }
+    writer.Close();
+    CHECK(reader.HardwareDecodeSuccessful());
+    CHECK(openshot::VulkanFrameReadbackCount() == before);
+    timeline.Close();
+    openshot::FFmpegReader encoded(path);
+    encoded.Open();
+    CHECK(encoded.info.video_length == 24);
+    CHECK(encoded.info.width == 640);
+    CHECK(encoded.info.height == 360);
+    const auto expected = reference->GetImage()->convertToFormat(QImage::Format_RGB888);
+    const auto actual = encoded.GetFrame(8)->GetImage()->convertToFormat(QImage::Format_RGB888);
+    double error = 0.0;
+    for (int y = 0; y < actual.height(); ++y)
+        for (int x = 0; x < actual.width() * 3; ++x)
+            error += std::abs(int(actual.constScanLine(y)[x]) - int(expected.constScanLine(y)[x]));
+    CHECK(error / (actual.width() * actual.height() * 3) < 10.0);
+    encoded.Close();
+    clip.RemoveEffect(&caption);
+}
+#endif

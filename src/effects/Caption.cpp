@@ -15,6 +15,14 @@
 #include "../Clip.h"
 #include "../Timeline.h"
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "../VulkanCompositor.h"
+#include "../VulkanFrameImage.h"
+#include "../Logger.h"
+#endif
+
+#include <QDataStream>
+#include <QIODevice>
 #include <QGuiApplication>
 #include <QString>
 #include <QPoint>
@@ -25,6 +33,28 @@
 #include <QPainterPath>
 
 using namespace openshot;
+
+namespace {
+// Fade the completed overlay, preserving text/stroke/background relationships.
+void CompositeCaption(const std::shared_ptr<Frame>& frame, const QImage& overlay, double opacity) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (VulkanRenderingEnabled() &&
+		std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage())) {
+		try {
+			auto uploaded = UploadVulkanImage(overlay);
+			frame->AddDeferredImage(RenderVulkanImage(uploaded, frame->GetDeferredImage(),
+				frame->GetWidth(), frame->GetHeight(), QTransform(), opacity));
+			return;
+		} catch (const std::exception& error) {
+			Logger::Instance()->Log(std::string("Vulkan caption CPU fallback: ") + error.what());
+		}
+	}
+#endif
+	QPainter painter(frame->GetImage().get());
+	painter.setOpacity(opacity);
+	painter.drawImage(0, 0, overlay);
+}
+}
 
 /// Blank constructor, useful when using Json to load the effect properties
 Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.1), top(0.75), right(0.1), bottom(0.0),
@@ -136,19 +166,11 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 		frame->AddColor(image_size.width(), image_size.height(), "#000000");
 	}
 
-	// Get the frame's image
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
+	const QSize frame_size(frame->GetWidth(), frame->GetHeight());
 
 	// Calculate scale factor, to keep different resolutions from
 	// having dramatically different font sizes
-	double timeline_scale_factor = frame_image->width() / 600.0;
-
-	// Load timeline's new frame image into a QPainter
-	QPainter painter(frame_image.get());
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
-
-	// Composite a new layer onto the image
-	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	double timeline_scale_factor = frame_size.width() / 600.0;
 
 	// Font options and metrics for caption text
 	double font_size_value = font_size.GetValue(frame_number) * timeline_scale_factor;
@@ -170,16 +192,16 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	double metrics_line_spacing = metrics.lineSpacing();
 
 	// Calculate caption area (based on left, top, right, and bottom margin)
-	double left_margin_x = frame_image->width() * left_value;
-	double top_margin_y = frame_image->height() * top_value;
+	double left_margin_x = frame_size.width() * left_value;
+	double top_margin_y = frame_size.height() * top_value;
 	double starting_y = top_margin_y + metrics_line_spacing;
 	double current_y = starting_y;
 	double bottom_y = starting_y;
 	double top_y = starting_y;
 	double max_text_width = 0.0;
-	double right_margin_x = frame_image->width() - (frame_image->width() * right_value);
+	double right_margin_x = frame_size.width() - (frame_size.width() * right_value);
 	double caption_area_width = right_margin_x - left_margin_x;
-	double bottom_margin_y = frame_image->height() - (frame_image->height() * bottom_value);
+	double bottom_margin_y = frame_size.height() - (frame_size.height() * bottom_value);
 	double caption_area_height = std::max(bottom_margin_y - starting_y, 0.0);
 	QRectF caption_area = QRectF(left_margin_x, starting_y, caption_area_width, caption_area_height);
 	QRectF caption_clip_area = QRectF(left_margin_x, top_margin_y, caption_area_width,
@@ -300,6 +322,11 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 		}
 	}
 
+	// No active, drawable cue: preserve the input surface without a composite.
+	if (text_paths.empty()) {
+		return frame;
+	}
+
 	// Calculate background size w/padding (based on actual text-wrapping)
 	QRectF caption_area_with_padding = QRectF(left_margin_x - (padding_value / 2.0),
 											  top_y - (padding_value / 2.0),
@@ -309,20 +336,43 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	// Calculate alignment offset on X axis (force center alignment of the caption area)
 	double alignment_offset = std::max((caption_area_width - max_text_width) / 2.0, 0.0);
 
+	const double cue_alpha = fade_in_percentage < 1.0 ? fade_in_percentage
+		: (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0 ? fade_out_percentage : 1.0);
+	if (cue_alpha <= 0.0)
+		return frame;
+
+	// Cache the evaluated drawing commands, excluding fade opacity. Both CPU
+	// and Vulkan reuse the full-opacity raster throughout a cue's fade.
+	QByteArray overlay_key;
+	QDataStream key(&overlay_key, QIODevice::WriteOnly);
+	key << frame_size << caption_clip_area << caption_area_with_padding
+		<< alignment_offset << background_corner_value << stroke_width_value
+		<< QString::fromStdString(background.GetColorHex(frame_number))
+		<< QString::fromStdString(color.GetColorHex(frame_number))
+		<< QString::fromStdString(stroke.GetColorHex(frame_number))
+		<< background_alpha.GetValue(frame_number) << font_alpha.GetValue(frame_number);
+	for (const auto& path : text_paths)
+		key << path;
+	if (overlay_key == this->overlay_key) {
+		CompositeCaption(frame, overlay_cache, cue_alpha);
+		return frame;
+	}
+	QImage overlay(frame_size, QImage::Format_RGBA8888_Premultiplied);
+	overlay.fill(Qt::transparent);
+
+	// Paint the caption independently of the video.
+	QPainter painter(&overlay);
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+
+	// Composite a new layer onto the image
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+
 	// Set background color of caption
 	QBrush background_brush;
 	QColor background_qcolor = QColor(QString(background.GetColorHex(frame_number).c_str()));
 	// Align background center
 	caption_area_with_padding.translate(alignment_offset, 0.0);
-	if (fade_in_percentage < 1.0) {
-		// Fade in background
-		background_qcolor.setAlphaF(fade_in_percentage * background_alpha.GetValue(frame_number));
-	} else if (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0) {
-		// Fade out background
-		background_qcolor.setAlphaF(fade_out_percentage * background_alpha.GetValue(frame_number));
-	} else {
-		background_qcolor.setAlphaF(background_alpha.GetValue(frame_number));
-	}
+	background_qcolor.setAlphaF(background_alpha.GetValue(frame_number));
 	background_brush.setColor(background_qcolor);
 	background_brush.setStyle(Qt::SolidPattern);
 	painter.setBrush(background_brush);
@@ -350,15 +400,6 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	for(QPainterPath path : text_paths) {
 		// Align text center (relative to background)
 		path.translate(alignment_offset, 0.0);
-		if (fade_in_percentage < 1.0) {
-			// Fade in text
-			font_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
-			stroke_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
-		} else if (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0) {
-			// Fade out text
-			font_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
-			stroke_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
-		}
 		pen.setColor(stroke_qcolor);
 		font_brush.setColor(font_qcolor);
 
@@ -384,6 +425,10 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 	// End painter
 	painter.end();
+
+	this->overlay_key = overlay_key;
+	overlay_cache = std::move(overlay);
+	CompositeCaption(frame, overlay_cache, cue_alpha);
 
 	// return the modified frame
 	return frame;

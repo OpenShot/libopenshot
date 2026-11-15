@@ -16,6 +16,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <QImage>
 #include <QFont>
 #include <QFontMetrics>
 #include <QRegularExpression>
@@ -43,6 +44,10 @@ private:
 	QFontMetrics* metrics;       ///< Font metrics object
 	QFont* font; 			     ///< QFont object
 	bool is_dirty;
+	QByteArray overlay_key; ///< Evaluated drawing commands for the last caption.
+	QImage overlay_cache; ///< Last caption raster; stable cache key reuses the shared Vulkan upload.
+
+	bool RendersOnVulkan() const override { return true; }
 
 	/// Init effect settings
 	void init_effect_details();
