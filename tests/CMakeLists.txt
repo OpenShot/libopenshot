@@ -61,6 +61,7 @@ set(OPENSHOT_TESTS
   FrameMapper
   KeyFrame
   Logger
+  LiveScale
   Point
   Profiles
   QtPlayer
@@ -215,16 +216,36 @@ foreach(tname ${OPENSHOT_TESTS})
     )
   endif()
 
-  # Automatically configure CTest targets from Catch2 test cases
-  catch_discover_tests(
-    openshot-${tname}-test
-    TEST_PREFIX ${tname}:
-    PROPERTIES
-      ${test_properties}
-  )
+  if(tname STREQUAL "LiveScale")
+    # Explicit backend runs prevent a successful CPU fallback masking GPU bugs.
+    add_test(NAME LiveScale:CPU COMMAND openshot-LiveScale-test "[live-scale]")
+    set_tests_properties(LiveScale:CPU PROPERTIES
+      LABELS LiveScale
+      ENVIRONMENT "QT_QPA_PLATFORM=offscreen;OPENSHOT_RENDER_BACKEND=cpu"
+    )
+  else()
+    # Automatically configure CTest targets from Catch2 test cases
+    catch_discover_tests(
+      openshot-${tname}-test
+      TEST_PREFIX ${tname}:
+      PROPERTIES
+        ${test_properties}
+    )
+  endif()
   list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
   list(APPEND CATCH2_TEST_NAMES ${tname})
 endforeach()
+
+# Run sharpness/cache coverage on both backends. Missing Vulkan hardware is a
+# reported skip; an available device silently falling back to CPU is a failure.
+if(ENABLE_GPU_FRAME)
+  add_test(NAME LiveScale:Vulkan COMMAND openshot-LiveScale-test "[live-scale]")
+  set_tests_properties(LiveScale:Vulkan PROPERTIES
+    LABELS "LiveScale;Vulkan"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;OPENSHOT_RENDER_BACKEND=vulkan;OPENSHOT_TEST_REQUIRE_VULKAN=1"
+    SKIP_REGULAR_EXPRESSION "Skipping Vulkan test:"
+  )
+endif()
 
 # Add an additional special-case test, for an envvar-dependent setting
 catch_discover_tests(

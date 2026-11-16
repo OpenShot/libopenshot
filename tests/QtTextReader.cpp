@@ -14,6 +14,10 @@
 #include "QtTextReader.h"
 #include "Clip.h"
 #include "Timeline.h"
+#include "FrameMapper.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanFrameImage.h"
+#endif
 #include "Color.h"
 #include "Frame.h"
 #include <QImage>
@@ -250,6 +254,55 @@ TEST_CASE("Scaled-up text renders sharp detail at the same size", "[libopenshot]
     // An upscaled 1x raster would be mostly blurred edge pixels
     CHECK(scaled.soft < normal.soft * 0.6);
     reader.Close();
+}
+
+
+TEST_CASE("Live text scaling refreshes cached raster detail", "[libopenshot][qttextreader][live-edit]")
+{
+    TextTestApplication application;
+    QtTextReader reader;
+    auto data = reader.JsonValue();
+    data["width"] = 320;
+    data["height"] = 60;
+    data["text"] = "Sharp";
+    data["document_layout"] = true;
+    reader.SetJsonValue(data);
+    Clip clip(&reader);
+    clip.Id("text");
+    clip.scale = SCALE_NONE;
+    Timeline timeline(1280, 720, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.SetMaxSize(1280, 720);
+    timeline.Open();
+    auto* mapper = dynamic_cast<FrameMapper*>(clip.Reader());
+    REQUIRE(mapper);
+    CHECK(timeline.GetFrame(1));
+    CHECK(mapper->GetFrame(1)->GetWidth() == 320);
+
+    // Match preview dragging, including undo: edit the already-rendered clip.
+    for (double scale : {3.0, 1.0, 2.0}) {
+        Json::Value change, changes(Json::arrayValue);
+        change["type"] = "update";
+        change["key"].append("clips");
+        Json::Value id;
+        id["id"] = clip.Id();
+        change["key"].append(id);
+        change["value"]["scale_x"] = Keyframe(scale).JsonValue();
+        change["value"]["scale_y"] = Keyframe(scale).JsonValue();
+        changes.append(change);
+        timeline.ApplyJsonDiff(changes.toStyledString());
+        auto rendered = timeline.GetFrame(1);
+        REQUIRE(rendered);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        if (qEnvironmentVariableIsSet("OPENSHOT_TEST_REQUIRE_VULKAN")) {
+            REQUIRE(VulkanRenderingEnabled());
+            REQUIRE(std::dynamic_pointer_cast<const VulkanFrameImage>(rendered->GetDeferredImage()));
+        }
+#endif
+        CHECK(mapper->GetFrame(1)->GetWidth() == int(320 * scale));
+        CHECK(reader.DetailScale() == scale);
+    }
+    timeline.Close();
 }
 
 namespace {

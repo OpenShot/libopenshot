@@ -797,6 +797,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 		if (reader->info.has_single_image) gpu_metrics::Record(gpu_metrics::ImageSource);
 		auto reader_frame = reader->GetFrame(clip_frame_number);
 		if (reader_frame) {
+            source_raster_size = QSize(reader_frame->GetWidth(), reader_frame->GetHeight());
 			// Override frame # (due to time-mapping might change it)
 			reader_frame->number = number;
 			reader_frame->SetAudioDirection(is_increasing);
@@ -1629,11 +1630,28 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	int blue = wave_color.blue.GetInt(frame->number);
 	int alpha = wave_color.alpha.GetInt(frame->number);
 
+    // Render at the final displayed resolution, but hold the old raster size
+    // throughout a preview drag. Decoded audio remains cached in the mapper.
+    auto* parent_timeline = static_cast<Timeline*>(ParentTimeline());
+    const bool transforming = parent_timeline && parent_timeline->IsClipTransforming(Id());
+    if (transforming && waveform_raster && waveform_frame == frame->number) {
+        // QImage's implicit sharing preserves upload identity while protecting
+        // the retained raster from later clip effects that edit mutable pixels.
+        frame->AddImage(std::make_shared<QImage>(*waveform_raster));
+        return;
+    }
+    if (!transforming) {
+        const double maximum = std::max({1.0, double(scale_x.GetMaxPoint().co.Y), double(scale_y.GetMaxPoint().co.Y)});
+        waveform_detail = std::min(maximum, std::max(1.0, 8192.0 / std::max(timeline_size.width(), timeline_size.height())));
+    }
+    const QSize raster_size(std::max(1, int(std::round(timeline_size.width() * waveform_detail))),
+                            std::max(1, int(std::round(timeline_size.height() * waveform_detail))));
+
 	// Render the waveform through the audio visualization effect so clip shortcuts
 	// and explicit effects share the same rendering path.
 	auto visual_frame = std::make_shared<Frame>(*frame.get());
 	visual_frame->AddImage(std::make_shared<QImage>(
-		timeline_size.width(), timeline_size.height(), QImage::Format_RGBA8888_Premultiplied));
+        raster_size.width(), raster_size.height(), QImage::Format_RGBA8888_Premultiplied));
 	visual_frame->GetImage()->fill(Qt::transparent);
 
 	AudioVisualization visualization;
@@ -1656,6 +1674,8 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	visualization.background = AUDIO_VISUALIZATION_BACKGROUND_TRANSPARENT;
 	visualization.GetFrame(visual_frame, frame->number);
 
+    waveform_raster = std::make_shared<QImage>(*visual_frame->GetImage());
+    waveform_frame = frame->number;
 	frame->AddImage(visual_frame->GetImage());
 }
 
@@ -1705,11 +1725,20 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		ReaderBase* source = reader;
 		if (auto* mapper = dynamic_cast<FrameMapper*>(source))
 			source = mapper->Reader();
-		if (auto* text = dynamic_cast<QtTextReader*>(source)) {
-			const double detail = text->DetailScale();
+        if (Waveform() || dynamic_cast<QtTextReader*>(source)) {
+            const double detail = Waveform() ? waveform_detail : static_cast<QtTextReader*>(source)->DetailScale();
 			source_size = QSize(std::max(1, int(std::round(source_size.width() / detail))),
 			                    std::max(1, int(std::round(source_size.height() / detail))));
-		}
+        } else if (location_coordinate_system == "auto" && !source_raster_size.isEmpty() &&
+                   (dynamic_cast<QtImageReader*>(source) || dynamic_cast<FFmpegReader*>(source))) {
+            // Reader detail may change after a drag; SCALE_NONE must retain its
+            // logical source size instead of applying the extra raster scale twice.
+            // Imported canvas/geometry projects retain their historical bounds.
+            auto* parent = static_cast<Timeline*>(timeline);
+            const double preview = parent && parent->info.width > 0 ? width / double(parent->info.width) : 1.0;
+            source_size = QSize(std::max(1, int(std::round(source_size.width() * source->info.width * preview / source_raster_size.width()))),
+                                std::max(1, int(std::round(source_size.height() * source->info.height * preview / source_raster_size.height()))));
+        }
 	}
 
 	// Initialize parent object's properties (Clip or Tracked Object)
