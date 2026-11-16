@@ -19,6 +19,7 @@
 #include "CacheMemory.h"
 #include "CrashHandler.h"
 #include "FrameMapper.h"
+#include "QtTextReader.h"
 #include "Exceptions.h"
 #include "effects/Mask.h"
 
@@ -1591,6 +1592,13 @@ void Timeline::apply_json_to_clips(Json::Value change) {
                     if (curve.GetCount() == 0 && name != "alpha" && name != "shear_x" && name != "shear_y")
                         curve = Keyframe(name == "scale_x" || name == "scale_y" ? 1.0 :
                                          name == "origin_x" || name == "origin_y" ? 0.5 : 0.0);
+                }
+                // Text raster resolution depends on clip scale. Let the reader
+                // regenerate its detail instead of reusing the old mapped pixels.
+                if (values.isMember("scale_x") || values.isMember("scale_y")) {
+                    auto* mapper = dynamic_cast<FrameMapper*>(existing_clip->Reader());
+                    if (mapper && dynamic_cast<QtTextReader*>(mapper->Reader()))
+                        mapper->GetCache()->Clear();
                 }
             } else {
                 existing_clip->SetJsonValue(std::move(change["value"]));
