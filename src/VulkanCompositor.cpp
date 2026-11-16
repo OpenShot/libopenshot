@@ -5,6 +5,7 @@
 #include "GpuDevices.h"
 #include "VulkanFrameImage.h"
 #include "ColorManagement.h"
+#include "MeshWarp.h"
 #ifdef __APPLE__
 #include "MacVulkanInterop.h"
 #endif
@@ -14,6 +15,7 @@
 #include <atomic>
 #include <bitset>
 #include <cstring>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -98,7 +100,7 @@ AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
     return ref;
 }
 struct EffectParameters {
-    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask, 5 blur, 6 LUT, 7 mask blend, 8 scope
+    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask, 5 blur, 6 LUT, 7 mask blend, 8 scope, 9 mesh distort
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -741,6 +743,70 @@ std::shared_ptr<const FrameImage> BlurVulkanImage(std::shared_ptr<const FrameIma
     // QPainter paints the blurred region over the original, including alpha.
     EffectParameters region{2,{float(area.left()),float(area.top()),float(area.right()+1),float(area.bottom()+1)}};
     return RenderImage(result,source,width,height,QTransform(),1.0,Qt::transparent,false,&region);
+}
+std::shared_ptr<const FrameImage> DistortVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::vector<QPointF>& mesh, int divisions) {
+    if (divisions < 1 || divisions > 96 || mesh.size() != size_t(divisions + 1) * (divisions + 1))
+        throw std::invalid_argument("Invalid Vulkan distortion mesh");
+    for (const auto& point : mesh)
+        if (!std::isfinite(point.x()) || !std::isfinite(point.y()))
+            throw std::invalid_argument("Non-finite Vulkan distortion mesh");
+    source = PremultipliedRGBA(source);
+    const int width = source->GetWidth(), height = source->GetHeight();
+    const int columns = (width + 15) / 16, rows = (height + 15) / 16;
+    std::vector<std::vector<uint32_t>> tiles(size_t(columns) * rows);
+    std::vector<uint32_t> records;
+    auto scalar = [&](double value) {
+        float narrowed = float(value);
+        uint32_t bits;
+        std::memcpy(&bits, &narrowed, sizeof(bits));
+        records.push_back(bits);
+    };
+    auto position = [&](int x, int y) {
+        const auto& point = mesh[y * (divisions + 1) + x];
+        return QPointF(point.x() * width, point.y() * height);
+    };
+    auto triangle = [&](QPointF a, QPointF b, QPointF c, QPointF uv, QPointF du, QPointF dv) {
+        QPointF e = b - a, f = c - a;
+        double det = e.x() * f.y() - e.y() * f.x();
+        if (std::abs(det) < 1e-8) return;
+        int left = std::max(0, int(std::ceil(std::min({a.x(),b.x(),c.x()}) - 0.5)));
+        int right = std::min(width-1, int(std::floor(std::max({a.x(),b.x(),c.x()}) - 0.5)));
+        int top = std::max(0, int(std::ceil(std::min({a.y(),b.y(),c.y()}) - 0.5)));
+        int bottom = std::min(height-1, int(std::floor(std::max({a.y(),b.y(),c.y()}) - 0.5)));
+        if (left > right || top > bottom) return;
+        uint32_t index = records.size();
+        // Store the local origin to avoid cancellation on small triangles at 4K.
+        scalar(a.x()); scalar(a.y()); scalar(f.y()/det); scalar(-f.x()/det);
+        scalar(-e.y()/det); scalar(e.x()/det);
+        scalar(uv.x()); scalar(uv.y()); scalar(du.x()); scalar(du.y()); scalar(dv.x()); scalar(dv.y());
+        // Pixel bounds match the CPU, including its half-pixel convention.
+        records.push_back(left); records.push_back(right); records.push_back(top); records.push_back(bottom);
+        for (int y=top; y<=bottom; ++y) {
+            auto span=mesh_warp::Span(a,b,c,y,left,right);
+            records.push_back(span.first); records.push_back(span.second);
+        }
+        for (int y=top/16; y<=bottom/16; ++y)
+            for (int x=left/16; x<=right/16; ++x)
+                tiles[y*columns+x].push_back(index);
+    };
+    const double step = 1.0/divisions;
+    for (int y=0; y<divisions; ++y) for (int x=0; x<divisions; ++x) {
+        QPointF a=position(x,y), b=position(x+1,y), c=position(x+1,y+1), d=position(x,y+1);
+        QPointF uv(x*step,y*step);
+        triangle(a,b,c,uv,QPointF(step,0),QPointF(step,step));
+        triangle(a,c,d,uv,QPointF(step,step),QPointF(0,step));
+    }
+    // Binding 5: per-tile [offset,count], triangle records, then tile index lists.
+    std::vector<uint32_t> data(tiles.size()*2);
+    const uint32_t record_start=data.size();
+    data.insert(data.end(),records.begin(),records.end());
+    for (size_t i=0; i<tiles.size(); ++i) {
+        data[i*2]=data.size(); data[i*2+1]=tiles[i].size();
+        for (uint32_t index : tiles[i]) data.push_back(record_start+index);
+    }
+    EffectParameters effect{9,{float(columns)},data.data(),data.size()*sizeof(uint32_t)};
+    return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
 }
 namespace {
 // Its ring slots keep recent NV12 frames, which NVENC export maps into CUDA.

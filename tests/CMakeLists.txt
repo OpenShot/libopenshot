@@ -98,6 +98,7 @@ set(OPENSHOT_TESTS
   SphericalEffect
   Timer
   DenoiseImage
+  Distort
   WaveEffect
 )
 

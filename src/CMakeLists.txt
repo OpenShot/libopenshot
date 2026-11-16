@@ -158,6 +158,7 @@ set(EFFECTS_SOURCES
   effects/SphericalProjection.cpp
   effects/Timer.cpp
   effects/DenoiseImage.cpp
+  effects/Distort.cpp
   effects/Wave.cpp
   audio_effects/STFT.cpp
   audio_effects/Noise.cpp
