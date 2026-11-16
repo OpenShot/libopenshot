@@ -37,6 +37,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		Keyframe amount;           ///< Overall grain intensity.
 		Keyframe size;             ///< Fine to coarse grain scale.
 		Keyframe softness;         ///< Crisp vs soft organic grain.

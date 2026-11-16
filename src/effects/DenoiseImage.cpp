@@ -18,6 +18,12 @@
 #include <cmath>
 #include <memory>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -338,11 +344,46 @@ void DenoiseImage::init_effect_details()
 void DenoiseImage::reset_temporal_history()
 {
 	previous_input_ = QImage();
+    previous_gpu_input_.reset();
 	last_frame_ = -1;
 }
 
 std::shared_ptr<openshot::Frame> DenoiseImage::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const float s=clamp01(float(strength.GetValue(frame_number))),d=clamp01(float(detail.GetValue(frame_number))),
+                    t=clamp01(float(temporal.GetValue(frame_number))),m=clamp01(float(motion_safety.GetValue(frame_number))),
+                    c=clamp01(float(color_noise.GetValue(frame_number)));
+                if(s<=0) { reset_temporal_history();return frame; }
+                const bool valid=t>0 && previous_gpu_input_ && last_frame_>=0 && frame_number==last_frame_+1 &&
+                    previous_gpu_input_->GetWidth()==surface->GetWidth() && previous_gpu_input_->GetHeight()==surface->GetHeight();
+                const auto lut=build_pixel_lut(build_response_lut(response_curve,frame_number),s,d,t,c);
+                std::vector<float> parameters;
+                for(const auto* table:{&lut.fine_threshold,&lut.mid_threshold,&lut.fine_keep,&lut.mid_keep,
+                    &lut.chroma_fine_threshold_rb,&lut.chroma_fine_threshold_g,&lut.chroma_mid_threshold,
+                    &lut.chroma_fine_keep,&lut.chroma_mid_keep,&lut.temporal_mix_base})
+                    parameters.insert(parameters.end(),table->begin(),table->end());
+                const float low=.020f+(1-m)*.080f;
+                parameters.insert(parameters.end(),{.45f+.55f*(1-d),.32f+(1-d)*.28f,.65f+c*.35f,low,low+.055f+(1-m)*.100f});
+                for(int a=0;a<256;++a) parameters.push_back(a?255.0f/a:0.0f);
+                const int fine=1+(s>=.75f && d<=.45f),coarse=s>=.95f && d<=.15f?8:s>=.80f && d<=.35f?6:s>=.65f && d<=.55f?5:3;
+                auto result=DenoiseVulkanImage(surface,valid?previous_gpu_input_:nullptr,parameters,fine,coarse);
+                previous_input_=QImage();
+                previous_gpu_input_=t>0?surface:nullptr;last_frame_=t>0?frame_number:-1;
+                frame->AddDeferredImage(result);return frame;
+            }
+        } catch(const std::exception& e) {
+            reset_temporal_history();Logger::Instance()->Log(std::string("Vulkan DenoiseImage CPU fallback: ")+e.what());
+        }
+    }
+#endif
+    previous_gpu_input_.reset();
+
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 	if (!frame_image || frame_image->isNull()) {
 		reset_temporal_history();

@@ -40,6 +40,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 
 		/// Default constructor, useful when using Json to load the effect properties
 		Deinterlace();

@@ -31,12 +31,14 @@ namespace openshot
 	{
 	private:
 		QImage previous_input_;
+        std::shared_ptr<const FrameImage> previous_gpu_input_;
 		int64_t last_frame_;
 
 		void init_effect_details();
 		void reset_temporal_history();
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		Keyframe strength;
 		Keyframe detail;
 		Keyframe temporal;

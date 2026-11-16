@@ -160,7 +160,244 @@ float chroma_metric(ivec3 rgb,ivec3 key,int method) {
     float d=abs(lch.z-p.clear.z);return min(d,360.0-d);
 }
 
+uint grain_mix(uint h) {
+    h^=h>>16;h*=0x7feb352du;h^=h>>15;h*=0x846ca68bu;return h^(h>>16);
+}
+float grain_hash(ivec2 q,int t,uint salt) {
+    uint h=data[272]^salt^uint(q.x)*0x9e3779b9u^uint(q.y)*0x85ebca6bu^uint(t)*0xc2b2ae35u;
+    precise float v=float(grain_mix(h))*(2.0/4294967295.0)-1.0;return v;
+}
+float grain_noise(vec2 q,int t,uint salt) {
+    ivec2 cell=ivec2(q);precise vec2 f=q-vec2(cell);f=f*f*(3.0-2.0*f);
+    float a=grain_hash(cell,t,salt),b=grain_hash(cell+ivec2(0,1),t,salt);
+    float c=grain_hash(cell+ivec2(1,0),t,salt),d=grain_hash(cell+ivec2(1,1),t,salt);
+    precise float left=a+(b-a)*f.y,right=c+(d-c)*f.y;
+    precise float result=left+(right-left)*f.x;return result;
+}
+void film_grain(ivec2 pixel) {
+    ivec4 c=bytes_at(pixel);precise vec3 rgb=vec3(c.rgb);
+    if(c.a!=255) rgb*=value(16+c.a);
+    rgb*=1.0/255.0;
+    precise float luma=.299*rgb.r+.587*rgb.g+.114*rgb.b;
+    precise float centered=abs(luma-.5)*2.0;
+    precise float tone=(1.0-luma)*(1.0-luma)*value(5)+clamp(1.0-centered*centered,0.0,1.0)*value(6)+luma*luma*value(7);
+    if(c.a==0 || tone<=.00001) { imageStore(output_img,pixel,vec4(c)/255.0);return; }
+    precise vec2 q=vec2(pixel)*vec2(value(12),value(13));
+    const uint salts[4]=uint[4](0x1000193u,0x8da6b343u,0xd8163841u,0xcb1ab31fu);
+    bool color=value(8)>.00001 && value(9)>.00001;
+    precise vec4 grains=vec4(0);
+    for(int s=0;s<(color?4:1);++s) {
+        precise float g[2];
+        for(int t=0;t<(value(15)>0.0?2:1);++t) {
+            g[t]=grain_hash(ivec2(q*value(0)),int(value(14))+t,salts[s]);
+            if(value(3)>.00001) {
+                float soft=grain_noise(q*value(1),int(value(14))+t,salts[s]^0x51633e2du);
+                g[t]+=(soft-g[t])*value(3);
+            }
+        }
+        grains[s]=g[0];
+        if(value(15)>0.0) grains[s]+=(g[1]-g[0])*value(10);
+        if(value(4)>.00001) {
+            float cluster=grain_noise(q*value(2),int(value(14)),salts[s]^0xa511e9b3u);
+            grains[s]*=1.0+(.45+abs(cluster)*1.35-1.0)*value(4);
+        }
+    }
+    precise vec3 delta=vec3(grains.x);
+    if(color) { delta+=(grains.yzw-delta)*value(9);delta=vec3(grains.x)+(delta-vec3(grains.x))*value(8); }
+    rgb=clamp(rgb+delta*(value(11)*tone),0.0,1.0)*255.0;
+    if(c.a!=255) rgb*=float(c.a)*(1.0/255.0);
+    imageStore(output_img,pixel,vec4(floor(rgb+.5),c.a)/255.0);
+}
+// Independent channel buffers keep 4K float intermediates within Vulkan storage-buffer limits.
+vec3 denoise_read(int base,int index) {
+    return vec3(uintBitsToFloat(data[base+index]),uintBitsToFloat(work_g[base+index]),uintBitsToFloat(work_b[base+index]));
+}
+void denoise_write(int base,int index,vec3 v) {
+    data[base+index]=floatBitsToUint(v.r);work_g[base+index]=floatBitsToUint(v.g);work_b[base+index]=floatBitsToUint(v.b);
+}
+vec3 denoise_straight(ivec4 c) { return vec3(c.rgb)*(c.a==255?1.0:value(2565+c.a)); }
+float denoise_luma(vec3 c) { precise float y=.299*c.r+.587*c.g+.114*c.b;return y; }
+float denoise_shrink(float v,float threshold,float keep) {
+    precise float result=abs(v)<=threshold?v*keep:(v<0.0?-1.0:1.0)*(threshold*keep+(abs(v)-threshold));return result;
+}
+void denoise(ivec2 pixel,int op) {
+    int n=p.sizes.z*p.sizes.w,index=pos_index(pixel);
+    if(op<38) {
+        int radius=int(p.effect.x);bool horizontal=op==34 || op==36;
+        int src=op==36?WORK+n:WORK,dst=op==35?WORK+n:op==37?WORK+2*n:WORK;
+        precise vec3 sum=vec3(0);
+        for(int k=-radius;k<=radius;++k) {
+            ivec2 q=clamp(pixel+(horizontal?ivec2(k,0):ivec2(0,k)),ivec2(0),p.sizes.zw-1);
+            sum+=op==34?denoise_straight(bytes_at(q)):denoise_read(src,pos_index(q));
+        }
+        denoise_write(dst,index,sum*(1.0/float(2*radius+1)));return;
+    }
+    ivec4 c=bytes_at(pixel);
+    precise vec3 center=denoise_straight(c),fine=denoise_read(WORK+n,index),base=denoise_read(WORK+2*n,index);
+    precise float cy=denoise_luma(center),fy=denoise_luma(fine),by=denoise_luma(base);
+    int r=int(clamp(cy+.5,0.0,255.0));
+    precise float out_y=by+denoise_shrink(fy-by,value(256+r),value(768+r))+denoise_shrink(cy-fy,value(r),value(512+r));
+    precise vec3 rgb;
+    for(int channel=0;channel<3;++channel) rgb[channel]=base[channel]+
+        denoise_shrink(fine[channel]-base[channel],value(1536+r),value(2048+r))+
+        denoise_shrink(center[channel]-fine[channel],value((channel==1?1280:1024)+r),value(1792+r));
+    rgb+=vec3(out_y-denoise_luma(rgb));
+    if(p.effect.x>0.0) {
+        ivec4 prev=ivec4(round(texelFetch(background_tex,pixel,0)*255.0));
+        precise vec3 previous=denoise_straight(prev),diff=abs(center-previous);
+        precise float py=denoise_luma(previous),motion=max(abs(cy-py)*(1.0/255.0),(diff.r+diff.g+diff.b)*((1.0/255.0)/3.0)*.75);
+        precise float t=clamp((motion-value(2563))/(value(2564)-value(2563)),0.0,1.0);
+        precise float gate=1.0-t*t*(3.0-2.0*t);
+        precise float mix_value=min(.35,value(2304+r)*gate*value(2560));
+        precise vec3 chroma=rgb-out_y;
+        out_y+=(py-out_y)*(mix_value*value(2561));
+        rgb=out_y+chroma+((previous-py)-chroma)*(mix_value*value(2562));
+    }
+    if(c.a!=255) rgb*=float(c.a)*(1.0/255.0);
+    rgb=floor(clamp(rgb,0.0,255.0)+.5);
+    imageStore(output_img,pixel,vec4(rgb,c.a)/255.0);
+}
+uvec4 scale_sum(ivec2 q,int first,int unit,ivec2 step) {
+    uvec4 sum=uvec4(bytes_at(q))*uint(first);int remain=16384-first;
+    while(remain>unit) { q+=step;sum+=uvec4(bytes_at(q))*uint(unit);remain-=unit; }
+    if(remain>0) sum+=uvec4(bytes_at(q+step))*uint(remain);
+    return sum;
+}
+void scale_effect(ivec2 pixel) {
+    int ax=3*pixel.x,ay=3*(p.sizes.x+pixel.y);
+    ivec2 q=ivec2(data[ax],data[ay]);
+    uint x=data[ax+1],y=data[ay+1];int cx=int(data[ax+2]),cy=int(data[ay+2]);
+    uvec4 sum;
+    if(cx==0 && cy==0) {
+        // Qt's SSE2/NEON four-pixel interpolation rounds vertically first.
+        uvec4 left=(uvec4(bytes_at(q))*(256u-y)+uvec4(bytes_at(q+ivec2(0,y>0u?1:0)))*y)>>8;
+        uvec4 right=(uvec4(bytes_at(q+ivec2(x>0u?1:0,0)))*(256u-y)+uvec4(bytes_at(q+ivec2(x>0u?1:0,y>0u?1:0)))*y)>>8;
+        sum=(left*(256u-x)+right*x)>>8;
+    } else if(cx==0) {
+        sum=scale_sum(q,int(y),cy,ivec2(0,1));
+        if(x>0u) sum=(sum*(256u-x)+scale_sum(q+ivec2(1,0),int(y),cy,ivec2(0,1))*x)>>8;
+        sum>>=14;
+    } else if(cy==0) {
+        sum=scale_sum(q,int(x),cx,ivec2(1,0));
+        if(y>0u) sum=(sum*(256u-y)+scale_sum(q+ivec2(0,1),int(x),cx,ivec2(1,0))*y)>>8;
+        sum>>=14;
+    } else {
+        sum=(scale_sum(q,int(x),cx,ivec2(1,0))>>4)*y;
+        int remain=16384-int(y);
+        while(remain>cy) { ++q.y;sum+=(scale_sum(q,int(x),cx,ivec2(1,0))>>4)*uint(cy);remain-=cy; }
+        if(remain>0) sum+=(scale_sum(q+ivec2(0,1),int(x),cx,ivec2(1,0))>>4)*uint(remain);
+        sum>>=24;
+    }
+    imageStore(output_img,pixel,vec4(sum)/255.0);
+}
+void displace(ivec2 pixel) {
+    ivec4 map=ivec4(round(texelFetch(background_tex,pixel,0)*255.0));
+    int gray=(map.r*11+map.g*16+map.b*5)>>5,processed=int(data[gray]);
+    if(p.effect.z>0.0) processed=255-processed;
+    processed=128+((processed-128)*map.a)/255;
+    if(p.effect.w>0.0) { imageStore(output_img,pixel,vec4(vec3(processed)/255.0,1));return; }
+    precise float signed_map=(float(processed)-127.5)/127.5;
+    precise vec2 q=clamp(vec2(pixel)+signed_map*p.effect.xy,vec2(0),vec2(p.sizes.zw-1));
+    ivec2 lo=ivec2(q),hi=min(lo+1,p.sizes.zw-1);precise vec2 f=q-vec2(lo);
+    precise vec4 top=vec4(bytes_at(lo))*(1.0-f.x)+vec4(bytes_at(ivec2(hi.x,lo.y)))*f.x;
+    precise vec4 bottom=vec4(bytes_at(ivec2(lo.x,hi.y)))*(1.0-f.x)+vec4(bytes_at(hi))*f.x;
+    precise vec4 result=top*(1.0-f.y)+bottom*f.y;
+    imageStore(output_img,pixel,floor(result+.5)/255.0);
+}
+uint tape_fnv(uint h,uint datum) {
+    for(int i=0;i<4;++i) { h^=(datum>>(8*i))&255u;h*=16777619u; }return h;
+}
+float tape_hash(uint y,uint x) { return float(tape_fnv(tape_fnv(tape_fnv(data[10],data[9]),y),x))/4294967295.0; }
+uint tape_step(inout uint h) { h^=h<<13;h^=h>>17;h^=h<<5;return h; }
+vec3 tape_yuv(ivec2 q) {
+    precise vec3 rgb=vec3(bytes_at(q).bgr)/255.0;
+    precise vec3 yuv=vec3(.299*rgb.r+.587*rgb.g+.114*rgb.b,
+        -.14713*rgb.r-.28886*rgb.g+.436*rgb.b,.615*rgb.r-.51499*rgb.g-.10001*rgb.b);return yuv;
+}
+void analog_tape(ivec2 pixel,int op) {
+    int w=p.sizes.z,h=p.sizes.w,n=w*h,uw=(w+1)/2,base=int(data[11]),index=pos_index(pixel),row=16+pixel.y*16;
+    if(op==41) {
+        precise vec3 c=tape_yuv(pixel);data[base+index]=floatBitsToUint(c.x);
+        if(pixel.x<uw) {
+            ivec2 q=ivec2(2*pixel.x,pixel.y);precise vec2 uv=tape_yuv(q).yz;
+            if(q.x+1<w) uv=(uv+tape_yuv(q+ivec2(1,0)).yz)*.5;
+            work_g[base+pixel.y*uw+pixel.x]=floatBitsToUint(uv.x);work_b[base+pixel.y*uw+pixel.x]=floatBitsToUint(uv.y);
+        }return;
+    }
+    if(op==42 || op==44) {
+        if(pixel.x!=0) return;
+        int width=op==42?w:uw,radius=int(value(op==42?2:3));
+        int src=op==42?base:base+n,dst=op==42?base+n:base;
+        precise vec3 sum=vec3(0);
+        for(int k=-radius;k<=radius;++k) sum+=denoise_read(src,pixel.y*width+clamp(k,0,width-1));
+        for(int x=0;x<width;++x) {
+            int q=pixel.y*width+x;precise vec3 v=sum/float(2*radius+1);
+            if(op==42) data[dst+q]=floatBitsToUint(v.r);
+            else { work_g[dst+q]=floatBitsToUint(v.g);work_b[dst+q]=floatBitsToUint(v.b); }
+            sum+=denoise_read(src,pixel.y*width+min(width-1,x+radius+1))-denoise_read(src,pixel.y*width+max(0,x-radius));
+        }return;
+    }
+    if(op==43) {
+        if(pixel.x>=uw) return;
+        precise float xs=clamp(float(pixel.x)-value(0),0.0,float(uw-1));int lo=int(xs),hi=min(lo+1,uw-1);
+        precise float f=xs-float(lo);
+        precise vec3 v=denoise_read(base,pixel.y*uw+lo)*(1.0-f)+denoise_read(base,pixel.y*uw+hi)*f;
+        work_g[base+n+pixel.y*uw+pixel.x]=floatBitsToUint(v.g);work_b[base+n+pixel.y*uw+pixel.x]=floatBitsToUint(v.b);return;
+    }
+    if(op==45) {
+        // One invocation per row preserves the CPU random/streak recurrence.
+        if(pixel.x!=0) return;
+        uint s0=data[row+3],s1=data[row+4],yref=data[row+9];precise float sl=0,sr=0;
+        for(int x=0;x<w;++x) {
+            int q=pixel.y*w+x;uint xref=uint(floor(float(x)*value(7)+.5));
+            if(tape_hash(yref,xref)<value(row+1)) sl=1;
+            if(tape_hash(yref,data[8]-1u-xref)<value(row+1)*.7) sr=1;
+            precise float noise=(float(tape_step(s0)&0xffffffu)/16777215.0)*(1.0-value(4))+
+                (float(tape_step(s1)&0xffffffu)/16777215.0)*value(4);
+            precise float y=uintBitsToFloat(data[base+n+q]),mt=clamp((y-.2)/(.8-.2),0.0,1.0);
+            precise float val=y+value(row+5)+value(row+6)*(2.0*noise-1.0)*(.6+.4*mt)+value(row+2);
+            precise float streak=value(6)*(sl+sr),result=val+streak*(value(row+7)+(1.0-val));
+            data[base+q]=floatBitsToUint(clamp(result,0.0,1.0));sl*=value(5);sr*=value(5);
+        }
+        for(int x=0;x<uw;++x) {
+            int q=base+pixel.y*uw+x;
+            work_g[q]=floatBitsToUint(uintBitsToFloat(work_g[q])*value(row));
+            work_b[q]=floatBitsToUint(uintBitsToFloat(work_b[q])*value(row));
+        }return;
+    }
+    if(op==46) {
+        precise float off=value(row+8),xs=clamp(float(pixel.x)+off,0.0,float(w-1));int lo=int(xs),hi=min(lo+1,w-1);
+        precise float f=xs-float(lo),yv=uintBitsToFloat(data[base+pixel.y*w+lo])*(1.0-f)+uintBitsToFloat(data[base+pixel.y*w+hi])*f;
+        data[base+n+index]=floatBitsToUint(yv);
+        if(pixel.x<uw) {
+            xs=clamp(float(pixel.x)+off*.5,0.0,float(uw-1));lo=int(xs);hi=min(lo+1,uw-1);f=xs-float(lo);
+            precise vec3 v=denoise_read(base,pixel.y*uw+lo)*(1.0-f)+denoise_read(base,pixel.y*uw+hi)*f;
+            work_g[base+n+pixel.y*uw+pixel.x]=floatBitsToUint(v.g);work_b[base+n+pixel.y*uw+pixel.x]=floatBitsToUint(v.b);
+        }return;
+    }
+    int lo=pixel.x/2,hi=min(lo+1,uw-1);float f=float(pixel.x%2)*.5;
+    precise vec3 uv=denoise_read(base+n,pixel.y*uw+lo)*(1.0-f)+denoise_read(base+n,pixel.y*uw+hi)*f;
+    uv*=value(1);float yv=uintBitsToFloat(data[base+n+index]);
+    precise vec3 rgb=vec3(yv+1.13983*uv.b,yv-.39465*uv.g-.58060*uv.b,yv+2.03211*uv.g);
+    imageStore(output_img,pixel,vec4(ivec3(clamp(rgb.bgr,0.0,1.0)*255.0),bytes_at(pixel).a)/255.0);
+}
 void spatial_effect(ivec2 pixel) {
+    if(p.modes.w>=41 && p.modes.w<=47) { analog_tape(pixel,p.modes.w);return; }
+    if(p.modes.w==39) { scale_effect(pixel);return; }
+    if(p.modes.w==40) { displace(pixel);return; }
+    if(p.modes.w>=34 && p.modes.w<=38) { denoise(pixel,p.modes.w);return; }
+    if(p.modes.w==33) { film_grain(pixel);return; }
+    if(p.modes.w==31) {
+        int index=pixel.y*p.sizes.z+pixel.x;
+        precise float moved=float(index)+value(pixel.y);
+        int q=int(moved);
+        if(abs(moved-float(q))>=0.5) q+=moved<0.0?-1:1;
+        q=clamp(q,0,p.sizes.z*p.sizes.w-1);
+        imageStore(output_img,pixel,texelFetch(plane_y,ivec2(q%p.sizes.z,q/p.sizes.z),0));return;
+    }
+    if(p.modes.w==32) {
+        imageStore(output_img,pixel,texelFetch(plane_y,ivec2(pixel.x,int(data[pixel.y])),0));return;
+    }
     int op=p.modes.w;
     int n=p.sizes.z*p.sizes.w;
     int index=pos_index(pixel);

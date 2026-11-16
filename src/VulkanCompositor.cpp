@@ -137,7 +137,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     uint32_t type=UINT32_MAX;
     for(uint32_t i=0;i<memory.memoryTypeCount;++i) {
         const auto flags=memory.memoryTypes[i].propertyFlags;
-        if(!(requirements.memoryTypeBits&(1u<<i)) || !(flags&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) continue;
+        if(!(requirements.memoryTypeBits&(1u<<i)) || (!parameters.empty() && !(flags&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))) continue;
         if(type==UINT32_MAX || (flags&VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) type=i;
         if(flags&VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) break;
     }
@@ -161,7 +161,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     return work;
 }
 struct EffectParameters {
-    int mode; // 1-13: affine/point effects; 14-30: spatial passes (effects.glsl)
+    int mode; // 1-13: affine/point effects; 14-47: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -169,6 +169,7 @@ struct EffectParameters {
     const VulkanFrameImage* mask=nullptr; // third input (binding 6)
     std::shared_ptr<EffectWork> work;
     std::vector<uint32_t>* counts=nullptr; // scope: zeroed, counted on the GPU, then read back
+    std::array<std::shared_ptr<EffectWork>,2> extra_work{};
 };
 struct Parameters {
     float matrix_x[4], matrix_y[4], coeffs[4], extra[4], clear[4];
@@ -221,6 +222,7 @@ class Pipeline {
         Buffer staging;  // host-read copy of the counters
         std::shared_ptr<const void> data_owner;
         std::shared_ptr<EffectWork> work;
+        std::array<std::shared_ptr<EffectWork>,2> extra_work{};
         std::vector<VkImageView> views;
         FramePtr target;
         std::vector<FramePtr> inputs;
@@ -287,20 +289,20 @@ public:
             VkCommandPoolCreateInfo ci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
             ci.queueFamilyIndex=queue_family; ci.flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             VkCheck(vkCreateCommandPool(device,&ci,nullptr,&commands),"Create command pool");
-            std::array<VkDescriptorSetLayoutBinding,7> bindings{};
-            for(int i=0;i<7;++i) {
+            std::array<VkDescriptorSetLayoutBinding,9> bindings{};
+            for(int i=0;i<9;++i) {
                 bindings[i].binding=i; bindings[i].descriptorCount=1;
-                bindings[i].descriptorType=i==5?VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                bindings[i].descriptorType=(i==5 || i>=7)?VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:(i==4 || (encode_nv12 && i==3))?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 bindings[i].stageFlags=VK_SHADER_STAGE_COMPUTE_BIT;
             }
             VkDescriptorSetLayoutCreateInfo di{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-            di.bindingCount=7; di.pBindings=bindings.data();
+            di.bindingCount=9; di.pBindings=bindings.data();
             VkCheck(vkCreateDescriptorSetLayout(device,&di,nullptr,&descriptors),"Create descriptors");
             VkPushConstantRange range{VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(Parameters)};
             VkPipelineLayoutCreateInfo li{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
             li.setLayoutCount=1; li.pSetLayouts=&descriptors; li.pushConstantRangeCount=1; li.pPushConstantRanges=&range;
             VkCheck(vkCreatePipelineLayout(device,&li,nullptr,&layout),"Create pipeline layout");
-            std::array<VkDescriptorPoolSize,3> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,5*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,kSlots}}};
+            std::array<VkDescriptorPoolSize,3> sizes{{{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,5*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,2*kSlots},{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,3*kSlots}}};
             VkDescriptorPoolCreateInfo pi{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
             pi.maxSets=kSlots; pi.poolSizeCount=3; pi.pPoolSizes=sizes.data();
             VkCheck(vkCreateDescriptorPool(device,&pi,nullptr,&pool),"Create descriptor pool");
@@ -359,7 +361,7 @@ public:
         slot.views.clear();
         slot.target.reset();
         slot.inputs.clear();
-        slot.work.reset();
+        slot.work.reset();slot.extra_work={};
     }
     VkImageView View(VkImage image,VkFormat format,VkImageAspectFlags aspect){
         VkImageViewCreateInfo vi{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -495,6 +497,7 @@ public:
         next_slot=(next_slot+1)%kSlots;
         Retire(slot);
         slot.work=effect?effect->work:nullptr;
+        slot.extra_work=effect?effect->extra_work:std::array<std::shared_ptr<EffectWork>,2>{};
         // Each in-flight submission owns its parameters until its fence retires.
         // Tables such as LUTs are copied once while a slot still holds them.
         if(effect && effect->data && (!effect->data_owner || slot.data_owner!=effect->data_owner)) {
@@ -557,7 +560,7 @@ public:
             }else views[4]=make_view(of->img[0],VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_ASPECT_COLOR_BIT);
             views[5]=mask?make_view(reinterpret_cast<AVVkFrame*>(mask->data[0])->img[0],VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_ASPECT_COLOR_BIT):views[0];
             std::array<VkDescriptorImageInfo,6> images{};
-            std::array<VkWriteDescriptorSet,7> writes{};
+            std::array<VkWriteDescriptorSet,9> writes{};
             for(int i=0;i<6;++i){
                 const int binding=i==5?6:i;
                 const bool storage=binding==4 || (encode_nv12 && binding==3);
@@ -571,9 +574,16 @@ public:
             writes[5].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writes[5].dstSet=set;writes[5].dstBinding=5;writes[5].descriptorCount=1;
             writes[5].descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;writes[5].pBufferInfo=&data_buffer;
+            std::array<VkDescriptorBufferInfo,2> extra_buffers{};
+            for(int i=0;i<2;++i) {
+                extra_buffers[i]={slot.extra_work[i]?slot.extra_work[i]->buffer:slot.data.buffer,0,VK_WHOLE_SIZE};
+                auto& write=writes[7+i];
+                write.sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;write.dstSet=set;write.dstBinding=7+i;
+                write.descriptorCount=1;write.descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;write.pBufferInfo=&extra_buffers[i];
+            }
             // The NV12 encoder shader uses bindings 0-4 only.
             if(encode_nv12) vkUpdateDescriptorSets(device,5,writes.data(),0,nullptr);
-            else vkUpdateDescriptorSets(device,7,writes.data(),0,nullptr);
+            else vkUpdateDescriptorSets(device,9,writes.data(),0,nullptr);
             VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};bi.flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             VkCheck(vkBeginCommandBuffer(cmd,&bi),"Begin affine commands");
             std::vector<VkSemaphore> semaphores;
@@ -606,6 +616,9 @@ public:
                 vkCmdPipelineBarrier(cmd,after,before,0,0,nullptr,1,&barrier,0,nullptr);
             };
             if(slot.work) buffer_barrier(slot.work->buffer,
+                VK_ACCESS_SHADER_WRITE_BIT|VK_ACCESS_HOST_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT|VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT|VK_PIPELINE_STAGE_HOST_BIT,VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            for(const auto& work:slot.extra_work) if(work) buffer_barrier(work->buffer,
                 VK_ACCESS_SHADER_WRITE_BIT|VK_ACCESS_HOST_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT|VK_ACCESS_SHADER_WRITE_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT|VK_PIPELINE_STAGE_HOST_BIT,VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
             if(scope) {
@@ -788,8 +801,9 @@ std::shared_ptr<const FrameImage> ShiftVulkanImage(std::shared_ptr<const FrameIm
 constexpr int kEffectWorkWords=512+16384;
 static std::shared_ptr<const FrameImage> SpatialPass(std::shared_ptr<const FrameImage> source,
     const std::shared_ptr<EffectWork>& work,int mode,const std::array<float,9>& values={},
-    std::shared_ptr<const FrameImage> background=nullptr,int width=0,int height=0) {
-    EffectParameters effect{mode,values};effect.work=work;
+    std::shared_ptr<const FrameImage> background=nullptr,int width=0,int height=0,
+    const std::array<std::shared_ptr<EffectWork>,2>& extra={}) {
+    EffectParameters effect{mode,values};effect.work=work;effect.extra_work=extra;
     return RenderImage(source,background,width?width:source->GetWidth(),height?height:source->GetHeight(),
         QTransform(),1.0,Qt::transparent,false,&effect);
 }
@@ -818,6 +832,73 @@ std::shared_ptr<const FrameImage> PixelateVulkanImage(std::shared_ptr<const Fram
     const std::array<float,9> values{float(area.x()),float(area.y()),float(area.width()),float(area.height())};
     auto small=SpatialPass(source,nullptr,15,values,nullptr,width,height);
     return SpatialPass(source,nullptr,16,values,small);
+}
+std::shared_ptr<const FrameImage> WaveVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& offsets) {
+    if(offsets.size()!=size_t(source->GetHeight())) throw std::invalid_argument("Invalid wave rows");
+    EffectParameters effect{31,{},offsets.data(),offsets.size()*sizeof(float)};
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> DeinterlaceVulkanImage(std::shared_ptr<const FrameImage> source,bool odd) {
+    const int rows=(source->GetHeight()-int(odd)+1)/2;
+    if(rows<=0) return source;
+    // Qt's nearest-neighbor scale uses inverse-transform pixel centers.
+    std::vector<uint32_t> lines(source->GetHeight());
+    QImage indices(1,rows,QImage::Format_ARGB32);
+    for(int y=0;y<rows;++y) indices.setPixel(0,y,0xff000000u|uint32_t(y));
+    const auto scaled=indices.scaled(1,source->GetHeight(),Qt::IgnoreAspectRatio,Qt::FastTransformation);
+    for(int y=0;y<source->GetHeight();++y) lines[y]=int(odd)+2*(scaled.pixel(0,y)&0xffffffu);
+    EffectParameters effect{32,{},lines.data(),lines.size()*sizeof(uint32_t)};
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> FilmGrainVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters,uint32_t seed) {
+    std::vector<uint32_t> words(parameters.size()+1);
+    std::memcpy(words.data(),parameters.data(),parameters.size()*sizeof(float));words.back()=seed;
+    EffectParameters effect{33,{},words.data(),words.size()*sizeof(uint32_t)};
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> DenoiseVulkanImage(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> previous,
+    const std::vector<float>& parameters,int fine_radius,int coarse_radius) {
+    source=PremultipliedRGBA(source);
+    if(previous) previous=PremultipliedRGBA(previous);
+    std::vector<uint32_t> words(parameters.size());std::memcpy(words.data(),parameters.data(),words.size()*sizeof(uint32_t));
+    const size_t size=size_t(source->GetWidth())*source->GetHeight()*3+kEffectWorkWords;
+    auto red=NewEffectWork(source,size,words);
+    const std::array<std::shared_ptr<EffectWork>,2> extra{NewEffectWork(source,size),NewEffectWork(source,size)};
+    for(int mode=34;mode<=37;++mode)
+        SpatialPass(source,red,mode,{float(mode<36?fine_radius:coarse_radius)},nullptr,0,0,extra);
+    return SpatialPass(source,red,38,{previous?1.0f:0.0f},previous,0,0,extra);
+}
+std::shared_ptr<const FrameImage> ScaleEffectVulkanImage(std::shared_ptr<const FrameImage> source,int width,int height) {
+    source=PremultipliedRGBA(source);
+    if(source->GetWidth()==width && source->GetHeight()==height) return source;
+    std::vector<uint32_t> axes;
+    for(const auto sizes:{std::pair<int,int>{source->GetWidth(),width},{source->GetHeight(),height}}) {
+        const int s=sizes.first,d=sizes.second;const bool up=d>=s;
+        int64_t position=up?int64_t(32768)*s/d-32768:0,increment=(int64_t(s)<<16)/d;
+        const int unit=((int64_t(d)<<14)+s-1)/s;
+        for(int i=0;i<d;++i,position+=increment) {
+            const int pos=position>>16;
+            axes.push_back(std::max(0,pos));
+            axes.push_back(up?(pos<0 || pos>=s-1?0:(position>>8)&255):((65536-(position&65535))*unit)>>16);
+            axes.push_back(up?0:unit);
+        }
+    }
+    EffectParameters effect{39,{float(source->GetWidth()),float(source->GetHeight())},axes.data(),axes.size()*sizeof(uint32_t)};
+    return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> DisplaceVulkanImage(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> map,
+    const std::array<uint32_t,256>& adjusted,float x,float y,bool invert,bool replace) {
+    source=PremultipliedRGBA(source);map=PremultipliedRGBA(map);
+    EffectParameters effect{40,{x,y,invert?1.0f:0.0f,replace?1.0f:0.0f},adjusted.data(),sizeof(adjusted)};
+    return RenderImage(source,map,source->GetWidth(),source->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> AnalogTapeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& parameters) {
+    source=PremultipliedRGBA(source);
+    const size_t size=size_t(source->GetWidth())*source->GetHeight()*2+parameters.size();
+    auto red=NewEffectWork(source,size,parameters);
+    const std::array<std::shared_ptr<EffectWork>,2> extra{NewEffectWork(source,size),NewEffectWork(source,size)};
+    for(int mode=41;mode<47;++mode) SpatialPass(source,red,mode,{},nullptr,0,0,extra);
+    return SpatialPass(source,red,47,{},nullptr,0,0,extra);
 }
 std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<int,3>& radii,float amount,float threshold,int mode,int channel) {

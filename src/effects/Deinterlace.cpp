@@ -14,6 +14,12 @@
 #include "Exceptions.h"
 #include <omp.h>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
@@ -48,6 +54,21 @@ void Deinterlace::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Deinterlace::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                frame->AddDeferredImage(DeinterlaceVulkanImage(surface,isOdd));
+                return frame;
+            }
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan Deinterlace CPU fallback: ")+e.what());
+        }
+    }
+#endif
+
 	// Get original size of frame's image
 	int original_width = frame->GetImage()->width();
 	int original_height = frame->GetImage()->height();
@@ -64,6 +85,7 @@ std::shared_ptr<openshot::Frame> Deinterlace::GetFrame(std::shared_ptr<openshot:
 	// If start = 0, rows_to_copy = ceil(original_height / 2.0)
 	// If start = 1, rows_to_copy = floor(original_height / 2.0)
 	int rows_to_copy = (original_height - start + 1) / 2;
+	if (rows_to_copy <= 0) return frame;
 
 	// Create a new image with exactly 'rows_to_copy' scanlines
 	QImage deinterlaced_image(

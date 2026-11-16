@@ -47,6 +47,21 @@ std::shared_ptr<const FrameImage> ChromaKeyVulkanImage(std::shared_ptr<const Fra
 /// Qt-compatible area downsampling and nearest-neighbor source-over painting.
 std::shared_ptr<const FrameImage> PixelateVulkanImage(std::shared_ptr<const FrameImage> source,
     const QRect& area,int width,int height);
+/// Geometry-only row parameters; pixels remain resident on the device.
+std::shared_ptr<const FrameImage> WaveVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& offsets);
+std::shared_ptr<const FrameImage> DeinterlaceVulkanImage(std::shared_ptr<const FrameImage> source,bool odd);
+/// Parameters: 16 grain controls, then 256 inverse-alpha values; seed is kept as uint32.
+std::shared_ptr<const FrameImage> FilmGrainVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters,uint32_t seed);
+/// Parameters: ten 256-entry response tables, five temporal controls, inverse alpha.
+/// Previous holds the original preceding input, never a filtered result.
+std::shared_ptr<const FrameImage> DenoiseVulkanImage(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> previous,
+    const std::vector<float>& parameters,int fine_radius,int coarse_radius);
+/// Qt-compatible smooth scaling of GPU effect inputs, including reader maps.
+std::shared_ptr<const FrameImage> ScaleEffectVulkanImage(std::shared_ptr<const FrameImage> source,int width,int height);
+std::shared_ptr<const FrameImage> DisplaceVulkanImage(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> map,
+    const std::array<uint32_t,256>& adjusted,float x,float y,bool invert,bool replace);
+/// Sixteen header words followed by sixteen words per row: noise, bands and tracking.
+std::shared_ptr<const FrameImage> AnalogTapeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& parameters);
 /// Three separable box blurs and an entirely GPU-resident adaptive threshold.
 std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<int,3>& radii,float amount,float threshold,int mode,int channel);

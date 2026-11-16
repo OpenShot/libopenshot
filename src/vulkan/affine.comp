@@ -10,6 +10,8 @@ layout(binding=3) uniform sampler2D background_tex;
 layout(binding=4, rgba8) uniform writeonly image2D output_img;
 // Effect parameters and tables (float bits), or scope counters.
 layout(std430,binding=5) buffer Data { uint data[]; };
+layout(std430,binding=7) buffer WorkGreen { uint work_g[]; };
+layout(std430,binding=8) buffer WorkBlue { uint work_b[]; };
 layout(binding=6) uniform sampler2D mask_tex;
 shared uint scope_histograms[1024];
 layout(push_constant) uniform Parameters {
@@ -110,7 +112,10 @@ vec4 load_source(vec2 uv) {
     if((p.modes.x&15)>=2) {
         vec4 front=clamp(sample_source(plane_y,uv),0.0,1.0);
         if((p.modes.x&15)==3) front.rgb*=front.a;
-        else front.rgb=min(front.rgb,vec3(front.a));
+        // Linear painting preserves the source bytes, as QPainter does.
+        // Effects such as AnalogTape and ColorShift can leave RGB above alpha;
+        // only bicubic resampling needs the overshoot clamp.
+        else if(p.modes.z!=0) front.rgb=min(front.rgb,vec3(front.a));
         return front;
     }
     float y=(sample_source(plane_y,uv).r-p.extra.y)*p.color_coeffs.x;

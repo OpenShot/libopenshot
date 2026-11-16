@@ -41,6 +41,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		Keyframe wavelength;	///< The length of the wave
 		Keyframe amplitude;		///< The height of the wave
 		Keyframe multiplier;	///< Amount to multiply the wave (make it bigger)

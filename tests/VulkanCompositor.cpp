@@ -40,6 +40,13 @@
 #include "effects/Pixelate.h"
 #include "effects/Shadow.h"
 #include "effects/Glow.h"
+#include "effects/Wave.h"
+#include "effects/Deinterlace.h"
+#include "effects/FilmGrain.h"
+#include "effects/DenoiseImage.h"
+#include "effects/Displace.h"
+#include "effects/AnalogTape.h"
+
 #ifdef USE_OPENCV
 #include "effects/Outline.h"
 #endif
@@ -1909,4 +1916,235 @@ TEST_CASE("Vulkan chroma key preserves exact colors at hard color space boundari
         openshot::ChromaKey effect(openshot::Color(key),openshot::Keyframe(fuzz),openshot::Keyframe(0),openshot::ChromaKeyMethod(method));
         CheckVulkanEffect(effect,pixels,source,1,1,true);
     }
+}
+
+TEST_CASE("Vulkan wave and deinterlace preserve CPU sampling", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size:{QSize(1,1),QSize(2,3),QSize(37,23),QSize(257,129)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Wave wave;
+        wave.amplitude=openshot::Keyframe(2.5);wave.shift_x=openshot::Keyframe(-.8);
+        for(int n:{1,13,87}) CheckVulkanEffect(wave,pixels,source,n,0,true);
+        for(bool odd:{false,true}) {
+            openshot::Deinterlace deinterlace(odd);
+            CheckVulkanEffect(deinterlace,pixels,source,1,0,true);
+        }
+    }
+}
+TEST_CASE("Vulkan film grain preserves deterministic colored temporal noise", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(129,73);
+    const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::FilmGrain grain;grain.amount=openshot::Keyframe(.85);
+    for(int mode=0;mode<4;++mode) {
+        grain.softness=openshot::Keyframe(mode&1?.9:0);
+        grain.clump=openshot::Keyframe(mode&2?.8:0);
+        grain.color_amount=openshot::Keyframe(mode&1?1:0);
+        grain.color_variation=openshot::Keyframe(.9);
+        for(int n:{1,19,53}) CheckVulkanEffect(grain,pixels,source,n,1,true);
+    }
+}
+TEST_CASE("Vulkan reader scaling matches Qt smooth sampling", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize input:{QSize(1,1),QSize(7,11),QSize(37,23)}) {
+        const auto pixels=PointEffectPixels(input.width(),input.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        for(const QSize output:{QSize(1,1),QSize(5,7),QSize(17,13),QSize(49,29)}) {
+            auto expected=pixels.scaled(output,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+            auto actual=openshot::ScaleEffectVulkanImage(source,output.width(),output.height())->Materialize();
+            int error=0;
+            for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x)
+                error=std::max(error,std::abs(int(actual.constScanLine(y)[x])-int(expected.constScanLine(y)[x])));
+            INFO("input="<<input.width()<<"x"<<input.height()<<" output="<<output.width()<<"x"<<output.height()<<" error="<<error);
+            CHECK(error==0);
+        }
+    }
+}
+TEST_CASE("Vulkan denoise matches CPU spatial and temporal histories", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    for(int mode=0;mode<3;++mode) {
+        openshot::DenoiseImage cpu,gpu;
+        for(auto* effect:{&cpu,&gpu}) {
+            effect->strength=openshot::Keyframe(mode==0?.78:1);
+            effect->detail=openshot::Keyframe(mode==0?.5:mode==1?.1:.4);
+            effect->temporal=openshot::Keyframe(mode==1?0:1);
+        }
+        for(int n:{1,2,3,19,20,19,20,21}) {
+            auto pixels=PointEffectPixels(n<20?73:39,n<20?41:27);
+            for(int y=0;y<pixels.height();++y) for(int x=0;x<pixels.width();++x) {
+                auto* c=pixels.scanLine(y)+4*x;c[0]=std::min(int(c[3]),int(c[0])+n%3);
+            }
+            if(n==3) pixels.fill(Qt::white);
+            auto source=openshot::UploadVulkanImage(pixels);
+            auto expected=std::make_shared<openshot::Frame>(n,pixels.width(),pixels.height(),"transparent");
+            expected->AddImage(std::make_shared<QImage>(pixels));
+            ProcessCpuEffect(cpu,expected,n);
+            auto actual=std::make_shared<openshot::Frame>(n,pixels.width(),pixels.height(),"transparent");actual->AddDeferredImage(source);
+            const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            { openshot::gpu_metrics::Scope scope(false);gpu.ProcessFrame(actual,n); }
+            const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+            REQUIRE(actual->GetDeferredImage());
+            auto a=actual->GetImage(),e=expected->GetImage();int error=0;
+            for(int y=0;y<pixels.height();++y) for(int x=0;x<pixels.width()*4;++x)
+                error=std::max(error,std::abs(int(a->constScanLine(y)[x])-int(e->constScanLine(y)[x])));
+            INFO("mode="<<mode<<" frame="<<n<<" error="<<error);CHECK(error<=1);
+        }
+    }
+}
+TEST_CASE("Vulkan tape preserves seeded tracking chroma and noise", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size:{QSize(1,1),QSize(3,5),QSize(129,73),QSize(513,257)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::AnalogTape tape;
+        for(int mode=0;mode<3;++mode) {
+            tape.noise=openshot::Keyframe(mode==0?0:.85);
+            tape.tracking=openshot::Keyframe(mode==1?0:.9);
+            tape.staticBands=openshot::Keyframe(mode==2?1:0);
+            for(int n:{1,2,7,31}) { INFO("size="<<size.width()<<" mode="<<mode);CheckVulkanEffect(tape,pixels,source,n,1,true); }
+        }
+    }
+}
+TEST_CASE("Vulkan displacement consumes GPU video maps without transfers", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(97,53),map_pixels=PointEffectPixels(31,19);
+    const auto source=openshot::UploadVulkanImage(pixels),map=openshot::UploadVulkanImage(map_pixels);
+    openshot::Displace effect;
+    for(bool gpu_map:{false,true}) {
+        effect.Reader(new PatternReader(map,gpu_map));
+        effect.horizontal=openshot::Keyframe(.23);effect.vertical=openshot::Keyframe(-.17);
+        effect.brightness=openshot::Keyframe(.12);effect.contrast=openshot::Keyframe(3);
+        for(bool invert:{false,true}) for(bool replace:{false,true}) {
+            effect.invert=invert;effect.replace_image=replace;
+            // CPU oracle may materialize the GPU map; its upload is outside the measured effect.
+            CheckVulkanEffect(effect,pixels,source,19,1,gpu_map);
+        }
+    }
+}
+
+TEST_CASE("Vulkan grain and distortion effects preserves masks and reuses their upload", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(79,43);const auto source=openshot::UploadVulkanImage(pixels);
+    QTemporaryDir directory;auto path=directory.filePath("mask.png");
+    REQUIRE(PointEffectPixels(23,17).save(path));
+    openshot::Wave wave;openshot::Deinterlace deinterlace;openshot::FilmGrain grain;
+    openshot::DenoiseImage denoise;denoise.temporal=openshot::Keyframe(0);
+    openshot::AnalogTape tape;openshot::Displace displace;
+    displace.Reader(new PatternReader(source,true));
+    grain.amount.AddPoint(1,.3,openshot::LINEAR);grain.amount.AddPoint(9,.9,openshot::LINEAR);
+    wave.amplitude.AddPoint(1,.1,openshot::LINEAR);wave.amplitude.AddPoint(9,2,openshot::LINEAR);
+    for(auto* effect:std::vector<openshot::EffectBase*>{&wave,&deinterlace,&grain,&denoise,&tape,&displace}) {
+        effect->MaskReader(new openshot::QtImageReader(path.toStdString()));
+        for(bool invert:{false,true}) {
+            effect->mask_invert=invert;INFO(effect->info.class_name<<" invert="<<invert);
+            for(int n:{1,5,9,3}) CheckVulkanEffect(*effect,pixels,source,n,2);
+            const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            for(int n:{4,6,8}) {
+                auto frame=std::make_shared<openshot::Frame>(n,pixels.width(),pixels.height(),"transparent");frame->AddDeferredImage(source);
+                { openshot::gpu_metrics::Scope scope(false);effect->ProcessFrame(frame,n); }
+                REQUIRE(frame->GetDeferredImage());
+            }
+            const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+        }
+    }
+}
+
+TEST_CASE("Vulkan grain and distortion effects stays resident through a timeline", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(128,96);const auto source=openshot::UploadVulkanImage(pixels);
+    std::vector<QImage> expected;
+    for(bool gpu:{false,true}) {
+        struct Restore {
+            std::string backend,device;
+            ~Restore(){openshot::ConfigureGpuEnvironment(backend,device);}
+        } restore{std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"",
+                  std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):""};
+        openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",restore.device);
+        PatternReader reader(source,gpu);
+        openshot::Clip clip(&reader);
+        openshot::Wave wave;openshot::Deinterlace deinterlace;openshot::FilmGrain grain;
+        openshot::DenoiseImage denoise;openshot::AnalogTape tape;openshot::Displace displace;
+        grain.Id("grain-parity");tape.Id("tape-parity");
+        displace.Reader(new PatternReader(source,gpu));
+        int order=10;
+        for(auto* effect:std::vector<openshot::EffectBase*>{&wave,&deinterlace,&grain,&denoise,&tape,&displace}) {
+            effect->Order(order--);clip.AddEffect(effect);
+        }
+        openshot::Timeline timeline(192,144,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+        timeline.SetMaxSize(128,96);timeline.AddClip(&clip);timeline.Open();
+        openshot::ResetGpuMetrics();
+        std::vector<std::shared_ptr<openshot::Frame>> frames;
+        for(int n=1;n<=8;++n) {
+            frames.push_back(timeline.GetFrame(n));if(gpu) REQUIRE(frames.back()->GetDeferredImage());
+        }
+        if(gpu) {
+            const auto metrics=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(metrics["uploads"].asInt()==0);CHECK(metrics["readbacks"].asInt()==0);
+        }
+        for(size_t n=0;n<frames.size();++n) {
+            const auto actual=frames[n]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+            if(!gpu) { expected.push_back(actual);continue; }
+            int error=0;double total=0;
+            for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) {
+                int delta=std::abs(int(actual.constScanLine(y)[x])-int(expected[n].constScanLine(y)[x]));
+                error=std::max(error,delta);total+=delta;
+            }
+            INFO("frame="<<n+1<<" max="<<error<<" mean="<<total/(actual.width()*actual.height()*4));
+            CHECK(error<=4);CHECK(total/(actual.width()*actual.height()*4)<=.1);
+        }
+        timeline.Close();
+    }
+    CHECK(source->Materialize()==pixels);
+}
+
+TEST_CASE("Vulkan grain and distortion effects preserve precision at 4K and tiny boundaries", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size:{QSize(1,1),QSize(2,3),QSize(3840,2160)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Wave wave;wave.amplitude=openshot::Keyframe(2.3);wave.shift_x=openshot::Keyframe(-.35);
+        openshot::Deinterlace deinterlace;
+        openshot::FilmGrain grain;grain.amount=openshot::Keyframe(.9);grain.evolution=openshot::Keyframe(0);
+        openshot::DenoiseImage denoise;denoise.temporal=openshot::Keyframe(0);
+        denoise.strength=openshot::Keyframe(1);denoise.detail=openshot::Keyframe(.1);
+        denoise.response_curve.enabled=openshot::Keyframe(0);
+        openshot::AnalogTape tape;
+        openshot::Displace displace;displace.Reader(new PatternReader(source,true));
+        for(auto* effect:std::vector<openshot::EffectBase*>{&wave,&deinterlace,&grain,&denoise,&tape,&displace}) {
+            INFO(effect->info.class_name<<" size="<<size.width()<<"x"<<size.height());
+            CheckVulkanEffect(*effect,pixels,source,17,effect==&wave || effect==&deinterlace?0:1,true);
+        }
+        CHECK(source->Materialize()==pixels);
+    }
+}
+
+TEST_CASE("Vulkan tape survives CPU GPU switches with different image sizes", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    openshot::AnalogTape tape;
+    for(const QSize size:{QSize(129,73),QSize(3,1),QSize(129,73),QSize(17,23),QSize(129,73)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        CheckVulkanEffect(tape,pixels,source,1,1,true);
+        // Leave only the GPU scratch dimensions changed, then reuse the last CPU size.
+        auto tiny=std::make_shared<openshot::Frame>(2,1,1,"transparent");
+        tiny->AddDeferredImage(openshot::UploadVulkanImage(PointEffectPixels(1,1)));
+        tape.ProcessFrame(tiny,2);REQUIRE(tiny->GetDeferredImage());
+        CheckVulkanEffect(tape,pixels,source,3,1,true);
+    }
+}
+
+TEST_CASE("Vulkan denoise resets temporal history when switching backends", "[vulkan][hardware][effects][batch-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(59,37);
+    const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::DenoiseImage effect;
+    effect.temporal=openshot::Keyframe(1);
+    // Each comparison switches CPU -> GPU; neither backend may consume history
+    // belonging to the other backend or to a disabled interval.
+    for(int n:{1,2,3}) CheckVulkanEffect(effect,pixels,source,n,1,true);
+    effect.strength=openshot::Keyframe(0);CheckVulkanEffect(effect,pixels,source,4,0,true);
+    effect.strength=openshot::Keyframe(.9);CheckVulkanEffect(effect,pixels,source,5,1,true);
 }
