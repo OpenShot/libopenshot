@@ -29,6 +29,12 @@
 #include <cmath>
 #include "effects/Mask.h"
 #include "effects/Blur.h"
+#include "effects/Brightness.h"
+#include "effects/Hue.h"
+#include "effects/Negate.h"
+#include "effects/Bars.h"
+#include "effects/Shift.h"
+#include "effects/ColorShift.h"
 #include "QtImageReader.h"
 #include "Timeline.h"
 #include "DummyReader.h"
@@ -803,14 +809,23 @@ void ProcessCpuEffect(openshot::EffectBase& effect, std::shared_ptr<openshot::Fr
     effect.ProcessFrame(frame,number);
 }
 void CheckVulkanEffect(openshot::EffectBase& effect, const QImage& pixels,
-    std::shared_ptr<const openshot::FrameImage> source, int number, int tolerance) {
+    std::shared_ptr<const openshot::FrameImage> source, int number, int tolerance, bool check_uploads = false) {
     auto cpu=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
     auto gpu=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
     cpu->AddImage(std::make_shared<QImage>(pixels.copy()));
     gpu->AddDeferredImage(source);
     ProcessCpuEffect(effect,cpu,number);
     const auto readbacks=openshot::VulkanFrameReadbackCount();
-    effect.ProcessFrame(gpu,number);
+    const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+    {
+        openshot::gpu_metrics::Scope scope(false);
+        effect.ProcessFrame(gpu,number);
+    }
+    if (check_uploads) {
+        const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+        CHECK(after["uploads"]==before["uploads"]);
+        CHECK(after["readbacks"]==before["readbacks"]);
+    }
     REQUIRE(gpu->GetDeferredImage());
     CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
     auto expected=cpu->GetImage(),actual=gpu->GetImage();
@@ -1466,3 +1481,185 @@ TEST_CASE("Mac 10-bit VideoToolbox surfaces convert on the GPU", "[vulkan][hardw
     }
 }
 #endif
+
+namespace {
+// Odd dimensions exercise partial workgroups; low alpha exposes differences in
+// unpremultiplication and byte truncation that opaque photographs conceal.
+QImage PointEffectPixels(int width=37,int height=23) {
+    QImage pixels(width,height,QImage::Format_RGBA8888_Premultiplied);
+    const std::array<int,11> alpha{0,1,2,3,17,64,127,128,170,254,255};
+    for(int y=0;y<height;++y)
+        for(int x=0;x<width;++x)
+            pixels.setPixelColor(x,y,QColor((x*37+y*11)%256,(y*53+x*7)%256,
+                (x*19+y*29)%256,alpha[(x+y)%alpha.size()]));
+    return pixels;
+}
+}
+
+TEST_CASE("Vulkan brightness matches CPU clipping animation and low alpha", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels();
+    const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Brightness effect;
+    effect.brightness.AddPoint(1,-1.0,openshot::LINEAR);
+    effect.brightness.AddPoint(9,1.0,openshot::LINEAR);
+    for(double contrast : {-128.0,0.0,3.0,128.0}) {
+        effect.contrast=openshot::Keyframe(contrast);
+        for(int number : {1,3,5,9,2}) {
+            INFO("contrast=" << contrast);
+            CheckVulkanEffect(effect,pixels,source,number,1,true);
+        }
+    }
+}
+
+TEST_CASE("Vulkan hue matches CPU rotations animation and low alpha", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels();
+    const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Hue effect;
+    effect.hue.AddPoint(1,-1.0,openshot::LINEAR);
+    effect.hue.AddPoint(17,1.0,openshot::LINEAR);
+    for(int number : {1,3,5,9,11,15,17,4})
+        CheckVulkanEffect(effect,pixels,source,number,1,true);
+}
+
+TEST_CASE("Vulkan negate matches Qt inversion with low alpha", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    openshot::Negate effect;
+    for(const QSize size : {QSize(37,23),QSize(1,1),QSize(1,29)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        CheckVulkanEffect(effect,pixels,openshot::UploadVulkanImage(pixels),1,1,true);
+    }
+}
+
+TEST_CASE("Vulkan bars match CPU edge rounding clamping and animated colors", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size : {QSize(37,23),QSize(1,1),QSize(1,29)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Bars effect;
+        effect.color=openshot::Color("#ab369e");
+        effect.color.alpha.AddPoint(1,0,openshot::LINEAR);
+        effect.color.alpha.AddPoint(9,255,openshot::LINEAR);
+        for(double margin : {-0.2,0.0,0.01,0.1,0.5,1.0,1.2}) {
+            effect.top=openshot::Keyframe(margin);
+            effect.left=openshot::Keyframe(margin/2);
+            effect.right=openshot::Keyframe(margin/3);
+            effect.bottom=openshot::Keyframe(margin/4);
+            for(int number : {1,5,9})
+                CheckVulkanEffect(effect,pixels,source,number,0,true);
+        }
+    }
+}
+
+TEST_CASE("Vulkan shifts match CPU wrapping rounding and independent RGBA", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size : {QSize(37,23),QSize(1,1),QSize(1,29)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());
+        const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Shift shift;
+        openshot::ColorShift channels;
+        for(double offset : {-2.25,-1.0,-0.9999,-0.5,-0.013,0.0,0.013,0.5,0.9999,1.0,2.25}) {
+            INFO("offset=" << offset << " size=" << size.width() << "x" << size.height());
+            shift.x=openshot::Keyframe(offset);
+            shift.y=openshot::Keyframe(-offset);
+            channels.red_x=channels.alpha_y=openshot::Keyframe(offset);
+            channels.green_y=channels.alpha_x=openshot::Keyframe(-offset);
+            channels.blue_x=openshot::Keyframe(offset/2);
+            channels.red_y=openshot::Keyframe(offset/3);
+            CheckVulkanEffect(shift,pixels,source,1,0,true);
+            CheckVulkanEffect(channels,pixels,source,1,0,true);
+        }
+        channels.green_x.AddPoint(1,-0.7,openshot::LINEAR);
+        channels.green_x.AddPoint(9,0.7,openshot::LINEAR);
+        shift.x.AddPoint(1,-0.7,openshot::LINEAR);
+        shift.x.AddPoint(9,0.7,openshot::LINEAR);
+        for(int number : {1,5,9,3}) {
+            CheckVulkanEffect(channels,pixels,source,number,0,true);
+            CheckVulkanEffect(shift,pixels,source,number,0,true);
+        }
+    }
+}
+
+TEST_CASE("Vulkan point effect masks match CPU including vary strength", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels();
+    const auto source=openshot::UploadVulkanImage(pixels);
+    QTemporaryDir directory;
+    const auto path=directory.filePath("mask.png");
+    QImage mask=PointEffectPixels();
+    REQUIRE(mask.save(path));
+    openshot::Brightness brightness,driven_brightness;
+    brightness.brightness=driven_brightness.brightness=openshot::Keyframe(0.3);
+    driven_brightness.mask_mode=openshot::BRIGHTNESS_MASK_VARY_STRENGTH;
+    openshot::Hue hue,driven_hue;
+    hue.hue=driven_hue.hue=openshot::Keyframe(0.3);
+    driven_hue.mask_mode=openshot::HUE_MASK_VARY_STRENGTH;
+    openshot::Negate negate;
+    openshot::Bars bars;
+    openshot::Shift shift;
+    shift.x=openshot::Keyframe(0.25);
+    openshot::ColorShift channels;
+    channels.alpha_x=openshot::Keyframe(-0.4);
+    channels.red_y=openshot::Keyframe(0.2);
+    for(openshot::EffectBase* effect : std::vector<openshot::EffectBase*>{
+        &brightness,&driven_brightness,&hue,&driven_hue,&negate,&bars,&shift,&channels}) {
+        effect->MaskReader(new openshot::QtImageReader(path.toStdString()));
+        for(bool invert : {false,true}) {
+            effect->mask_invert=invert;
+            INFO(effect->info.class_name << " invert=" << invert);
+            CheckVulkanEffect(*effect,pixels,source,1,2);
+            // CPU comparison accesses mutable mask bits, invalidating the
+            // upload cache key. Check reuse without another CPU mask access.
+            const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            for(int number : {2,3,4}) {
+                auto frame=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
+                frame->AddDeferredImage(source);
+                openshot::gpu_metrics::Scope scope(false);
+                effect->ProcessFrame(frame,number);
+                REQUIRE(frame->GetDeferredImage());
+            }
+            const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(after["uploads"]==before["uploads"]);
+            CHECK(after["readbacks"]==before["readbacks"]);
+        }
+    }
+}
+
+TEST_CASE("Vulkan point effect chain stays resident and matches CPU", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels();
+    auto cpu=std::make_shared<openshot::Frame>(1,pixels.width(),pixels.height(),"transparent");
+    auto gpu=std::make_shared<openshot::Frame>(1,pixels.width(),pixels.height(),"transparent");
+    cpu->AddImage(std::make_shared<QImage>(pixels.copy()));
+    gpu->AddDeferredImage(openshot::UploadVulkanImage(pixels));
+    openshot::Brightness brightness;
+    brightness.brightness=openshot::Keyframe(0.18);
+    openshot::Hue hue(openshot::Keyframe(-0.37));
+    openshot::Negate negate;
+    openshot::Bars bars;
+    openshot::Shift shift;
+    shift.x=openshot::Keyframe(-1.27);
+    shift.y=openshot::Keyframe(0.5);
+    openshot::ColorShift channels;
+    channels.red_y=openshot::Keyframe(-0.31);
+    channels.alpha_x=openshot::Keyframe(0.21);
+    std::vector<openshot::EffectBase*> effects{&brightness,&hue,&negate,&bars,&shift,&channels};
+    openshot::ResetGpuMetrics();
+    for(auto effect : effects) {
+        ProcessCpuEffect(*effect,cpu,1);
+        openshot::gpu_metrics::Scope scope(false);
+        effect->ProcessFrame(gpu,1);
+        REQUIRE(gpu->GetDeferredImage());
+    }
+    const auto metrics=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+    CHECK(metrics["uploads"].asInt()==0);
+    CHECK(metrics["readbacks"].asInt()==0);
+    const auto expected=cpu->GetImage(),actual=gpu->GetImage();
+    int max_error=0;
+    for(int y=0;y<pixels.height();++y)
+        for(int x=0;x<pixels.width()*4;++x)
+            max_error=std::max(max_error,std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x])));
+    INFO("six-effect chain max byte error=" << max_error);
+    CHECK(max_error<=3);
+}

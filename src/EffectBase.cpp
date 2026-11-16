@@ -565,6 +565,7 @@ std::shared_ptr<const FrameImage> EffectBase::ResolveReaderMaskSurface(int width
 	if (!mask_reader)
 		return {};
 	std::shared_ptr<const FrameImage> surface;
+	std::shared_ptr<QImage> cpu_image;
 	bool still = true;
 	#pragma omp critical (open_effect_mask_reader)
 	{
@@ -575,8 +576,13 @@ std::shared_ptr<const FrameImage> EffectBase::ResolveReaderMaskSurface(int width
 			still = mask_reader->info.has_single_image;
 			if (!still) {
 				auto source_frame = mask_reader->GetFrame(MapMaskFrameNumber(frame_number));
-				if (source_frame)
+				if (source_frame) {
 					surface = source_frame->GetDeferredImage();
+					if (!surface) {
+						auto image = source_frame->GetImage();
+						if (image && !image->isNull()) cpu_image = std::make_shared<QImage>(*image);
+					}
+				}
 			}
 		} catch (const std::exception& e) {
 			Logger::Instance()->Log(
@@ -588,6 +594,13 @@ std::shared_ptr<const FrameImage> EffectBase::ResolveReaderMaskSurface(int width
 		const QTransform scale = QTransform::fromScale(double(width) / surface->GetWidth(),
 			double(height) / surface->GetHeight());
 		return RenderVulkanImage(surface, nullptr, width, height, scale, 1.0, Qt::transparent, true);
+	}
+	if (!still) {
+		// Reuse the software frame we already requested. Asking the reader a
+		// second time changes observable mask timing and can decode twice.
+		if (cpu_image) return UploadVulkanImage(cpu_image->scaled(
+			width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+		return {};
 	}
 	auto image = ResolveReaderMaskImage(width, height, frame_number);
 	if (image && !image->isNull())

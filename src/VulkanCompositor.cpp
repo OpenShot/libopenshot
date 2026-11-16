@@ -98,7 +98,8 @@ AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
     return ref;
 }
 struct EffectParameters {
-    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask, 5 blur, 6 LUT, 7 mask blend, 8 scope
+    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask, 5 blur, 6 LUT, 7 mask blend, 8 scope,
+              // 9 brightness, 10 hue, 11 negate, 12 bars, 13 channel shifts
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -682,6 +683,37 @@ static std::shared_ptr<const FrameImage> PremultipliedRGBA(std::shared_ptr<const
     if(context->sw_format==AV_PIX_FMT_RGBA && rgba->IsPremultiplied()) return source;
     return RenderVulkanImage(source,nullptr,source->GetWidth(),source->GetHeight(),QTransform(),1.0);
 }
+static std::shared_ptr<const FrameImage> RenderPixelEffect(std::shared_ptr<const FrameImage> source,
+    const EffectParameters& effect) {
+    // Integer texel access must see the same premultiplied bytes as GetImage().
+    source=PremultipliedRGBA(source);
+    return RenderImage(source,nullptr,source->GetWidth(),source->GetHeight(),
+        QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> BrightnessVulkanImage(std::shared_ptr<const FrameImage> source,
+    float contrast_factor,int brightness_offset) {
+    return RenderPixelEffect(source,EffectParameters{9,{contrast_factor,float(brightness_offset)}});
+}
+std::shared_ptr<const FrameImage> HueVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<float,3>& rotation) {
+    return RenderPixelEffect(source,EffectParameters{10,{rotation[0],rotation[1],rotation[2]}});
+}
+std::shared_ptr<const FrameImage> NegateVulkanImage(std::shared_ptr<const FrameImage> source) {
+    return RenderPixelEffect(source,EffectParameters{11});
+}
+std::shared_ptr<const FrameImage> BarsVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QColor& color,const std::array<int,4>& widths) {
+    const QRgb rgba=qPremultiply(color.rgba());
+    return RenderPixelEffect(source,EffectParameters{12,{
+        float(widths[0]),float(widths[1]),float(widths[2]),float(widths[3]),
+        float(qRed(rgba)),float(qGreen(rgba)),float(qBlue(rgba)),float(qAlpha(rgba))}});
+}
+std::shared_ptr<const FrameImage> ShiftVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,8>& offsets) {
+    EffectParameters effect{13};
+    std::transform(offsets.begin(),offsets.end(),effect.values.begin(),[](int value){return float(value);});
+    return RenderPixelEffect(source,effect);
+}
 std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const FrameImage> original,
     std::shared_ptr<const FrameImage> effected,std::shared_ptr<const FrameImage> mask,bool invert,bool drive) {
     // GPU division is not correctly rounded, so share the CPU's exact factors
@@ -708,6 +740,7 @@ std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const Fra
     }();
     const auto& factors=tables[(invert?1:0)|(drive?2:0)];
     auto mask_surface=std::dynamic_pointer_cast<const VulkanFrameImage>(PremultipliedRGBA(mask));
+    effected=PremultipliedRGBA(effected);
     EffectParameters effect{7,{drive?1.0f:0.0f},factors->data(),factors->size()*sizeof(float),factors};
     effect.mask=mask_surface.get();
     return RenderImage(effected,PremultipliedRGBA(original),effected->GetWidth(),effected->GetHeight(),

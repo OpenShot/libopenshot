@@ -13,6 +13,12 @@
 #include "Hue.h"
 #include "Exceptions.h"
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
@@ -46,11 +52,6 @@ void Hue::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Hue::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	// Get the frame's image
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-
-	int pixel_count = frame_image->width() * frame_image->height();
-
 	// Get the current hue percentage shift amount, and convert to degrees
 	double degrees = 360.0 * hue.GetValue(frame_number);
 	float cosA = cos(degrees*3.14159265f/180);
@@ -63,6 +64,26 @@ std::shared_ptr<openshot::Frame> Hue::GetFrame(std::shared_ptr<openshot::Frame> 
 		1.0f/3.0f * (1.0f - cosA) + sqrtf(1.0f/3.0f) * sinA
 	};
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data)
+                surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(HueVulkanImage(surface, {matrix[0], matrix[1], matrix[2]}));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan hue CPU fallback: ") + error.what());
+        }
+    }
+#endif
+	// Get the frame's image
+	std::shared_ptr<QImage> frame_image = frame->GetImage();
+
+	int pixel_count = frame_image->width() * frame_image->height();
+
 	// Loop through pixels
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
 
@@ -71,6 +92,11 @@ std::shared_ptr<openshot::Frame> Hue::GetFrame(std::shared_ptr<openshot::Frame> 
 	{
 		// Calculate alpha % (to be used for removing pre-multiplied alpha value)
 		int A = pixels[pixel * 4 + 3];
+        // Transparent premultiplied pixels have no color to rotate.
+        if (A == 0) {
+            pixels[pixel * 4] = pixels[pixel * 4 + 1] = pixels[pixel * 4 + 2] = 0;
+            continue;
+        }
 		float alpha_percent = A / 255.0;
 
 		// Get RGB values, and remove pre-multiplied alpha

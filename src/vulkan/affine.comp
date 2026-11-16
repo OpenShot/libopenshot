@@ -188,11 +188,52 @@ void scope() {
     for(uint i=gl_LocalInvocationIndex;i<1024u;i+=256u)
         if(scope_histograms[i]!=0u) atomicAdd(data[i],scope_histograms[i]);
 }
+// Point effects read/write integer premultiplied bytes. Keep their output out
+// of source-over compositing: ColorShift can move alpha independently of RGB.
+void pixel_effect(ivec2 pixel) {
+    ivec4 c=ivec4(round(texelFetch(plane_y,pixel,0)*255.0));
+    if(p.modes.w==9 && c.a>0) {
+        ivec3 rgb=c.rgb;
+        if(c.a<255) rgb=ivec3(vec3(rgb)*(255.0/float(c.a)));
+        precise vec3 adjusted=p.effect.x*(vec3(rgb)-128.0)+128.0;
+        rgb=clamp(clamp(ivec3(adjusted),ivec3(0),ivec3(255))+int(p.effect.y),ivec3(0),ivec3(255));
+        if(c.a<255) rgb=ivec3(vec3(rgb)*(float(c.a)*(1.0/255.0)));
+        c.rgb=rgb;
+    }
+    if(p.modes.w==10) {
+        if(c.a==0) c.rgb=ivec3(0);
+        else {
+            ivec3 rgb=ivec3(vec3(c.rgb)/(float(c.a)/255.0));
+            precise vec3 rotated=vec3(
+                rgb.r*p.effect.x+rgb.g*p.effect.y+rgb.b*p.effect.z,
+                rgb.r*p.effect.z+rgb.g*p.effect.x+rgb.b*p.effect.y,
+                rgb.r*p.effect.y+rgb.g*p.effect.z+rgb.b*p.effect.x);
+            rgb=clamp(ivec3(rotated),ivec3(0),ivec3(255));
+            c.rgb=ivec3(vec3(rgb)*(float(c.a)/255.0));
+        }
+    }
+    if(p.modes.w==11) c.rgb=ivec3(c.a)-c.rgb;
+    if(p.modes.w==12) {
+        ivec4 bars=ivec4(p.effect);
+        // Preserve Bars' inclusive top row and its zero-width special case.
+        if((bars.y>0 && pixel.y<=bars.y) || (bars.w>0 && pixel.y>=p.sizes.y-bars.w) ||
+           (bars.x>0 && pixel.x<bars.x) || (bars.z>0 && pixel.x>=p.sizes.x-bars.z)) c=ivec4(p.clear);
+    }
+    if(p.modes.w==13) {
+        ivec4 dx=ivec4(p.effect.xz,p.clear.xz),dy=ivec4(p.effect.yw,p.clear.yw);
+        for(int channel=0;channel<4;++channel) {
+            ivec2 position=(pixel-ivec2(dx[channel],dy[channel])+p.sizes.zw)%p.sizes.zw;
+            c[channel]=int(round(texelFetch(plane_y,position,0)[channel]*255.0));
+        }
+    }
+    imageStore(output_img,pixel,vec4(c)/255.0);
+}
 void main() {
     // Scopes count instead of writing an image; every invocation reaches the barriers.
     if(p.modes.w==8) { scope(); return; }
     ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
     if(any(greaterThanEqual(pixel,p.sizes.xy))) return;
+    if(p.modes.w>=9) { pixel_effect(pixel); return; }
     vec2 center=vec2(pixel)+0.5;
     vec2 src=vec2(dot(p.matrix_x.xyz,vec3(center,1)),dot(p.matrix_y.xyz,vec3(center,1)));
     vec4 front=vec4(0);
@@ -293,6 +334,10 @@ void main() {
     if(p.modes.w==7) {
         // EffectBase::BlendWithMask: mix input (background) and result by mask
         // gray. The table holds the factor, then its inverse, per gray value.
+        // ColorShift can move alpha independently; do not clamp its RGB to
+        // alpha as the resampling/compositing path normally does.
+        front=texelFetch(plane_y,pixel,0);
+        back=texelFetch(background_tex,pixel,0);
         ivec4 effected=ivec4(round(front*255.0)),original=ivec4(round(back*255.0));
         ivec4 mask=ivec4(round(texelFetch(mask_tex,pixel,0)*255.0));
         int gray=(mask.r*11+mask.g*16+mask.b*5)/32;

@@ -12,6 +12,13 @@
 
 #include "Shift.h"
 #include "Exceptions.h"
+#include <cmath>
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -46,6 +53,27 @@ void Shift::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Shift::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    const auto offset = [](double value, int size) {
+        const int pixels = int(std::round(size * std::fmod(std::fabs(value), 1.0)));
+        return value < 0 ? -pixels : pixels;
+    };
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data)
+                surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                const int dx = offset(x.GetValue(frame_number), surface->GetWidth());
+                const int dy = offset(y.GetValue(frame_number), surface->GetHeight());
+                frame->AddDeferredImage(ShiftVulkanImage(surface, {dx, dy, dx, dy, dx, dy, dx, dy}));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan shift CPU fallback: ") + error.what());
+        }
+    }
+#endif
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 	unsigned char *pixels = (unsigned char *) frame_image->bits();

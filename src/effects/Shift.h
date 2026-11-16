@@ -41,6 +41,7 @@ namespace openshot
 
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		Keyframe x;	///< Shift the X coordinates (left or right)
 		Keyframe y;	///< Shift the Y coordinates (up or down)
 

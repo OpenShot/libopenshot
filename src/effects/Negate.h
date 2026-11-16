@@ -34,6 +34,7 @@ namespace openshot
 	class Negate : public EffectBase
 	{
 	public:
+		bool RendersOnVulkan() const override { return true; }
 
 		/// Default constructor
 		Negate();

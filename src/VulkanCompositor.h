@@ -27,6 +27,18 @@ std::shared_ptr<const FrameImage> RenderVulkanImage(
 /// Apply common and per-channel saturation, preserving premultiplied alpha.
 std::shared_ptr<const FrameImage> SaturateVulkanImage(
     std::shared_ptr<const FrameImage> source, const std::array<float, 4>& saturation);
+/// Byte-oriented color effects, matching the CPU's premultiplied RGBA math.
+std::shared_ptr<const FrameImage> BrightnessVulkanImage(
+    std::shared_ptr<const FrameImage> source, float contrast_factor, int brightness_offset);
+std::shared_ptr<const FrameImage> HueVulkanImage(
+    std::shared_ptr<const FrameImage> source, const std::array<float, 3>& rotation);
+std::shared_ptr<const FrameImage> NegateVulkanImage(std::shared_ptr<const FrameImage> source);
+/// Replace edge pixels with a premultiplied color; widths are left/top/right/bottom.
+std::shared_ptr<const FrameImage> BarsVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QColor& color, const std::array<int, 4>& widths);
+/// Wrapped integer offsets, interleaved x/y for red, green, blue and alpha.
+std::shared_ptr<const FrameImage> ShiftVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int, 8>& offsets);
 /// Copy a source rectangle into a transparent output, with optional resized canvas.
 std::shared_ptr<const FrameImage> CropVulkanImage(std::shared_ptr<const FrameImage> source,
     const QRectF& destination, const QRectF& copy, const QRect& canvas);
