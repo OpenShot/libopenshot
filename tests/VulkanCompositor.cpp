@@ -4,6 +4,7 @@
 #endif
 // Copyright (c) 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
+#define CATCH_CONFIG_EXTERNAL_INTERFACES
 #include "openshot_catch.h"
 #include "VulkanCompositor.h"
 #include "VulkanFrameImage.h"
@@ -50,6 +51,7 @@
 #include "effects/SphericalProjection.h"
 #ifdef USE_OPENCV
 #include "effects/Stabilizer.h"
+#include "effects/Tracker.h"
 #include "effects/ObjectDetection.h"
 #endif
 #ifdef USE_OPENCV
@@ -2361,10 +2363,26 @@ TEST_CASE("Vulkan stabilizer matches OpenCV fixed point warps", "[vulkan][hardwa
 #endif
 #ifdef USE_OPENCV
 namespace {
+std::unique_ptr<QGuiApplication>& DetectionTestApplication() {
+    static std::unique_ptr<QGuiApplication> app;
+    return app;
+}
+#if CATCH_VERSION_MAJOR >= 3
+using VulkanTestListenerBase=Catch::EventListenerBase;
+#else
+using VulkanTestListenerBase=Catch::TestEventListenerBase;
+#endif
+struct VulkanTestApplicationLifetime : VulkanTestListenerBase {
+    using VulkanTestListenerBase::VulkanTestListenerBase;
+    void testRunEnded(const Catch::TestRunStats&) override {
+        // Destroy Qt before process-wide Qt/plugin statics are torn down.
+        DetectionTestApplication().reset();
+    }
+};
+CATCH_REGISTER_LISTENER(VulkanTestApplicationLifetime)
 void DetectionTestApp() {
     static int argc=1;static char name[]="vulkan-effects";static char* argv[]={name,nullptr};
-    static std::unique_ptr<QGuiApplication> app;
-    if(!QGuiApplication::instance()) app=std::make_unique<QGuiApplication>(argc,argv);
+    if(!QGuiApplication::instance()) DetectionTestApplication()=std::make_unique<QGuiApplication>(argc,argv);
 }
 void WriteDetectionData(const QString& path) {
     auto varint=[](std::string& out,uint64_t v){while(v>=128){out.push_back(char((v&127)|128));v>>=7;}out.push_back(char(v));};
@@ -2528,6 +2546,128 @@ TEST_CASE("Vulkan animated projection detection chain remains copy free", "[vulk
             auto actual=frames[n]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);if(!gpu) { expected.push_back(actual);continue; }
             int error=0;double sum=0;for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) { int d=std::abs(int(actual.constScanLine(y)[x])-int(expected[n].constScanLine(y)[x]));error=std::max(error,d);sum+=d; }
             INFO("frame="<<n+1<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));CHECK(error<=5);CHECK(sum/(actual.width()*actual.height()*4)<=.1);
+        }
+        timeline.Close();
+    }
+    CHECK(source->Materialize()==pixels);
+}
+#endif
+#ifdef USE_OPENCV
+namespace {
+void TrackerTestBoxes(openshot::Tracker& tracker) {
+    tracker.trackedData->SetBaseFPS(openshot::Fraction(24,1));
+    tracker.trackedData->AddBox(1,.27f,.39f,.43f,.47f,0);
+    tracker.trackedData->AddBox(9,.71f,.61f,.63f,.32f,37);
+    tracker.trackedData->stroke=openshot::Color("#c34b27");
+    tracker.trackedData->background=openshot::Color("#2691da");
+}
+}
+TEST_CASE("Vulkan tracker preserves animated CPU boxes and styles", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    openshot::Tracker effect;TrackerTestBoxes(effect);
+    for(const QSize size:{QSize(1,1),QSize(3,5),QSize(37,23),QSize(257,129)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        for(double corner:{0.,3.,12.}) for(double width:{0.,1.,7.2}) for(double alpha:{0.,.45,1.}) {
+            effect.trackedData->background_corner=openshot::Keyframe(corner);effect.trackedData->stroke_width=openshot::Keyframe(width);
+            effect.trackedData->stroke_alpha=openshot::Keyframe(alpha);effect.trackedData->background_alpha=openshot::Keyframe(alpha);
+            for(int n:{1,4,9,19}) {
+                INFO("size="<<size.width()<<"x"<<size.height()<<" corner="<<corner<<" stroke="<<width<<" alpha="<<alpha<<" frame="<<n);
+                CheckVulkanEffect(effect,pixels,source,n,3,true);
+            }
+        }
+    }
+}
+TEST_CASE("Vulkan tracker missing and hidden boxes stay resident", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels();const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Tracker effect;CheckVulkanEffect(effect,pixels,source,1,0,true);
+    TrackerTestBoxes(effect);effect.trackedData->visible=openshot::Keyframe(0);CheckVulkanEffect(effect,pixels,source,3,0,true);
+    effect.trackedData->visible=openshot::Keyframe(1);effect.trackedData->draw_box=openshot::Keyframe(0);
+    effect.trackedData->draw_text=openshot::Keyframe(1);CheckVulkanEffect(effect,pixels,source,3,0,true);
+    effect.trackedData.reset();CheckVulkanEffect(effect,pixels,source,1,0,true);
+    CHECK(!effect.GetFrame(std::shared_ptr<openshot::Frame>(),1));
+}
+TEST_CASE("Vulkan tracker preserves shared masks and upload reuse", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(129,73);const auto source=openshot::UploadVulkanImage(pixels);
+    QTemporaryDir directory;auto path=directory.filePath("mask.png");REQUIRE(PointEffectPixels(23,17).save(path));
+    openshot::Tracker effect;TrackerTestBoxes(effect);effect.MaskReader(new openshot::QtImageReader(path.toStdString()));
+    effect.trackedData->background_alpha.AddPoint(1,.1,openshot::LINEAR);effect.trackedData->background_alpha.AddPoint(9,.8,openshot::LINEAR);
+    effect.trackedData->stroke_width.AddPoint(1,1,openshot::LINEAR);effect.trackedData->stroke_width.AddPoint(9,7,openshot::LINEAR);
+    for(bool invert:{false,true}) {
+        effect.mask_invert=invert;
+        for(int n:{1,4,9}) CheckVulkanEffect(effect,pixels,source,n,3);
+        const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+        for(int n:{2,5,8}) {
+            auto frame=std::make_shared<openshot::Frame>(n,129,73,"transparent");frame->AddDeferredImage(source);
+            { openshot::gpu_metrics::Scope scope(false);effect.ProcessFrame(frame,n); }REQUIRE(frame->GetDeferredImage());
+        }
+        const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+    }
+}
+TEST_CASE("Vulkan tracker generated masks preserve rotation and multiple boxes", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    openshot::Tracker provider;provider.Id("tracker-provider");TrackerTestBoxes(provider);
+    auto extra=std::make_shared<openshot::TrackedObjectBBox>();extra->SetBaseFPS(openshot::Fraction(24,1));
+    extra->AddBox(1,.71f,.26f,.27f,.32f,-32);extra->AddBox(9,.39f,.41f,.3f,.4f,-21);provider.trackedObjects[1]=extra;
+    openshot::Clip parent;parent.AddEffect(&provider);
+    openshot::Brightness effect(openshot::Keyframe(.3),openshot::Keyframe(2));effect.MaskSourceId(provider.Id());parent.AddEffect(&effect);
+    const auto pixels=PointEffectPixels(129,73);const auto source=openshot::UploadVulkanImage(pixels);
+    for(double corner:{0.,5.,12.}) for(bool visible:{false,true}) for(bool invert:{false,true}) {
+        provider.trackedData->background_corner=openshot::Keyframe(corner);extra->background_corner=openshot::Keyframe(corner);
+        provider.trackedData->visible=openshot::Keyframe(visible);extra->visible=openshot::Keyframe(visible);effect.mask_invert=invert;
+        for(int n:{1,4,9,19}) { INFO("corner="<<corner<<" visible="<<visible<<" invert="<<invert<<" frame="<<n);CheckVulkanEffect(effect,pixels,source,n,3,true); }
+    }
+}
+TEST_CASE("Vulkan tracker preserves 4K output and its source", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(3840,2160);const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Tracker effect;TrackerTestBoxes(effect);
+    effect.trackedData->background_alpha=openshot::Keyframe(.37);effect.trackedData->stroke_width=openshot::Keyframe(6.7);
+    effect.trackedData->background_corner=openshot::Keyframe(25);
+    for(int n:{1,4,9}) CheckVulkanEffect(effect,pixels,source,n,3,true);
+    CHECK(source->Materialize()==pixels);
+}
+#endif
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan tracker preserves independent tiny fill and stroke coverage", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size:{QSize(1,1),QSize(3,5),QSize(37,23)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Tracker effect;TrackerTestBoxes(effect);
+        for(int layer:{0,1}) for(double width:{0.,7.2}) for(double corner:{0.,12.}) {
+            effect.trackedData->stroke_alpha=openshot::Keyframe(layer==0?0:1);effect.trackedData->background_alpha=openshot::Keyframe(layer==0?1:0);
+            effect.trackedData->stroke_width=openshot::Keyframe(width);effect.trackedData->background_corner=openshot::Keyframe(corner);
+            for(int n:{1,4,9}) { INFO("size="<<size.width()<<" layer="<<layer<<" width="<<width<<" corner="<<corner<<" frame="<<n);CheckVulkanEffect(effect,pixels,source,n,3,true); }
+        }
+    }
+}
+#endif
+
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan animated tracker and linked mask timeline remains copy free", "[vulkan][hardware][effects][tracker-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(128,96);const auto source=openshot::UploadVulkanImage(pixels);std::vector<QImage> expected;
+    for(bool gpu:{false,true}) {
+        struct Restore { std::string backend,device;~Restore(){openshot::ConfigureGpuEnvironment(backend,device);} }
+        restore{std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"",std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):""};
+        openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",restore.device);
+        PatternReader reader(source,gpu);openshot::Clip clip(&reader);
+        openshot::Tracker tracker;TrackerTestBoxes(tracker);tracker.Id("chain-tracker");
+        tracker.trackedData->ParentClip(&clip);
+        tracker.trackedData->stroke_width=openshot::Keyframe(3.7);
+        tracker.trackedData->background_alpha=openshot::Keyframe(.31);
+        tracker.trackedData->background_corner=openshot::Keyframe(7);
+        openshot::Brightness brightness(openshot::Keyframe(.12),openshot::Keyframe(2));brightness.MaskSourceId(tracker.Id());
+        tracker.Order(10);brightness.Order(9);clip.AddEffect(&tracker);clip.AddEffect(&brightness);
+        openshot::Timeline timeline(128,96,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);timeline.AddClip(&clip);timeline.Open();
+        std::vector<std::shared_ptr<openshot::Frame>> frames{timeline.GetFrame(1)};openshot::ResetGpuMetrics();
+        for(int n=2;n<=8;++n) { frames.push_back(timeline.GetFrame(n));if(gpu) REQUIRE(frames.back()->GetDeferredImage()); }
+        if(gpu) { auto m=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(m["uploads"].asInt()==0);CHECK(m["readbacks"].asInt()==0); }
+        for(size_t n=0;n<frames.size();++n) {
+            auto actual=frames[n]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);if(!gpu) { expected.push_back(actual);continue; }
+            int error=0;double sum=0;for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) { int d=std::abs(int(actual.constScanLine(y)[x])-int(expected[n].constScanLine(y)[x]));error=std::max(error,d);sum+=d; }
+            INFO("frame="<<n+1<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));CHECK(error<=3);CHECK(sum/(actual.width()*actual.height()*4)<=.1);
         }
         timeline.Close();
     }

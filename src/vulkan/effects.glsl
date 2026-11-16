@@ -578,7 +578,37 @@ void paint_glyph(ivec2 pixel) {
     ivec4 color=ivec4(p.clear);color.rgb=premultiply_bytes(color.rgb,color.a);
     imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,alpha),original))/255.0);
 }
+void cosmetic_stroke(ivec2 pixel) {
+    ivec4 result=bytes_at(pixel),color=ivec4(p.effect);color.rgb=premultiply_bytes(color.rgb,color.a);
+    for(int segment=0;segment<int(p.clear.x);++segment) {
+        int base=8*segment;bool vertical=data[base]!=0u;int major=vertical?pixel.y:pixel.x,minor=vertical?pixel.x:pixel.y;
+        int start=int(data[base+1]),end=int(data[base+2]);if(major<start || major>end) continue;
+        int extent=major==start?int(data[base+5]):major==end?int(data[base+6]):64;if(extent==0) continue;
+        int position=int(data[base+3])+(major-start)*int(data[base+4]),lo=position>>16,fraction=(position>>8)&255;
+        int coverage=minor==lo?255-fraction:minor==lo+1?fraction:0;
+        coverage=(coverage*extent)>>6;coverage=(coverage*int(data[base+7]))>>8;
+        if(coverage>0) result=over_bytes(byte_multiply(color,coverage),result);
+    }
+    imageStore(output_img,pixel,vec4(result)/255.0);
+}
+void fill_rect(ivec2 pixel) {
+    int left=int(data[0]),top=int(data[1]),right=int(data[2]),bottom=int(data[3]),l=left>>16,r=right>>16;
+    int width=0;
+    if(pixel.x>=l && pixel.x<=r) {
+        // Preserve Qt's raster fill coverage for rectangles inside one column,
+        // including its extra full-column contribution and byte truncation.
+        if(l==r) width=65536-(left&65535)+(right&65535);
+        else width=pixel.x==l?65536-(left&65535):pixel.x==r?right&65535:65536;
+    }
+    int height=max(0,min((pixel.y+1)*65536,bottom)-max(pixel.y*65536,top));
+    uint high,low;umulExtended(uint(height),uint(width*255),high,low);
+    int coverage=int(high&255u); // Qt stores span coverage as an unsigned byte.
+    ivec4 color=ivec4(p.effect);color.rgb=premultiply_bytes(color.rgb,color.a);
+    imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,coverage),bytes_at(pixel)))/255.0);
+}
 void spatial_effect(ivec2 pixel) {
+    if(p.modes.w==61) { fill_rect(pixel);return; }
+    if(p.modes.w==60) { cosmetic_stroke(pixel);return; }
     if(p.modes.w==57) { paint_path(pixel);return; }
     if(p.modes.w==59) { paint_glyph(pixel);return; }
     if(p.modes.w>=53 && p.modes.w<=55) { spherical(pixel,p.modes.w);return; }

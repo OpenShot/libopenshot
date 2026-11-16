@@ -20,6 +20,8 @@
 #include <stdexcept>
 #include <sstream>
 #include <vector>
+#include <QPainterPathStroker>
+#include <functional>
 extern "C" {
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_vulkan.h>
@@ -161,7 +163,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     return work;
 }
 struct EffectParameters {
-    int mode; // 1-13: affine/point effects; 14-59: spatial passes (effects.glsl)
+    int mode; // 1-13: affine/point effects; 14-61: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -937,20 +939,113 @@ std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const Fra
 }
 std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color) {
     if(path.isEmpty() || color.alpha()==0) return source;
-    // QPainter's outline mapper uses the same public Bezier flattening routine,
-    // with a 0.25px threshold, followed by 26.6 outline rounding. Public
-    // toSubpathPolygons defaults to 0.5px, so scale by two and divide back.
+    const QRect clip(0,0,source->GetWidth(),source->GetHeight());
+    if(!path.controlPointRect().toRect().intersects(clip)) return source;
+    // Match Qt's 0.25px Bezier flattening, including its special distance test
+    // for subpixel curves. Scaling public toSubpathPolygons changes that test.
     std::vector<float> edges;
-    for(const auto& polygon:path.toSubpathPolygons(QTransform::fromScale(2,2))) {
-        for(int i=0;i<polygon.size();++i) {
-            const auto& a=polygon[i];const auto& b=polygon[(i+1)%polygon.size()];
-            edges.insert(edges.end(),{qRound(a.x()*32)/64.0f,qRound(a.y()*32)/64.0f,qRound(b.x()*32)/64.0f,qRound(b.y()*32)/64.0f});
+    auto line=[&](QPointF a,QPointF b) { edges.insert(edges.end(),{qRound(a.x()*64)/64.0f,qRound(a.y()*64)/64.0f,qRound(b.x()*64)/64.0f,qRound(b.y()*64)/64.0f}); };
+    std::function<void(QPointF,QPointF,QPointF,QPointF,int)> cubic;
+    cubic=[&](QPointF a,QPointF b,QPointF c,QPointF d,int level) {
+        const double dx=d.x()-a.x(),dy=d.y()-a.y();double length=std::abs(dx)+std::abs(dy),distance;
+        if(length>1) distance=std::abs(dx*(a.y()-b.y())-dy*(a.x()-b.x()))+std::abs(dx*(a.y()-c.y())-dy*(a.x()-c.x()));
+        else { distance=std::abs(a.x()-b.x())+std::abs(a.y()-b.y())+std::abs(a.x()-c.x())+std::abs(a.y()-c.y());length=1; }
+        if(distance<.25*length || level==0) { line(a,d);return; }
+        const auto ab=(a+b)*.5,bc=(b+c)*.5,cd=(c+d)*.5,abc=(ab+bc)*.5,bcd=(bc+cd)*.5,center=(abc+bcd)*.5;
+        cubic(a,ab,abc,center,level-1);cubic(center,bcd,cd,d,level-1);
+    };
+    QPointF previous,first;bool open=false;
+    for(int i=0;i<path.elementCount();++i) {
+        const auto e=path.elementAt(i);const QPointF point(e.x,e.y);
+        if(e.isMoveTo()) { if(open) line(previous,first);previous=first=point;open=true; }
+        else if(e.isLineTo()) { line(previous,point);previous=point; }
+        else if(e.type==QPainterPath::CurveToElement) {
+            const auto c=path.elementAt(++i),d=path.elementAt(++i);const QPointF control(c.x,c.y),end(d.x,d.y);
+            QPainterPath curve;curve.moveTo(previous);curve.cubicTo(point,control,end);
+            if(!QRectF(clip).contains(end) && !curve.boundingRect().intersects(QRectF(clip))) line(previous,end);
+            else cubic(previous,point,control,end,9);
+            previous=end;
         }
     }
+    if(open) line(previous,first);
     const auto bounds=path.boundingRect().adjusted(-1,-1,1,1);
     EffectParameters effect{57,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),
         float(bounds.left()),float(bounds.top()),float(bounds.right()),float(bounds.bottom()),0},edges.data(),edges.size()*sizeof(float)};
     effect.values[8]=float(edges.size()/4)+(path.fillRule()==Qt::OddEvenFill?.5f:0.0f);
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> FillVulkanRect(std::shared_ptr<const FrameImage> source,const QRectF& rectangle,const QColor& color) {
+    const auto rect=rectangle.normalized();
+    const double l=std::clamp(rect.left(),0.0,double(source->GetWidth())),r=std::clamp(rect.right(),0.0,double(source->GetWidth())),
+        t=std::clamp(rect.top(),0.0,double(source->GetHeight())),b=std::clamp(rect.bottom(),0.0,double(source->GetHeight()));
+    if(int((r-l)*64)==0 || int((b-t)*64)==0 || color.alpha()==0) return source;
+    const std::array<int32_t,4> bounds{int(l*65536),int(t*65536),int(r*65536),int(b*65536)};
+    EffectParameters effect{61,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha())},bounds.data(),sizeof(bounds)};
+    return RenderPixelEffect(source,effect);
+}
+QPainterPath RoundedRectVulkanPath(const QRectF& rect,double radius) {
+    QPainterPath path;
+    const double l=rect.left(),r=rect.right(),t=rect.top(),b=rect.bottom();
+    if(radius<=0) { path.addRect(rect);return path; }
+    const double rx=std::min(radius,rect.width()/2),ry=std::min(radius,rect.height()/2),k=1.0-0.5522847498;
+    path.moveTo(l+rx,t);path.lineTo(r-rx,t);path.cubicTo(r-k*rx,t,r,t+k*ry,r,t+ry);
+    path.lineTo(r,b-ry);path.cubicTo(r,b-k*ry,r-k*rx,b,r-rx,b);
+    path.lineTo(l+rx,b);path.cubicTo(l+k*rx,b,l,b-k*ry,l,b-ry);
+    path.lineTo(l,t+ry);path.cubicTo(l,t+k*ry,l+k*rx,t,l+rx,t);path.closeSubpath();
+    return path;
+}
+std::shared_ptr<const FrameImage> StrokeVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QPen& pen) {
+    if(path.isEmpty() || pen.color().alpha()==0) return source;
+    if(pen.widthF()>1) {
+        QPainterPathStroker stroker;stroker.setWidth(pen.widthF());stroker.setJoinStyle(pen.joinStyle());
+        stroker.setCapStyle(pen.capStyle());stroker.setMiterLimit(pen.miterLimit());
+        return PaintVulkanPath(source,stroker.createStroke(path),pen.color());
+    }
+    // Qt's thin solid stroke is a sequence of antialiased lines, rather than a
+    // filled stroke outline. Transfer only fixed-point line geometry, not pixels.
+    std::vector<int32_t> lines;
+    const int opacity=pen.widthF()==0?256:std::clamp(int(256*pen.widthF()),0,256);
+    auto line=[&](QPointF a,QPointF b) {
+        auto clip=[](double& a,double& b,double& other_a,double& other_b,double low,double high) {
+            if(a<low) { if(b<=low) return false;other_a+=(other_b-other_a)/(b-a)*(low-a);a=low; }
+            else if(a>high) { if(b>=high) return false;other_a+=(other_b-other_a)/(b-a)*(high-a);a=high; }
+            if(b<low) { other_b+=(other_b-other_a)/(b-a)*(low-b);b=low; }
+            else if(b>high) { other_b+=(other_b-other_a)/(b-a)*(high-b);b=high; }
+            return true;
+        };
+        double ax=a.x(),ay=a.y(),bx=b.x(),by=b.y();
+        if(!clip(ax,bx,ay,by,-1,source->GetWidth()+1) || !clip(ay,by,ax,bx,-1,source->GetHeight()+1)) return;
+        int x1=int(ax*64),y1=int(ay*64),x2=int(bx*64),y2=int(by*64),dx=x2-x1,dy=y2-y1;
+        const bool vertical=std::abs(dx)<std::abs(dy);
+        if(vertical) { std::swap(x1,y1);std::swap(x2,y2);std::swap(dx,dy); }
+        if(dx==0) return;
+        const int increment=int(int64_t(dy)*65536/dx);
+        if(x1>x2) { std::swap(x1,x2);std::swap(y1,y2); }
+        const int minor=(y1-32)*1024-int((int64_t((x1&63)-32)*increment)>>6);
+        const int start=x1>>6,end=x2>>6,first=start==end?x2-x1:64-(x1&63),last=start==end?0:x2&63;
+        lines.insert(lines.end(),{int(vertical),start,end,minor,increment,first,last,opacity});
+    };
+    std::function<void(QPointF,QPointF,QPointF,QPointF,int)> cubic;
+    cubic=[&](QPointF a,QPointF b,QPointF c,QPointF d,int level) {
+        const double dx=a.x()-d.x(),dy=a.y()-d.y(),limit=.25*(std::abs(dx)+std::abs(dy));
+        if(level && (std::abs(dx*(d.y()-b.y())-dy*(d.x()-b.x()))>=limit ||
+            std::abs(dx*(d.y()-c.y())-dy*(d.x()-c.x()))>=limit)) {
+            const auto ab=(a+b)*.5,bc=(b+c)*.5,cd=(c+d)*.5,abc=(ab+bc)*.5,bcd=(bc+cd)*.5,center=(abc+bcd)*.5;
+            cubic(a,ab,abc,center,level-1);cubic(center,bcd,cd,d,level-1);
+        } else line(a,d);
+    };
+    QPointF previous,first;bool open=false;
+    for(int i=0;i<path.elementCount();++i) {
+        const auto e=path.elementAt(i);const QPointF point(e.x,e.y);
+        if(e.isMoveTo()) { if(open && previous!=first) line(previous,first);previous=first=point;open=true; }
+        else if(e.isLineTo()) { line(previous,point);previous=point; }
+        else if(e.type==QPainterPath::CurveToElement) {
+            const auto c=path.elementAt(++i),d=path.elementAt(++i);cubic(previous,point,QPointF(c.x,c.y),QPointF(d.x,d.y),6);previous=QPointF(d.x,d.y);
+        }
+    }
+    if(open && previous!=first) line(previous,first);
+    const auto color=pen.color();
+    EffectParameters effect{60,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),float(lines.size()/8)},lines.data(),lines.size()*sizeof(int32_t)};
     return RenderPixelEffect(source,effect);
 }
 std::shared_ptr<const FrameImage> PaintVulkanGlyph(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> atlas,

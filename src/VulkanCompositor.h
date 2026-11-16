@@ -11,6 +11,7 @@
 #include <QTransform>
 #include <QRectF>
 #include <QPainterPath>
+#include <QPen>
 namespace openshot {
 namespace color { struct SourceColor; }
 /// Scale a decoded YUV surface to RGBA using its color description: YUV
@@ -77,6 +78,12 @@ std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const Fra
 std::shared_ptr<const FrameImage> SphericalVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
 /// Rasterize vector annotations from geometry, preserving the video surface on the device.
 std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color);
+/// Qt's axis-aligned rectangle fill, including its 16.16 subpixel coverage.
+std::shared_ptr<const FrameImage> FillVulkanRect(std::shared_ptr<const FrameImage> source,const QRectF& rect,const QColor& color);
+/// Match QPainter's rounded-rectangle traversal.
+QPainterPath RoundedRectVulkanPath(const QRectF& rect,double radius);
+/// Paint a closed solid path with Qt's wide or cosmetic stroke coverage.
+std::shared_ptr<const FrameImage> StrokeVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QPen& pen);
 /// Tint and paint a cached Qt glyph coverage asset without resampling.
 std::shared_ptr<const FrameImage> PaintVulkanGlyph(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> atlas,
     const QRect& tile,const QPoint& origin,const QColor& color);
