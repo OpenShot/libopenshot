@@ -46,6 +46,7 @@ namespace openshot
         void init_effect_details();
 
     public:
+        bool RendersOnVulkan() const override { return true; }
         Keyframe draw_mask;
         Color mask_color;
         Keyframe mask_alpha;
@@ -60,6 +61,11 @@ namespace openshot
 
         bool LoadObjMaskData(std::string inputFilePath);
         std::shared_ptr<QImage> TrackedObjectMask(std::shared_ptr<QImage> target_image, int64_t frame_number) const override;
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        std::shared_ptr<const FrameImage> TrackedObjectMaskSurface(
+            std::shared_ptr<const FrameImage> target,int64_t frame_number) const override;
+#endif
 
         std::string Json() const override;
         void SetJson(const std::string value) override;

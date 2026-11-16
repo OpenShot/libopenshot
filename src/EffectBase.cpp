@@ -763,11 +763,13 @@ std::shared_ptr<openshot::Frame> EffectBase::ProcessFrame(std::shared_ptr<opensh
 			try {
 				// Generated masks only need the target size, not its pixels.
 				std::shared_ptr<const FrameImage> mask;
-				if (ResolveMaskSourceEffect()) {
-					auto generated = GetMaskImage(std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied), frame_number);
-					if (generated && !generated->isNull())
-						mask = UploadVulkanImage(*generated);
-				} else
+                if (auto* source_effect=ResolveMaskSourceEffect()) {
+                    mask=source_effect->TrackedObjectMaskSurface(original_surface,frame_number);
+                    if(!mask) {
+                        auto generated=GetMaskImage(std::make_shared<QImage>(width,height,QImage::Format_RGBA8888_Premultiplied),frame_number);
+                        if(generated && !generated->isNull()) mask=UploadVulkanImage(*generated);
+                    }
+                } else
 					mask = ResolveReaderMaskSurface(width, height, frame_number);
 				if (!mask)
 					return output_frame;

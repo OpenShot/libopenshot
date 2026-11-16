@@ -62,6 +62,14 @@ std::shared_ptr<const FrameImage> DisplaceVulkanImage(std::shared_ptr<const Fram
     const std::array<uint32_t,256>& adjusted,float x,float y,bool invert,bool replace);
 /// Sixteen header words followed by sixteen words per row: noise, bands and tracking.
 std::shared_ptr<const FrameImage> AnalogTapeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& parameters);
+/// CPU-generated flare geometry and tint values; the overlay is generated and painted on the GPU.
+std::shared_ptr<const FrameImage> LensFlareVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
+/// Reconstruct a segmentation mask without uploading an expanded image; opaque selects grayscale on black.
+std::shared_ptr<const FrameImage> ObjectMaskVulkanSurface(std::shared_ptr<const FrameImage> reference,int width,int height,
+    const std::vector<uint32_t>& rle,bool opaque=false);
+/// Decode compact analysis RLE, scale its alpha and paint fill/elliptical stroke entirely on the GPU.
+std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const FrameImage> source,int mask_width,int mask_height,
+    const std::vector<uint32_t>& rle,const QColor& fill,const QColor& stroke,const std::vector<int>& ellipse_rows);
 /// Three separable box blurs and an entirely GPU-resident adaptive threshold.
 std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<int,3>& radii,float amount,float threshold,int mode,int channel);

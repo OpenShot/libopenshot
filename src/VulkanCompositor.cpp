@@ -161,7 +161,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     return work;
 }
 struct EffectParameters {
-    int mode; // 1-13: affine/point effects; 14-47: spatial passes (effects.glsl)
+    int mode; // 1-13: affine/point effects; 14-52: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -899,6 +899,32 @@ std::shared_ptr<const FrameImage> AnalogTapeVulkanImage(std::shared_ptr<const Fr
     const std::array<std::shared_ptr<EffectWork>,2> extra{NewEffectWork(source,size),NewEffectWork(source,size)};
     for(int mode=41;mode<47;++mode) SpatialPass(source,red,mode,{},nullptr,0,0,extra);
     return SpatialPass(source,red,47,{},nullptr,0,0,extra);
+}
+std::shared_ptr<const FrameImage> LensFlareVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters) {
+    EffectParameters effect{48,{},parameters.data(),parameters.size()*sizeof(float)};
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> ObjectMaskVulkanSurface(std::shared_ptr<const FrameImage> source,int mask_width,int mask_height,
+    const std::vector<uint32_t>& rle,bool opaque) {
+    std::vector<uint32_t> ends(rle.size()+1);ends[0]=uint32_t(rle.size());
+    uint64_t offset=0,total=uint64_t(mask_width)*mask_height;
+    for(size_t i=0;i<rle.size();++i) { offset=std::min(total,offset+rle[i]);ends[i+1]=uint32_t(offset); }
+    EffectParameters decode{49,{},ends.data(),ends.size()*sizeof(uint32_t)};
+    auto mask=RenderImage(source,nullptr,mask_width,mask_height,QTransform(),1.0,Qt::transparent,false,&decode);
+    mask=ScaleEffectVulkanImage(mask,source->GetWidth(),source->GetHeight());
+    return opaque?SpatialPass(mask,nullptr,52):mask;
+}
+std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const FrameImage> source,int mask_width,int mask_height,
+    const std::vector<uint32_t>& rle,const QColor& fill,const QColor& stroke,const std::vector<int>& ellipse_rows) {
+    source=PremultipliedRGBA(source);
+    auto mask=ObjectMaskVulkanSurface(source,mask_width,mask_height,rle);
+    std::vector<uint32_t> parameters(16+ellipse_rows.size());
+    parameters[0]=uint32_t(ellipse_rows.size());parameters[1]=uint32_t(ellipse_rows.size()/2);
+    std::copy(ellipse_rows.begin(),ellipse_rows.end(),parameters.begin()+16);
+    auto work=NewEffectWork(source,kEffectWorkWords+size_t(source->GetWidth())*source->GetHeight(),parameters);
+    if(!ellipse_rows.empty()) SpatialPass(mask,work,50);
+    return SpatialPass(source,work,51,{float(fill.red()),float(fill.green()),float(fill.blue()),float(fill.alpha()),
+        float(stroke.red()),float(stroke.green()),float(stroke.blue()),float(stroke.alpha())},mask);
 }
 std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<int,3>& radii,float amount,float threshold,int mode,int channel) {

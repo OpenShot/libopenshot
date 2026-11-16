@@ -27,6 +27,7 @@ namespace openshot
         void init_effect_details();
 
     public:
+        bool RendersOnVulkan() const override { return true; }
         Keyframe x;
         Keyframe y;
         Keyframe brightness;

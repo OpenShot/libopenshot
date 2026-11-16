@@ -381,7 +381,85 @@ void analog_tape(ivec2 pixel,int op) {
     precise vec3 rgb=vec3(yv+1.13983*uv.b,yv-.39465*uv.g-.58060*uv.b,yv+2.03211*uv.g);
     imageStore(output_img,pixel,vec4(ivec3(clamp(rgb.bgr,0.0,1.0)*255.0),bytes_at(pixel).a)/255.0);
 }
+ivec4 byte_multiply(ivec4 c,int alpha) {
+    ivec4 t=c*alpha;return (t+(t>>8)+128)>>8;
+}
+ivec3 flare_add(ivec3 rgb,float amount,int color) {
+    precise vec3 delta=vec3(ivec3(255)-rgb)*amount;
+    delta*=vec3(value(color),value(color+1),value(color+2));
+    return clamp(rgb+ivec3(delta),ivec3(0),ivec3(255));
+}
+void lens_flare(ivec2 pixel) {
+    precise vec2 delta=vec2(pixel)-vec2(value(0),value(1));
+    precise float d=sqrt(delta.x*delta.x+delta.y*delta.y);
+    ivec3 rgb=ivec3(0);
+    for(int ring=0;ring<5;++ring) {
+        float radius=value(4+ring);precise float amount;
+        if(ring<4) {
+            if(d>=radius) continue;
+            amount=(radius-d)/radius;if(ring<3) amount*=amount;
+        } else {
+            amount=abs((d-radius)/(radius*.07));if(!(amount<1.0)) continue;
+            amount=1.0-amount;
+        }
+        rgb=flare_add(rgb,amount,16+3*ring);
+    }
+    for(int ref=0;ref<int(value(9));++ref) {
+        int base=32+8*ref,type=int(value(base+3));float radius=value(base+2);
+        precise vec2 q=vec2(value(base),value(base+1))-vec2(pixel);
+        precise float distance=sqrt(q.x*q.x+q.y*q.y),amount=0;
+        if(type==1) { amount=(radius-distance)/radius;if(!(amount>0.0)) continue;amount*=amount; }
+        else if(type==2 || type==3) {
+            amount=(radius-distance)/(radius*(type==2?.15:.12));if(!(amount>0.0)) continue;
+            amount=min(amount,1.0);if(type==3) amount=1.0-amount*.12;
+        } else {
+            amount=abs((distance-radius)/(radius*.04));if(!(amount<1.0)) continue;amount=1.0-amount;
+        }
+        rgb=flare_add(rgb,amount,base+4);
+    }
+    int alpha=max(rgb.r,max(rgb.g,rgb.b));
+    ivec4 original=bytes_at(pixel),overlay=ivec4(premultiply_bytes(rgb,alpha),alpha);
+    int coverage=int(value(3));
+    ivec4 sum=min(original+overlay,ivec4(255));
+    ivec4 mixed=sum*coverage+original*(255-coverage);
+    mixed=(mixed+(mixed>>8)+128)>>8;
+    precise float oa=float(original.a)/255.0,fa=(float(alpha)/255.0)*value(2);
+    int final_alpha=int(clamp(max(oa,fa)*255.0,0.0,255.0));
+    imageStore(output_img,pixel,vec4(byte_multiply(mixed,final_alpha))/255.0);
+}
+void object_mask(ivec2 pixel,int op) {
+    if(op==49) {
+        uint index=uint(pixel.y*p.sizes.x+pixel.x),lo=0u,hi=data[0];
+        while(lo<hi) { uint mid=lo+(hi-lo)/2u;if(data[1u+mid]<=index) lo=mid+1u;else hi=mid; }
+        float alpha=lo<data[0] && (lo&1u)!=0u?1.0:0.0;
+        imageStore(output_img,pixel,vec4(alpha));return;
+    }
+    if(op==50) {
+        if(pixel.x!=0) return;
+        uint sum=0u;
+        for(int x=0;x<p.sizes.z;++x) { sum+=uint(bytes_at(ivec2(x,pixel.y)).a>0);data[WORK+pixel.y*p.sizes.z+x]=sum; }
+        return;
+    }
+    int mask_alpha=int(round(texelFetch(background_tex,pixel,0).a*255.0));
+    ivec4 fill=ivec4(p.effect);fill.rgb=premultiply_bytes(fill.rgb,fill.a);
+    ivec4 result=over_bytes(byte_multiply(fill,mask_alpha),bytes_at(pixel));
+    if(data[0]>0u && mask_alpha==0) {
+        bool dilated=false;int radius=int(data[1]);
+        for(int row=0;row<int(data[0]);++row) {
+            int y=pixel.y+row-radius;if(y<0 || y>=p.sizes.w) continue;
+            int extent=int(data[16+row]),left=max(0,pixel.x-extent),right=min(p.sizes.z-1,pixel.x+extent);
+            uint count=data[WORK+y*p.sizes.z+right];
+            if(left>0) count-=data[WORK+y*p.sizes.z+left-1];
+            if(count>0u) { dilated=true;break; }
+        }
+        if(dilated) { ivec4 stroke=ivec4(p.clear);stroke.rgb=premultiply_bytes(stroke.rgb,stroke.a);result=over_bytes(stroke,result); }
+    }
+    imageStore(output_img,pixel,vec4(result)/255.0);
+}
 void spatial_effect(ivec2 pixel) {
+    if(p.modes.w==52) { float alpha=texelFetch(plane_y,pixel,0).a;imageStore(output_img,pixel,vec4(vec3(alpha),1));return; }
+    if(p.modes.w>=49 && p.modes.w<=51) { object_mask(pixel,p.modes.w);return; }
+    if(p.modes.w==48) { lens_flare(pixel);return; }
     if(p.modes.w>=41 && p.modes.w<=47) { analog_tape(pixel,p.modes.w);return; }
     if(p.modes.w==39) { scale_effect(pixel);return; }
     if(p.modes.w==40) { displace(pixel);return; }

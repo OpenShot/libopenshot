@@ -43,6 +43,10 @@
 #include "effects/Wave.h"
 #include "effects/Deinterlace.h"
 #include "effects/FilmGrain.h"
+#include "effects/LensFlare.h"
+#ifdef USE_OPENCV
+#include "effects/ObjectMask.h"
+#endif
 #include "effects/DenoiseImage.h"
 #include "effects/Displace.h"
 #include "effects/AnalogTape.h"
@@ -2148,3 +2152,174 @@ TEST_CASE("Vulkan denoise resets temporal history when switching backends", "[vu
     effect.strength=openshot::Keyframe(0);CheckVulkanEffect(effect,pixels,source,4,0,true);
     effect.strength=openshot::Keyframe(.9);CheckVulkanEffect(effect,pixels,source,5,1,true);
 }
+
+TEST_CASE("Vulkan lens flare preserves CPU rings reflectors tint and alpha", "[vulkan][hardware][effects][flare-object-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size:{QSize(1,1),QSize(37,23),QSize(257,129)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::LensFlare effect;
+        effect.x.AddPoint(1,-.7,openshot::LINEAR);effect.x.AddPoint(9,.4,openshot::LINEAR);
+        effect.y.AddPoint(1,-.3,openshot::LINEAR);effect.y.AddPoint(9,.8,openshot::LINEAR);
+        for(double brightness:{0.,.25,.5,1.,1.7}) for(double scale:{0.,.4,1.8}) {
+            effect.brightness=openshot::Keyframe(brightness);effect.size=openshot::Keyframe(scale);
+            for(const QColor color:{QColor(Qt::white),QColor(235,73,18,91)}) {
+                effect.color=openshot::Color(color);
+                INFO("size="<<size.width()<<" intensity="<<brightness<<" scale="<<scale<<" color="<<color.name().toStdString());
+                for(int n:{1,5,9}) CheckVulkanEffect(effect,pixels,source,n,2,true);
+            }
+        }
+    }
+}
+
+#ifdef USE_OPENCV
+namespace {
+void WriteObjectMaskData(const QString& path,int width,int height,const std::vector<std::vector<uint32_t>>& frames) {
+    auto varint=[](std::string& out,uint64_t v) {
+        while(v>=128) { out.push_back(char((v&127)|128));v>>=7; }out.push_back(char(v));
+    };
+    auto message=[&](std::string& out,uint32_t tag,const std::string& value) {
+        varint(out,tag);varint(out,value.size());out+=value;
+    };
+    std::string data;
+    for(size_t n=0;n<frames.size();++n) {
+        std::string mask,box,frame;
+        varint(mask,8);varint(mask,width);varint(mask,16);varint(mask,height);
+        for(auto count:frames[n]) { varint(mask,24);varint(mask,count); }
+        // Width/height float fields, followed by the nested segmentation mask.
+        for(uint32_t tag:{29u,37u}) { varint(box,tag);box.append("\0\0\x80\x3f",4); }
+        message(box,66,mask);varint(frame,8);varint(frame,n+1);message(frame,18,box);message(data,10,frame);
+    }
+    QFile file(path);REQUIRE(file.open(QIODevice::WriteOnly));
+    REQUIRE(file.write(data.data(),data.size())==qint64(data.size()));file.close();
+}
+}
+TEST_CASE("Vulkan object masks decode scale and dilate like CPU", "[vulkan][hardware][effects][flare-object-effects]") {
+    if(!VulkanAvailable()) return;
+    QTemporaryDir directory;const auto path=directory.filePath("masks.pb");
+    WriteObjectMaskData(path,7,5,{{0,8,4,6,1,8,8},{35},{0,35},{1,1,1,1,1,1,1,1,1,1,1,1},{0,0,0,12,23}});
+    openshot::ObjectMask effect;REQUIRE(effect.LoadObjMaskData(path.toStdString()));
+    effect.mask_color=openshot::Color("#d34c29");effect.stroke_color=openshot::Color("#208fe1");
+    for(const QSize size:{QSize(1,1),QSize(3,2),QSize(7,5),QSize(37,23),QSize(129,73)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        for(double width:{0.,1.,3.,10.}) for(double alpha:{0.,.47,1.}) {
+            effect.stroke_width=openshot::Keyframe(width);effect.mask_alpha=openshot::Keyframe(alpha);
+            effect.stroke_alpha=openshot::Keyframe(alpha);
+            INFO("size="<<size.width()<<" stroke="<<width<<" alpha="<<alpha);
+            for(int n:{1,2,3,4,5,19}) CheckVulkanEffect(effect,pixels,source,n,1,true);
+        }
+        effect.draw_mask=openshot::Keyframe(0);CheckVulkanEffect(effect,pixels,source,1,0,true);effect.draw_mask=openshot::Keyframe(1);
+    }
+}
+#endif
+
+TEST_CASE("Vulkan lens flare and object masks preserve effect masks", "[vulkan][hardware][effects][flare-object-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(129,73);const auto source=openshot::UploadVulkanImage(pixels);
+    QTemporaryDir directory;const auto path=directory.filePath("mask.png");REQUIRE(PointEffectPixels(23,17).save(path));
+    openshot::LensFlare flare;
+    flare.brightness.AddPoint(1,.25,openshot::LINEAR);flare.brightness.AddPoint(9,1.6,openshot::LINEAR);
+    flare.color=openshot::Color("#e85a27");
+    std::vector<openshot::EffectBase*> effects{&flare};
+#ifdef USE_OPENCV
+    const auto data_path=directory.filePath("objects.pb");WriteObjectMaskData(data_path,7,5,std::vector<std::vector<uint32_t>>(9,{0,8,4,6,1,8,8}));
+    openshot::ObjectMask object;REQUIRE(object.LoadObjMaskData(data_path.toStdString()));
+    object.mask_alpha.AddPoint(1,.2,openshot::LINEAR);object.mask_alpha.AddPoint(9,.8,openshot::LINEAR);
+    object.stroke_width.AddPoint(1,1,openshot::LINEAR);object.stroke_width.AddPoint(9,6,openshot::LINEAR);
+    effects.push_back(&object);
+#endif
+    for(auto* effect:effects) {
+        effect->MaskReader(new openshot::QtImageReader(path.toStdString()));
+        for(bool invert:{false,true}) {
+            effect->mask_invert=invert;INFO(effect->info.class_name<<" invert="<<invert);
+            for(int n:{1,5,9,3}) CheckVulkanEffect(*effect,pixels,source,n,2);
+            const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            for(int n:{4,6,8}) {
+                auto frame=std::make_shared<openshot::Frame>(n,pixels.width(),pixels.height(),"transparent");frame->AddDeferredImage(source);
+                { openshot::gpu_metrics::Scope scope(false);effect->ProcessFrame(frame,n); }
+                REQUIRE(frame->GetDeferredImage());
+            }
+            const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+        }
+    }
+}
+
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan object mask sources stay copy free for linked effects", "[vulkan][hardware][effects][flare-object-effects]") {
+    if(!VulkanAvailable()) return;
+    QTemporaryDir directory;const auto path=directory.filePath("objects.pb");
+    WriteObjectMaskData(path,7,5,{{0,8,4,6,1,8,8},{35},{0,35}});
+    openshot::ObjectMask provider;provider.Id("gpu-segmentation");provider.draw_mask=openshot::Keyframe(0);
+    REQUIRE(provider.LoadObjMaskData(path.toStdString()));
+    openshot::Clip parent;parent.AddEffect(&provider);
+    openshot::Brightness effect(openshot::Keyframe(.3),openshot::Keyframe(4));
+    effect.MaskSourceId(provider.Id());parent.AddEffect(&effect);
+    const auto pixels=PointEffectPixels(97,53);const auto source=openshot::UploadVulkanImage(pixels);
+    for(bool invert:{false,true}) {
+        effect.mask_invert=invert;
+        for(int n:{1,2,3,19,1}) CheckVulkanEffect(effect,pixels,source,n,1,true);
+    }
+}
+#endif
+
+TEST_CASE("Vulkan flare and segmentation preserve 4K precision", "[vulkan][hardware][effects][flare-object-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(3840,2160);const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::LensFlare flare;flare.x=openshot::Keyframe(.3);flare.y=openshot::Keyframe(-.2);
+    flare.brightness=openshot::Keyframe(.73);flare.size=openshot::Keyframe(1.7);flare.color=openshot::Color("#e254a7");
+    CheckVulkanEffect(flare,pixels,source,5,2,true);
+#ifdef USE_OPENCV
+    QTemporaryDir directory;const auto path=directory.filePath("objects.pb");
+    WriteObjectMaskData(path,7,5,{{0,8,4,6,1,8,8}});
+    openshot::ObjectMask effect;REQUIRE(effect.LoadObjMaskData(path.toStdString()));
+    effect.mask_alpha=openshot::Keyframe(.62);effect.stroke_width=openshot::Keyframe(11);effect.stroke_alpha=openshot::Keyframe(.41);
+    CheckVulkanEffect(effect,pixels,source,1,1,true);
+#endif
+    CHECK(source->Materialize()==pixels);
+}
+
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan flare segmentation and linked grading stay resident in a timeline", "[vulkan][hardware][effects][flare-object-effects]") {
+    if(!VulkanAvailable()) return;
+    QTemporaryDir directory;const auto path=directory.filePath("objects.pb");
+    WriteObjectMaskData(path,7,5,std::vector<std::vector<uint32_t>>(8,{0,8,4,6,1,8,8}));
+    const auto pixels=PointEffectPixels(128,96);const auto source=openshot::UploadVulkanImage(pixels);
+    std::vector<QImage> expected;
+    for(bool gpu:{false,true}) {
+        struct Restore {
+            std::string backend,device;
+            ~Restore(){openshot::ConfigureGpuEnvironment(backend,device);}
+        } restore{std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"",
+                  std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):""};
+        openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",restore.device);
+        PatternReader reader(source,gpu);openshot::Clip clip(&reader);
+        openshot::LensFlare flare;flare.color=openshot::Color("#e86a23");
+        flare.brightness.AddPoint(1,.2,openshot::LINEAR);flare.brightness.AddPoint(8,1.3,openshot::LINEAR);
+        openshot::ObjectMask object;object.Id("timeline-object");REQUIRE(object.LoadObjMaskData(path.toStdString()));
+        object.stroke_width=openshot::Keyframe(5);
+        openshot::Brightness grade(openshot::Keyframe(.12),openshot::Keyframe(3));grade.MaskSourceId(object.Id());
+        int order=10;
+        for(auto* effect:std::vector<openshot::EffectBase*>{&flare,&object,&grade}) { effect->Order(order--);clip.AddEffect(effect); }
+        openshot::Timeline timeline(128,96,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+        timeline.AddClip(&clip);timeline.Open();openshot::ResetGpuMetrics();
+        std::vector<std::shared_ptr<openshot::Frame>> frames;
+        for(int n=1;n<=8;++n) { frames.push_back(timeline.GetFrame(n));if(gpu) REQUIRE(frames.back()->GetDeferredImage()); }
+        if(gpu) {
+            const auto m=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(m["uploads"].asInt()==0);CHECK(m["readbacks"].asInt()==0);
+        }
+        for(size_t n=0;n<frames.size();++n) {
+            const auto actual=frames[n]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+            if(!gpu) { expected.push_back(actual);continue; }
+            int error=0;double sum=0;
+            for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) {
+                int d=std::abs(int(actual.constScanLine(y)[x])-int(expected[n].constScanLine(y)[x]));error=std::max(error,d);sum+=d;
+            }
+            INFO("frame="<<n+1<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));
+            CHECK(error<=3);CHECK(sum/(actual.width()*actual.height()*4)<=.1);
+        }
+        timeline.Close();
+    }
+    CHECK(source->Materialize()==pixels);
+}
+#endif

@@ -41,6 +41,12 @@
 #include <algorithm>
 #include <omp.h>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 // Default constructor
@@ -222,9 +228,17 @@ static void apply_reflector(QRgb &pxl, const Reflect &r, int cx, int cy)
 std::shared_ptr<openshot::Frame>
 LensFlare::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t f)
 {
-    auto img = frame->GetImage();
-    int w = img->width();
-    int h = img->height();
+    std::shared_ptr<const FrameImage> surface;
+    int gpu_width=0,gpu_height=0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        surface=frame->GetDeferredImage();
+        if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+        if(surface) { gpu_width=surface->GetWidth();gpu_height=surface->GetHeight(); }
+    }
+#endif
+    auto img=surface?nullptr:frame->GetImage();
+    int w=surface?gpu_width:img->width(),h=surface?gpu_height:img->height();
 
     // Fetch keyframe values
     float X  = x.GetValue(f),
@@ -275,6 +289,32 @@ LensFlare::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t f)
     // Precompute reflectors
     std::vector<Reflect> refs;
     init_reflectors(refs, DX, DY, w, h, tint, S);
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(surface) {
+        try {
+            // Only geometry and QColor metadata cross the host/device boundary.
+            std::vector<float> parameters(32+refs.size()*8);
+            parameters[0]=px;parameters[1]=py;parameters[2]=I;
+            parameters[3]=(255*int(std::clamp(double(I),0.0,1.0)*256))>>8;
+            parameters[4]=scolor;parameters[5]=sglow;parameters[6]=sinner;
+            parameters[7]=souter;parameters[8]=shalo;parameters[9]=float(refs.size());
+            int index=16;
+            for(const auto& c:{c_color,c_glow,c_inner,c_outer,c_halo}) {
+                parameters[index++]=c.redF();parameters[index++]=c.greenF();parameters[index++]=c.blueF();
+            }
+            index=32;
+            for(const auto& r:refs) {
+                parameters[index++]=r.xp;parameters[index++]=r.yp;parameters[index++]=r.size;parameters[index++]=float(r.type);
+                parameters[index++]=r.col.redF();parameters[index++]=r.col.greenF();parameters[index++]=r.col.blueF();++index;
+            }
+            frame->AddDeferredImage(LensFlareVulkanImage(surface,parameters));return frame;
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan LensFlare CPU fallback: ")+e.what());
+            img=frame->GetImage();
+        }
+    }
+#endif
 
     // Build an un-premultiplied overlay
     QImage overlay(w, h, QImage::Format_ARGB32);
@@ -358,6 +398,9 @@ LensFlare::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t f)
         }
     }
     img->setAlphaChannel(finalA);
+    // setAlphaChannel returns ARGB. Restore Frame's RGBA invariant for masks
+    // and subsequent byte-oriented effects without changing the pixel colors.
+    *img=img->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
     return frame;
 }
 

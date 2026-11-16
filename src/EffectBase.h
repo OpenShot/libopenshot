@@ -210,7 +210,12 @@ namespace openshot
 		/// Set the order that this effect should be executed.
 		void Order(int new_order) { order = new_order; }
 
-		virtual ~EffectBase();
+        virtual ~EffectBase();
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        /// Optional resident equivalent of TrackedObjectMask. Empty keeps the CPU fallback.
+        virtual std::shared_ptr<const FrameImage> TrackedObjectMaskSurface(
+            std::shared_ptr<const FrameImage>, int64_t) const { return {}; }
+#endif
 	};
 
 }
