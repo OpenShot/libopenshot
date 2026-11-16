@@ -817,22 +817,20 @@ void CheckVulkanEffect(openshot::EffectBase& effect, const QImage& pixels,
     auto expected=cpu->GetImage(),actual=gpu->GetImage();
     REQUIRE(actual->size()==expected->size());
     int max_error=0;
-    for (int y=0;y<actual->height();++y)
-        for (int x=0;x<actual->width()*4;++x)
-            max_error=std::max(max_error,std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x])));
-    INFO("frame=" << number << " max byte error=" << max_error);
-    if (max_error > tolerance) {
-        for (int y=0;y<actual->height();++y) for(int x=0;x<actual->width();++x) {
-            int error=0;
-            for(int c=0;c<4;++c) error=std::max(error,std::abs(int(expected->constScanLine(y)[x*4+c])-int(actual->constScanLine(y)[x*4+c])));
-            if(error==max_error) {
-                INFO("pixel=" << x << "," << y << " expected=" << expected->pixelColor(x,y).name(QColor::HexArgb).toStdString()
-                     << " actual=" << actual->pixelColor(x,y).name(QColor::HexArgb).toStdString());
-                CHECK(error<=tolerance);
-                return;
+    QPoint worst_pixel;
+    for (int y=0;y<actual->height();++y) {
+        for (int x=0;x<actual->width()*4;++x) {
+            const int error=std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x]));
+            if (error > max_error) {
+                max_error=error;
+                worst_pixel=QPoint(x/4,y);
             }
         }
     }
+    INFO("frame=" << number << " max byte error=" << max_error);
+    INFO("pixel=" << worst_pixel.x() << "," << worst_pixel.y()
+         << " expected=" << expected->pixelColor(worst_pixel).name(QColor::HexArgb).toStdString()
+         << " actual=" << actual->pixelColor(worst_pixel).name(QColor::HexArgb).toStdString());
     CHECK(max_error<=tolerance);
 }
 
@@ -1519,7 +1517,7 @@ TEST_CASE("Vulkan distort retains queued meshes and handles small frames", "[vul
     std::vector<QImage> expected;
     auto readbacks=openshot::VulkanFrameReadbackCount();
     for (int i=0;i<12;++i) {
-        for (auto& point : effect.points_x) point=openshot::Keyframe(i/48.0);
+        std::fill(effect.points_x.begin(), effect.points_x.end(), openshot::Keyframe(i/48.0));
         auto cpu=std::make_shared<openshot::Frame>(1,96,64,"transparent");
         cpu->AddImage(std::make_shared<QImage>(pixels));
         ProcessCpuEffect(effect,cpu,1); expected.push_back(cpu->GetImage()->copy());

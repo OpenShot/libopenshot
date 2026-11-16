@@ -748,9 +748,10 @@ std::shared_ptr<const FrameImage> DistortVulkanImage(std::shared_ptr<const Frame
     const std::vector<QPointF>& mesh, int divisions) {
     if (divisions < 1 || divisions > 96 || mesh.size() != size_t(divisions + 1) * (divisions + 1))
         throw std::invalid_argument("Invalid Vulkan distortion mesh");
-    for (const auto& point : mesh)
-        if (!std::isfinite(point.x()) || !std::isfinite(point.y()))
-            throw std::invalid_argument("Non-finite Vulkan distortion mesh");
+    if (std::any_of(mesh.begin(), mesh.end(), [](const QPointF& point) {
+            return !std::isfinite(point.x()) || !std::isfinite(point.y());
+        }))
+        throw std::invalid_argument("Non-finite Vulkan distortion mesh");
     source = PremultipliedRGBA(source);
     const int width = source->GetWidth(), height = source->GetHeight();
     const int columns = (width + 15) / 16, rows = (height + 15) / 16;
@@ -803,7 +804,8 @@ std::shared_ptr<const FrameImage> DistortVulkanImage(std::shared_ptr<const Frame
     data.insert(data.end(),records.begin(),records.end());
     for (size_t i=0; i<tiles.size(); ++i) {
         data[i*2]=data.size(); data[i*2+1]=tiles[i].size();
-        for (uint32_t index : tiles[i]) data.push_back(record_start+index);
+        std::transform(tiles[i].begin(), tiles[i].end(), std::back_inserter(data),
+            [record_start](uint32_t index) { return record_start + index; });
     }
     EffectParameters effect{9,{float(columns)},data.data(),data.size()*sizeof(uint32_t)};
     return RenderImage(source,nullptr,width,height,QTransform(),1.0,Qt::transparent,false,&effect);

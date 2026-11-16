@@ -5,6 +5,7 @@
 #include "openshot_catch.h"
 #include <QColor>
 #include <memory>
+#include <algorithm>
 using namespace openshot;
 namespace {
 std::shared_ptr<Frame> input(int w=48,int h=36) {
@@ -24,7 +25,7 @@ TEST_CASE("Distort identity and zero strength preserve pixels", "[effect][distor
 }
 TEST_CASE("Distort translates forward and leaves exposed pixels transparent", "[effect][distort]") {
     Distort effect;
-    for(auto& curve:effect.points_x) curve=Keyframe(0.25);
+    std::fill(effect.points_x.begin(), effect.points_x.end(), Keyframe(0.25));
     auto frame=input(); QImage original=frame->GetImage()->copy();
     QImage result=*effect.GetFrame(frame,1)->GetImage();
     CHECK(result.pixelColor(0,18).alpha()==0);
@@ -34,7 +35,8 @@ TEST_CASE("Distort translates forward and leaves exposed pixels transparent", "[
 }
 TEST_CASE("Distort preserves translucent color when sampling", "[effect][distort]") {
     auto frame=input(); frame->GetImage()->fill(QColor(255,0,0,128));
-    Distort effect; for(auto& curve:effect.points_x) curve=Keyframe(0.01);
+    Distort effect;
+    std::fill(effect.points_x.begin(), effect.points_x.end(), Keyframe(0.01));
     auto result=effect.GetFrame(frame,1)->GetImage();
     CHECK(result->pixelColor(24,18)==QColor(255,0,0,128));
 }
