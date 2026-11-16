@@ -21,6 +21,12 @@
 
 #include <algorithm>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -68,6 +74,30 @@ void Pixelate::init_effect_details()
 std::shared_ptr<openshot::Frame>
 Pixelate::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && (true)) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const int w=surface->GetWidth(),h=surface->GetHeight();
+                QRect area=QRect(0,0,w,h).marginsRemoved({
+                    int(clamp_margin(left.GetValue(frame_number))*w),int(clamp_margin(top.GetValue(frame_number))*h),
+                    int(clamp_margin(right.GetValue(frame_number))*w),int(clamp_margin(bottom.GetValue(frame_number))*h)});
+                area=area.intersected(QRect(0,0,w,h));
+                const double factor=std::min(pow(0.001,fabs(pixelization.GetValue(frame_number))),1.0);
+                if(!area.isEmpty() && factor>0) {
+                    const int width=std::max(1,int(area.width()*factor));
+                    const int height=std::max(1,int(double(area.height())*width/area.width()+0.9999));
+                    frame->AddDeferredImage(PixelateVulkanImage(surface,area,width,height));
+                }
+                return frame;
+            }
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan pixelate CPU fallback: ")+error.what());
+        }
+    }
+#endif
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 

@@ -30,6 +30,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		Keyframe opacity;	///< Overall shadow opacity.
 		Keyframe blur_radius;	///< Blur radius in pixels.
 		Keyframe spread;	///< Boosts the source alpha before blur.

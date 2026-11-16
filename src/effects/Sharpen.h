@@ -44,6 +44,8 @@ protected:
                               std::shared_ptr<QImage> mask_image, int64_t frame_number) const override;
 
 public:
+        bool RendersOnVulkan() const override { return true; }
+        bool MaskDrivesAmount(int64_t number) const override { return UseCustomMaskBlend(number); }
     /// Amount of sharpening to apply (0 to 2)
     Keyframe amount;
 

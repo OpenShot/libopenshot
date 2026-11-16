@@ -13,6 +13,12 @@
 #include "Outline.h"
 #include "Exceptions.h"
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
@@ -59,6 +65,31 @@ std::shared_ptr<openshot::Frame> Outline::GetFrame(std::shared_ptr<openshot::Fra
 		return frame;
 	}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const double sigma=double(widthValue/3.0f);
+                const int count=cvRound(sigma*6+1)|1;
+                const cv::Mat weights=cv::getGaussianKernel(count,sigma,CV_64F);
+                std::vector<int> kernel(count);
+                double error=0;int sum=0;
+                for(int i=0;i<count/2;++i) {
+                    const double adjusted=weights.at<double>(i)*256.0+error;
+                    const int value=cvRound(adjusted);error=adjusted-value;
+                    kernel[i]=kernel[count-1-i]=value;sum+=value;
+                }
+                kernel[count/2]=256-2*sum;
+                frame->AddDeferredImage(OutlineVulkanImage(surface,kernel,QColor(redValue,greenValue,blueValue,alphaValue)));
+                return frame;
+            }
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan outline CPU fallback: ")+error.what());
+        }
+    }
+#endif
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 

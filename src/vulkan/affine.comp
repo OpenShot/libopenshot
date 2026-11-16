@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #version 450
+#extension GL_GOOGLE_include_directive : require
 layout(local_size_x=16, local_size_y=16) in;
 layout(binding=0) uniform sampler2D plane_y;
 layout(binding=1) uniform sampler2D plane_u;
@@ -228,11 +229,13 @@ void pixel_effect(ivec2 pixel) {
     }
     imageStore(output_img,pixel,vec4(c)/255.0);
 }
+#include "effects.glsl"
 void main() {
     // Scopes count instead of writing an image; every invocation reaches the barriers.
     if(p.modes.w==8) { scope(); return; }
     ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
     if(any(greaterThanEqual(pixel,p.sizes.xy))) return;
+    if(p.modes.w>=14) { spatial_effect(pixel); return; }
     if(p.modes.w>=9) { pixel_effect(pixel); return; }
     vec2 center=vec2(pixel)+0.5;
     vec2 src=vec2(dot(p.matrix_x.xyz,vec3(center,1)),dot(p.matrix_y.xyz,vec3(center,1)));

@@ -48,6 +48,7 @@ namespace openshot
 		std::shared_ptr<QImage> BGRACvMatToQImage(cv::Mat img);
 
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		Keyframe width;	///< Width of the outline
 		Color color;	///< Color of the outline
 

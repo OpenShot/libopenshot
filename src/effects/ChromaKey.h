@@ -45,6 +45,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+        bool RendersOnVulkan() const override { return true; }
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		ChromaKey();

@@ -39,6 +39,22 @@ std::shared_ptr<const FrameImage> BarsVulkanImage(std::shared_ptr<const FrameIma
 /// Wrapped integer offsets, interleaved x/y for red, green, blue and alpha.
 std::shared_ptr<const FrameImage> ShiftVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<int, 8>& offsets);
+/// CPU-compatible basic, HSV/HSL, CIE and YCbCr keying. Conversion tables
+/// retain Babl's transfer functions and float rounding across frames.
+std::shared_ptr<const FrameImage> ChromaKeyVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& color,int fuzz,int halo,int method,
+    std::shared_ptr<const std::vector<float>> conversions=nullptr,const std::array<float,3>& key_features={});
+/// Qt-compatible area downsampling and nearest-neighbor source-over painting.
+std::shared_ptr<const FrameImage> PixelateVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QRect& area,int width,int height);
+/// Three separable box blurs and an entirely GPU-resident adaptive threshold.
+std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& radii,float amount,float threshold,int mode,int channel);
+/// Shared alpha spread, offset, float blur and compositing for Shadow/Glow.
+std::shared_ptr<const FrameImage> HaloVulkanImage(std::shared_ptr<const FrameImage> source,
+    int radius,int spread,const QPoint& offset,const QColor& color,float opacity,bool inner);
+std::shared_ptr<const FrameImage> OutlineVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::vector<int>& kernel,const QColor& color);
 /// Copy a source rectangle into a transparent output, with optional resized canvas.
 std::shared_ptr<const FrameImage> CropVulkanImage(std::shared_ptr<const FrameImage> source,
     const QRectF& destination, const QRectF& copy, const QRect& canvas);

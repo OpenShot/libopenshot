@@ -35,6 +35,14 @@
 #include "effects/Bars.h"
 #include "effects/Shift.h"
 #include "effects/ColorShift.h"
+#include "effects/ChromaKey.h"
+#include "effects/Sharpen.h"
+#include "effects/Pixelate.h"
+#include "effects/Shadow.h"
+#include "effects/Glow.h"
+#ifdef USE_OPENCV
+#include "effects/Outline.h"
+#endif
 #include "QtImageReader.h"
 #include "Timeline.h"
 #include "DummyReader.h"
@@ -828,7 +836,8 @@ void CheckVulkanEffect(openshot::EffectBase& effect, const QImage& pixels,
     }
     REQUIRE(gpu->GetDeferredImage());
     CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
-    auto expected=cpu->GetImage(),actual=gpu->GetImage();
+    auto expected=std::make_shared<QImage>(cpu->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
+    auto actual=gpu->GetImage();
     REQUIRE(actual->size()==expected->size());
     int max_error=0;
     for (int y=0;y<actual->height();++y)
@@ -1662,4 +1671,242 @@ TEST_CASE("Vulkan point effect chain stays resident and matches CPU", "[vulkan][
             max_error=std::max(max_error,std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x])));
     INFO("six-effect chain max byte error=" << max_error);
     CHECK(max_error<=3);
+}
+
+namespace {
+QImage SilhouettePixels(int w=65,int h=49) {
+    QImage image(w,h,QImage::Format_RGBA8888_Premultiplied);
+    image.fill(Qt::transparent);
+    for(int y=0;y<h;++y) for(int x=0;x<w;++x) {
+        if((x-w/2)*(x-w/2)+(y-h/2)*(y-h/2)<(h/3)*(h/3) ||
+            (x>w/6 && x<w/3 && y>h/6 && y<h/2))
+            image.setPixelColor(x,y,QColor((x*17)%256,(y*23)%256,(x*11+y*7)%256,((x+y)%4)*64+63));
+    }
+    return image;
+}
+}
+
+TEST_CASE("Vulkan chroma key matches CPU hard and soft thresholds", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    QImage pixels=PointEffectPixels(47,19);
+    for(int x=0;x<pixels.width();++x) pixels.setPixelColor(x,0,QColor(x*5,255-x*4,x*3));
+    auto source=openshot::UploadVulkanImage(pixels);
+    for(auto method : {openshot::CHROMAKEY_BASIC,openshot::CHROMAKEY_BASIC_SOFT}) {
+        for(int fuzz : {0,1,20,100,300}) for(int halo : {0,1,40}) {
+            INFO("method=" << method << " fuzz=" << fuzz << " halo=" << halo);
+            openshot::ChromaKey effect(openshot::Color("#14ef0c"),openshot::Keyframe(fuzz),openshot::Keyframe(halo),method);
+            CheckVulkanEffect(effect,pixels,source,1,1,true);
+        }
+    }
+}
+
+TEST_CASE("Vulkan pixelate matches Qt scaling regions alpha and animation", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    for(QSize size : {QSize(37,23),QSize(1,1),QSize(1,29),QSize(29,1)}) {
+        auto pixels=PointEffectPixels(size.width(),size.height());
+        auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Pixelate effect;
+        for(double margin : {0.0,0.17,0.6}) {
+            effect.left=effect.top=openshot::Keyframe(margin);
+            effect.bottom=openshot::Keyframe(margin/2);
+            for(double amount : {0.0,0.001,0.05,0.2,0.5,1.0}) {
+                INFO("size=" << size.width() << "x" << size.height() << " margin=" << margin << " amount=" << amount);
+                effect.pixelization=openshot::Keyframe(amount);
+                CheckVulkanEffect(effect,pixels,source,1,1,true);
+            }
+        }
+    }
+}
+
+TEST_CASE("Vulkan sharpen matches CPU channels modes adaptive threshold and alpha", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    auto pixels=PointEffectPixels(65,49);
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Sharpen effect;
+    effect.amount=openshot::Keyframe(2.0);
+    for(int mode : {0,1}) for(int channel : {0,1,2}) {
+        effect.mode=mode;effect.channel=channel;
+        for(double radius : {0.0,3.0,40.0,100.0}) for(double threshold : {0.0,0.3,1.0}) {
+            INFO("mode=" << mode << " channel=" << channel << " radius=" << radius << " threshold=" << threshold);
+            effect.radius=openshot::Keyframe(radius);effect.threshold=openshot::Keyframe(threshold);
+            CheckVulkanEffect(effect,pixels,source,1,1,true);
+        }
+    }
+}
+
+TEST_CASE("Vulkan shadow and glow match CPU spread blur offsets and inner mode", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    for(QSize size : {QSize(65,49),QSize(1,1),QSize(3,7)}) {
+        auto pixels=SilhouettePixels(size.width(),size.height());
+        if(size.width()==1) pixels.setPixelColor(0,0,QColor(130,80,230,127));
+        auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Shadow shadow;
+        openshot::Glow glow;
+        shadow.color=glow.color=openshot::Color("#c43f85");
+        shadow.color.alpha=glow.color.alpha=openshot::Keyframe(180);
+        shadow.angle=openshot::Keyframe(-33);
+        shadow.distance=openshot::Keyframe(-5);
+        shadow.opacity=glow.opacity=openshot::Keyframe(0.63);
+        for(int radius : {0,1,8,30}) for(double spread : {0.0,0.45}) {
+            INFO("size=" << size.width() << "x" << size.height() << " radius=" << radius << " spread=" << spread);
+            shadow.blur_radius=glow.blur_radius=openshot::Keyframe(radius);
+            shadow.spread=glow.spread=openshot::Keyframe(spread);
+            CheckVulkanEffect(shadow,pixels,source,1,1,true);
+            for(int mode : {openshot::GLOW_MODE_OUTER,openshot::GLOW_MODE_INNER}) {
+                glow.mode=mode;INFO("glow mode=" << mode);
+                CheckVulkanEffect(glow,pixels,source,1,1,true);
+            }
+        }
+    }
+}
+
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan outline matches OpenCV edges and premultiplied alpha", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    for(QImage pixels : {SilhouettePixels(),PointEffectPixels(),SilhouettePixels(1,5)}) {
+        auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Outline effect;
+        effect.color=openshot::Color("#c43f85");
+        effect.color.alpha=openshot::Keyframe(170);
+        for(double width : {0.0,0.5,1.0,3.0,7.5,20.0,100.0}) {
+            INFO("width=" << width << " size=" << pixels.width() << "x" << pixels.height());
+            effect.width=openshot::Keyframe(width);
+            CheckVulkanEffect(effect,pixels,source,1,1,true);
+        }
+    }
+}
+
+#endif // USE_OPENCV
+
+TEST_CASE("Vulkan advanced chroma key matches Babl color spaces", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(47,19);
+    const auto source=openshot::UploadVulkanImage(pixels);
+    for(int method=1;method<=10;++method) for(int fuzz : {0,1,20,60,120}) for(int halo : {0,1,25}) {
+        INFO("method=" << method << " fuzz=" << fuzz << " halo=" << halo);
+        openshot::ChromaKey effect(openshot::Color("#14ef0c"),openshot::Keyframe(fuzz),openshot::Keyframe(halo),openshot::ChromaKeyMethod(method));
+        CheckVulkanEffect(effect,pixels,source,1,1,true);
+    }
+}
+
+TEST_CASE("Vulkan spatial effects match animated CPU masks and reuse mask uploads", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=SilhouettePixels();
+    const auto source=openshot::UploadVulkanImage(pixels);
+    QTemporaryDir directory;
+    const auto mask_path=directory.filePath("spatial-mask.png");
+    REQUIRE(PointEffectPixels(23,17).save(mask_path));
+    openshot::ChromaKey chroma(openshot::Color("#14ef0c"),openshot::Keyframe(30),openshot::Keyframe(20));
+    openshot::Pixelate pixelate,driven_pixelate;
+    pixelate.pixelization.AddPoint(1,0.1,openshot::LINEAR);pixelate.pixelization.AddPoint(9,0.8,openshot::LINEAR);
+    driven_pixelate.pixelization=pixelate.pixelization;
+    driven_pixelate.mask_mode=openshot::PIXELATE_MASK_VARY_STRENGTH;
+    openshot::Sharpen sharpen,driven_sharpen;
+    sharpen.amount.AddPoint(1,0.5,openshot::LINEAR);sharpen.amount.AddPoint(9,2.0,openshot::LINEAR);
+    sharpen.radius=openshot::Keyframe(40);sharpen.threshold=openshot::Keyframe(0.3);
+    driven_sharpen.amount=sharpen.amount;driven_sharpen.radius=sharpen.radius;driven_sharpen.threshold=sharpen.threshold;
+    driven_sharpen.mask_mode=openshot::SHARPEN_MASK_VARY_STRENGTH;
+    openshot::Shadow shadow;
+    openshot::Glow glow;
+    shadow.blur_radius.AddPoint(1,0,openshot::LINEAR);shadow.blur_radius.AddPoint(9,12,openshot::LINEAR);
+    shadow.distance.AddPoint(1,-4,openshot::LINEAR);shadow.distance.AddPoint(9,8,openshot::LINEAR);
+    glow.blur_radius=shadow.blur_radius;
+    std::vector<openshot::EffectBase*> effects{&chroma,&pixelate,&driven_pixelate,&sharpen,&driven_sharpen,&shadow,&glow};
+#ifdef USE_OPENCV
+    openshot::Outline outline;
+    outline.width.AddPoint(1,0.5,openshot::LINEAR);outline.width.AddPoint(9,10,openshot::LINEAR);
+    effects.push_back(&outline);
+#endif
+    for(auto* effect:effects) {
+        effect->MaskReader(new openshot::QtImageReader(mask_path.toStdString()));
+        for(bool invert:{false,true}) {
+            INFO(effect->info.class_name << " invert=" << invert);
+            effect->mask_invert=invert;
+            for(int number:{1,5,9,3}) CheckVulkanEffect(*effect,pixels,source,number,2);
+            const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            for(int number:{4,6,8}) {
+                auto frame=std::make_shared<openshot::Frame>(number,pixels.width(),pixels.height(),"transparent");
+                frame->AddDeferredImage(source);
+                openshot::gpu_metrics::Scope scope(false);
+                effect->ProcessFrame(frame,number);
+                REQUIRE(frame->GetDeferredImage());
+            }
+            const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(after["uploads"]==before["uploads"]);
+            CHECK(after["readbacks"]==before["readbacks"]);
+        }
+    }
+}
+
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan spatial effect timeline chain stays copy free", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=SilhouettePixels(128,96);
+    const auto source=openshot::UploadVulkanImage(pixels);
+    std::vector<QImage> expected;
+    for(bool gpu:{false,true}) {
+        struct Restore {
+            std::string backend,device;
+            ~Restore(){openshot::ConfigureGpuEnvironment(backend,device);}
+        } restore{std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"",
+                  std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):""};
+        openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",restore.device);
+        PatternReader reader(source,gpu);
+        openshot::Clip clip(&reader);
+        openshot::ChromaKey chroma;
+        openshot::Pixelate pixelate;
+        pixelate.pixelization=openshot::Keyframe(0.2);
+        openshot::Outline outline;
+        outline.width=openshot::Keyframe(3);
+        openshot::Sharpen sharpen;
+        sharpen.amount=openshot::Keyframe(1.3);sharpen.radius=openshot::Keyframe(20);
+        openshot::Shadow shadow;
+        shadow.blur_radius=openshot::Keyframe(5);shadow.distance=openshot::Keyframe(4);
+        openshot::Glow glow;
+        glow.blur_radius=openshot::Keyframe(4);
+        int order=10;
+        for(auto* effect:std::vector<openshot::EffectBase*>{&chroma,&pixelate,&outline,&sharpen,&shadow,&glow}) {
+            effect->Order(order--);clip.AddEffect(effect);
+        }
+        openshot::Timeline timeline(128,96,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);
+        timeline.AddClip(&clip);timeline.Open();
+        openshot::ResetGpuMetrics();
+        std::vector<std::shared_ptr<openshot::Frame>> frames;
+        for(int number=1;number<=8;++number) {
+            frames.push_back(timeline.GetFrame(number));
+            if(gpu) REQUIRE(frames.back()->GetDeferredImage());
+        }
+        if(gpu) {
+            const auto metrics=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            CHECK(metrics["readbacks"].asInt()==0);CHECK(metrics["uploads"].asInt()==0);
+        }
+        for(size_t number=0;number<frames.size();++number) {
+            auto actual=frames[number]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+            if(!gpu) { expected.push_back(actual);continue; }
+            int max_error=0;
+            for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x)
+                max_error=std::max(max_error,std::abs(int(actual.constScanLine(y)[x])-int(expected[number].constScanLine(y)[x])));
+            INFO("timeline frame=" << number+1 << " max error=" << max_error);
+            CHECK(max_error<=3);
+        }
+        timeline.Close();
+    }
+    const QImage unchanged=source->Materialize();
+    CHECK(unchanged==pixels);
+}
+#endif
+
+TEST_CASE("Vulkan chroma key preserves exact colors at hard color space boundaries", "[vulkan][hardware][effects][spatial-effects]") {
+    if(!VulkanAvailable()) return;
+    QImage pixels(16,3,QImage::Format_RGBA8888_Premultiplied);
+    const std::array<QColor,8> palette{Qt::black,Qt::white,Qt::red,Qt::green,Qt::blue,Qt::cyan,Qt::magenta,QColor(128,128,128)};
+    for(int y=0;y<pixels.height();++y) for(int x=0;x<pixels.width();++x) {
+        QColor color=palette[x%palette.size()];color.setAlpha(y==0?255:y==1?127:1);pixels.setPixelColor(x,y,color);
+    }
+    const auto source=openshot::UploadVulkanImage(pixels);
+    for(const auto& key:palette) for(int method=0;method<=11;++method) for(int fuzz:{0,1,125}) {
+        INFO("key=" << key.name().toStdString() << " method=" << method << " fuzz=" << fuzz);
+        openshot::ChromaKey effect(openshot::Color(key),openshot::Keyframe(fuzz),openshot::Keyframe(0),openshot::ChromaKeyMethod(method));
+        CheckVulkanEffect(effect,pixels,source,1,1,true);
+    }
 }

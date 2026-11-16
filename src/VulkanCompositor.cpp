@@ -97,14 +97,77 @@ AVBufferRef* OutputPool(AVBufferRef* device_ref,int w,int h,bool encode_nv12){
     if(!ref) throw std::bad_alloc();
     return ref;
 }
+// Shared across dependent compute submissions. Only small parameter tables are
+// written by the host; all intermediate pixels and reductions stay on the GPU.
+struct EffectWork {
+    EffectWork()=default;
+    EffectWork(const EffectWork&)=delete;
+    EffectWork& operator=(const EffectWork&)=delete;
+    AVBufferRef* owner=nullptr;
+    VkDevice device=VK_NULL_HANDLE;
+    VkBuffer buffer=VK_NULL_HANDLE;
+    VkDeviceMemory memory=VK_NULL_HANDLE;
+    ~EffectWork() {
+        if(buffer) vkDestroyBuffer(device,buffer,nullptr);
+        if(memory) vkFreeMemory(device,memory,nullptr);
+        av_buffer_unref(&owner);
+    }
+};
+std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage>& source,
+    size_t words,const std::vector<uint32_t>& parameters={}) {
+    const auto image=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
+    if(!image) throw std::invalid_argument("Vulkan effect requires a Vulkan surface");
+    auto* fc=reinterpret_cast<AVHWFramesContext*>(image->GetFrame()->hw_frames_ctx->data);
+    auto* context=reinterpret_cast<AVVulkanDeviceContext*>(fc->device_ctx->hwctx);
+    auto work=std::make_shared<EffectWork>();
+    work->owner=av_buffer_ref(fc->device_ref);
+    if(!work->owner) throw std::bad_alloc();
+    work->device=context->act_dev;
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(context->phys_dev,&properties);
+    if(words>properties.limits.maxStorageBufferRange/sizeof(uint32_t) || parameters.size()>words)
+        throw std::runtime_error("Vulkan effect scratch buffer exceeds device limits");
+    VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    info.size=words*sizeof(uint32_t);info.usage=VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    VkCheck(vkCreateBuffer(work->device,&info,nullptr,&work->buffer),"Create effect scratch buffer");
+    VkMemoryRequirements requirements;
+    vkGetBufferMemoryRequirements(work->device,work->buffer,&requirements);
+    VkPhysicalDeviceMemoryProperties memory;
+    vkGetPhysicalDeviceMemoryProperties(context->phys_dev,&memory);
+    uint32_t type=UINT32_MAX;
+    for(uint32_t i=0;i<memory.memoryTypeCount;++i) {
+        const auto flags=memory.memoryTypes[i].propertyFlags;
+        if(!(requirements.memoryTypeBits&(1u<<i)) || !(flags&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) continue;
+        if(type==UINT32_MAX || (flags&VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) type=i;
+        if(flags&VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) break;
+    }
+    if(type==UINT32_MAX) throw std::runtime_error("No Vulkan effect buffer memory");
+    VkMemoryAllocateInfo allocation{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    allocation.allocationSize=requirements.size;allocation.memoryTypeIndex=type;
+    VkCheck(vkAllocateMemory(work->device,&allocation,nullptr,&work->memory),"Allocate effect scratch buffer");
+    VkCheck(vkBindBufferMemory(work->device,work->buffer,work->memory,0),"Bind effect scratch buffer");
+    if(!parameters.empty()) {
+        void* mapped=nullptr;
+        VkCheck(vkMapMemory(work->device,work->memory,0,VK_WHOLE_SIZE,0,&mapped),"Map effect parameters");
+        std::memcpy(mapped,parameters.data(),parameters.size()*sizeof(uint32_t));
+        if(!(memory.memoryTypes[type].propertyFlags&VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+            VkMappedMemoryRange range{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+            range.memory=work->memory;range.size=VK_WHOLE_SIZE;
+            const auto result=vkFlushMappedMemoryRanges(work->device,1,&range);
+            vkUnmapMemory(work->device,work->memory);
+            VkCheck(result,"Flush effect parameters");
+        } else vkUnmapMemory(work->device,work->memory);
+    }
+    return work;
+}
 struct EffectParameters {
-    int mode; // 1 saturation, 2 crop, 3 grading, 4 mask, 5 blur, 6 LUT, 7 mask blend, 8 scope,
-              // 9 brightness, 10 hue, 11 negate, 12 bars, 13 channel shifts
+    int mode; // 1-13: affine/point effects; 14-30: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
     std::shared_ptr<const void> data_owner; // unchanged data: skip the copy while a slot holds it
     const VulkanFrameImage* mask=nullptr; // third input (binding 6)
+    std::shared_ptr<EffectWork> work;
     std::vector<uint32_t>* counts=nullptr; // scope: zeroed, counted on the GPU, then read back
 };
 struct Parameters {
@@ -157,6 +220,7 @@ class Pipeline {
         Buffer counts;   // GPU-only scope counters
         Buffer staging;  // host-read copy of the counters
         std::shared_ptr<const void> data_owner;
+        std::shared_ptr<EffectWork> work;
         std::vector<VkImageView> views;
         FramePtr target;
         std::vector<FramePtr> inputs;
@@ -295,6 +359,7 @@ public:
         slot.views.clear();
         slot.target.reset();
         slot.inputs.clear();
+        slot.work.reset();
     }
     VkImageView View(VkImage image,VkFormat format,VkImageAspectFlags aspect){
         VkImageViewCreateInfo vi{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -313,7 +378,7 @@ public:
         const AVFrame* back=background?background->GetFrame():nullptr;
         if(back){
             const auto* bc=reinterpret_cast<const AVHWFramesContext*>(back->hw_frames_ctx->data);
-            if(bc->device_ctx!=device_context || bc->sw_format!=AV_PIX_FMT_RGBA || back->width!=width || back->height!=height)
+            if(bc->device_ctx!=device_context || bc->sw_format!=AV_PIX_FMT_RGBA || (effect && effect->mode==16?false:back->width!=width || back->height!=height))
                 throw std::runtime_error("Vulkan background must be matching RGBA surface");
         }
         const AVFrame* mask=effect && effect->mask?effect->mask->GetFrame():nullptr;
@@ -429,6 +494,7 @@ public:
         Slot& slot=ring[next_slot];
         next_slot=(next_slot+1)%kSlots;
         Retire(slot);
+        slot.work=effect?effect->work:nullptr;
         // Each in-flight submission owns its parameters until its fence retires.
         // Tables such as LUTs are copied once while a slot still holds them.
         if(effect && effect->data && (!effect->data_owner || slot.data_owner!=effect->data_owner)) {
@@ -501,7 +567,7 @@ public:
                 write.descriptorType=storage?VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;write.pImageInfo=&images[i];
             }
             // Scopes count into GPU memory; every other mode reads its parameters.
-            VkDescriptorBufferInfo data_buffer{scope?slot.counts.buffer:slot.data.buffer,0,VK_WHOLE_SIZE};
+            VkDescriptorBufferInfo data_buffer{slot.work?slot.work->buffer:scope?slot.counts.buffer:slot.data.buffer,0,VK_WHOLE_SIZE};
             writes[5].sType=VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writes[5].dstSet=set;writes[5].dstBinding=5;writes[5].descriptorCount=1;
             writes[5].descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;writes[5].pBufferInfo=&data_buffer;
@@ -539,6 +605,9 @@ public:
                 barrier.buffer=buffer;barrier.size=VK_WHOLE_SIZE;
                 vkCmdPipelineBarrier(cmd,after,before,0,0,nullptr,1,&barrier,0,nullptr);
             };
+            if(slot.work) buffer_barrier(slot.work->buffer,
+                VK_ACCESS_SHADER_WRITE_BIT|VK_ACCESS_HOST_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT|VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT|VK_PIPELINE_STAGE_HOST_BIT,VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
             if(scope) {
                 vkCmdFillBuffer(cmd,slot.counts.buffer,0,count_bytes,0);
                 buffer_barrier(slot.counts.buffer,VK_ACCESS_TRANSFER_WRITE_BIT,VK_ACCESS_SHADER_READ_BIT|VK_ACCESS_SHADER_WRITE_BIT,
@@ -713,6 +782,107 @@ std::shared_ptr<const FrameImage> ShiftVulkanImage(std::shared_ptr<const FrameIm
     EffectParameters effect{13};
     std::transform(offsets.begin(),offsets.end(),effect.values.begin(),[](int value){return float(value);});
     return RenderPixelEffect(source,effect);
+}
+// Scratch passes share one queue and buffer; no intermediate image is read by
+// the host. The ordinary image fence publishes completion of the final pass.
+constexpr int kEffectWorkWords=512+16384;
+static std::shared_ptr<const FrameImage> SpatialPass(std::shared_ptr<const FrameImage> source,
+    const std::shared_ptr<EffectWork>& work,int mode,const std::array<float,9>& values={},
+    std::shared_ptr<const FrameImage> background=nullptr,int width=0,int height=0) {
+    EffectParameters effect{mode,values};effect.work=work;
+    return RenderImage(source,background,width?width:source->GetWidth(),height?height:source->GetHeight(),
+        QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> ChromaKeyVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& color,int fuzz,int halo,int method,
+    std::shared_ptr<const std::vector<float>> conversions,const std::array<float,3>& key_features) {
+    if(method>0 && method<11 && (!conversions || conversions->size()<2336+65536*3+2048*5))
+        throw std::invalid_argument("Advanced Vulkan keying requires Babl conversion tables");
+    source=PremultipliedRGBA(source);
+    static const auto inverse=[] {
+        auto values=std::make_shared<std::vector<float>>(256);
+        for(int i=1;i<256;++i) (*values)[i]=255.0f/float(i);
+        return values;
+    }();
+    const auto table=conversions?conversions:inverse;
+    const int upper=fuzz+halo;
+    EffectParameters effect{14,{float(color[0]),float(color[1]),float(color[2]),float(method),
+        float(fuzz),float(halo),float(upper*upper),halo>0?1.0f/float(halo):0.0f},
+        table->data(),table->size()*sizeof(float),table};
+    if(method>0 && method<11) std::copy(key_features.begin(),key_features.end(),effect.values.begin()+6);
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> PixelateVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QRect& area,int width,int height) {
+    source=PremultipliedRGBA(source);
+    const std::array<float,9> values{float(area.x()),float(area.y()),float(area.width()),float(area.height())};
+    auto small=SpatialPass(source,nullptr,15,values,nullptr,width,height);
+    return SpatialPass(source,nullptr,16,values,small);
+}
+std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& radii,float amount,float threshold,int mode,int channel) {
+    source=PremultipliedRGBA(source);
+    const int n=source->GetWidth()*source->GetHeight(),a=kEffectWorkWords,b=a+n,c=b+n;
+    // Match Qt's format conversion, including its platform-specific integer
+    // unpremultiplication. This immutable 64 KiB table contains no frame data.
+    static const auto conversion=[] {
+        std::vector<uint32_t> table(kEffectWorkWords);
+        QImage image(256,256,QImage::Format_RGBA8888_Premultiplied);
+        for(int alpha=0;alpha<256;++alpha) for(int color=0;color<256;++color) {
+            auto* p=image.scanLine(alpha)+color*4;
+            p[0]=p[1]=p[2]=color;p[3]=alpha;
+        }
+        image=image.convertToFormat(QImage::Format_ARGB32);
+        for(int alpha=0;alpha<256;++alpha) for(int color=0;color<256;++color) {
+            const int index=alpha*256+color;
+            table[512+index/4]|=uint32_t(qRed(image.pixel(color,alpha)))<<((index%4)*8);
+        }
+        return table;
+    }();
+    auto work=NewEffectWork(source,size_t(n)*3+kEffectWorkWords,conversion);
+    SpatialPass(source,work,17);
+    int src=a;
+    for(int radius:radii) {
+        for(int direction=0;direction<2;++direction) {
+            const int dst=src==b?c:b;
+            SpatialPass(source,work,18,{float(src),float(dst),float(radius),float(direction),1.0f/float(2*radius+1)});
+            src=dst;
+        }
+    }
+    if(threshold>0) SpatialPass(source,work,19,{float(src)});
+    return SpatialPass(source,work,20,{float(src),amount,threshold,float(mode),float(channel)});
+}
+std::shared_ptr<const FrameImage> HaloVulkanImage(std::shared_ptr<const FrameImage> source,
+    int radius,int spread,const QPoint& offset,const QColor& color,float opacity,bool inner) {
+    source=PremultipliedRGBA(source);
+    const int n=source->GetWidth()*source->GetHeight(),a=kEffectWorkWords,b=a+n,c=b+n;
+    auto work=NewEffectWork(source,size_t(n)*3+kEffectWorkWords);
+    SpatialPass(source,work,21);
+    if(spread>0) {
+        SpatialPass(source,work,22,{float(a),float(b),float(spread),0});
+        SpatialPass(source,work,22,{float(b),float(a),float(spread),1});
+    }
+    SpatialPass(source,work,23,{float(offset.x()),float(offset.y()),inner?1.0f:0.0f});
+    if(radius>0) for(int i=0;i<3;++i) {
+        SpatialPass(source,work,24,{float(b),float(c),float(radius),0,1.0f/float(2*radius+1)});
+        SpatialPass(source,work,24,{float(c),float(b),float(radius),1,1.0f/float(2*radius+1)});
+    }
+    return SpatialPass(source,work,25,{inner?1.0f:0.0f,opacity,0,0,
+        float(color.red()),float(color.green()),float(color.blue()),float(color.alpha())});
+}
+std::shared_ptr<const FrameImage> OutlineVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::vector<int>& kernel,const QColor& color) {
+    source=PremultipliedRGBA(source);
+    if(kernel.empty() || kernel.size()>223) throw std::invalid_argument("Invalid Vulkan outline kernel");
+    std::vector<uint32_t> parameters(512);
+    parameters[0]=uint32_t(kernel.size());
+    std::copy(kernel.begin(),kernel.end(),parameters.begin()+1);
+    // OpenCV's seven-tap sigma=0.8 kernel in its 8-bit fixed-point format.
+    const std::array<int,7> edge_kernel{0,6,58,128,58,6,0};
+    std::copy(edge_kernel.begin(),edge_kernel.end(),parameters.begin()+224);
+    auto work=NewEffectWork(source,size_t(source->GetWidth())*source->GetHeight()*3+kEffectWorkWords,parameters);
+    for(int mode:{26,27,28,29}) SpatialPass(source,work,mode);
+    return SpatialPass(source,work,30,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha())});
 }
 std::shared_ptr<const FrameImage> BlendMaskVulkanImage(std::shared_ptr<const FrameImage> original,
     std::shared_ptr<const FrameImage> effected,std::shared_ptr<const FrameImage> mask,bool invert,bool drive) {

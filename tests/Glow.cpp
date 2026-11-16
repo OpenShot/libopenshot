@@ -144,3 +144,14 @@ TEST_CASE("Glow spread expands hard-edged shapes before blur", "[effect][glow][s
 
 	CHECK(high_frame->GetImage()->pixelColor(16, 32).alpha() > low_frame->GetImage()->pixelColor(16, 32).alpha());
 }
+
+TEST_CASE("Glow clamps blur edges on images smaller than its radius", "[effect][glow][edge]") {
+    for(QSize size:{QSize(1,1),QSize(1,5),QSize(4,3)}) for(int mode:{GLOW_MODE_OUTER,GLOW_MODE_INNER}) {
+        QImage pixels(size,QImage::Format_RGBA8888_Premultiplied);
+        pixels.fill(QColor(30,120,210,255));
+        auto frame=std::make_shared<Frame>();frame->AddImage(std::make_shared<QImage>(pixels));
+        Glow effect;effect.blur_radius=Keyframe(32);effect.mode=mode;
+        auto actual=effect.GetFrame(frame,1)->GetImage();
+        CHECK(*actual==pixels);
+    }
+}

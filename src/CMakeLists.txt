@@ -474,7 +474,8 @@ if(ENABLE_GPU_FRAME)
     add_custom_command(OUTPUT "${shader_header}"
       COMMAND "${GLSLANG_VALIDATOR}" -V -S comp --vn "openshot_${shader}_spv"
               -o "${shader_header}" "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp"
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp" VERBATIM)
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp"
+              "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/effects.glsl" VERBATIM)
     list(APPEND VULKAN_SHADER_HEADERS "${shader_header}")
   endforeach()
   add_custom_target(openshot-vulkan-shaders DEPENDS ${VULKAN_SHADER_HEADERS})

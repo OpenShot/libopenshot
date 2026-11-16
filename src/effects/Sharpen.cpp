@@ -18,6 +18,12 @@
 #include <vector>
 #include <omp.h>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 // Constructor with default keyframes
@@ -229,6 +235,26 @@ static void gauss_blur(const QImage& src, QImage& dst, double sigma)
 std::shared_ptr<Frame> Sharpen::GetFrame(
   std::shared_ptr<Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && (true)) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const double amt=amount.GetValue(frame_number),r=radius.GetValue(frame_number);
+                if(amt!=0 && r>0) {
+                    int boxes[3];boxes_for_gauss(std::max(0.1,r*surface->GetHeight()/720.0),boxes);
+                    frame->AddDeferredImage(SharpenVulkanImage(surface,
+                        {(boxes[0]-1)/2,(boxes[1]-1)/2,(boxes[2]-1)/2},float(amt),
+                        float(threshold.GetValue(frame_number)),mode,channel));
+                }
+                return frame;
+            }
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan sharpen CPU fallback: ")+error.what());
+        }
+    }
+#endif
   auto img = frame->GetImage();
   if (!img || img->isNull())
     return frame;
@@ -245,8 +271,15 @@ std::shared_ptr<Frame> Sharpen::GetFrame(
   double rpx   = radius.GetValue(frame_number);    // px
   double thrUI = threshold.GetValue(frame_number); // 0–1
 
-  if (amt == 0.0 || rpx <= 0.0)
+  const auto finish = [&]() {
+    // Common mask blending reads RGBA premultiplied bytes. Keep the legacy
+    // unmasked format, but never mix its straight ARGB bytes with a RGBA mask.
+    if (MaskReader() || !MaskSourceId().empty())
+      *img = img->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
     return frame;
+  };
+  if (amt == 0.0 || rpx <= 0.0)
+    return finish();
 
   // Sigma scaled against 720p reference
   double sigma = std::max(0.1, rpx * H / 720.0);
@@ -362,7 +395,7 @@ std::shared_ptr<Frame> Sharpen::GetFrame(
     }
   }
 
-  return frame;
+  return finish();
 }
 
 // JSON serialization
