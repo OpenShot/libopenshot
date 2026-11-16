@@ -109,6 +109,10 @@ namespace openshot {
 			LegacyClipTransform
 		};
 
+        QSize source_raster_size; ///< Reader dimensions before clip effects/transforms
+        double waveform_detail = 1.0; ///< Extra raster detail, held during live transforms
+        std::shared_ptr<QImage> waveform_raster; ///< Last paused waveform, reused while dragging
+        int64_t waveform_frame = 0;
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		int waveform_mode; ///< Audio visualization mode used when waveform is enabled
 		ReaderOrientationMode reader_orientation_mode; ///< Internal project compatibility mode
