@@ -10,6 +10,7 @@
 #include <QColor>
 #include <QTransform>
 #include <QRectF>
+#include <QPainterPath>
 namespace openshot {
 namespace color { struct SourceColor; }
 /// Scale a decoded YUV surface to RGBA using its color description: YUV
@@ -70,6 +71,15 @@ std::shared_ptr<const FrameImage> ObjectMaskVulkanSurface(std::shared_ptr<const 
 /// Decode compact analysis RLE, scale its alpha and paint fill/elliptical stroke entirely on the GPU.
 std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const FrameImage> source,int mask_width,int mask_height,
     const std::vector<uint32_t>& rle,const QColor& fill,const QColor& stroke,const std::vector<int>& ellipse_rows);
+/// OpenCV-compatible 1/32-pixel rotation/translation and zoom, with opaque black borders.
+std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<std::vector<int32_t>>& axes);
+/// All spherical/fisheye models, straight-alpha CPU-compatible sampling and automatic mipmaps.
+std::shared_ptr<const FrameImage> SphericalVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
+/// Rasterize vector annotations from geometry, preserving the video surface on the device.
+std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color);
+/// Tint and paint a cached Qt glyph coverage asset without resampling.
+std::shared_ptr<const FrameImage> PaintVulkanGlyph(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> atlas,
+    const QRect& tile,const QPoint& origin,const QColor& color);
 /// Three separable box blurs and an entirely GPU-resident adaptive threshold.
 std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<int,3>& radii,float amount,float threshold,int mode,int channel);

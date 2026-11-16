@@ -28,8 +28,44 @@
 #include <QRectF>
 #include <QString>
 #include <QStringList>
+#include <QPainterPathStroker>
+#include <mutex>
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace std;
 using namespace openshot;
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+namespace openshot {
+struct DetectionGlyphCache {
+    struct Glyph { std::shared_ptr<const FrameImage> image;int width,height,baseline_x,baseline_y; };
+    std::mutex mutex;
+    std::map<QString,Glyph> entries;
+};
+}
+static std::shared_ptr<const FrameImage> DetectionLabel(std::shared_ptr<const FrameImage> source,DetectionGlyphCache& cache,
+    const QFont& font,const QString& label,double left,double top,const QColor& color) {
+    const QString key=font.key()+":"+label;
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    auto found=cache.entries.find(key);
+    if(found==cache.entries.end()) {
+        const QRect bounds=QFontMetrics(font).boundingRect(label);
+        DetectionGlyphCache::Glyph glyph{nullptr,std::max(1,bounds.width()+6),std::max(1,bounds.height()+6),3-bounds.left(),3-bounds.top()};
+        QImage atlas(glyph.width,glyph.height*64,QImage::Format_RGBA8888_Premultiplied);atlas.fill(Qt::transparent);
+        QPainter painter(&atlas);painter.setRenderHints(QPainter::Antialiasing|QPainter::SmoothPixmapTransform);painter.setFont(font);painter.setPen(Qt::white);
+        for(int phase=0;phase<64;++phase) painter.drawText(QPointF(glyph.baseline_x+phase/64.0,phase*glyph.height+glyph.baseline_y),label);
+        painter.end();glyph.image=UploadVulkanImage(atlas);found=cache.entries.emplace(key,std::move(glyph)).first;
+    }
+    const auto& glyph=found->second;
+    const int fixed=int(left*64),phase=fixed&63;
+    return PaintVulkanGlyph(source,glyph.image,QRect(0,phase*glyph.height,glyph.width,glyph.height),
+        QPoint((fixed>>6)-glyph.baseline_x,int(top)-glyph.baseline_y),color);
+}
+#endif
 
 namespace {
 bool is_all_objects_key(const std::string& name)
@@ -125,6 +161,9 @@ ObjectDetection::ObjectDetection()
   : display_box_text(1.0)
   , display_boxes(1.0)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    gpu_glyphs=std::make_shared<DetectionGlyphCache>();
+#endif
 	// Init effect metadata
 	init_effect_details();
 
@@ -149,17 +188,29 @@ void ObjectDetection::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) {
-    // Get the frame's QImage
-    std::shared_ptr<QImage> frame_image = frame->GetImage();
-
-    // Check if frame isn't NULL
-    if(!frame_image || frame_image->isNull()) {
-        return frame;
+std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame,int64_t frame_number) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try { return RenderFrame(frame,frame_number,true); }
+        catch(const std::exception& e) { Logger::Instance()->Log(std::string("Vulkan ObjectDetection CPU fallback: ")+e.what()); }
     }
-
-    QPainter painter(frame_image.get());
-    painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+#endif
+    return RenderFrame(frame,frame_number,false);
+}
+std::shared_ptr<Frame> ObjectDetection::RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool allow_gpu) {
+    std::shared_ptr<const FrameImage> surface;int gpu_width=0,gpu_height=0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(allow_gpu) {
+        surface=frame->GetDeferredImage();
+        if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+        if(surface) { gpu_width=surface->GetWidth();gpu_height=surface->GetHeight(); }
+    }
+#endif
+    auto frame_image=surface?nullptr:frame->GetImage();
+    if(!surface && (!frame_image || frame_image->isNull())) return frame;
+    const int width=surface?gpu_width:frame_image->width(),height=surface?gpu_height:frame_image->height();
+    QPainter painter;
+    if(!surface) { painter.begin(frame_image.get());painter.setRenderHints(QPainter::Antialiasing|QPainter::SmoothPixmapTransform); }
 
     if (detectionsData.find(frame_number) != detectionsData.end()) {
         DetectionData detections = detectionsData[frame_number];
@@ -179,10 +230,10 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                 Clip* parentClip = (Clip*) trackedObject->ParentClip();
                 if (parentClip && trackedObject->Contains(frame_number) && trackedObject->visible.GetValue(frame_number) == 1) {
                     BBox trackedBox = trackedObject->GetBox(frame_number);
-                    QRectF boxRect((trackedBox.cx - trackedBox.width / 2) * frame_image->width(),
-                                   (trackedBox.cy - trackedBox.height / 2) * frame_image->height(),
-                                   trackedBox.width * frame_image->width(),
-                                   trackedBox.height * frame_image->height());
+                    QRectF boxRect((trackedBox.cx - trackedBox.width / 2) * width,
+                                   (trackedBox.cy - trackedBox.height / 2) * height,
+                                   trackedBox.width * width,
+                                   trackedBox.height * height);
 
                     // Get properties of tracked object (i.e. colors, stroke width, etc...)
                     std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
@@ -194,25 +245,39 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                     // Set the pen for the border
                     QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
                     pen.setWidthF(trackedObject->ScaledStrokeWidth(
-                        frame_number, frame_image->width(), frame_image->height()));
-                    painter.setPen(pen);
+                        frame_number, width, height));
+                    if(!surface) painter.setPen(pen);
 
                     // Set the brush for the background
                     QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
-                    painter.setBrush(brush);
+                    if(!surface) painter.setBrush(brush);
 
                     if (display_boxes.GetValue(frame_number) == 1 && trackedObject->draw_box.GetValue(frame_number) == 1) {
                         // Only draw boxes if both properties are set to YES (draw all boxes, and draw box of the selected box)
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+                        if(surface) {
+                            QPainterPath path;path.addRoundedRect(boxRect,bg_corner,bg_corner);
+                            surface=PaintVulkanPath(surface,path,brush.color());
+                            QPainterPathStroker stroker;stroker.setWidth(pen.widthF()>0?pen.widthF():1);stroker.setJoinStyle(pen.joinStyle());
+                            stroker.setCapStyle(pen.capStyle());stroker.setMiterLimit(pen.miterLimit());
+                            surface=PaintVulkanPath(surface,stroker.createStroke(path),pen.color());
+                        } else
+#endif
                         painter.drawRoundedRect(boxRect, bg_corner, bg_corner);
                     }
 
                     ObjectMaskData object_mask = trackedObject->GetMask(frame_number, 5);
                     if (object_mask.HasData() && trackedObject->draw_mask.GetValue(frame_number) == 1) {
-                        QImage mask = alpha_mask_image_from_rle(object_mask)
-                            .scaled(frame_image->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                         std::vector<int> mask_rgba = trackedObject->mask_color.GetColorRGBA(frame_number);
                         float mask_alpha = trackedObject->mask_alpha.GetValue(frame_number);
                         QColor mask_color(mask_rgba[0], mask_rgba[1], mask_rgba[2], 255 * mask_alpha);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+                        if(surface) surface=ObjectMaskVulkanImage(surface,object_mask.width,object_mask.height,object_mask.rle,mask_color,Qt::transparent,{});
+                        else
+#endif
+                        {
+                        QImage mask = alpha_mask_image_from_rle(object_mask)
+                            .scaled(frame_image->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                         QImage overlay(frame_image->size(), QImage::Format_ARGB32_Premultiplied);
                         overlay.fill(Qt::transparent);
                         QPainter overlay_painter(&overlay);
@@ -222,6 +287,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         overlay_painter.drawImage(0, 0, mask);
                         overlay_painter.end();
                         painter.drawImage(0, 0, overlay);
+                        }
                     }
 
                     if(display_box_text.GetValue(frame_number) == 1 && trackedObject->draw_text.GetValue(frame_number) == 1) {
@@ -238,7 +304,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         // Set up the painter, font, and pen
                         QFont font;
                         font.setPixelSize(14);
-                        painter.setFont(font);
+                        if(!surface) painter.setFont(font);
 
                         // Calculate the size of the text
                         QFontMetrics fontMetrics(font);
@@ -249,6 +315,10 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         double top = std::max(static_cast<int>(boxRect.top()), labelSize.height()) - 4.0;
 
                         // Draw the text
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+                        if(surface) surface=DetectionLabel(surface,*gpu_glyphs,font,label,left,top,pen.color());
+                        else
+#endif
                         painter.drawText(QPointF(left, top), label);
                     }
                 }
@@ -256,7 +326,10 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
         }
     }
 
-    painter.end();
+    if(!surface) painter.end();
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(surface) frame->AddDeferredImage(surface);
+#endif
 
     // The frame's QImage has been modified in place, so we just return the original frame
     return frame;
@@ -273,6 +346,9 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath)
         return false;
     }
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    { std::lock_guard<std::mutex> lock(gpu_glyphs->mutex);gpu_glyphs->entries.clear(); }
+#endif
     // Clear out any old state
     classNames.clear();
     classesColor.clear();
@@ -504,6 +580,64 @@ std::shared_ptr<QImage> ObjectDetection::TrackedObjectMask(std::shared_ptr<QImag
 		return {};
 	return mask_image;
 }
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+std::shared_ptr<const FrameImage> ObjectDetection::TrackedObjectMaskSurface(std::shared_ptr<const FrameImage> target_image,int64_t frame_number) const {
+	if (!target_image)
+		return {};
+
+    auto mask_image=RenderVulkanImage(target_image,nullptr,target_image->GetWidth(),target_image->GetHeight(),QTransform(),0,Qt::black);
+    const auto detections_it=detectionsData.find(frame_number);
+    if(detections_it==detectionsData.end()) return mask_image;
+	const DetectionData& detections = detections_it->second;
+	for (int i = 0; i < detections.boxes.size(); i++) {
+		if (detections.confidences.at(i) < confidence_threshold)
+			continue;
+
+		const int class_id = detections.classIds.at(i);
+		if (class_id < 0 || class_id >= classNames.size())
+			continue;
+
+		const std::string class_name = classNames[class_id];
+		if (!display_classes.empty() &&
+			std::find(display_classes.begin(), display_classes.end(), class_name) == display_classes.end()) {
+			continue;
+		}
+
+		int object_id = detections.objectIds.at(i);
+		auto tracked_object_it = trackedObjects.find(object_id);
+		if (tracked_object_it == trackedObjects.end() || !tracked_object_it->second)
+			continue;
+
+		auto tracked_object = std::static_pointer_cast<TrackedObjectBBox>(tracked_object_it->second);
+		if (!tracked_object->ExactlyContains(frame_number) ||
+			tracked_object->visible.GetValue(frame_number) != 1) {
+			continue;
+		}
+
+		BBox box = tracked_object->GetBox(frame_number);
+		if (box.width <= 0.0f || box.height <= 0.0f || box.cx < 0.0f || box.cy < 0.0f)
+			continue;
+
+		ObjectMaskData object_mask = tracked_object->GetMask(frame_number, 5);
+		if (object_mask.HasData() && tracked_object->draw_mask.GetValue(frame_number) == 1) {
+            auto mask=ObjectMaskVulkanSurface(target_image,object_mask.width,object_mask.height,object_mask.rle);
+            mask_image=RenderVulkanImage(mask,mask_image,target_image->GetWidth(),target_image->GetHeight(),QTransform(),1);
+			continue;
+		}
+
+		const double x = (box.cx - box.width / 2.0) * target_image->GetWidth();
+		const double y = (box.cy - box.height / 2.0) * target_image->GetHeight();
+		const double w = box.width * target_image->GetWidth();
+		const double h = box.height * target_image->GetHeight();
+		const double corner = tracked_object->background_corner.GetValue(frame_number);
+        QPainterPath path;path.addRoundedRect(QRectF(x,y,w,h),corner,corner);mask_image=PaintVulkanPath(mask_image,path,Qt::white);
+	}
+
+	return mask_image;
+}
+
+#endif
 
 // Generate JSON string of this object
 std::string ObjectDetection::Json() const {

@@ -31,6 +31,12 @@
 #include <opencv2/imgproc.hpp>
 #endif
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace std;
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
@@ -72,6 +78,36 @@ void Stabilizer::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const auto transform=transformationData.find(frame_number);
+                if(transform==transformationData.end()) {
+                    frame->AddDeferredImage(StabilizeVulkanImage(surface,{}));return frame;
+                }
+                const auto& t=transform->second;
+                const int w=surface->GetWidth(),h=surface->GetHeight();
+                const cv::Mat rotation=(cv::Mat_<double>(2,3)<<cos(t.da),-sin(t.da),t.dx*w,sin(t.da),cos(t.da),t.dy*h);
+                const float scale=zoom.GetValue(frame_number);
+                const auto zoom_matrix=cv::getRotationMatrix2D(cv::Point2f(w/2,h/2),0,scale);
+                // OpenCV quantizes each axis independently before the 1/32-pixel interpolation.
+                std::vector<std::vector<int32_t>> axes;
+                for(const auto& forward:{rotation,zoom_matrix}) {
+                    cv::Mat inverse;cv::invertAffineTransform(forward,inverse);
+                    const double* m=inverse.ptr<double>();std::vector<int32_t> table(2*(w+h));
+                    for(int x=0;x<w;++x) { table[2*x]=cv::saturate_cast<int>(m[0]*x*1024);table[2*x+1]=cv::saturate_cast<int>(m[3]*x*1024); }
+                    for(int y=0;y<h;++y) { table[2*(w+y)]=cv::saturate_cast<int>((m[1]*y+m[2])*1024)+16;table[2*(w+y)+1]=cv::saturate_cast<int>((m[4]*y+m[5])*1024)+16; }
+                    axes.push_back(std::move(table));
+                }
+                frame->AddDeferredImage(StabilizeVulkanImage(surface,axes));return frame;
+            }
+        } catch(const std::exception& e) { Logger::Instance()->Log(std::string("Vulkan Stabilizer CPU fallback: ")+e.what()); }
+    }
+#endif
 
 	// Grab OpenCV Mat image
 	cv::Mat frame_image = frame->GetImageCV();

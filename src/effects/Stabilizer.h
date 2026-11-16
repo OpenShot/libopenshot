@@ -72,6 +72,7 @@ namespace openshot
         Keyframe zoom;
 
     public:
+    bool RendersOnVulkan() const override { return true; }
         std::string teste;
         std::map <size_t,EffectCamTrajectory> trajectoryData; // Save camera trajectory data
         std::map <size_t,EffectTransformParam> transformationData; // Save transormation data

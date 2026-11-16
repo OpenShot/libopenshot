@@ -456,7 +456,133 @@ void object_mask(ivec2 pixel,int op) {
     }
     imageStore(output_img,pixel,vec4(result)/255.0);
 }
+ivec3 stabilize_at(ivec2 q) {
+    if(any(lessThan(q,ivec2(0))) || any(greaterThanEqual(q,p.sizes.zw))) return ivec3(0);
+    return bytes_at(q).rgb;
+}
+void stabilize(ivec2 pixel) {
+    if(p.effect.x==0.0) { imageStore(output_img,pixel,vec4(vec3(bytes_at(pixel).rgb)/255.0,1));return; }
+    int x=(int(data[2*pixel.x])+int(data[2*(p.sizes.z+pixel.y)]))>>5;
+    int y=(int(data[2*pixel.x+1])+int(data[2*(p.sizes.z+pixel.y)+1]))>>5;
+    ivec2 q=clamp(ivec2(x>>5,y>>5),ivec2(-32768),ivec2(32767));int fx=x&31,fy=y&31;
+    ivec3 c=stabilize_at(q)*((32-fx)*(32-fy))+stabilize_at(q+ivec2(1,0))*(fx*(32-fy))+
+        stabilize_at(q+ivec2(0,1))*((32-fx)*fy)+stabilize_at(q+ivec2(1,1))*(fx*fy);
+    imageStore(output_img,pixel,vec4(vec3((c+512)>>10)/255.0,1));
+}
+vec2 spherical_uv(ivec2 pixel) {
+    int model=int(value(15)),projection=int(value(16));precise vec3 ray;
+    if(projection<=1) {
+        precise float x=(2.0*(float(pixel.x)+.5)/float(p.sizes.z)-1.0)*value(11);
+        precise float y=-(2.0*(float(pixel.y)+.5)/float(p.sizes.w)-1.0)*value(12);
+        ray=vec3(value(9)*x+value(10)*y,-value(10)*x+value(9)*y,-1);
+        ray/=sqrt(ray.x*ray.x+ray.y*ray.y+1.0);
+    } else {
+        float radius=.5*float(min(p.sizes.z,p.sizes.w));
+        precise float x=(float(pixel.x)+.5-float(p.sizes.z)*.5)/radius,y=-(float(pixel.y)+.5-float(p.sizes.w)*.5)/radius;
+        precise vec2 q=vec2(value(9)*x+value(10)*y,-value(10)*x+value(9)*y);
+        float r=length(q),tmax=value(14)*.5;if(r>1.0) return vec2(-1);
+        float theta=projection==3?2.0*asin(clamp(r*sin(tmax*.5),-1.0,1.0)):
+            projection==4?2.0*atan(r*tan(tmax*.5)):projection==5?asin(clamp(r*sin(tmax),-1.0,1.0)):r*tmax;
+        float phi=r>0.0?atan(q.y,q.x):0.0;
+        ray=vec3(sin(theta)*cos(phi),sin(theta)*sin(phi),-cos(theta));
+    }
+    precise vec3 world=vec3(value(0)*ray.x+value(1)*ray.y+value(2)*ray.z,
+        value(3)*ray.x+value(4)*ray.y+value(5)*ray.z,value(6)*ray.x+value(7)*ray.y+value(8)*ray.z);
+    const float pi=3.141592653589793;
+    if(model==0) {
+        float lon=atan(world.x,-world.z),lat=atan(world.y,length(world.xz));
+        if(projection==1) lon=clamp(lon,-pi*.5,pi*.5);
+        return vec2((lon+(projection==1?pi*.5:pi))/(projection==1?pi:2.0*pi)*float(p.sizes.z),(pi*.5-lat)/pi*float(p.sizes.w));
+    }
+    float theta=atan(length(world.xy),world.z*(value(17)>0.0?1.0:-1.0)),tmax=max(.000001,value(13)*.5);
+    float r=model==2?sin(theta*.5)/max(1e-12,sin(tmax*.5)):model==3?tan(theta*.5)/max(1e-12,tan(tmax*.5)):
+        model==4?sin(theta)/max(1e-12,sin(tmax)):theta/tmax;
+    float phi=length(world.xy)>0.0?atan(world.y,world.x):0.0;
+    float radius=.5*float(min(p.sizes.z,p.sizes.w))*r;
+    return vec2(float(p.sizes.z)*.5+radius*cos(phi),float(p.sizes.w)*.5-radius*sin(phi));
+}
+ivec4 spherical_at(ivec2 q,int level) {
+    if(level<0) return straight_bytes(bytes_at(clamp(q,ivec2(0),p.sizes.zw-1)));
+    ivec2 size=ivec2(data[33+3*level],data[34+3*level]);q=clamp(q,ivec2(0),size-1);
+    return unpack_bytes(data[int(data[35+3*level])+q.y*size.x+q.x]);
+}
+vec4 spherical_cubic(vec4 a,vec4 b,vec4 c,vec4 d,float t) {
+    precise vec4 a0=-.5*a+1.5*b-1.5*c+.5*d,a1=a-2.5*b+2.0*c-.5*d,a2=-.5*a+.5*c;
+    precise vec4 v=((a0*t+a1)*t+a2)*t+b;return v;
+}
+void spherical(ivec2 pixel,int op) {
+    int index=pos_index(pixel),n=p.sizes.z*p.sizes.w;
+    if(op==53) { vec2 uv=spherical_uv(pixel);data[WORK+2*index]=floatBitsToUint(uv.x);data[WORK+2*index+1]=floatBitsToUint(uv.y);return; }
+    if(op==55) {
+        int level=int(p.effect.x),w=int(data[33+3*level]),h=int(data[34+3*level]),base=int(data[35+3*level]);
+        if(pixel.x>=w || pixel.y>=h) return;
+        ivec4 c=level==0?straight_bytes(bytes_at(pixel)):(spherical_at(pixel*2,level-1)+spherical_at(pixel*2+ivec2(1,0),level-1)+
+            spherical_at(pixel*2+ivec2(0,1),level-1)+spherical_at(pixel*2+ivec2(1,1),level-1))/4;
+        data[base+pixel.y*w+pixel.x]=pack_bytes(c);return;
+    }
+    precise vec2 uv=vec2(uintBitsToFloat(data[WORK+2*index]),uintBitsToFloat(data[WORK+2*index+1]));
+    int projection=int(value(16)),model=int(value(15)),quality=int(value(18));
+    if(model==0 && projection==0) { if(uv.x<0.0) uv.x+=float(p.sizes.z);if(uv.x>=float(p.sizes.z)) uv.x-=float(p.sizes.z);uv.y=clamp(uv.y,0.0,float(p.sizes.w-1)); }
+    else if(model==0 && projection==1) uv=clamp(uv,vec2(0),vec2(p.sizes.zw-1));
+    else if(any(lessThan(uv,vec2(0))) || any(greaterThanEqual(uv,vec2(p.sizes.zw)))) { imageStore(output_img,pixel,vec4(0));return; }
+    int level=-1;
+    if(quality==3) {
+        vec2 dx=vec2(0),dy=vec2(0);
+        if(pixel.x+1<p.sizes.z) dx=vec2(uintBitsToFloat(data[WORK+2*index+2]),uintBitsToFloat(data[WORK+2*index+3]))-uv;
+        if(pixel.y+1<p.sizes.w) dy=vec2(uintBitsToFloat(data[WORK+2*(index+p.sizes.z)]),uintBitsToFloat(data[WORK+2*(index+p.sizes.z)+1]))-uv;
+        float scale=max(length(dx),length(dy));level=scale>1.0?min(int(floor(log2(scale))),int(data[32])-1):0;
+        uv/=float(1<<level);
+    }
+    ivec2 size=level<0?p.sizes.zw:ivec2(data[33+3*level],data[34+3*level]),q=clamp(ivec2(floor(uv)),ivec2(0),size-1);
+    precise vec2 f=uv-vec2(q);precise vec4 c;
+    if(quality==0) c=vec4(spherical_at(q,level));
+    else if(quality==2) {
+        vec4 rows[4];
+        for(int y=-1;y<=2;++y) rows[y+1]=spherical_cubic(vec4(spherical_at(q+ivec2(-1,y),level)),vec4(spherical_at(q+ivec2(0,y),level)),
+            vec4(spherical_at(q+ivec2(1,y),level)),vec4(spherical_at(q+ivec2(2,y),level)),f.x);
+        c=spherical_cubic(rows[0],rows[1],rows[2],rows[3],f.y);
+    } else {
+        precise vec4 top=vec4(spherical_at(q,level))*(1.0-f.x)+vec4(spherical_at(q+ivec2(1,0),level))*f.x;
+        precise vec4 bottom=vec4(spherical_at(q+ivec2(0,1),level))*(1.0-f.x)+vec4(spherical_at(q+ivec2(1,1),level))*f.x;
+        c=top*(1.0-f.y)+bottom*f.y;
+    }
+    ivec4 result=ivec4(floor(clamp(c,0.0,255.0)+.5));result.rgb=premultiply_bytes(result.rgb,result.a);
+    imageStore(output_img,pixel,vec4(result)/255.0);
+}
+float paint_primitive(float x) { return x<=0.0?0.0:x>=1.0?x-.5:.5*x*x; }
+void paint_path(ivec2 pixel) {
+    ivec4 original=bytes_at(pixel);
+    if(float(pixel.x+1)<p.clear.x || float(pixel.y+1)<p.clear.y || float(pixel.x)>p.clear.z || float(pixel.y)>p.clear.w) {
+        imageStore(output_img,pixel,vec4(original)/255.0);return;
+    }
+    precise float area=0.0;
+    for(int edge=0;edge<int(p.matrix_x.w);++edge) {
+        int base=4*edge;vec2 a=vec2(value(base),value(base+1)),b=vec2(value(base+2),value(base+3));
+        if(a.y==b.y) continue;float sign_value=a.y<b.y?1.0:-1.0;
+        if(a.y>b.y) { vec2 swap_value=a;a=b;b=swap_value; }
+        float ya=max(a.y,float(pixel.y)),yb=min(b.y,float(pixel.y+1));if(yb<=ya) continue;
+        precise float slope=(b.x-a.x)/(b.y-a.y),xa=a.x+(ya-a.y)*slope-float(pixel.x),xb=a.x+(yb-a.y)*slope-float(pixel.x);
+        precise float integral=abs(xb-xa)<1e-6?clamp(xa,0.0,1.0):(paint_primitive(xb)-paint_primitive(xa))/(xb-xa);
+        area+=sign_value*(yb-ya)*integral;
+    }
+    float coverage=abs(area);
+    if(fract(p.matrix_x.w)>0.0) { coverage=mod(coverage,2.0);if(coverage>1.0) coverage=2.0-coverage; }
+    int alpha=clamp(int(floor(coverage*256.0+1e-4)),0,255);
+    ivec4 color=ivec4(p.effect);color.rgb=premultiply_bytes(color.rgb,color.a);
+    imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,alpha),original))/255.0);
+}
+void paint_glyph(ivec2 pixel) {
+    ivec2 q=pixel-ivec2(p.effect.xy);ivec4 original=bytes_at(pixel);
+    if(any(lessThan(q,ivec2(0))) || any(greaterThanEqual(q,ivec2(p.effect.zw)))) { imageStore(output_img,pixel,vec4(original)/255.0);return; }
+    int alpha=int(round(texelFetch(background_tex,q+ivec2(0,int(p.matrix_x.w)),0).a*255.0));
+    ivec4 color=ivec4(p.clear);color.rgb=premultiply_bytes(color.rgb,color.a);
+    imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,alpha),original))/255.0);
+}
 void spatial_effect(ivec2 pixel) {
+    if(p.modes.w==57) { paint_path(pixel);return; }
+    if(p.modes.w==59) { paint_glyph(pixel);return; }
+    if(p.modes.w>=53 && p.modes.w<=55) { spherical(pixel,p.modes.w);return; }
+    if(p.modes.w==56) { stabilize(pixel);return; }
     if(p.modes.w==52) { float alpha=texelFetch(plane_y,pixel,0).a;imageStore(output_img,pixel,vec4(vec3(alpha),1));return; }
     if(p.modes.w>=49 && p.modes.w<=51) { object_mask(pixel,p.modes.w);return; }
     if(p.modes.w==48) { lens_flare(pixel);return; }

@@ -26,6 +26,7 @@
 
 namespace openshot {
 	class TrackedObjectBBox;
+    struct DetectionGlyphCache;
 }
 
 // Struct that stores the detected bounding boxes for all the clip frames
@@ -65,6 +66,8 @@ namespace openshot
     class ObjectDetection : public EffectBase
     {
     private:
+        std::shared_ptr<DetectionGlyphCache> gpu_glyphs;
+        std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool allow_gpu);
         std::string protobuf_data_path;
         std::map<size_t, DetectionData> detectionsData;
         std::vector<std::string> classNames;
@@ -90,6 +93,7 @@ namespace openshot
         void init_effect_details();
 
     public:
+    bool RendersOnVulkan() const override { return true; }
         /// Index of the Tracked Object that was selected to modify it's properties
         int selectedObjectIndex;
 
@@ -118,6 +122,9 @@ namespace openshot
         /// Generate a black/white mask from visible detected bounding boxes.
         std::shared_ptr<QImage> TrackedObjectMask(std::shared_ptr<QImage> target_image, int64_t frame_number) const override;
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        std::shared_ptr<const FrameImage> TrackedObjectMaskSurface(std::shared_ptr<const FrameImage> target,int64_t frame_number) const override;
+#endif
         // Get and Set JSON methods
         std::string Json() const override; ///< Generate JSON string of this object
         void SetJson(const std::string value) override; ///< Load JSON string into this object

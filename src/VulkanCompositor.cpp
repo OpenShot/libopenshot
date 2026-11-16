@@ -161,7 +161,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     return work;
 }
 struct EffectParameters {
-    int mode; // 1-13: affine/point effects; 14-52: spatial passes (effects.glsl)
+    int mode; // 1-13: affine/point effects; 14-59: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -380,7 +380,7 @@ public:
         const AVFrame* back=background?background->GetFrame():nullptr;
         if(back){
             const auto* bc=reinterpret_cast<const AVHWFramesContext*>(back->hw_frames_ctx->data);
-            if(bc->device_ctx!=device_context || bc->sw_format!=AV_PIX_FMT_RGBA || (effect && effect->mode==16?false:back->width!=width || back->height!=height))
+            if(bc->device_ctx!=device_context || bc->sw_format!=AV_PIX_FMT_RGBA || (effect && (effect->mode==16 || effect->mode==59)?false:back->width!=width || back->height!=height))
                 throw std::runtime_error("Vulkan background must be matching RGBA surface");
         }
         const AVFrame* mask=effect && effect->mask?effect->mask->GetFrame():nullptr;
@@ -926,12 +926,42 @@ std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const Fr
     return SpatialPass(source,work,51,{float(fill.red()),float(fill.green()),float(fill.blue()),float(fill.alpha()),
         float(stroke.red()),float(stroke.green()),float(stroke.blue()),float(stroke.alpha())},mask);
 }
-std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
-    const std::array<int,3>& radii,float amount,float threshold,int mode,int channel) {
+std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<std::vector<int32_t>>& axes) {
     source=PremultipliedRGBA(source);
-    const int n=source->GetWidth()*source->GetHeight(),a=kEffectWorkWords,b=a+n,c=b+n;
-    // Match Qt's format conversion, including its platform-specific integer
-    // unpremultiplication. This immutable 64 KiB table contains no frame data.
+    if(axes.empty()) return SpatialPass(source,nullptr,56);
+    for(const auto& table:axes) {
+        EffectParameters effect{56,{1},table.data(),table.size()*sizeof(int32_t)};
+        source=RenderPixelEffect(source,effect);
+    }
+    return source;
+}
+std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color) {
+    if(path.isEmpty() || color.alpha()==0) return source;
+    // QPainter's outline mapper uses the same public Bezier flattening routine,
+    // with a 0.25px threshold, followed by 26.6 outline rounding. Public
+    // toSubpathPolygons defaults to 0.5px, so scale by two and divide back.
+    std::vector<float> edges;
+    for(const auto& polygon:path.toSubpathPolygons(QTransform::fromScale(2,2))) {
+        for(int i=0;i<polygon.size();++i) {
+            const auto& a=polygon[i];const auto& b=polygon[(i+1)%polygon.size()];
+            edges.insert(edges.end(),{qRound(a.x()*32)/64.0f,qRound(a.y()*32)/64.0f,qRound(b.x()*32)/64.0f,qRound(b.y()*32)/64.0f});
+        }
+    }
+    const auto bounds=path.boundingRect().adjusted(-1,-1,1,1);
+    EffectParameters effect{57,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),
+        float(bounds.left()),float(bounds.top()),float(bounds.right()),float(bounds.bottom()),0},edges.data(),edges.size()*sizeof(float)};
+    effect.values[8]=float(edges.size()/4)+(path.fillRule()==Qt::OddEvenFill?.5f:0.0f);
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> PaintVulkanGlyph(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> atlas,
+    const QRect& tile,const QPoint& origin,const QColor& color) {
+    source=PremultipliedRGBA(source);
+    EffectParameters effect{59,{float(origin.x()),float(origin.y()),float(tile.width()),float(tile.height()),
+        float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),float(tile.y())}};
+    return RenderImage(source,atlas,source->GetWidth(),source->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
+}
+// Shared Qt unpremultiplication lookup, including its platform-specific rounding.
+static const std::vector<uint32_t>& StraightByteConversion() {
     static const auto conversion=[] {
         std::vector<uint32_t> table(kEffectWorkWords);
         QImage image(256,256,QImage::Format_RGBA8888_Premultiplied);
@@ -946,7 +976,30 @@ std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const Frame
         }
         return table;
     }();
-    auto work=NewEffectWork(source,size_t(n)*3+kEffectWorkWords,conversion);
+    return conversion;
+}
+std::shared_ptr<const FrameImage> SphericalVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters) {
+    source=PremultipliedRGBA(source);
+    const int w=source->GetWidth(),h=source->GetHeight(),n=w*h;
+    auto words=StraightByteConversion();std::memcpy(words.data(),parameters.data(),parameters.size()*sizeof(float));
+    int sizes[4][3]={{w,h,kEffectWorkWords+2*n}};int levels=1,total=sizes[0][2]+(int(parameters[18])==3?n:0);
+    if(int(parameters[18])==3) while(levels<4 && sizes[levels-1][0]>1 && sizes[levels-1][1]>1) {
+        sizes[levels][0]=sizes[levels-1][0]/2;sizes[levels][1]=sizes[levels-1][1]/2;sizes[levels][2]=total;
+        total+=sizes[levels][0]*sizes[levels][1];++levels;
+    }
+    words[32]=levels;for(int l=0;l<levels;++l) for(int i=0;i<3;++i) words[33+3*l+i]=sizes[l][i];
+    auto work=NewEffectWork(source,total,words);
+    SpatialPass(source,work,53);
+    if(int(parameters[18])==3) for(int l=0;l<levels;++l) SpatialPass(source,work,55,{float(l)});
+    return SpatialPass(source,work,54);
+}
+std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& radii,float amount,float threshold,int mode,int channel) {
+    source=PremultipliedRGBA(source);
+    const int n=source->GetWidth()*source->GetHeight(),a=kEffectWorkWords,b=a+n,c=b+n;
+    // Match Qt's format conversion, including its platform-specific integer
+    // unpremultiplication. This immutable 64 KiB table contains no frame data.
+    auto work=NewEffectWork(source,size_t(n)*3+kEffectWorkWords,StraightByteConversion());
     SpatialPass(source,work,17);
     int src=a;
     for(int radius:radii) {

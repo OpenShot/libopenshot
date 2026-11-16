@@ -17,6 +17,9 @@
 #include "FFmpegReader.h"
 #include "FFmpegWriter.h"
 #include <QTemporaryDir>
+#include <QGuiApplication>
+#include <QPainter>
+#include <QPainterPathStroker>
 #include <algorithm>
 #include <numeric>
 #include "Clip.h"
@@ -44,6 +47,11 @@
 #include "effects/Deinterlace.h"
 #include "effects/FilmGrain.h"
 #include "effects/LensFlare.h"
+#include "effects/SphericalProjection.h"
+#ifdef USE_OPENCV
+#include "effects/Stabilizer.h"
+#include "effects/ObjectDetection.h"
+#endif
 #ifdef USE_OPENCV
 #include "effects/ObjectMask.h"
 #endif
@@ -2317,6 +2325,209 @@ TEST_CASE("Vulkan flare segmentation and linked grading stay resident in a timel
             }
             INFO("frame="<<n+1<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));
             CHECK(error<=3);CHECK(sum/(actual.width()*actual.height()*4)<=.1);
+        }
+        timeline.Close();
+    }
+    CHECK(source->Materialize()==pixels);
+}
+#endif
+
+TEST_CASE("Vulkan spherical projection matches every model and sampler", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    const auto pixels=PointEffectPixels(37,23);const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::SphericalProjection effect;effect.yaw=openshot::Keyframe(23.7);effect.pitch=openshot::Keyframe(-14.1);effect.roll=openshot::Keyframe(7.4);
+    effect.fov=openshot::Keyframe(113.7);effect.in_fov=openshot::Keyframe(213.2);
+    for(int model=0;model<=4;++model) for(int projection=0;projection<=5;++projection) for(int invert:{0,1}) for(int sampler=0;sampler<=3;++sampler) {
+        effect.input_model=model;effect.projection_mode=projection;effect.invert=invert;effect.interpolation=sampler;
+        INFO("model="<<model<<" projection="<<projection<<" invert="<<invert<<" sampler="<<sampler);
+        CheckVulkanEffect(effect,pixels,source,3,2,true);
+    }
+}
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan stabilizer matches OpenCV fixed point warps", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    openshot::Stabilizer effect;
+    effect.transformationData[1]=EffectTransformParam(.023,-.071,.127);
+    effect.transformationData[2]=EffectTransformParam(-.21,.043,-.39);
+    effect.transformationData[3]=EffectTransformParam(0,0,0);
+    for(const QSize size:{QSize(1,1),QSize(3,5),QSize(37,23),QSize(257,129)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        for(double zoom:{.7,1.,1.3,2.1}) {
+            Json::Value values;values["zoom"]=openshot::Keyframe(zoom).JsonValue();effect.SetJsonValue(values);
+            for(int n:{1,2,3,19}) { INFO("size="<<size.width()<<" zoom="<<zoom<<" frame="<<n);CheckVulkanEffect(effect,pixels,source,n,1,true); }
+        }
+    }
+}
+#endif
+#ifdef USE_OPENCV
+namespace {
+void DetectionTestApp() {
+    static int argc=1;static char name[]="vulkan-effects";static char* argv[]={name,nullptr};
+    static std::unique_ptr<QGuiApplication> app;
+    if(!QGuiApplication::instance()) app=std::make_unique<QGuiApplication>(argc,argv);
+}
+void WriteDetectionData(const QString& path) {
+    auto varint=[](std::string& out,uint64_t v){while(v>=128){out.push_back(char((v&127)|128));v>>=7;}out.push_back(char(v));};
+    auto message=[&](std::string& out,int tag,const std::string& value){varint(out,tag);varint(out,value.size());out+=value;};
+    auto real=[&](std::string& out,int tag,float value){varint(out,tag);uint32_t bits;std::memcpy(&bits,&value,4);for(int b=0;b<4;++b)out.push_back(char(bits>>(8*b)));};
+    std::string data;message(data,26,"person");message(data,26,"car");
+    for(int n=1;n<=9;++n) {
+        std::string frame;varint(frame,8);varint(frame,n);
+        for(int object=0;object<2;++object) {
+            std::string box,mask;real(box,13,.13f+.005f*n+object*.16f);real(box,21,.21f+.007f*n+object*.1f);
+            real(box,29,.3f+.003f*n);real(box,37,.37f);real(box,53,object?.4f:.95f);
+            varint(box,40);varint(box,object);varint(box,56);varint(box,100+object);
+            varint(mask,8);varint(mask,7);varint(mask,16);varint(mask,5);
+            for(int count:{0,8,4,6,1,8,8}) {varint(mask,24);varint(mask,count);}message(box,66,mask);message(frame,18,box);
+        }
+        message(data,10,frame);
+    }
+    QFile file(path);REQUIRE(file.open(QIODevice::WriteOnly));REQUIRE(file.write(data.data(),data.size())==qint64(data.size()));file.close();
+}
+}
+TEST_CASE("Vulkan detection boxes and segmentation match Qt", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detections.pb");WriteDetectionData(path);
+    openshot::Clip parent;openshot::ObjectDetection effect;parent.AddEffect(&effect);REQUIRE(effect.LoadObjDetectdData(path.toStdString()));
+    for(const QSize size:{QSize(37,23),QSize(257,129)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        for(int mode=0;mode<4;++mode) {
+            Json::Value settings;settings["display_box_text"]=openshot::Keyframe(mode==3?1:0).JsonValue();effect.SetJsonValue(settings);
+            for(auto& item:effect.trackedObjects) {
+                auto tracked=std::static_pointer_cast<openshot::TrackedObjectBBox>(item.second);
+                tracked->background_corner=openshot::Keyframe(mode==1?5:0);
+                tracked->draw_mask=openshot::Keyframe(mode==2?1:0);
+                tracked->draw_box=openshot::Keyframe(mode==2 || mode==3?0:1);
+            }
+            for(int n:{1,3,9}) { INFO("size="<<size.width()<<" mode="<<mode<<" frame="<<n);CheckVulkanEffect(effect,pixels,source,n,3,!(mode==3 && n==1 && size.width()==37)); }
+        }
+    }
+}
+#endif
+TEST_CASE("Vulkan vector annotation coverage follows Qt paths", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    QImage pixels(97,73,QImage::Format_RGBA8888_Premultiplied);pixels.fill(Qt::transparent);const auto source=openshot::UploadVulkanImage(pixels);
+    for(int mode=0;mode<2;++mode) {
+        QPainterPath path;path.addRoundedRect(QRectF(12.31,17.43,54.27,36.29),5,5);
+        if(mode) { QPainterPathStroker stroker;stroker.setWidth(2);path=stroker.createStroke(path); }
+        const QColor color(83,160,237,255);QImage expected=pixels.copy();
+        QPainter painter(&expected);painter.setRenderHints(QPainter::Antialiasing|QPainter::SmoothPixmapTransform);painter.fillPath(path,color);painter.end();
+        auto actual=openshot::PaintVulkanPath(source,path,color)->Materialize();
+        int error=0,ex=0,ey=0,channel=0;
+        for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) {
+            int d=std::abs(int(actual.constScanLine(y)[x])-int(expected.constScanLine(y)[x]));if(d>error){error=d;ex=x/4;ey=y;channel=x%4;}
+        }
+        INFO("mode="<<mode<<" error="<<error<<" location="<<ex<<","<<ey<<" channel="<<channel<<" CPU="<<int(expected.constScanLine(ey)[4*ex+channel])<<" GPU="<<int(actual.constScanLine(ey)[4*ex+channel]));
+        CHECK(error<=2);
+    }
+}
+TEST_CASE("Vulkan spherical auto quality covers mipmaps and camera poles", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    for(const QSize size:{QSize(1,1),QSize(3,5),QSize(129,73)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
+        openshot::SphericalProjection effect;
+        effect.yaw=openshot::Keyframe(19.7);effect.roll=openshot::Keyframe(12.3);
+        effect.fov=openshot::Keyframe(160);effect.in_fov=openshot::Keyframe(70);
+        for(int model=0;model<=4;++model) for(int projection:{0,1,2,4,5}) {
+            effect.input_model=model;effect.projection_mode=projection;
+            for(double pitch:{-90.,0.,90.}) {
+                effect.pitch=openshot::Keyframe(pitch);
+                INFO("size="<<size.width()<<" model="<<model<<" projection="<<projection<<" pitch="<<pitch);
+                CheckVulkanEffect(effect,pixels,source,1,2,true);
+            }
+        }
+    }
+}
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan detection linked masks honor filtering and visibility", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detections.pb");WriteDetectionData(path);
+    openshot::Clip parent;openshot::ObjectDetection provider;provider.Id("detection-provider");parent.AddEffect(&provider);
+    REQUIRE(provider.LoadObjDetectdData(path.toStdString()));
+    openshot::Brightness effect(openshot::Keyframe(.3),openshot::Keyframe(2));effect.MaskSourceId(provider.Id());parent.AddEffect(&effect);
+    const auto pixels=PointEffectPixels(129,73);const auto source=openshot::UploadVulkanImage(pixels);
+    for(int mode=0;mode<4;++mode) {
+        Json::Value settings;settings["class_filter"]=mode==1?"person":"";settings["confidence_threshold"]=mode==2?.9:.25;
+        provider.SetJsonValue(settings);
+        for(auto& item:provider.trackedObjects) {
+            auto object=std::static_pointer_cast<openshot::TrackedObjectBBox>(item.second);
+            object->draw_mask=openshot::Keyframe(mode==3?1:0);object->background_corner=openshot::Keyframe(5);
+        }
+        for(bool invert:{false,true}) {
+            effect.mask_invert=invert;
+            for(int n:{1,3,9,19}) { INFO("mode="<<mode<<" invert="<<invert<<" frame="<<n);CheckVulkanEffect(effect,pixels,source,n,2,true); }
+        }
+    }
+}
+#endif
+
+TEST_CASE("Vulkan projection and stabilization preserve 4K sampling", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    // Smooth color detail still spans alpha extremes while tolerating subpixel
+    // differences in the CPU double and GPU float camera calculations.
+    QImage pixels(3840,2160,QImage::Format_RGBA8888_Premultiplied);
+    for(int y=0;y<pixels.height();++y) for(int x=0;x<pixels.width();++x)
+        pixels.setPixelColor(x,y,QColor((x/19+y/17)%256,(x/23+y/31)%256,(x/37+y/11)%256,255));
+    const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::SphericalProjection sphere;sphere.yaw=openshot::Keyframe(21.7);sphere.pitch=openshot::Keyframe(-23.1);sphere.roll=openshot::Keyframe(7.3);
+    CheckVulkanEffect(sphere,pixels,source,1,2,true);
+#ifdef USE_OPENCV
+    openshot::Stabilizer stabilizer;stabilizer.transformationData[1]=EffectTransformParam(.034,-.021,.043);
+    CheckVulkanEffect(stabilizer,pixels,source,1,1,true);
+    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
+    openshot::Clip parent;openshot::ObjectDetection detector;parent.AddEffect(&detector);REQUIRE(detector.LoadObjDetectdData(path.toStdString()));
+    // Warm the glyph assets. Subsequent moving labels, boxes and masks upload no images.
+    CheckVulkanEffect(detector,pixels,source,1,3);
+    CheckVulkanEffect(detector,pixels,source,3,3,true);
+#endif
+    CHECK(source->Materialize()==pixels);
+}
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan projection stabilization and detection preserve shared masks", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
+    auto mask_path=directory.filePath("mask.png");REQUIRE(PointEffectPixels(23,17).save(mask_path));
+    const auto pixels=PointEffectPixels(129,73);const auto source=openshot::UploadVulkanImage(pixels);
+    openshot::SphericalProjection sphere;sphere.yaw.AddPoint(1,-17,openshot::LINEAR);sphere.yaw.AddPoint(9,23,openshot::LINEAR);
+    openshot::Stabilizer stabilize;for(int n=1;n<=9;++n) stabilize.transformationData[n]=EffectTransformParam(.003*n,-.002*n,.007*n);
+    openshot::ObjectDetection detect;openshot::Clip parent;parent.AddEffect(&detect);REQUIRE(detect.LoadObjDetectdData(path.toStdString()));
+    for(auto* effect:std::vector<openshot::EffectBase*>{&sphere,&stabilize,&detect}) {
+        effect->MaskReader(new openshot::QtImageReader(mask_path.toStdString()));
+        for(bool invert:{false,true}) {
+            effect->mask_invert=invert;INFO(effect->info.class_name<<" invert="<<invert);
+            for(int n:{1,3,9}) CheckVulkanEffect(*effect,pixels,source,n,3);
+            auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            for(int n:{2,4,8}) {
+                auto frame=std::make_shared<openshot::Frame>(n,129,73,"transparent");frame->AddDeferredImage(source);
+                { openshot::gpu_metrics::Scope scope(false);effect->ProcessFrame(frame,n); }REQUIRE(frame->GetDeferredImage());
+            }
+            auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+        }
+    }
+}
+TEST_CASE("Vulkan animated projection detection chain remains copy free", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable()) return;
+    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
+    const auto pixels=PointEffectPixels(128,96);const auto source=openshot::UploadVulkanImage(pixels);std::vector<QImage> expected;
+    for(bool gpu:{false,true}) {
+        struct Restore { std::string backend,device;~Restore(){openshot::ConfigureGpuEnvironment(backend,device);} }
+        restore{std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"",std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):""};
+        openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",restore.device);
+        PatternReader reader(source,gpu);openshot::Clip clip(&reader);
+        openshot::SphericalProjection sphere;sphere.yaw.AddPoint(1,-12.3,openshot::LINEAR);sphere.yaw.AddPoint(8,21.7,openshot::LINEAR);
+        openshot::Stabilizer stabilize;for(int n=1;n<=9;++n) stabilize.transformationData[n]=EffectTransformParam(.001*n,-.002*n,.003*n);
+        openshot::ObjectDetection detect;detect.Id("chain-detections");
+        openshot::Brightness brightness(openshot::Keyframe(.12),openshot::Keyframe(2));brightness.MaskSourceId(detect.Id());
+        int order=10;for(auto* effect:std::vector<openshot::EffectBase*>{&sphere,&stabilize,&detect,&brightness}) { effect->Order(order--);clip.AddEffect(effect); }
+        REQUIRE(detect.LoadObjDetectdData(path.toStdString()));
+        openshot::Timeline timeline(128,96,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);timeline.AddClip(&clip);timeline.Open();
+        std::vector<std::shared_ptr<openshot::Frame>> frames{timeline.GetFrame(1)};openshot::ResetGpuMetrics();
+        for(int n=2;n<=8;++n) { frames.push_back(timeline.GetFrame(n));if(gpu) REQUIRE(frames.back()->GetDeferredImage()); }
+        if(gpu) { auto m=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(m["uploads"].asInt()==0);CHECK(m["readbacks"].asInt()==0); }
+        for(size_t n=0;n<frames.size();++n) {
+            auto actual=frames[n]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);if(!gpu) { expected.push_back(actual);continue; }
+            int error=0;double sum=0;for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) { int d=std::abs(int(actual.constScanLine(y)[x])-int(expected[n].constScanLine(y)[x]));error=std::max(error,d);sum+=d; }
+            INFO("frame="<<n+1<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));CHECK(error<=5);CHECK(sum/(actual.width()*actual.height()*4)<=.1);
         }
         timeline.Close();
     }
