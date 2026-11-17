@@ -557,7 +557,15 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
         if(mixed) even_frame=GetOrCreateFrame(mapped.Even.Frame);
         bool resident=false;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-        if(VulkanRenderingEnabled()) try {
+        // Forwarding an immutable progressive surface needs no GPU device.
+        // Preserve lazy storage even when Vulkan is disabled or unavailable.
+        if (!mixed && odd_frame && odd_frame->has_image_data) {
+            if (auto image = odd_frame->GetDeferredImage()) {
+                frame->AddDeferredImage(image);
+                resident = true;
+            }
+        }
+        if(!resident && VulkanRenderingEnabled()) try {
             auto surface=[](const std::shared_ptr<Frame>& source)->std::shared_ptr<const FrameImage> {
                 if(!source || !source->has_image_data)return {};
                 if(auto image=source->GetDeferredImage())return image;

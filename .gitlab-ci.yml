@@ -99,7 +99,8 @@ mac-builder:
     - cmake --build . --parallel $(sysctl -n hw.ncpu)
     - make install
     - find "$CI_PROJECT_DIR/build/install-x64" -type f \( -name "*.dylib" -or -name "*.so" \) -exec sh -c 'for f do if ! otool -l "$f" | grep -q "$OPENCV_ROOT/lib"; then install_name_tool -add_rpath "$OPENCV_ROOT/lib" "$f" || true; fi; done' sh {} +
-    - ctest --output-on-failure -VV
+    # Keep warnings/errors, but avoid truncating test failures with device listings.
+    - MVK_CONFIG_LOG_LEVEL=2 ctest --output-on-failure -VV
     - PROJECT_VERSION=$(grep -E '^set\(PROJECT_VERSION_FULL "(.*)' ../CMakeLists.txt | awk '{print $2}' | tr -d '")')
     - PROJECT_SO=$(grep -E '^set\(PROJECT_SO_VERSION (.*)' ../CMakeLists.txt | awk '{print $2}' | tr -d ')')
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID\nCI_PIPELINE_ID:$CI_PIPELINE_ID\nVERSION:$PROJECT_VERSION\nSO:$PROJECT_SO" > "install-x64/share/$CI_PROJECT_NAME.env"

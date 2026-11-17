@@ -196,6 +196,20 @@ void scope() {
 }
 // Point effects read/write integer premultiplied bytes. Keep their output out
 // of source-over compositing: ColorShift can move alpha independently of RGB.
+// Correct a native division at an integer boundary using its fused residual.
+// The CPU truncates a correctly rounded float quotient; an integer k is reached
+// half an ULP before k. FMA keeps this comparison independent of reciprocal
+// approximation on Metal, without moving any image pixels to the host.
+int hue_unpremultiply(int channel,float alpha) {
+    int q=int(float(channel)/alpha);
+    if(q>0) {
+        float k=float(q),half_ulp=(k-uintBitsToFloat(floatBitsToUint(k)-1u))*.5;
+        if(fma(-k,alpha,float(channel)) < -alpha*half_ulp)--q;
+    }
+    float k=float(q+1),half_ulp=(k-uintBitsToFloat(floatBitsToUint(k)-1u))*.5;
+    if(fma(-k,alpha,float(channel)) >= -alpha*half_ulp)++q;
+    return q;
+}
 void pixel_effect(ivec2 pixel) {
     ivec4 c=ivec4(round(texelFetch(plane_y,pixel,0)*255.0));
     if(p.modes.w==9 && c.a>0) {
@@ -209,13 +223,15 @@ void pixel_effect(ivec2 pixel) {
     if(p.modes.w==10) {
         if(c.a==0) c.rgb=ivec3(0);
         else {
-            ivec3 rgb=ivec3(vec3(c.rgb)/(float(c.a)/255.0));
+            float alpha=value(c.a);
+            ivec3 rgb=ivec3(hue_unpremultiply(c.r,alpha),hue_unpremultiply(c.g,alpha),hue_unpremultiply(c.b,alpha));
             precise vec3 rotated=vec3(
                 rgb.r*p.effect.x+rgb.g*p.effect.y+rgb.b*p.effect.z,
                 rgb.r*p.effect.z+rgb.g*p.effect.x+rgb.b*p.effect.y,
                 rgb.r*p.effect.y+rgb.g*p.effect.z+rgb.b*p.effect.x);
             rgb=clamp(ivec3(rotated),ivec3(0),ivec3(255));
-            c.rgb=ivec3(vec3(rgb)*(float(c.a)/255.0));
+            precise vec3 premultiplied=vec3(rgb)*alpha;
+            c.rgb=ivec3(premultiplied);
         }
     }
     if(p.modes.w==11) c.rgb=ivec3(c.a)-c.rgb;

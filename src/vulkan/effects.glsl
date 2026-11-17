@@ -2,6 +2,23 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Intermediate words are packed RGBA bytes or IEEE float alpha values. Binding
 // 5 is retained across passes; barriers order all producer/consumer dispatches.
+// GLSL's two-argument atan is undefined when x is zero. Metal's native
+// approximation also differs noticeably near axes. Reduce to |z| <= tan(pi/8)
+// and evaluate the convergent atan series, with explicit axes and quadrants.
+float effect_atan2(float y,float x) {
+    const float pi=3.141592653589793;
+    if(y==0.0) return x<0.0?((floatBitsToUint(y)&0x80000000u)!=0u?-pi:pi):y;
+    if(x==0.0) return y<0.0?-pi*.5:pi*.5;
+    float ax=abs(x),ay=abs(y);precise float z=min(ax,ay)/max(ax,ay);
+    bool reduced=z>0.414213562373095;
+    if(reduced) z=(z-1.0)/(z+1.0);
+    precise float z2=z*z,term=z,result=z;
+    for(int n=1;n<=12;++n) {term*=-z2;result+=term/float(2*n+1);}
+    if(reduced)result+=pi*.25;
+    if(ay>ax)result=pi*.5-result;
+    if(x<0.0)result=pi-result;
+    return y<0.0?-result:result;
+}
 const int WORK=512+16384;
 ivec4 bytes_at(ivec2 q) { return ivec4(round(texelFetch(plane_y,q,0)*255.0)); }
 uint pack_bytes(ivec4 c) { return uint(c.r)|(uint(c.g)<<8)|(uint(c.b)<<16)|(uint(c.a)<<24); }
@@ -96,7 +113,7 @@ vec3 chroma_lch(ivec3 rgb) {
     int ray=chroma_ray(rgb);
     if(ray>=0) { int base=2336+65536*3+ray*5;return vec3(value(base+1),value(base+2),value(base+3)); }
     vec3 lab=chroma_lab(rgb);
-    float hue=all(equal(lab.yz,vec2(0)))?0.0:degrees(atan(lab.z,lab.y));
+    float hue=all(equal(lab.yz,vec2(0)))?0.0:degrees(effect_atan2(lab.z,lab.y));
     if(hue<0) hue+=360.0;
     return vec3(lab.x,length(lab.yz),hue);
 }
@@ -115,7 +132,7 @@ float chroma_delta_e(vec3 key,vec3 pixel) {
     float multiplier=1.0+0.5*(1.0-sqrt(cbar/(cbar+25.0)));
     vec2 a=vec2(key.y*multiplier,key.z),b=vec2(pixel.y*multiplier,pixel.z);
     float c1p=length(a),c2p=length(b),cp=(c1p+c2p)/2.0,dc=c2p-c1p;
-    float h1=atan(a.y,a.x)*180.0/pi,h2=atan(b.y,b.x)*180.0/pi;
+    float h1=effect_atan2(a.y,a.x)*180.0/pi,h2=effect_atan2(b.y,b.x)*180.0/pi;
     float dh=h2-h1,hbar=c1p!=0.0 && c2p!=0.0?(h1+h2)/2.0:h1+h2;
     if(dh < -180.0) { dh+=360.0;hbar+=hbar<180.0?180.0:-180.0; }
     else if(dh>180.0) { dh-=360.0;hbar+=hbar<180.0?180.0:-180.0; }
@@ -483,21 +500,21 @@ vec2 spherical_uv(ivec2 pixel) {
         float r=length(q),tmax=value(14)*.5;if(r>1.0) return vec2(-1);
         float theta=projection==3?2.0*asin(clamp(r*sin(tmax*.5),-1.0,1.0)):
             projection==4?2.0*atan(r*tan(tmax*.5)):projection==5?asin(clamp(r*sin(tmax),-1.0,1.0)):r*tmax;
-        float phi=r>0.0?atan(q.y,q.x):0.0;
+        float phi=r>0.0?effect_atan2(q.y,q.x):0.0;
         ray=vec3(sin(theta)*cos(phi),sin(theta)*sin(phi),-cos(theta));
     }
     precise vec3 world=vec3(value(0)*ray.x+value(1)*ray.y+value(2)*ray.z,
         value(3)*ray.x+value(4)*ray.y+value(5)*ray.z,value(6)*ray.x+value(7)*ray.y+value(8)*ray.z);
     const float pi=3.141592653589793;
     if(model==0) {
-        float lon=atan(world.x,-world.z),lat=atan(world.y,length(world.xz));
+        float lon=effect_atan2(world.x,-world.z),lat=effect_atan2(world.y,length(world.xz));
         if(projection==1) lon=clamp(lon,-pi*.5,pi*.5);
         return vec2((lon+(projection==1?pi*.5:pi))/(projection==1?pi:2.0*pi)*float(p.sizes.z),(pi*.5-lat)/pi*float(p.sizes.w));
     }
-    float theta=atan(length(world.xy),world.z*(value(17)>0.0?1.0:-1.0)),tmax=max(.000001,value(13)*.5);
+    float theta=effect_atan2(length(world.xy),world.z*(value(17)>0.0?1.0:-1.0)),tmax=max(.000001,value(13)*.5);
     float r=model==2?sin(theta*.5)/max(1e-12,sin(tmax*.5)):model==3?tan(theta*.5)/max(1e-12,tan(tmax*.5)):
         model==4?sin(theta)/max(1e-12,sin(tmax)):theta/tmax;
-    float phi=length(world.xy)>0.0?atan(world.y,world.x):0.0;
+    float phi=length(world.xy)>0.0?effect_atan2(world.y,world.x):0.0;
     float radius=.5*float(min(p.sizes.z,p.sizes.w))*r;
     return vec2(float(p.sizes.z)*.5+radius*cos(phi),float(p.sizes.w)*.5-radius*sin(phi));
 }
@@ -624,7 +641,7 @@ ivec4 vector_color(int cmd,ivec2 pixel) {
     vec2 point=vec2(pixel)+.5,a=vec2(value(cmd+12),value(cmd+13));float t;
     if(kind==1) {vec2 d=vec2(value(cmd+14),value(cmd+15))-a;t=dot(point-a,d)/max(dot(d,d),1e-10);}
     else if(kind==2) t=length(point-a)/max(value(cmd+14),1e-10);
-    else {vec2 d=point-a;t=1.0-(atan(d.y,d.x)+radians(value(cmd+14)))/6.28318530718;}
+    else {vec2 d=point-a;t=1.0-(effect_atan2(d.y,d.x)+radians(value(cmd+14)))/6.28318530718;}
     int spread=int(data[cmd+16]);
     int index=int(t*1023.0+.5);
     if(kind==3 || spread==2){index=index%1024;if(index<0)index+=1024;}

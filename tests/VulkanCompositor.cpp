@@ -884,11 +884,15 @@ void CheckVulkanEffect(openshot::EffectBase& effect, const QImage& pixels,
     auto expected=std::make_shared<QImage>(cpu->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
     auto actual=gpu->GetImage();
     REQUIRE(actual->size()==expected->size());
-    int max_error=0;
+    int max_error=0,worst_x=0,worst_y=0;
     for (int y=0;y<actual->height();++y)
-        for (int x=0;x<actual->width()*4;++x)
-            max_error=std::max(max_error,std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x])));
-    INFO("frame=" << number << " max byte error=" << max_error);
+        for (int x=0;x<actual->width()*4;++x) {
+            const int error=std::abs(int(expected->constScanLine(y)[x])-int(actual->constScanLine(y)[x]));
+            if(error>max_error){max_error=error;worst_x=x/4;worst_y=y;}
+        }
+    INFO("frame=" << number << " max byte error=" << max_error << " at=" << worst_x << "," << worst_y
+         << " CPU=" << expected->pixelColor(worst_x,worst_y).name(QColor::HexArgb).toStdString()
+         << " GPU=" << actual->pixelColor(worst_x,worst_y).name(QColor::HexArgb).toStdString());
     CHECK(max_error<=tolerance);
 }
 
@@ -1575,6 +1579,20 @@ TEST_CASE("Vulkan hue matches CPU rotations animation and low alpha", "[vulkan][
     effect.hue.AddPoint(17,1.0,openshot::LINEAR);
     for(int number : {1,3,5,9,11,15,17,4})
         CheckVulkanEffect(effect,pixels,source,number,1,true);
+}
+
+TEST_CASE("Vulkan hue preserves integer boundaries for every alpha", "[vulkan][hardware][effects][point-effects]") {
+    if(!VulkanAvailable())return;
+    QImage pixels(256,256,QImage::Format_RGBA8888_Premultiplied);
+    for(int a=0;a<256;++a)for(int c=0;c<256;++c) {
+        auto* pixel=pixels.scanLine(a)+4*c;
+        pixel[0]=std::min(a,c);pixel[1]=c*a/255;pixel[2]=(255-c)*a/255;pixel[3]=a;
+    }
+    auto source=openshot::UploadVulkanImage(pixels);openshot::Hue effect;
+    for(double shift:{0.0,.125,.5,1.0}) {
+        INFO("hue="<<shift);effect.hue=openshot::Keyframe(shift);
+        CheckVulkanEffect(effect,pixels,source,1,1,true);
+    }
 }
 
 TEST_CASE("Vulkan negate matches Qt inversion with low alpha", "[vulkan][hardware][effects][point-effects]") {

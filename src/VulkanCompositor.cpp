@@ -857,7 +857,14 @@ std::shared_ptr<const FrameImage> BrightnessVulkanImage(std::shared_ptr<const Fr
 }
 std::shared_ptr<const FrameImage> HueVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<float,3>& rotation) {
-    return RenderPixelEffect(source,EffectParameters{10,{rotation[0],rotation[1],rotation[2]}});
+    // Match the CPU's double division followed by float storage. Native GPU
+    // division may round A/255 differently before integer unpremultiplication.
+    static const auto alpha=[] {
+        std::array<float,256> values{};
+        for(int i=0;i<256;++i)values[i]=float(i/255.0);
+        return values;
+    }();
+    return RenderPixelEffect(source,EffectParameters{10,{rotation[0],rotation[1],rotation[2]},alpha.data(),sizeof(alpha)});
 }
 std::shared_ptr<const FrameImage> NegateVulkanImage(std::shared_ptr<const FrameImage> source) {
     return RenderPixelEffect(source,EffectParameters{11});
