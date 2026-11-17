@@ -2460,6 +2460,28 @@ TEST_CASE("Vulkan vector annotation coverage follows Qt paths", "[vulkan][hardwa
         CHECK(error<=2);
     }
 }
+TEST_CASE("Vulkan path coverage preserves long and reversed fixed-point edges", "[vulkan][hardware][effects][projection-detection-effects]") {
+    if(!VulkanAvailable())return;
+    QImage pixels(97,73,QImage::Format_RGBA8888_Premultiplied);pixels.fill(Qt::transparent);
+    auto source=openshot::UploadVulkanImage(pixels);
+    for(bool reverse:{false,true})for(int shape=0;shape<3;++shape) {
+        QPainterPath path;
+        if(shape==0){path.moveTo(-5000,-2500);path.lineTo(5000,2500);path.lineTo(5000,-2500);}
+        if(shape==1){path.moveTo(32.25,-5000);path.lineTo(32.265625,5000);path.lineTo(5000,5000);}
+        if(shape==2){path.moveTo(-5000,2500.125);path.lineTo(5000,-2499.875);path.lineTo(5000,5000);}
+        path.closeSubpath();if(reverse)path=path.toReversed();
+        const QColor color(83,160,237,191);QImage expected=pixels.copy();
+        QPainter painter(&expected);painter.setRenderHint(QPainter::Antialiasing);painter.fillPath(path,color);painter.end();
+        auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());std::shared_ptr<const openshot::FrameImage> result;
+        {openshot::gpu_metrics::Scope scope(false);result=openshot::PaintVulkanPath(source,path,color);}
+        auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+        CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+        const auto actual=result->Materialize();int error=0;
+        for(int y=0;y<actual.height();++y)for(int x=0;x<actual.width()*4;++x)
+            error=std::max(error,std::abs(int(expected.constScanLine(y)[x])-int(actual.constScanLine(y)[x])));
+        INFO("shape="<<shape<<" reverse="<<reverse<<" max="<<error);CHECK(error<=2);
+    }
+}
 TEST_CASE("Vulkan spherical auto quality covers mipmaps and camera poles", "[vulkan][hardware][effects][projection-detection-effects]") {
     if(!VulkanAvailable()) return;
     for(const QSize size:{QSize(1,1),QSize(3,5),QSize(129,73)}) {

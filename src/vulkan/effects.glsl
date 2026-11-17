@@ -568,21 +568,42 @@ void spherical(ivec2 pixel,int op) {
 }
 float paint_primitive(float x) { return x<=0.0?0.0:x>=1.0?x-.5:.5*x*x; }
 // Fixed-point edge intersections, matching Qt's 8-bit area accumulator.
-int gray_edge(vec2 a,vec2 b,ivec2 pixel) {
-    int direction=a.y<b.y?1:-1;if(a.y>b.y){vec2 temp=a;a=b;b=temp;}
-    a*=256.0;b*=256.0;
-    float top=max(a.y,float(pixel.y*256)),bottom=min(b.y,float((pixel.y+1)*256));if(bottom<=top)return 0;
-    float slope=(b.x-a.x)/(b.y-a.y);
-    vec2 start=vec2(top==a.y?a.x:floor(a.x+(top-a.y)*slope),top),end=vec2(bottom==b.y?b.x:floor(a.x+(bottom-a.y)*slope),bottom);
-    float left=float(pixel.x*256),right=left+256.0,dy=bottom-top;
-    if(max(start.x,end.x)<=left)return direction*int(dy*512.0);
-    if(min(start.x,end.x)>=right)return 0;
-    if(start.x==end.x)return direction*int(dy*(512.0-2.0*(start.x-left)));
-    float yleft=clamp(floor(top+(left-start.x)*dy/(end.x-start.x)),top,bottom),
-        yright=clamp(floor(top+(right-start.x)*dy/(end.x-start.x)),top,bottom);
-    float first=min(yleft,yright),last=max(yleft,yright),left_cover=end.x>start.x?yleft-top:bottom-yleft;
-    float xfirst=clamp(start.x,left,right)-left,xlast=clamp(end.x,left,right)-left;
-    return direction*int(512.0*(left_cover+last-first)-(xfirst+xlast)*(last-first));
+// Floor(a*b/d) with a full-width product. Short edges use one 32-bit
+// division; the overflow path handles long 4K edges without shaderInt64.
+int edge_mul_div(int a,int b,int d) {
+    bool negative=(a<0)!=(b<0);negative=negative!=(d<0);
+    uint high,low;umulExtended(uint(abs(a)),uint(abs(b)),high,low);
+    uint denominator=uint(abs(d)),quotient,remainder;
+    if(high==0u){quotient=low/denominator;remainder=low%denominator;}
+    else {
+        quotient=0u;remainder=high;
+        for(int bit=31;bit>=0;--bit){
+            remainder=(remainder<<1)|((low>>bit)&1u);
+            if(remainder>=denominator){remainder-=denominator;quotient|=1u<<bit;}
+        }
+    }
+    return negative?-int(quotient)-int(remainder!=0u):int(quotient);
+}
+int gray_edge(vec2 af,vec2 bf,ivec2 pixel) {
+    ivec2 a=ivec2(af*256.0),b=ivec2(bf*256.0);
+    int direction=a.y<b.y?1:-1;if(a.y>b.y){ivec2 temp=a;a=b;b=temp;}
+    int top=max(a.y,pixel.y*256),bottom=min(b.y,(pixel.y+1)*256);if(bottom<=top)return 0;
+    int left=pixel.x*256,right=left+256,dy=bottom-top;
+    // Most edges lie entirely to one side of a pixel. Avoid division there,
+    // and for vertical edges, so dense vector fills retain their fast path.
+    if(max(a.x,b.x)<=left)return direction*dy*512;
+    if(min(a.x,b.x)>=right)return 0;
+    if(a.x==b.x)return direction*dy*(512-2*(a.x-left));
+    int start=a.x+edge_mul_div(top-a.y,b.x-a.x,b.y-a.y);
+    int end=a.x+edge_mul_div(bottom-a.y,b.x-a.x,b.y-a.y);
+    if(max(start,end)<=left)return direction*dy*512;
+    if(min(start,end)>=right)return 0;
+    if(start==end)return direction*dy*(512-2*(start-left));
+    int yleft=clamp(top+edge_mul_div(left-start,dy,end-start),top,bottom);
+    int yright=clamp(top+edge_mul_div(right-start,dy,end-start),top,bottom);
+    int first=min(yleft,yright),last=max(yleft,yright),left_cover=end>start?yleft-top:bottom-yleft;
+    int xfirst=clamp(start,left,right)-left,xlast=clamp(end,left,right)-left;
+    return direction*(512*(left_cover+last-first)-(xfirst+xlast)*(last-first));
 }
 void paint_path(ivec2 pixel) {
     ivec4 original=bytes_at(pixel);
