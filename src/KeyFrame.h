@@ -87,6 +87,9 @@ namespace openshot {
 		/// Get the value at a specific index
 		double GetValue(int64_t index) const;
 
+        /// Evaluate the same curve at a fractional frame (for audio automation).
+        double GetValueAtFrame(double index) const;
+
 		/// Get the rounded INT value at a specific index
 		int GetInt(int64_t index) const;
 

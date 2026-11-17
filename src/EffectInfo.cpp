@@ -137,6 +137,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if(effect_type == "Expander")
 		return new Expander();
 
+	else if(effect_type == "PitchShift")
+		return new PitchShift();
+
 	else if(effect_type == "Robotization")
 		return new Robotization();
 
@@ -208,6 +211,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(ParametricEQ().JsonInfo());
 	root.append(Compressor().JsonInfo());
 	root.append(Expander().JsonInfo());
+	root.append(PitchShift().JsonInfo());
 	root.append(Robotization().JsonInfo());
 	root.append(Whisperization().JsonInfo());
 

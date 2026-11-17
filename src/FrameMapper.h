@@ -191,6 +191,9 @@ namespace openshot
 	 * \endcode
 	 */
 	class FrameMapper : public ReaderBase {
+        friend class PitchShift;
+        friend class Clip;
+
 	private:
 		bool field_toggle;		// Internal odd / even toggle (used when building the mapping)
 		Fraction original;		// The original frame rate

@@ -160,6 +160,7 @@ set(EFFECTS_SOURCES
   effects/DenoiseImage.cpp
   effects/Distort.cpp
   effects/Wave.cpp
+  audio_effects/PitchShift.cpp
   audio_effects/STFT.cpp
   audio_effects/Noise.cpp
   audio_effects/Delay.cpp
@@ -187,6 +188,7 @@ set(CMAKE_MACOSX_RPATH 0)
 ############### CREATE LIBRARY #################
 # Create shared openshot library
 add_library(openshot SHARED)
+target_include_directories(openshot SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/signalsmith")
 if(ENABLE_GPU_FRAME)
   target_compile_definitions(openshot PUBLIC OPENSHOT_ENABLE_GPU_FRAME=1)
 endif()
@@ -707,6 +709,14 @@ install(DIRECTORY .
   FILES_MATCHING PATTERN "*.h"
 )
 
+
+# Include the notices for the bundled pitch-shifting implementation with binaries.
+install(FILES "${PROJECT_SOURCE_DIR}/thirdparty/signalsmith/README.md"
+  COMPONENT runtime DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/libopenshot/thirdparty/signalsmith")
+foreach(signalsmith_part stretch signalsmith-linear)
+  install(FILES "${PROJECT_SOURCE_DIR}/thirdparty/signalsmith/${signalsmith_part}/LICENSE.txt"
+    COMPONENT runtime DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/libopenshot/thirdparty/signalsmith/${signalsmith_part}")
+endforeach()
 
 # On Windows, we copy project output DLLs into the tests dir
 # so that the unit test executables can find them

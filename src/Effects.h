@@ -46,6 +46,7 @@
 #include "effects/Wave.h"
 
 /* Audio Effects */
+#include "audio_effects/PitchShift.h"
 #include "audio_effects/Noise.h"
 #include "audio_effects/Delay.h"
 #include "audio_effects/Echo.h"

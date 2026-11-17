@@ -60,6 +60,7 @@ set(OPENSHOT_TESTS
   FrameScope
   FrameMapper
   KeyFrame
+  PitchShift
   Logger
   LiveScale
   Point
