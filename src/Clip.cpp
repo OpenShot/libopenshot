@@ -1540,29 +1540,38 @@ std::shared_ptr<const FrameImage> FrameNumberOverlay(std::shared_ptr<const Frame
         // of blurring the hinted bitmap atlas through an affine transform.
         QTextLayout layout(text,font,&device);layout.beginLayout();auto line=layout.createLine();line.setLineWidth(100000);layout.endLayout();
         QPainterPath outlines;outlines.setFillRule(Qt::WindingFill);
+#ifdef __APPLE__
+        // CoreText uses Qt's outline fallback for rotated text. Let Qt shape
+        // and position that path, avoiding FreeType's bitmap-cache snapping.
+        outlines.addText(QPointF(20,20),font,text);
+        // Qt subdivides in font coordinates before mapping the resulting
+        // vertices. Subdividing an already rotated curve chooses different
+        // segments and changes coverage at small glyph edges.
+        const double scale=std::max(std::hypot(matrix.m11(),matrix.m12()),std::hypot(matrix.m21(),matrix.m22()));
+        const auto bounds=outlines.controlPointRect();
+        const auto edges=VulkanPathEdges(outlines,std::max(1,int(std::ceil(bounds.right()+2))),
+            std::max(1,int(std::ceil(bounds.bottom()+2))),scale>0?.25/scale:.25);
+        QPainterPath polygon;polygon.setFillRule(Qt::WindingFill);QPointF previous;bool first=true;
+        for(size_t edge=0;edge<edges.size();edge+=4){
+            const QPointF a(edges[edge],edges[edge+1]),b(edges[edge+2],edges[edge+3]);
+            if(first || previous!=a)polygon.moveTo(a);
+            polygon.lineTo(b);previous=b;first=false;
+        }
+        outlines=matrix.map(polygon);
+#else
         for(const auto& run:line.glyphRuns()) {
             const auto ids=run.glyphIndexes();const auto positions=run.positions();
             for(int i=0;i<ids.size();++i){
                 const auto anchor=checkedPoint(matrix.map(QPointF(20+positions[i].x(),20+positions[i].y()-line.ascent())));
-#ifdef __APPLE__
-                // CoreText cannot cache rotated glyph bitmaps. Qt paints their
-                // vector outlines at the original shaped positions, then maps
-                // the path; FreeType's device-pixel snapping must not be used.
-                QTransform placed(matrix.m11(),matrix.m12(),matrix.m21(),matrix.m22(),anchor.x(),anchor.y());
-#else
                 const int fixed=int(anchor.x()*64),phase=fixed&63;
                 const double x=double(fixed>>6)+(fixed!=0 && asset.subpixel?(asset.phase_start[phase]+1)/64.0:0.0);
                 QTransform placed(matrix.m11(),matrix.m12(),matrix.m21(),matrix.m22(),x,((int(anchor.y()*64)+32)>>6));
-#endif
                 outlines.addPath(placed.map(run.rawFont().pathForGlyph(ids[i])));
             }
         }
-        auto coverage=SolidVulkanImage(source->GetWidth(),source->GetHeight(),Qt::transparent);
-#ifdef __APPLE__
-        coverage=PaintVulkanPath(coverage,outlines,Qt::white);
-#else
-        coverage=PaintVulkanPath(coverage,outlines,Qt::white,.0625);
 #endif
+        auto coverage=SolidVulkanImage(source->GetWidth(),source->GetHeight(),Qt::transparent);
+        coverage=PaintVulkanPath(coverage,outlines,Qt::white,.0625);
         return PaintVulkanTextMask(source,coverage,composite,matrix,clip_width,clip_height,corner_radius);
     }
     const QRect bounds=metrics.boundingRect(text).translated(int(std::floor(baseline.x())),int(std::floor(baseline.y()))).adjusted(-3,-3,3,3);

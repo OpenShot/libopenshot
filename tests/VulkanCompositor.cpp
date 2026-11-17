@@ -2460,6 +2460,28 @@ TEST_CASE("Vulkan vector annotation coverage follows Qt paths", "[vulkan][hardwa
         CHECK(error<=2);
     }
 }
+TEST_CASE("Vulkan raster coverage isolates fractional edge intersections", "[vulkan][hardware][effects][raster-diagnostics]") {
+    if(!VulkanAvailable())return;
+    QImage pixels(97,73,QImage::Format_RGBA8888_Premultiplied);pixels.fill(Qt::transparent);
+    auto source=openshot::UploadVulkanImage(pixels);
+    QPainterPath rounded;rounded.addRoundedRect(QRectF(12.31,17.43,54.27,36.29),5,5);
+    const auto edges=openshot::VulkanPathEdges(rounded,97,73);
+    for(size_t i=0;i<edges.size();i+=4)for(bool reverse:{false,true}) {
+        QPointF a(edges[i],edges[i+1]),b(edges[i+2],edges[i+3]);if(a.y()==b.y())continue;
+        QPainterPath path;path.moveTo(a);path.lineTo(b);path.lineTo(-1,b.y());path.lineTo(-1,a.y());path.closeSubpath();
+        if(reverse)path=path.toReversed();
+        QImage expected=pixels.copy();QPainter painter(&expected);painter.setRenderHint(QPainter::Antialiasing);painter.fillPath(path,Qt::white);painter.end();
+        const auto actual=openshot::PaintVulkanPath(source,path,Qt::white)->Materialize();
+        int error=0,ex=0,ey=0;
+        for(int y=0;y<actual.height();++y)for(int x=0;x<actual.width();++x) {
+            int d=std::abs(expected.pixelColor(x,y).alpha()-actual.pixelColor(x,y).alpha());
+            if(d>error){error=d;ex=x;ey=y;}
+        }
+        INFO("edge="<<i/4<<" a="<<a.x()<<","<<a.y()<<" b="<<b.x()<<","<<b.y()<<" reverse="<<reverse
+             <<" max="<<error<<" at="<<ex<<","<<ey<<" CPU="<<expected.pixelColor(ex,ey).alpha()<<" GPU="<<actual.pixelColor(ex,ey).alpha());
+        CHECK(error<=2);
+    }
+}
 TEST_CASE("Vulkan path coverage preserves long and reversed fixed-point edges", "[vulkan][hardware][effects][projection-detection-effects]") {
     if(!VulkanAvailable())return;
     QImage pixels(97,73,QImage::Format_RGBA8888_Premultiplied);pixels.fill(Qt::transparent);

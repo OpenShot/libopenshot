@@ -571,6 +571,14 @@ float paint_primitive(float x) { return x<=0.0?0.0:x>=1.0?x-.5:.5*x*x; }
 // Floor(a*b/d) with a full-width product. Short edges use one 32-bit
 // division; the overflow path handles long 4K edges without shaderInt64.
 int edge_mul_div(int a,int b,int d) {
+    // Keep ordinary edge products signed throughout; only wide products
+    // need the unsigned long-division fallback.
+    if(abs(a)<=32767 && abs(b)<=32767) {
+        int product=a*b,quotient=product/d;
+        int remainder=product-quotient*d;
+        if(remainder!=0 && ((remainder<0)!=(d<0)))--quotient;
+        return quotient;
+    }
     bool negative=(a<0)!=(b<0);negative=negative!=(d<0);
     uint high,low;umulExtended(uint(abs(a)),uint(abs(b)),high,low);
     uint denominator=uint(abs(d)),quotient,remainder;
