@@ -19,6 +19,9 @@
 #include "CacheMemory.h"
 #include "CrashHandler.h"
 #include "FrameMapper.h"
+#include "QtTextReader.h"
+#include "QtImageReader.h"
+#include "FFmpegReader.h"
 #include "Exceptions.h"
 #include "effects/Mask.h"
 
@@ -912,6 +915,7 @@ void Timeline::Clear()
 
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+    live_transform_scales.clear();
 
 	// Close all open clips
 	for (auto clip : clips)
@@ -1468,6 +1472,66 @@ void Timeline::InvalidateCacheForClip(const Clip* clip) {
 	BumpCacheEpoch();
 }
 
+namespace {
+ReaderBase* TransformSource(Clip* clip) {
+    auto* reader = clip->Reader();
+    if (auto* mapper = dynamic_cast<FrameMapper*>(reader)) reader = mapper->Reader();
+    return reader;
+}
+std::pair<double, double> TransformDetail(Clip* clip) {
+    auto* source = TransformSource(clip);
+    const bool text = dynamic_cast<QtTextReader*>(source);
+    const bool video = dynamic_cast<FFmpegReader*>(source) && source->info.has_video;
+    if (!text && !dynamic_cast<QtImageReader*>(source) && !video && !clip->Waveform()) return {0.0, 0.0};
+    double x = clip->scale_x.GetMaxPoint().co.Y;
+    double y = clip->scale_y.GetMaxPoint().co.Y;
+    if (text || clip->Waveform()) return {std::max({1.0, x, y}), 1.0};
+    if (clip->scale != SCALE_NONE) { x = std::max(1.0, x); y = std::max(1.0, y); }
+    return {x, y};
+}
+bool RefreshTransformSource(Clip* clip) {
+    // Waveforms are regenerated from cached audio after the mapper, so their
+    // refinement must not evict decoded video/audio or rebuild audio mappings.
+    if (clip->Waveform()) return true;
+    auto* source = TransformSource(clip);
+    if (auto* video = dynamic_cast<FFmpegReader*>(source)) {
+        const auto cached = video->GetCache()->GetSmallestFrame();
+        QSize native(video->info.width, video->info.height);
+        if (video->HasMaxDecodeSize() && (native.width() > video->MaxDecodeWidth() || native.height() > video->MaxDecodeHeight()))
+            native.scale(video->MaxDecodeWidth(), video->MaxDecodeHeight(), Qt::KeepAspectRatio);
+        // Once the source is already at native detail, further transforms need
+        // no re-decode. Never throw away full-detail video just to shrink it.
+        if (cached && cached->GetWidth() >= native.width() && cached->GetHeight() >= native.height()) return false;
+    }
+    if (source && source->GetCache()) source->GetCache()->Clear();
+    if (clip->Reader() && clip->Reader()->GetCache()) clip->Reader()->GetCache()->Clear();
+    return true;
+}
+}
+
+void Timeline::BeginClipTransform(const std::string& id) {
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+    if (auto* clip = GetClip(id)) live_transform_scales.emplace(id, TransformDetail(clip));
+}
+
+bool Timeline::IsClipTransforming(const std::string& id) {
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+    return live_transform_scales.count(id) != 0;
+}
+
+bool Timeline::EndClipTransform(const std::string& id) {
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+    const auto found = live_transform_scales.find(id);
+    if (found == live_transform_scales.end()) return false;
+    const auto initial = found->second;
+    live_transform_scales.erase(found);
+    auto* clip = GetClip(id);
+    if (!clip || initial == TransformDetail(clip)) return false;
+    if (!RefreshTransformSource(clip)) return false;
+    InvalidateCacheForClip(clip);
+    return true;
+}
+
 // Apply JSON diff to clips
 void Timeline::apply_json_to_clips(Json::Value change) {
 
@@ -1582,6 +1646,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 			// Update clip properties from JSON
 			if (visual_only) {
+                const bool scale_edit = !values["scale_x"].isNull() || !values["scale_y"].isNull();
+                const bool refresh_detail = scale_edit && !IsClipTransforming(existing_clip->Id());
+                const auto previous_detail = refresh_detail ? TransformDetail(existing_clip) : std::make_pair(0.0, 0.0);
                 for (const auto& name : values.getMemberNames()) {
                     auto& curve = *visual_properties.at(name);
                     // Null fields are ignored by Clip::SetJsonValue too.
@@ -1592,6 +1659,10 @@ void Timeline::apply_json_to_clips(Json::Value change) {
                         curve = Keyframe(name == "scale_x" || name == "scale_y" ? 1.0 :
                                          name == "origin_x" || name == "origin_y" ? 0.5 : 0.0);
                 }
+                // Single property edits refine immediately; a drag refines once
+                // in EndClipTransform, leaving every intermediate sample cheap.
+                if (refresh_detail && previous_detail != TransformDetail(existing_clip))
+                    RefreshTransformSource(existing_clip);
             } else {
                 existing_clip->SetJsonValue(std::move(change["value"]));
             }

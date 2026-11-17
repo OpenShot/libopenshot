@@ -42,6 +42,7 @@
 #include "effects/Shift.h"
 #include "effects/Timer.h"
 #include "effects/DenoiseImage.h"
+#include "effects/Distort.h"
 #include "effects/Wave.h"
 
 /* Audio Effects */

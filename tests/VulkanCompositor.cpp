@@ -33,6 +33,7 @@
 #include <cmath>
 #include "effects/Mask.h"
 #include "effects/Blur.h"
+#include "effects/Distort.h"
 #include "effects/Brightness.h"
 #include "effects/Hue.h"
 #include "effects/Negate.h"
@@ -3024,6 +3025,91 @@ TEST_CASE("Vulkan frame-number overlays preserve Qt text and stay resident", "[v
                 // retain the same mean-error bound for transformed text.
                 CheckClipPixels(expected[i],actual,style==2?20:3);}}
             clip.Close();
+        }
+    }
+}
+
+TEST_CASE("Vulkan distort matches CPU presets animated points and folds", "[vulkan][hardware][effects][distort]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(96,64,QImage::Format_RGBA8888_Premultiplied);
+    for (int y=0;y<pixels.height();++y) for (int x=0;x<pixels.width();++x)
+        pixels.setPixelColor(x,y,QColor((x*7)%256,(y*11)%256,(x*3+y*5)%256,(x%4)*85));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Distort effect;
+    effect.strength.AddPoint(1,-0.5,openshot::LINEAR);
+    effect.strength.AddPoint(9,1.0,openshot::LINEAR);
+    for (int preset=0;preset<=6;++preset) {
+        effect.preset=preset;
+        INFO("preset=" << preset);
+        for (int number : {1,5,9,3}) CheckVulkanEffect(effect,pixels,source,number,2);
+    }
+    effect.points_x[5].AddPoint(1,0.0,openshot::LINEAR);
+    effect.points_x[5].AddPoint(9,0.8,openshot::LINEAR);
+    effect.points_y[6]=openshot::Keyframe(-0.8);
+    for (int number : {1,5,9,3}) CheckVulkanEffect(effect,pixels,source,number,2);
+}
+TEST_CASE("Vulkan distort retains queued meshes and handles small frames", "[vulkan][hardware][effects][distort]") {
+    if (!VulkanAvailable()) return;
+    for (int size : {1,2,17}) {
+        QImage pixels(size,size,QImage::Format_RGBA8888_Premultiplied);
+        pixels.fill(QColor(240,80,20,128));
+        auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Distort effect;
+        effect.preset=3;
+        CheckVulkanEffect(effect,pixels,source,1,2);
+    }
+    QImage pixels(96,64,QImage::Format_RGBA8888_Premultiplied);
+    pixels.fill(QColor(220,90,30,170));
+    auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Distort effect;
+    std::vector<std::shared_ptr<openshot::Frame>> queued;
+    std::vector<QImage> expected;
+    auto readbacks=openshot::VulkanFrameReadbackCount();
+    for (int i=0;i<12;++i) {
+        std::fill(effect.points_x.begin(), effect.points_x.end(), openshot::Keyframe(i/48.0));
+        auto cpu=std::make_shared<openshot::Frame>(1,96,64,"transparent");
+        cpu->AddImage(std::make_shared<QImage>(pixels));
+        ProcessCpuEffect(effect,cpu,1); expected.push_back(cpu->GetImage()->copy());
+        auto gpu=std::make_shared<openshot::Frame>(1,96,64,"transparent");
+        gpu->AddDeferredImage(source); effect.ProcessFrame(gpu,1);
+        REQUIRE(gpu->GetDeferredImage()); queued.push_back(gpu);
+    }
+    CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+    for (size_t i=0;i<queued.size();++i) CHECK(*queued[i]->GetImage()==expected[i]);
+}
+
+TEST_CASE("Vulkan distort uploads CPU clip frames and preserves identity surfaces", "[vulkan][hardware][effects][distort]") {
+    if (!VulkanAvailable()) return;
+    QImage pixels(48,32,QImage::Format_RGBA8888_Premultiplied);
+    pixels.fill(QColor(240,80,20,128));
+    openshot::Clip clip;
+    openshot::Distort effect;
+    clip.AddEffect(&effect);
+    auto frame=std::make_shared<openshot::Frame>(1,48,32,"transparent");
+    frame->AddImage(std::make_shared<QImage>(pixels));
+    effect.preset=1;
+    auto readbacks=openshot::VulkanFrameReadbackCount();
+    effect.ProcessFrame(frame,1);
+    REQUIRE(frame->GetDeferredImage());
+    CHECK(openshot::VulkanFrameReadbackCount()==readbacks);
+    auto surface=frame->GetDeferredImage();
+    effect.strength=openshot::Keyframe(0.0);
+    effect.ProcessFrame(frame,2);
+    CHECK(frame->GetDeferredImage()==surface);
+}
+
+TEST_CASE("Vulkan distort keeps triangle edges covered at HD and 4K", "[vulkan][hardware][effects][distort]") {
+    if (!VulkanAvailable()) return;
+    for (int width : {1920,3840}) {
+        QImage pixels(width,width*9/16,QImage::Format_RGBA8888_Premultiplied);
+        for (int y=0;y<pixels.height();++y) for (int x=0;x<width;++x)
+            pixels.setPixelColor(x,y,QColor(x*255/width,y*255/pixels.height(),180,170));
+        auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Distort effect;
+        for (int preset : {2,5}) {
+            effect.preset=preset;
+            INFO("width=" << width << " preset=" << preset);
+            CheckVulkanEffect(effect,pixels,source,1,2);
         }
     }
 }

@@ -575,6 +575,7 @@ namespace openshot { void ReleaseVulkanMemory(); uint64_t VulkanFrameReadbackCou
 %include "effects/SphericalProjection.cpp"
 %include "effects/Timer.h"
 %include "effects/DenoiseImage.h"
+%include "effects/Distort.h"
 %include "effects/Wave.h"
 #ifdef USE_OPENCV
     %include "effects/Stabilizer.h"

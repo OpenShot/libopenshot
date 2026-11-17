@@ -16,6 +16,7 @@
 #include <list>
 #include <memory>
 #include <set>
+#include <map>
 #include <atomic>
 #include <cstdint>
 #include <utility>
@@ -217,6 +218,9 @@ namespace openshot {
 		/// Update the list of 'opened' clips
 		void update_open_clips(openshot::Clip *clip, bool does_clip_intersect);
 
+        // Initial source detail for active preview transform gestures.
+        std::map<std::string, std::pair<double, double>> live_transform_scales;
+
 		/// Increment the cache invalidation epoch.
 		void BumpCacheEpoch();
 
@@ -287,6 +291,11 @@ namespace openshot {
 		/// Clear all cache for this timeline instance, including all clips' cache
 		/// @param deep If True, clear all FrameMappers and nested Readers (QtImageReader, FFmpegReader, etc...)
 		void ClearAllCache(bool deep=false);
+
+        /// Reuse source rasters during a preview gesture; refine changed detail on release.
+        void BeginClipTransform(const std::string& id);
+        bool EndClipTransform(const std::string& id);
+        bool IsClipTransforming(const std::string& id);
 
 		/// Return a list of clips on the timeline
 		std::list<openshot::Clip*> Clips() override { return clips; };

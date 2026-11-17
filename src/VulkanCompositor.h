@@ -140,6 +140,10 @@ std::shared_ptr<const FrameImage> MaskVulkanImage(std::shared_ptr<const FrameIma
 /// Separable box blur with clamped region edges and CPU-compatible compositing.
 std::shared_ptr<const FrameImage> BlurVulkanImage(std::shared_ptr<const FrameImage> source,
     const QRect& area, int horizontal, int vertical, int iterations);
+/// Warp a normalized row-major mesh using deterministic triangle coverage and
+/// premultiplied bilinear sampling. Uncovered output pixels are transparent.
+std::shared_ptr<const FrameImage> DistortVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::vector<QPointF>& mesh, int divisions);
 /// Diagnostic count of successful compute pipeline creations.
 uint64_t VulkanPipelineCreationCount();
 /// Return pooled GPU frame memory once its frames are released, i.e. after
