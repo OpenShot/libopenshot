@@ -550,24 +550,36 @@ void spherical(ivec2 pixel,int op) {
     imageStore(output_img,pixel,vec4(result)/255.0);
 }
 float paint_primitive(float x) { return x<=0.0?0.0:x>=1.0?x-.5:.5*x*x; }
+// Fixed-point edge intersections, matching Qt's 8-bit area accumulator.
+int gray_edge(vec2 a,vec2 b,ivec2 pixel) {
+    int direction=a.y<b.y?1:-1;if(a.y>b.y){vec2 temp=a;a=b;b=temp;}
+    a*=256.0;b*=256.0;
+    float top=max(a.y,float(pixel.y*256)),bottom=min(b.y,float((pixel.y+1)*256));if(bottom<=top)return 0;
+    float slope=(b.x-a.x)/(b.y-a.y);
+    vec2 start=vec2(top==a.y?a.x:floor(a.x+(top-a.y)*slope),top),end=vec2(bottom==b.y?b.x:floor(a.x+(bottom-a.y)*slope),bottom);
+    float left=float(pixel.x*256),right=left+256.0,dy=bottom-top;
+    if(max(start.x,end.x)<=left)return direction*int(dy*512.0);
+    if(min(start.x,end.x)>=right)return 0;
+    if(start.x==end.x)return direction*int(dy*(512.0-2.0*(start.x-left)));
+    float yleft=clamp(floor(top+(left-start.x)*dy/(end.x-start.x)),top,bottom),
+        yright=clamp(floor(top+(right-start.x)*dy/(end.x-start.x)),top,bottom);
+    float first=min(yleft,yright),last=max(yleft,yright),left_cover=end.x>start.x?yleft-top:bottom-yleft;
+    float xfirst=clamp(start.x,left,right)-left,xlast=clamp(end.x,left,right)-left;
+    return direction*int(512.0*(left_cover+last-first)-(xfirst+xlast)*(last-first));
+}
 void paint_path(ivec2 pixel) {
     ivec4 original=bytes_at(pixel);
     if(float(pixel.x+1)<p.clear.x || float(pixel.y+1)<p.clear.y || float(pixel.x)>p.clear.z || float(pixel.y)>p.clear.w) {
         imageStore(output_img,pixel,vec4(original)/255.0);return;
     }
-    precise float area=0.0;
+    int area=0;
     for(int edge=0;edge<int(p.matrix_x.w);++edge) {
         int base=4*edge;vec2 a=vec2(value(base),value(base+1)),b=vec2(value(base+2),value(base+3));
-        if(a.y==b.y) continue;float sign_value=a.y<b.y?1.0:-1.0;
-        if(a.y>b.y) { vec2 swap_value=a;a=b;b=swap_value; }
-        float ya=max(a.y,float(pixel.y)),yb=min(b.y,float(pixel.y+1));if(yb<=ya) continue;
-        precise float slope=(b.x-a.x)/(b.y-a.y),xa=a.x+(ya-a.y)*slope-float(pixel.x),xb=a.x+(yb-a.y)*slope-float(pixel.x);
-        precise float integral=abs(xb-xa)<1e-6?clamp(xa,0.0,1.0):(paint_primitive(xb)-paint_primitive(xa))/(xb-xa);
-        area+=sign_value*(yb-ya)*integral;
+        if(a.y!=b.y)area+=gray_edge(a,b,pixel);
     }
-    float coverage=abs(area);
-    if(fract(p.matrix_x.w)>0.0) { coverage=mod(coverage,2.0);if(coverage>1.0) coverage=2.0-coverage; }
-    int alpha=clamp(int(floor(coverage*256.0+1e-4)),0,255);
+    int alpha=abs(area>>9);
+    if(fract(p.matrix_x.w)>0.0) {alpha=alpha%512;if(alpha>256)alpha=512-alpha;}
+    alpha=clamp(alpha,0,255);
     ivec4 color=ivec4(p.effect);color.rgb=premultiply_bytes(color.rgb,color.a);
     imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,alpha),original))/255.0);
 }
@@ -606,7 +618,91 @@ void fill_rect(ivec2 pixel) {
     ivec4 color=ivec4(p.effect);color.rgb=premultiply_bytes(color.rgb,color.a);
     imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,coverage),bytes_at(pixel)))/255.0);
 }
+ivec4 vector_color(int cmd,ivec2 pixel) {
+    int kind=int(data[cmd+5]);
+    if(kind==0) {uint c=data[cmd+17];return ivec4(c&255u,(c>>8)&255u,(c>>16)&255u,c>>24);}
+    vec2 point=vec2(pixel)+.5,a=vec2(value(cmd+12),value(cmd+13));float t;
+    if(kind==1) {vec2 d=vec2(value(cmd+14),value(cmd+15))-a;t=dot(point-a,d)/max(dot(d,d),1e-10);}
+    else if(kind==2) t=length(point-a)/max(value(cmd+14),1e-10);
+    else {vec2 d=point-a;t=1.0-(atan(d.y,d.x)+radians(value(cmd+14)))/6.28318530718;}
+    int spread=int(data[cmd+16]);
+    int index=int(t*1023.0+.5);
+    if(kind==3 || spread==2){index=index%1024;if(index<0)index+=1024;}
+    else if(spread==1){index=index%2048;if(index<0)index+=2048;if(index>=1024)index=2047-index;}
+    else index=clamp(index,0,1023);
+    t=float(index)/1023.0;
+    int first=int(data[cmd+6]),count=int(data[cmd+7]);
+    vec4 color=vec4(value(first+1),value(first+2),value(first+3),value(first+4));
+    for(int i=1;i<count;++i) {
+        int previous=first+5*(i-1),next=first+5*i;
+        vec4 c=vec4(value(next+1),value(next+2),value(next+3),value(next+4));
+        if(t<=value(next)) {color=mix(color,c,clamp((t-value(previous))/max(value(next)-value(previous),1e-10),0.0,1.0));break;}
+        color=c;
+    }
+    return ivec4(floor(color+.5));
+}
+void vector_paint(ivec2 pixel) {
+    ivec4 result=bytes_at(pixel);int tile=(pixel.y/16)*int(data[0])+pixel.x/16;
+    int begin=int(data[4+2*tile]),count=int(data[5+2*tile]),commands=4+2*int(data[0]*data[1]);
+    for(int item=0;item<count;++item) {
+        int cmd=commands+24*int(data[begin+item]);
+        if(float(pixel.x)<value(cmd+8) || float(pixel.y)<value(cmd+9) || float(pixel.x)>=value(cmd+10) || float(pixel.y)>=value(cmd+11))continue;
+        if(data[cmd]==2u) {
+            ivec4 color=vector_color(cmd,pixel);
+            for(int line=0;line<int(data[cmd+3]);++line) {
+                int base=int(data[cmd+2])+8*line;bool vertical=data[base]!=0u;
+                int major=vertical?pixel.y:pixel.x,minor=vertical?pixel.x:pixel.y,start=int(data[base+1]),end=int(data[base+2]);
+                if(major<start || major>end)continue;
+                int pos=int(data[base+3])+(major-start)*int(data[base+4]),coverage;
+                if(data[cmd+1]!=0u) {
+                    int extent=major==start?int(data[base+5]):major==end?int(data[base+6]):64;
+                    int lo=pos>>16,fraction=(pos>>8)&255;coverage=minor==lo?255-fraction:minor==lo+1?fraction:0;coverage=(coverage*extent)>>6;
+                } else coverage=minor==(pos>>16)?255:0;
+                coverage=(coverage*int(data[base+7]))>>8;
+                if(coverage>0)result=over_bytes(byte_multiply(color,coverage),result);
+            }
+            continue;
+        }
+        bool aa=data[cmd+1]!=0u;int alpha=0;
+        if(data[cmd]==1u) {
+            vec4 r=vec4(value(cmd+18),value(cmd+19),value(cmd+20),value(cmd+21));
+            if(aa) {
+                int l=int(clamp(r.x,0.0,float(p.sizes.z))*65536.0),t=int(clamp(r.y,0.0,float(p.sizes.w))*65536.0),
+                    right=int(clamp(r.z,0.0,float(p.sizes.z))*65536.0),bottom=int(clamp(r.w,0.0,float(p.sizes.w))*65536.0);
+                int x0=l>>16,x1=right>>16,width=0;
+                if(pixel.x>=x0 && pixel.x<=x1) width=x0==x1?65536-(l&65535)+(right&65535):pixel.x==x0?65536-(l&65535):pixel.x==x1?right&65535:65536;
+                int height=max(0,min((pixel.y+1)*65536,bottom)-max(pixel.y*65536,t));uint hi,lo;umulExtended(uint(height),uint(width*255),hi,lo);alpha=int(hi&255u);
+            } else alpha=all(greaterThanEqual(vec2(pixel),floor(r.xy+.5))) && all(lessThan(vec2(pixel),floor(r.zw+.5)))?255:0;
+        } else {
+            int area=0,winding=0;
+            int table=int(data[cmd+22]),row=table+2*(pixel.y-int(data[cmd+23]));
+            int edges=table+int(data[row]),edge_count=int(data[row+1]);
+            if(!aa) {
+                for(int item=0;item<edge_count;++item) {
+                    int edge=int(data[edges+item]),base=int(data[cmd+2])+5*edge,top=int(data[base]),bottom=int(data[base+1]);
+                    if(pixel.y<top || pixel.y>bottom)continue;
+                    int boundary=(int(data[base+2])+(pixel.y-top)*int(data[base+3]))>>16;
+                    if(boundary>pixel.x)winding+=int(data[base+4]);
+                }
+                alpha=(data[cmd+4]!=0u?(abs(winding)%2)!=0:winding!=0)?255:0;
+            } else {
+                for(int item=0;item<edge_count;++item) {
+                    int edge=int(data[edges+item]),base=int(data[cmd+2])+4*edge;vec2 a=vec2(value(base),value(base+1)),b=vec2(value(base+2),value(base+3));
+                    if(a.y!=b.y)area+=gray_edge(a,b,pixel);
+                }
+                alpha=abs(area>>9);if(data[cmd+4]!=0u){alpha=alpha%512;if(alpha>256)alpha=512-alpha;}alpha=clamp(alpha,0,255);
+            }
+        }
+        if(alpha>0)result=over_bytes(byte_multiply(vector_color(cmd,pixel),alpha),result);
+    }
+    imageStore(output_img,pixel,vec4(result)/255.0);
+}
 void spatial_effect(ivec2 pixel) {
+    if(p.modes.w==63) {vector_paint(pixel);return;}
+    if(p.modes.w==62) {
+        ivec4 c=ivec4(p.effect);c.rgb=premultiply_bytes(c.rgb,c.a);
+        imageStore(output_img,pixel,vec4(c)/255.0);return;
+    }
     if(p.modes.w==61) { fill_rect(pixel);return; }
     if(p.modes.w==60) { cosmetic_stroke(pixel);return; }
     if(p.modes.w==57) { paint_path(pixel);return; }

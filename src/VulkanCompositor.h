@@ -14,6 +14,8 @@
 #include <QPen>
 namespace openshot {
 namespace color { struct SourceColor; }
+/// Generate a solid image entirely on the GPU, including the first frame.
+std::shared_ptr<const FrameImage> SolidVulkanImage(int width,int height,const QColor& color);
 /// Scale a decoded YUV surface to RGBA using its color description: YUV
 /// matrix and range, and for HDR or BT.2020 sources conversion to SDR BT.709
 /// matching color::SdrConverter on the CPU.
@@ -76,6 +78,8 @@ std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const Fr
 std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<std::vector<int32_t>>& axes);
 /// All spherical/fisheye models, straight-alpha CPU-compatible sampling and automatic mipmaps.
 std::shared_ptr<const FrameImage> SphericalVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
+std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height);
+std::shared_ptr<const FrameImage> PaintVulkanCommands(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& commands);
 /// Rasterize vector annotations from geometry, preserving the video surface on the device.
 std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color);
 /// Qt's axis-aligned rectangle fill, including its 16.16 subpixel coverage.

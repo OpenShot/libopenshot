@@ -68,7 +68,10 @@ namespace openshot
 	private:
 		void init_effect_details();
 
+        std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool use_vulkan);
+
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		int visualization_type;
 		int style;
 		Color color;

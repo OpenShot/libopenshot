@@ -12,6 +12,12 @@
 
 #include "AudioVisualization.h"
 #include "Exceptions.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#include "VulkanPainter.h"
+#endif
 #include "Timeline.h"
 
 #include <algorithm>
@@ -437,11 +443,33 @@ void AudioVisualization::init_effect_details()
 	info.has_video = true;
 }
 
-std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+    if(!frame) return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        const auto old_type=visualization_type;
+        try { return RenderFrame(frame,frame_number,true); }
+        catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan AudioVisualization CPU fallback: ")+error.what());
+            visualization_type=old_type;
+        }
+    }
+#endif
+    return RenderFrame(frame,frame_number,false);
+}
+
+std::shared_ptr<openshot::Frame> AudioVisualization::RenderFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number,bool use_vulkan)
 {
-	const std::shared_ptr<QImage> frame_image = frame->GetImage();
-	int width = frame_image ? std::max(1, frame_image->width()) : 1;
-	int height = frame_image ? std::max(1, frame_image->height()) : 1;
+	std::shared_ptr<QImage> frame_image;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    const bool gpu=(use_vulkan && VulkanRenderingEnabled());
+    auto surface=gpu?frame->GetDeferredImage():nullptr;
+    if(!gpu || (!surface && frame->has_image_data && background==AUDIO_VISUALIZATION_BACKGROUND_SOURCE)) frame_image=frame->GetImage();
+#else
+    const bool gpu=false;frame_image=frame->GetImage();
+#endif
+	int width = std::max(1,frame->GetWidth());
+	int height = std::max(1,frame->GetHeight());
 	if ((width <= 1 || height <= 1) && ParentTimeline()) {
 		if (Timeline* timeline = dynamic_cast<Timeline*>(ParentTimeline())) {
 			if (timeline->info.width > 1 && timeline->info.height > 1) {
@@ -472,8 +500,21 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 	const bool overlay = channel_layout == AUDIO_VISUALIZATION_CHANNEL_OVERLAY;
 
 	const bool use_filled_waveform_argb = mode == AUDIO_VISUALIZATION_FILLED_WAVEFORM;
-	auto visual = std::make_shared<QImage>(width, height,
-		use_filled_waveform_argb ? QImage::Format_ARGB32_Premultiplied : QImage::Format_RGBA8888_Premultiplied);
+    std::shared_ptr<QImage> visual;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    std::unique_ptr<VulkanPaintDevice> device;
+    if(gpu) {
+        device=std::make_unique<VulkanPaintDevice>(width,height);
+        if(background==AUDIO_VISUALIZATION_BACKGROUND_SOURCE) {
+            if(!surface && frame_image) surface=UploadVulkanImage(*frame_image);
+            if(surface && (surface->GetWidth()!=width || surface->GetHeight()!=height)) surface=ScaleEffectVulkanImage(surface,width,height);
+        } else surface.reset();
+        if(!surface) surface=SolidVulkanImage(width,height,background==AUDIO_VISUALIZATION_BACKGROUND_SOURCE?QColor(QString::fromStdString(frame->GetBackgroundColor())):QColor(Qt::transparent));
+    } else
+#endif
+    visual=std::make_shared<QImage>(width,height,use_filled_waveform_argb?QImage::Format_ARGB32_Premultiplied:QImage::Format_RGBA8888_Premultiplied);
+    if(!gpu) {
+
 	if (background == AUDIO_VISUALIZATION_BACKGROUND_SOURCE && frame_image && !frame_image->isNull()) {
 		if (frame_image->width() == width && frame_image->height() == height)
 			*visual = frame_image->copy();
@@ -483,7 +524,12 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 		visual->fill(Qt::transparent);
 	}
 
-	QPainter painter(visual.get());
+    }
+    QPaintDevice* target=visual.get();
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(gpu) target=device.get();
+#endif
+    QPainter painter(target);
 	if (background == AUDIO_VISUALIZATION_BACKGROUND_SOURCE && frame_image &&
 		(frame_image->width() != width || frame_image->height() != height)) {
 		painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
@@ -494,22 +540,25 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 	const Palette palette = make_palette(base, styled_glow, style, color_spread_value);
 
 	if (background == AUDIO_VISUALIZATION_BACKGROUND_SOLID) {
-		painter.fillRect(visual->rect(), palette.dark);
+		painter.fillRect(QRect(0,0,width,height), palette.dark);
 	} else if (background == AUDIO_VISUALIZATION_BACKGROUND_FADE) {
 		QLinearGradient grad(0, 0, 0, height);
 		grad.setColorAt(0.0, alpha_color(palette.dark, 0.0f));
 		grad.setColorAt(1.0, alpha_color(palette.dark, 0.55f));
-		painter.fillRect(visual->rect(), grad);
+		painter.fillRect(QRect(0,0,width,height), grad);
 	} else if (background == AUDIO_VISUALIZATION_BACKGROUND_GRADIENT) {
 		QLinearGradient grad(0, 0, width, height);
 		grad.setColorAt(0.0, alpha_color(palette.dark, 0.55f));
 		grad.setColorAt(1.0, alpha_color(palette.accent, 0.35f));
-		painter.fillRect(visual->rect(), grad);
+		painter.fillRect(QRect(0,0,width,height), grad);
 	}
 
 	if (frame->GetAudioSamplesCount() <= 0) {
 		painter.end();
-		frame->AddImage(visual);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        if(gpu) frame->AddDeferredImage(device->Render(surface));else
+#endif
+        frame->AddImage(visual);
 		return frame;
 	}
 
@@ -660,6 +709,20 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 			terrain_brush = vertical_style_fill(0, 0, 0, height, palette, style);
 		}
 		if (points.size() > 1) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+            if(gpu) {
+                painter.save();painter.setRenderHint(QPainter::Antialiasing,false);painter.setPen(Qt::NoPen);
+                painter.setBrush(terrain_brush);
+                for(int x=0;x<width;++x) {
+                    const float position=x*(points.size()-1)/float(std::max(1,width-1));
+                    const int index=clampi(int(std::floor(position)),0,int(points.size())-2);const float mix=position-index;
+                    const float y=points[index].y()*(1-mix)+points[index+1].y()*mix;
+                    painter.drawRect(QRectF(x,std::floor(y),1,height-std::floor(y)));
+                }
+                painter.restore();
+            } else
+#endif
+            {
 			QImage fill_layer(width, height, QImage::Format_RGBA8888_Premultiplied);
 			fill_layer.fill(Qt::transparent);
 			QPainter fill_painter(&fill_layer);
@@ -685,7 +748,9 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 			fill_painter.drawImage(0, 0, mask);
 			fill_painter.end();
 			painter.drawImage(0, 0, fill_layer);
-		}
+            }
+        }
+
 		const float ridge_width = std::max(1.0f, stroke * 0.75f);
 		if (color_mode == AUDIO_VISUALIZATION_COLOR_RAINBOW) {
 			QLinearGradient glow_grad(0, 0, width, 0);
@@ -766,7 +831,7 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 	} else if (mode == AUDIO_VISUALIZATION_PHASE_SCOPE) {
 		if (channels < 2) {
 			visualization_type = AUDIO_VISUALIZATION_WAVEFORM;
-			auto result = GetFrame(frame, frame_number);
+			auto result = RenderFrame(frame, frame_number,use_vulkan);
 			visualization_type = mode;
 			return result;
 		}
@@ -902,7 +967,10 @@ std::shared_ptr<openshot::Frame> AudioVisualization::GetFrame(std::shared_ptr<op
 	}
 
 	painter.end();
-	frame->AddImage(visual);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(gpu) frame->AddDeferredImage(device->Render(surface));else
+#endif
+    frame->AddImage(visual);
 	return frame;
 }
 

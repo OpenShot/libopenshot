@@ -71,10 +71,9 @@ namespace openshot
 		void BlendWithMask(std::shared_ptr<QImage> original_image, std::shared_ptr<QImage> effected_image,
 					   std::shared_ptr<QImage> mask_image) const;
 
+	protected:
 		/// Find the effect named by mask_source_id.
 		EffectBase* ResolveMaskSourceEffect();
-
-	protected:
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 		/// Create a reader instance from reader JSON.

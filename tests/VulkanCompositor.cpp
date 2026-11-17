@@ -110,6 +110,29 @@ public:
     }
 };
 }
+namespace {
+std::unique_ptr<QGuiApplication>& VulkanTestApplication() {
+    static std::unique_ptr<QGuiApplication> app;
+    return app;
+}
+#if CATCH_VERSION_MAJOR >= 3
+using VulkanTestListenerBase=Catch::EventListenerBase;
+#else
+using VulkanTestListenerBase=Catch::TestEventListenerBase;
+#endif
+struct VulkanTestApplicationLifetime : VulkanTestListenerBase {
+    using VulkanTestListenerBase::VulkanTestListenerBase;
+    void testRunEnded(const Catch::TestRunStats&) override {
+        // Destroy Qt before process-wide Qt/plugin statics are torn down.
+        VulkanTestApplication().reset();
+    }
+};
+CATCH_REGISTER_LISTENER(VulkanTestApplicationLifetime)
+void EnsureVulkanTestApplication() {
+    static int argc=1;static char name[]="vulkan-effects";static char* argv[]={name,nullptr};
+    if(!QGuiApplication::instance()) VulkanTestApplication()=std::make_unique<QGuiApplication>(argc,argv);
+}
+}
 TEST_CASE("Vulkan GPU listing reports the card OpenShot renders with", "[vulkan][hardware]") {
     if(!VulkanAvailable()) return;
     const auto active=openshot::ActiveGpuDevice();
@@ -2363,27 +2386,6 @@ TEST_CASE("Vulkan stabilizer matches OpenCV fixed point warps", "[vulkan][hardwa
 #endif
 #ifdef USE_OPENCV
 namespace {
-std::unique_ptr<QGuiApplication>& DetectionTestApplication() {
-    static std::unique_ptr<QGuiApplication> app;
-    return app;
-}
-#if CATCH_VERSION_MAJOR >= 3
-using VulkanTestListenerBase=Catch::EventListenerBase;
-#else
-using VulkanTestListenerBase=Catch::TestEventListenerBase;
-#endif
-struct VulkanTestApplicationLifetime : VulkanTestListenerBase {
-    using VulkanTestListenerBase::VulkanTestListenerBase;
-    void testRunEnded(const Catch::TestRunStats&) override {
-        // Destroy Qt before process-wide Qt/plugin statics are torn down.
-        DetectionTestApplication().reset();
-    }
-};
-CATCH_REGISTER_LISTENER(VulkanTestApplicationLifetime)
-void DetectionTestApp() {
-    static int argc=1;static char name[]="vulkan-effects";static char* argv[]={name,nullptr};
-    if(!QGuiApplication::instance()) DetectionTestApplication()=std::make_unique<QGuiApplication>(argc,argv);
-}
 void WriteDetectionData(const QString& path) {
     auto varint=[](std::string& out,uint64_t v){while(v>=128){out.push_back(char((v&127)|128));v>>=7;}out.push_back(char(v));};
     auto message=[&](std::string& out,int tag,const std::string& value){varint(out,tag);varint(out,value.size());out+=value;};
@@ -2405,7 +2407,7 @@ void WriteDetectionData(const QString& path) {
 }
 TEST_CASE("Vulkan detection boxes and segmentation match Qt", "[vulkan][hardware][effects][projection-detection-effects]") {
     if(!VulkanAvailable()) return;
-    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detections.pb");WriteDetectionData(path);
+    EnsureVulkanTestApplication();QTemporaryDir directory;auto path=directory.filePath("detections.pb");WriteDetectionData(path);
     openshot::Clip parent;openshot::ObjectDetection effect;parent.AddEffect(&effect);REQUIRE(effect.LoadObjDetectdData(path.toStdString()));
     for(const QSize size:{QSize(37,23),QSize(257,129)}) {
         const auto pixels=PointEffectPixels(size.width(),size.height());const auto source=openshot::UploadVulkanImage(pixels);
@@ -2459,7 +2461,7 @@ TEST_CASE("Vulkan spherical auto quality covers mipmaps and camera poles", "[vul
 #ifdef USE_OPENCV
 TEST_CASE("Vulkan detection linked masks honor filtering and visibility", "[vulkan][hardware][effects][projection-detection-effects]") {
     if(!VulkanAvailable()) return;
-    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detections.pb");WriteDetectionData(path);
+    EnsureVulkanTestApplication();QTemporaryDir directory;auto path=directory.filePath("detections.pb");WriteDetectionData(path);
     openshot::Clip parent;openshot::ObjectDetection provider;provider.Id("detection-provider");parent.AddEffect(&provider);
     REQUIRE(provider.LoadObjDetectdData(path.toStdString()));
     openshot::Brightness effect(openshot::Keyframe(.3),openshot::Keyframe(2));effect.MaskSourceId(provider.Id());parent.AddEffect(&effect);
@@ -2492,7 +2494,7 @@ TEST_CASE("Vulkan projection and stabilization preserve 4K sampling", "[vulkan][
 #ifdef USE_OPENCV
     openshot::Stabilizer stabilizer;stabilizer.transformationData[1]=EffectTransformParam(.034,-.021,.043);
     CheckVulkanEffect(stabilizer,pixels,source,1,1,true);
-    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
+    EnsureVulkanTestApplication();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
     openshot::Clip parent;openshot::ObjectDetection detector;parent.AddEffect(&detector);REQUIRE(detector.LoadObjDetectdData(path.toStdString()));
     // Warm the glyph assets. Subsequent moving labels, boxes and masks upload no images.
     CheckVulkanEffect(detector,pixels,source,1,3);
@@ -2503,7 +2505,7 @@ TEST_CASE("Vulkan projection and stabilization preserve 4K sampling", "[vulkan][
 #ifdef USE_OPENCV
 TEST_CASE("Vulkan projection stabilization and detection preserve shared masks", "[vulkan][hardware][effects][projection-detection-effects]") {
     if(!VulkanAvailable()) return;
-    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
+    EnsureVulkanTestApplication();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
     auto mask_path=directory.filePath("mask.png");REQUIRE(PointEffectPixels(23,17).save(mask_path));
     const auto pixels=PointEffectPixels(129,73);const auto source=openshot::UploadVulkanImage(pixels);
     openshot::SphericalProjection sphere;sphere.yaw.AddPoint(1,-17,openshot::LINEAR);sphere.yaw.AddPoint(9,23,openshot::LINEAR);
@@ -2525,7 +2527,7 @@ TEST_CASE("Vulkan projection stabilization and detection preserve shared masks",
 }
 TEST_CASE("Vulkan animated projection detection chain remains copy free", "[vulkan][hardware][effects][projection-detection-effects]") {
     if(!VulkanAvailable()) return;
-    DetectionTestApp();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
+    EnsureVulkanTestApplication();QTemporaryDir directory;auto path=directory.filePath("detection.pb");WriteDetectionData(path);
     const auto pixels=PointEffectPixels(128,96);const auto source=openshot::UploadVulkanImage(pixels);std::vector<QImage> expected;
     for(bool gpu:{false,true}) {
         struct Restore { std::string backend,device;~Restore(){openshot::ConfigureGpuEnvironment(backend,device);} }
@@ -2674,3 +2676,216 @@ TEST_CASE("Vulkan animated tracker and linked mask timeline remains copy free", 
     CHECK(source->Materialize()==pixels);
 }
 #endif
+
+// The generators must work from the first frame: no uploaded seed or cached
+// overlay is needed. Audio analysis remains shared CPU math, never video pixels.
+#include "effects/AudioVisualization.h"
+#include "effects/BeatSync.h"
+#include "effects/Timer.h"
+namespace {
+void AddGeneratorAudio(std::shared_ptr<openshot::Frame> frame,int n) {
+    const int samples=2000;frame->ResizeAudio(2,samples,48000,openshot::LAYOUT_STEREO);
+    for(int channel=0;channel<2;++channel) {
+        std::vector<float> audio(samples);
+        for(int i=0;i<samples;++i) audio[i]=.6f*std::sin((i+n*31)*(channel?0.071:0.058))+.17f*std::cos(i*.23);
+        frame->AddAudio(true,channel,0,audio.data(),samples,1);
+    }
+}
+void CheckGenerator(openshot::EffectBase& cpu_effect,openshot::EffectBase& gpu_effect,const QImage& pixels,
+    std::shared_ptr<const openshot::FrameImage> source,int n,int tolerance=3) {
+    auto cpu=std::make_shared<openshot::Frame>(n,pixels.width(),pixels.height(),"transparent");
+    auto gpu=std::make_shared<openshot::Frame>(n,pixels.width(),pixels.height(),"transparent");
+    cpu->AddImage(std::make_shared<QImage>(pixels.copy()));gpu->AddDeferredImage(source);
+    AddGeneratorAudio(cpu,n);AddGeneratorAudio(gpu,n);ProcessCpuEffect(cpu_effect,cpu,n);
+    auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+    {openshot::gpu_metrics::Scope scope(false);gpu_effect.ProcessFrame(gpu,n);}
+    auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+    CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);REQUIRE(gpu->GetDeferredImage());
+    const auto expected=cpu->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied),actual=gpu->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+    int error=0,ex=0,ey=0;double sum=0;
+    for(int y=0;y<actual.height();++y) for(int x=0;x<actual.width()*4;++x) {
+        int d=std::abs(int(expected.constScanLine(y)[x])-int(actual.constScanLine(y)[x]));sum+=d;if(d>error){error=d;ex=x/4;ey=y;}
+    }
+    INFO("frame="<<n<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4)<<" at="<<ex<<","<<ey);
+    CHECK(error<=tolerance);
+    CHECK(sum/(actual.width()*actual.height()*4)<=.25);
+}
+}
+TEST_CASE("Vulkan BeatSync matches audio envelopes and seeks without transfers", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable()) return;
+    auto pixels=PointEffectPixels(129,73);auto source=openshot::UploadVulkanImage(pixels);
+    for(bool invert:{false,true}) {
+        openshot::BeatSync cpu,gpu;cpu.invert=gpu.invert=invert;
+        cpu.low_color=gpu.low_color=openshot::Color("#39278143");cpu.high_color=gpu.high_color=openshot::Color("#c3ef4587");
+        for(int n:{1,2,3,19,20,2}) CheckGenerator(cpu,gpu,pixels,source,n,0);
+    }
+}
+TEST_CASE("Vulkan Timer matches Qt outlines layouts and animated styles", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable()) return;
+    EnsureVulkanTestApplication();
+    for(const QSize size:{QSize(37,23),QSize(257,129),QSize(854,480)}) {
+        auto pixels=PointEffectPixels(size.width(),size.height());auto source=openshot::UploadVulkanImage(pixels);
+        openshot::Timer effect;effect.font_name="DejaVu Sans";effect.prefix="T ";effect.suffix=" !";
+        effect.font_size=openshot::Keyframe(47);effect.show_background=true;effect.background_alpha=openshot::Keyframe(.37);
+        for(int mode=0;mode<5;++mode) for(double stroke:{0.,.5,3.}) {
+            effect.mode=mode;effect.format=mode;effect.stroke_width=openshot::Keyframe(stroke);
+            INFO("width="<<size.width()<<" mode="<<mode<<" stroke="<<stroke);
+            for(int n:{1,37,200}) CheckVulkanEffect(effect,pixels,source,n,3,true);
+        }
+    }
+}
+TEST_CASE("Vulkan audio visualization matches every mode style and background", "[vulkan][hardware][effects][remaining-effects][audio-vector]") {
+    if(!VulkanAvailable()) return;
+    auto pixels=PointEffectPixels(193,129);auto source=openshot::UploadVulkanImage(pixels);
+    for(int mode=0;mode<=8;++mode) for(int style=0;style<4;++style) for(int color=0;color<2;++color) {
+        openshot::AudioVisualization cpu,gpu;
+        cpu.visualization_type=gpu.visualization_type=mode;cpu.style=gpu.style=style;
+        cpu.color_mode=gpu.color_mode=color;cpu.background=gpu.background=(mode+style)%5;
+        cpu.glow=gpu.glow=openshot::Keyframe(.37);cpu.detail=gpu.detail=openshot::Keyframe(.31);
+        cpu.channel_layout=gpu.channel_layout=(mode+style)%4;
+        INFO("mode="<<mode<<" style="<<style<<" color="<<color);
+        CheckGenerator(cpu,gpu,pixels,source,3);
+    }
+}
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan Mask handles linked generated sources and missing data", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable()) return;
+    auto pixels=PointEffectPixels(129,73);auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Clip parent;openshot::Tracker provider;provider.Id("linked-tracker");TrackerTestBoxes(provider);parent.AddEffect(&provider);
+    openshot::Mask effect;effect.MaskSourceId(provider.Id());parent.AddEffect(&effect);
+    for(bool replace:{false,true}) for(bool invert:{false,true}) for(double contrast:{0.,7.,19.8}) {
+        effect.replace_image=replace;effect.mask_invert=invert;effect.contrast=openshot::Keyframe(contrast);
+        effect.brightness=openshot::Keyframe(-.2);
+        for(int n:{1,4,9,19}) CheckVulkanEffect(effect,pixels,source,n,1,true);
+    }
+}
+#endif
+TEST_CASE("Vulkan generators create their first image without seed uploads", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable()) return;
+    EnsureVulkanTestApplication();
+    for(int kind=0;kind<3;++kind) for(bool audio:{false,true}) {
+        openshot::BeatSync beat;openshot::AudioVisualization visual;openshot::Timer timer;
+        auto* effect=kind==0?static_cast<openshot::EffectBase*>(&beat):kind==1?static_cast<openshot::EffectBase*>(&visual):static_cast<openshot::EffectBase*>(&timer);
+        auto frame=std::make_shared<openshot::Frame>(1,37,23,"transparent");if(audio)AddGeneratorAudio(frame,1);
+        const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+        {openshot::gpu_metrics::Scope scope(false);effect->ProcessFrame(frame,1);}
+        const auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+        REQUIRE(frame->GetDeferredImage());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+        CHECK(!frame->GetDeferredImage()->Materialize().isNull());
+    }
+}
+TEST_CASE("Vulkan audio generators preserve tiny and 4K frames", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable()) return;
+    for(QSize size:{QSize(1,1),QSize(3,5),QSize(3840,2160)}) {
+        auto pixels=PointEffectPixels(size.width(),size.height());auto source=openshot::UploadVulkanImage(pixels);
+        for(int mode:{1,2,3,4,5,6,7,8}) {
+            openshot::AudioVisualization cpu,gpu;cpu.visualization_type=gpu.visualization_type=mode;
+            cpu.detail=gpu.detail=openshot::Keyframe(.1);cpu.background=gpu.background=openshot::AUDIO_VISUALIZATION_BACKGROUND_SOURCE;
+            INFO("size="<<size.width()<<"x"<<size.height()<<" mode="<<mode);
+            CheckGenerator(cpu,gpu,pixels,source,2,3);
+        }
+        openshot::BeatSync cpu,gpu;CheckGenerator(cpu,gpu,pixels,source,1,0);
+        CHECK(source->Materialize()==pixels);
+    }
+}
+#ifdef USE_OPENCV
+TEST_CASE("Vulkan Mask consumes detection segmentation and GPU reader masks", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable()) return;EnsureVulkanTestApplication();
+    QTemporaryDir directory;auto detection=directory.filePath("detection.pb"),segmentation=directory.filePath("mask.pb");
+    WriteDetectionData(detection);WriteObjectMaskData(segmentation,7,5,{{0,8,4,6,1,8,8},{35},{0,35}});
+    const auto pixels=PointEffectPixels(129,73);auto source=openshot::UploadVulkanImage(pixels);
+    openshot::Clip parent;openshot::ObjectDetection detector;detector.Id("detect");parent.AddEffect(&detector);REQUIRE(detector.LoadObjDetectdData(detection.toStdString()));
+    openshot::ObjectMask object;object.Id("segment");parent.AddEffect(&object);REQUIRE(object.LoadObjMaskData(segmentation.toStdString()));
+    openshot::Mask mask;parent.AddEffect(&mask);mask.brightness=openshot::Keyframe(-.25);mask.contrast=openshot::Keyframe(7);
+    for(const char* id:{"detect","segment","missing"}) {
+        mask.MaskSourceId(id);
+        for(bool replace:{false,true})for(bool invert:{false,true}) {
+            mask.replace_image=replace;mask.mask_invert=invert;
+            for(int n:{1,2,3,19}) CheckVulkanEffect(mask,pixels,source,n,3,true);
+        }
+    }
+    mask.MaskSourceId("");mask.MaskReader(new PatternReader(source,true));
+    for(int n:{1,2,3}) CheckVulkanEffect(mask,pixels,source,n,1,true);
+}
+namespace {
+class AudioPatternReader : public PatternReader {
+public:
+    using PatternReader::PatternReader;
+    std::shared_ptr<openshot::Frame> GetFrame(int64_t n) override { auto frame=PatternReader::GetFrame(n);AddGeneratorAudio(frame,n);return frame; }
+};
+}
+TEST_CASE("Vulkan remaining effects stay resident together in an animated timeline", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable())return;EnsureVulkanTestApplication();
+    const auto pixels=PointEffectPixels(192,128);auto source=openshot::UploadVulkanImage(pixels);std::vector<QImage> expected;
+    for(bool gpu:{false,true}) {
+        struct Restore {std::string backend,device;~Restore(){openshot::ConfigureGpuEnvironment(backend,device);}}
+        restore{std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"",std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):""};
+        openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",restore.device);
+        AudioPatternReader reader(source,gpu);openshot::Clip clip(&reader);
+        openshot::Tracker tracker;TrackerTestBoxes(tracker);tracker.Id("generator-tracker");
+        openshot::Mask mask;mask.MaskSourceId(tracker.Id());mask.brightness=openshot::Keyframe(-.2);
+        openshot::BeatSync beat;
+        openshot::AudioVisualization visual;visual.background=openshot::AUDIO_VISUALIZATION_BACKGROUND_SOURCE;
+        visual.visualization_type=openshot::AUDIO_VISUALIZATION_RADIAL;visual.glow.AddPoint(1,.1,openshot::LINEAR);visual.glow.AddPoint(9,.7,openshot::LINEAR);
+        openshot::Timer timer;timer.font_name="DejaVu Sans";timer.font_size=openshot::Keyframe(43);timer.stroke_width=openshot::Keyframe(1.5);
+        int order=10;for(auto* effect:std::vector<openshot::EffectBase*>{&tracker,&mask,&beat,&visual,&timer}){effect->Order(order--);clip.AddEffect(effect);}
+        openshot::Timeline timeline(192,128,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);timeline.AddClip(&clip);timeline.Open();
+        std::vector<std::shared_ptr<openshot::Frame>> frames;openshot::ResetGpuMetrics();
+        for(int n=1;n<=8;++n){frames.push_back(timeline.GetFrame(n));if(gpu)REQUIRE(frames.back()->GetDeferredImage());}
+        if(gpu){auto m=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(m["uploads"].asInt()==0);CHECK(m["readbacks"].asInt()==0);}
+        for(size_t n=0;n<frames.size();++n){auto actual=frames[n]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+            if(!gpu){expected.push_back(actual);continue;}int error=0;double sum=0;
+            for(int y=0;y<actual.height();++y)for(int x=0;x<actual.width()*4;++x){int d=std::abs(int(actual.constScanLine(y)[x])-int(expected[n].constScanLine(y)[x]));error=std::max(error,d);sum+=d;}
+            INFO("frame="<<n+1<<" max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));CHECK(error<=3);CHECK(sum/(actual.width()*actual.height()*4)<=.25);
+        }
+        timeline.Close();
+    }
+    CHECK(source->Materialize()==pixels);
+}
+#endif
+#include "VulkanPainter.h"
+TEST_CASE("Vulkan cosmetic polylines preserve Qt reversal dropout pixels", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable())return;
+    QPolygonF points;points<<QPointF(74.8679,56.8642)<<QPointF(76.0755,35.5976)<<QPointF(77.283,33.6169)<<QPointF(78.4906,35.3853);
+    QImage pixels(97,73,QImage::Format_RGBA8888_Premultiplied);pixels.fill(Qt::transparent);
+    const auto source=openshot::UploadVulkanImage(pixels);
+    for(bool aa:{false,true})for(double width:{.45,1.}) {
+        QPen pen(QColor(60,140,230,122),width,Qt::SolidLine,Qt::FlatCap);
+        auto expected=pixels.copy();QPainter cpu(&expected);cpu.setRenderHint(QPainter::Antialiasing,aa);cpu.setPen(pen);cpu.drawPolyline(points);cpu.end();
+        openshot::VulkanPaintDevice device(97,73);QPainter gpu(&device);gpu.setRenderHint(QPainter::Antialiasing,aa);gpu.setPen(pen);gpu.drawPolyline(points);gpu.end();
+        auto actual=device.Render(source)->Materialize();int error=0;
+        for(int y=0;y<73;++y)for(int x=0;x<97*4;++x)error=std::max(error,std::abs(int(actual.constScanLine(y)[x])-int(expected.constScanLine(y)[x])));
+        INFO("antialias="<<aa<<" width="<<width);CHECK(error<=1);
+    }
+}
+namespace {
+class ForeignFrameImage : public openshot::FrameImage {
+    QImage pixels;
+public:
+    explicit ForeignFrameImage(QImage pixels):pixels(std::move(pixels)) {}
+    int GetWidth() const override{return pixels.width();}
+    int GetHeight() const override{return pixels.height();}
+    int64_t GetBytes() const override{return pixels.sizeInBytes();}
+    QImage Materialize() const override{return pixels.copy();}
+};
+}
+TEST_CASE("Vulkan generators preserve CPU fallback for foreign surfaces", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable())return;EnsureVulkanTestApplication();
+    auto pixels=PointEffectPixels(193,129);
+    for(int kind:{0,1}){
+        openshot::Timer timer;openshot::AudioVisualization visual;visual.background=openshot::AUDIO_VISUALIZATION_BACKGROUND_SOURCE;
+        auto* effect=kind==0?static_cast<openshot::EffectBase*>(&timer):static_cast<openshot::EffectBase*>(&visual);
+        auto cpu=std::make_shared<openshot::Frame>(3,193,129,"transparent"),fallback=std::make_shared<openshot::Frame>(3,193,129,"transparent");
+        cpu->AddImage(std::make_shared<QImage>(pixels.copy()));fallback->AddDeferredImage(std::make_shared<ForeignFrameImage>(pixels));
+        AddGeneratorAudio(cpu,3);AddGeneratorAudio(fallback,3);ProcessCpuEffect(*effect,cpu,3);effect->ProcessFrame(fallback,3);
+        CHECK_FALSE(fallback->GetDeferredImage());CHECK(*fallback->GetImage()==*cpu->GetImage());
+    }
+}
+TEST_CASE("Vulkan Mask keeps standalone CPU inputs functional", "[vulkan][hardware][effects][remaining-effects]") {
+    if(!VulkanAvailable())return;
+    auto pixels=PointEffectPixels(37,23),mask_pixels=PointEffectPixels(11,7);auto map=openshot::UploadVulkanImage(mask_pixels);
+    openshot::Mask mask;mask.MaskReader(new PatternReader(map,false));mask.brightness=openshot::Keyframe(-.3);
+    auto cpu=std::make_shared<openshot::Frame>(3,37,23,"transparent"),fallback=std::make_shared<openshot::Frame>(3,37,23,"transparent");
+    cpu->AddImage(std::make_shared<QImage>(pixels.copy()));fallback->AddImage(std::make_shared<QImage>(pixels.copy()));
+    ProcessCpuEffect(mask,cpu,3);mask.ProcessFrame(fallback,3);CHECK(*fallback->GetImage()==*cpu->GetImage());CHECK(*fallback->GetImage()!=pixels);
+}

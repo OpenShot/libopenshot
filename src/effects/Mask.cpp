@@ -63,13 +63,19 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
     // An absent reader/generated mask is a no-op, including on deferred frames.
     if (!MaskReader() && MaskSourceId().empty()) return frame;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-    if (VulkanRenderingEnabled() && MaskSourceId().empty()) {
+    if (VulkanRenderingEnabled()) {
         try {
-            auto mask=ResolveReaderMaskSurface(frame->GetWidth(),frame->GetHeight(),frame_number);
-            if (!mask) return frame;
             auto surface=frame->GetDeferredImage();
             if (!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
-            if (surface) {
+            std::shared_ptr<const FrameImage> mask;
+            if(surface) {
+                if(auto* source=ResolveMaskSourceEffect()) {
+                    mask=source->TrackedObjectMaskSurface(surface,frame_number);
+                    if(!mask) mask=SolidVulkanImage(surface->GetWidth(),surface->GetHeight(),Qt::black);
+                } else mask=ResolveReaderMaskSurface(surface->GetWidth(),surface->GetHeight(),frame_number);
+            }
+            if (surface && !mask) return frame;
+            if (surface && mask) {
                 const float factor=20.0f/std::max(0.5f,20.0f-float(contrast.GetValue(frame_number)));
                 frame->AddDeferredImage(MaskVulkanImage(surface,mask,factor,
                     int(255*brightness.GetValue(frame_number)),mask_invert,replace_image));

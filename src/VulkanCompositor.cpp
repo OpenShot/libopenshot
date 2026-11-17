@@ -163,7 +163,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     return work;
 }
 struct EffectParameters {
-    int mode; // 1-13: affine/point effects; 14-61: spatial passes (effects.glsl)
+    int mode; // 1-13: affine/point effects; 14-63: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -937,10 +937,8 @@ std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const Fra
     }
     return source;
 }
-std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color) {
-    if(path.isEmpty() || color.alpha()==0) return source;
-    const QRect clip(0,0,source->GetWidth(),source->GetHeight());
-    if(!path.controlPointRect().toRect().intersects(clip)) return source;
+std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height) {
+    const QRect clip(0,0,width,height);
     // Match Qt's 0.25px Bezier flattening, including its special distance test
     // for subpixel curves. Scaling public toSubpathPolygons changes that test.
     std::vector<float> edges;
@@ -968,11 +966,26 @@ std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameIma
         }
     }
     if(open) line(previous,first);
+    return edges;
+}
+std::shared_ptr<const FrameImage> PaintVulkanCommands(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& commands) {
+    EffectParameters effect{63,{},commands.data(),commands.size()*sizeof(uint32_t)};
+    return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color) {
+    if(path.isEmpty() || color.alpha()==0) return source;
+    const QRect clip(0,0,source->GetWidth(),source->GetHeight());
+    if(!path.controlPointRect().toRect().intersects(clip)) return source;
+    const auto edges=VulkanPathEdges(path,source->GetWidth(),source->GetHeight());
     const auto bounds=path.boundingRect().adjusted(-1,-1,1,1);
     EffectParameters effect{57,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),
         float(bounds.left()),float(bounds.top()),float(bounds.right()),float(bounds.bottom()),0},edges.data(),edges.size()*sizeof(float)};
     effect.values[8]=float(edges.size()/4)+(path.fillRule()==Qt::OddEvenFill?.5f:0.0f);
     return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> SolidVulkanImage(int width,int height,const QColor& color) {
+    EffectParameters effect{62,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha())}};
+    return RenderPixelEffect(AllocateVulkanImage(width,height),effect);
 }
 std::shared_ptr<const FrameImage> FillVulkanRect(std::shared_ptr<const FrameImage> source,const QRectF& rectangle,const QColor& color) {
     const auto rect=rectangle.normalized();

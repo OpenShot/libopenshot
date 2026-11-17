@@ -12,6 +12,11 @@
 
 #include "BeatSync.h"
 #include "Exceptions.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 #include "Timeline.h"
 
 #include <algorithm>
@@ -141,11 +146,25 @@ void BeatSync::init_effect_details()
 	info.has_video = true;
 }
 
-std::shared_ptr<openshot::Frame> BeatSync::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> BeatSync::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+    if(!frame) return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        const auto old_envelope=envelope_;const auto old_last=last_frame_;
+        try { return RenderFrame(frame,frame_number,true); }
+        catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan BeatSync CPU fallback: ")+error.what());
+            envelope_=old_envelope;last_frame_=old_last;
+        }
+    }
+#endif
+    return RenderFrame(frame,frame_number,false);
+}
+
+std::shared_ptr<openshot::Frame> BeatSync::RenderFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number,bool use_vulkan)
 {
-	const std::shared_ptr<QImage> frame_image = frame->GetImage();
-	int width  = frame_image ? std::max(1, frame_image->width())  : 1;
-	int height = frame_image ? std::max(1, frame_image->height()) : 1;
+	int width = std::max(1,frame->GetWidth());
+	int height = std::max(1,frame->GetHeight());
 	if ((width <= 1 || height <= 1) && ParentTimeline()) {
 		if (Timeline* timeline = dynamic_cast<Timeline*>(ParentTimeline())) {
 			if (timeline->info.width > 1 && timeline->info.height > 1) {
@@ -197,14 +216,21 @@ std::shared_ptr<openshot::Frame> BeatSync::GetFrame(std::shared_ptr<openshot::Fr
 	const float response = clampf(response_curve.Sample(energy, frame_number), 0.0f, 1.0f);
 	const int blend = clampi(static_cast<int>(response * 256.0f + 0.5f), 0, 256);
 	const int inv = 256 - blend;
-	auto out = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
-	out->fill(QColor(
+	const QColor generated(
 		blend_channel(low_color.red.GetInt(frame_number), high_color.red.GetInt(frame_number), inv, blend),
 		blend_channel(low_color.green.GetInt(frame_number), high_color.green.GetInt(frame_number), inv, blend),
 		blend_channel(low_color.blue.GetInt(frame_number), high_color.blue.GetInt(frame_number), inv, blend),
-		blend_channel(low_color.alpha.GetInt(frame_number), high_color.alpha.GetInt(frame_number), inv, blend)));
+		blend_channel(low_color.alpha.GetInt(frame_number), high_color.alpha.GetInt(frame_number), inv, blend));
 
-	frame->AddImage(out);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if((use_vulkan && VulkanRenderingEnabled())) {
+        frame->AddDeferredImage(SolidVulkanImage(width,height,generated));
+        return frame;
+    }
+#endif
+    auto out=std::make_shared<QImage>(width,height,QImage::Format_RGBA8888_Premultiplied);
+    out->fill(generated);
+    frame->AddImage(out);
 	return frame;
 }
 
