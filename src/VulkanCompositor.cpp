@@ -747,7 +747,7 @@ std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameI
         edges.insert(edges.end(),{top,bottom,int(start),slope,direction});
     }
     rounded.values[1]=float(edges.size()/5);rounded.values[2]=bounded?1.f:0.f;
-    std::vector<uint32_t> geometry;for(auto edge:edges)geometry.push_back(uint32_t(edge));
+    std::vector<uint32_t> geometry(edges.begin(),edges.end());
     if(rounded.values[0]>0) {
         QPainterPath path;path.addRoundedRect(QRectF(0,0,source->GetWidth(),source->GetHeight()),rounded.values[0],rounded.values[0]);path=matrix.map(path);
         const auto bounds=path.controlPointRect();

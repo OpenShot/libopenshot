@@ -8,6 +8,7 @@
 #include <QGradient>
 #include <array>
 #include <algorithm>
+#include <iterator>
 #include <cstring>
 #include <cmath>
 #include <stdexcept>
@@ -62,7 +63,7 @@ struct VulkanPaintDevice::Engine : QPaintEngine {
         else {
             w[2]=extra.size();
             if(!aa) {auto lines=aliasedEdges(path);w[3]=lines.size()/5;extra.insert(extra.end(),lines.begin(),lines.end());}
-            else {auto edges=VulkanPathEdges(path,width,height);w[3]=edges.size()/4;for(float f:edges)extra.push_back(Word(f));}
+            else {auto edges=VulkanPathEdges(path,width,height);w[3]=edges.size()/4;std::transform(edges.begin(),edges.end(),std::back_inserter(extra),Word);}
 
         }
         if(const auto* gradient=fill.gradient()) {

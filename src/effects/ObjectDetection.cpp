@@ -7,7 +7,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2026 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -198,19 +198,28 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame,in
     return RenderFrame(frame,frame_number,false);
 }
 std::shared_ptr<Frame> ObjectDetection::RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool allow_gpu) {
-    std::shared_ptr<const FrameImage> surface;int gpu_width=0,gpu_height=0;
+    std::shared_ptr<QImage> frame_image;
+    int width=frame->GetWidth(),height=frame->GetHeight();
+    QPainter painter;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
+    std::shared_ptr<const FrameImage> surface;
     if(allow_gpu) {
         surface=frame->GetDeferredImage();
         if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
-        if(surface) { gpu_width=surface->GetWidth();gpu_height=surface->GetHeight(); }
     }
+    if(surface) {
+        width=surface->GetWidth();height=surface->GetHeight();
+    } else
+#else
+    (void)allow_gpu;
 #endif
-    auto frame_image=surface?nullptr:frame->GetImage();
-    if(!surface && (!frame_image || frame_image->isNull())) return frame;
-    const int width=surface?gpu_width:frame_image->width(),height=surface?gpu_height:frame_image->height();
-    QPainter painter;
-    if(!surface) { painter.begin(frame_image.get());painter.setRenderHints(QPainter::Antialiasing|QPainter::SmoothPixmapTransform); }
+    {
+        frame_image=frame->GetImage();
+        if(!frame_image || frame_image->isNull())return frame;
+        width=frame_image->width();height=frame_image->height();
+        painter.begin(frame_image.get());
+        painter.setRenderHints(QPainter::Antialiasing|QPainter::SmoothPixmapTransform);
+    }
 
     if (detectionsData.find(frame_number) != detectionsData.end()) {
         DetectionData detections = detectionsData[frame_number];
@@ -246,11 +255,11 @@ std::shared_ptr<Frame> ObjectDetection::RenderFrame(std::shared_ptr<Frame> frame
                     QPen pen(QColor(stroke_rgba[0], stroke_rgba[1], stroke_rgba[2], 255 * stroke_alpha));
                     pen.setWidthF(trackedObject->ScaledStrokeWidth(
                         frame_number, width, height));
-                    if(!surface) painter.setPen(pen);
+                    if(painter.isActive()) painter.setPen(pen);
 
                     // Set the brush for the background
                     QBrush brush(QColor(bg_rgba[0], bg_rgba[1], bg_rgba[2], 255 * bg_alpha));
-                    if(!surface) painter.setBrush(brush);
+                    if(painter.isActive()) painter.setBrush(brush);
 
                     if (display_boxes.GetValue(frame_number) == 1 && trackedObject->draw_box.GetValue(frame_number) == 1) {
                         // Only draw boxes if both properties are set to YES (draw all boxes, and draw box of the selected box)
@@ -304,7 +313,7 @@ std::shared_ptr<Frame> ObjectDetection::RenderFrame(std::shared_ptr<Frame> frame
                         // Set up the painter, font, and pen
                         QFont font;
                         font.setPixelSize(14);
-                        if(!surface) painter.setFont(font);
+                        if(painter.isActive()) painter.setFont(font);
 
                         // Calculate the size of the text
                         QFontMetrics fontMetrics(font);
@@ -326,7 +335,7 @@ std::shared_ptr<Frame> ObjectDetection::RenderFrame(std::shared_ptr<Frame> frame
         }
     }
 
-    if(!surface) painter.end();
+    if(painter.isActive()) painter.end();
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
     if(surface) frame->AddDeferredImage(surface);
 #endif
