@@ -586,7 +586,7 @@ void paint_path(ivec2 pixel) {
 void paint_glyph(ivec2 pixel) {
     ivec2 q=pixel-ivec2(p.effect.xy);ivec4 original=bytes_at(pixel);
     if(any(lessThan(q,ivec2(0))) || any(greaterThanEqual(q,ivec2(p.effect.zw)))) { imageStore(output_img,pixel,vec4(original)/255.0);return; }
-    int alpha=int(round(texelFetch(background_tex,q+ivec2(0,int(p.matrix_x.w)),0).a*255.0));
+    int alpha=int(round(texelFetch(background_tex,q+ivec2(int(data[0]),int(p.matrix_x.w)),0).a*255.0));
     ivec4 color=ivec4(p.clear);color.rgb=premultiply_bytes(color.rgb,color.a);
     imageStore(output_img,pixel,vec4(over_bytes(byte_multiply(color,alpha),original))/255.0);
 }
@@ -697,7 +697,76 @@ void vector_paint(ivec2 pixel) {
     }
     imageStore(output_img,pixel,vec4(result)/255.0);
 }
+int blend_div255(int x) {x+=128;return (x+(x>>8))>>8;}
+int blend_channel(int d,int s,int da,int sa,int mode) {
+    int temp=s*(255-da)+d*(255-sa);
+    if(mode==13)return blend_div255(s*d+temp);
+    if(mode==14)return 255-(((255-s)*(255-d))>>8);
+    if(mode==15)return blend_div255(2*d<da?2*s*d+temp:sa*da-2*(da-d)*(sa-s)+temp);
+    if(mode==16)return blend_div255(min(s*da,d*sa)+temp);
+    if(mode==17)return blend_div255(max(s*da,d*sa)+temp);
+    if(mode==18){
+        if(s*da+d*sa>sa*da)return blend_div255(sa*da+temp);
+        if(s==sa || sa==0)return blend_div255(temp);
+        return blend_div255(255*d*sa/(255-255*s/sa)+temp);
+    }
+    if(mode==19){
+        if(s*da+d*sa<sa*da)return blend_div255(temp);
+        if(s==0)return blend_div255(d*sa+temp);
+        return blend_div255(sa*(s*da+d*sa-sa*da)/s+temp);
+    }
+    if(mode==20)return blend_div255(2*s<sa?2*s*d+temp:sa*da-2*(da-d)*(sa-s)+temp);
+    if(mode==21){
+        int dn=da!=0?255*d/da:0,t=temp*255;
+        if(2*s<sa)return (d*(sa*255+(2*s-sa)*(255-dn))+t)/65025;
+        if(4*d<=da)return (d*sa*255+da*(2*s-sa)*((((16*dn-12*255)*dn+3*65025)*dn)/65025)+t)/65025;
+        return (d*sa*255+da*(2*s-sa)*(int(sqrt(float(dn*255)))-dn)+t)/65025;
+    }
+    if(mode==22)return s+d-blend_div255(2*min(s*da,d*sa));
+    return s+d-((s*d)>>7); // Exclusion, matching Qt's 8-bit path.
+}
+ivec4 composite_bytes(ivec4 s,ivec4 d,int mode) {
+    if(mode==0)return over_bytes(s,d);
+    if(mode==1)return over_bytes(d,s);
+    if(mode==2)return ivec4(0);
+    if(mode==3)return s;
+    if(mode==4)return d;
+    if(mode==5)return byte_multiply(s,d.a);
+    if(mode==6)return byte_multiply(d,s.a);
+    if(mode==7)return byte_multiply(s,255-d.a);
+    if(mode==8)return byte_multiply(d,255-s.a);
+    if(mode==9)return byte_multiply(s,d.a)+byte_multiply(d,255-s.a);
+    if(mode==10)return byte_multiply(d,s.a)+byte_multiply(s,255-d.a);
+    if(mode==11)return byte_multiply(s,255-d.a)+byte_multiply(d,255-s.a);
+    if(mode==12)return min(s+d,ivec4(255));
+    return ivec4(blend_channel(d.r,s.r,d.a,s.a,mode),blend_channel(d.g,s.g,d.a,s.a,mode),
+        blend_channel(d.b,s.b,d.a,s.a,mode),255-(((255-s.a)*(255-d.a))>>8));
+}
+void composite_frame(ivec2 pixel) {
+    ivec4 d;
+    if(p.modes.y==1)d=ivec4(round(texelFetch(background_tex,pixel,0)*255.0));
+    else {d=ivec4(p.effect.yzw,p.clear.x);d.rgb=premultiply_bytes(d.rgb,d.a);}
+    ivec4 result=composite_bytes(bytes_at(pixel),d,int(p.effect.x));int alpha=int(p.clear.y);
+    if(alpha<255)for(int i=0;i<4;++i)result[i]=blend_div255(result[i]*alpha+d[i]*(255-alpha));
+    imageStore(output_img,pixel,vec4(clamp(result,0,255))/255.0);
+}
+void paint_text_mask(ivec2 pixel) {
+    ivec4 original=bytes_at(pixel);float coverage=texelFetch(background_tex,pixel,0).a;
+    if(value(8)>0.0){
+        int area=0;for(int edge=0;edge<int(p.effect.y);++edge){int base=9+4*edge;
+            vec2 a=vec2(value(base),value(base+1)),b=vec2(value(base+2),value(base+3));if(a.y!=b.y)area+=gray_edge(a,b,pixel);}
+        coverage*=float(clamp(abs(area>>9),0,255))/255.0;
+    }
+    int alpha=clamp(int(round(coverage*255.0)),0,255);ivec4 painted=composite_bytes(ivec4(255),original,int(p.effect.x));
+    ivec4 result;for(int i=0;i<4;++i)result[i]=blend_div255(painted[i]*alpha+original[i]*(255-alpha));
+    imageStore(output_img,pixel,vec4(result)/255.0);
+}
 void spatial_effect(ivec2 pixel) {
+    if(p.modes.w==66){paint_text_mask(pixel);return;}
+    if(p.modes.w==64){composite_frame(pixel);return;}
+    if(p.modes.w==65){
+        imageStore(output_img,pixel,(pixel.y&1)==0?texelFetch(background_tex,pixel,0):texelFetch(plane_y,pixel,0));return;
+    }
     if(p.modes.w==63) {vector_paint(pixel);return;}
     if(p.modes.w==62) {
         ivec4 c=ivec4(p.effect);c.rgb=premultiply_bytes(c.rgb,c.a);

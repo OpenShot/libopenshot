@@ -1,9 +1,9 @@
+// Copyright (c) 2026 OpenShot Studios, LLC
+// SPDX-License-Identifier: LGPL-3.0-or-later
 #ifdef __APPLE__
 #include "MacVulkanInterop.h"
 #include <CoreVideo/CoreVideo.h>
 #endif
-// Copyright (c) 2026 OpenShot Studios, LLC
-// SPDX-License-Identifier: LGPL-3.0-or-later
 #define CATCH_CONFIG_EXTERNAL_INTERFACES
 #include "openshot_catch.h"
 #include "VulkanCompositor.h"
@@ -2888,4 +2888,142 @@ TEST_CASE("Vulkan Mask keeps standalone CPU inputs functional", "[vulkan][hardwa
     auto cpu=std::make_shared<openshot::Frame>(3,37,23,"transparent"),fallback=std::make_shared<openshot::Frame>(3,37,23,"transparent");
     cpu->AddImage(std::make_shared<QImage>(pixels.copy()));fallback->AddImage(std::make_shared<QImage>(pixels.copy()));
     ProcessCpuEffect(mask,cpu,3);mask.ProcessFrame(fallback,3);CHECK(*fallback->GetImage()==*cpu->GetImage());CHECK(*fallback->GetImage()!=pixels);
+}
+#include "FrameMapper.h"
+TEST_CASE("Vulkan clip composition matches every Qt blend mode", "[vulkan][hardware][clip-mapper]") {
+    if(!VulkanAvailable())return;
+    for(QSize size:{QSize(1,1),QSize(3,5),QSize(129,73)}) {
+        const auto pixels=PointEffectPixels(size.width(),size.height());auto background=pixels.mirrored(true,true);
+        auto source=openshot::UploadVulkanImage(pixels),back=openshot::UploadVulkanImage(background);
+        for(int mode=0;mode<=openshot::COMPOSITE_LAST;++mode) {
+            QImage expected=background.copy();QPainter p(&expected);p.setCompositionMode(static_cast<QPainter::CompositionMode>(mode));p.drawImage(0,0,pixels);p.end();
+            auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            std::shared_ptr<const openshot::FrameImage> result;
+            {openshot::gpu_metrics::Scope scope(false);result=openshot::CompositeVulkanImage(source,back,mode);}
+            auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);
+            auto actual=result->Materialize();int error=0;
+            for(int y=0;y<size.height();++y)for(int x=0;x<size.width()*4;++x)error=std::max(error,std::abs(int(actual.constScanLine(y)[x])-int(expected.constScanLine(y)[x])));
+            INFO("size="<<size.width()<<"x"<<size.height()<<" mode="<<mode<<" error="<<error);CHECK(error<=1);
+        }
+    }
+}
+
+namespace {
+class MappingTestReader : public openshot::DummyReader {
+    std::vector<QImage> pixels;
+    std::vector<std::shared_ptr<const openshot::FrameImage>> surfaces;
+public:
+    MappingTestReader(const std::vector<QImage>& images,openshot::Fraction fps,bool gpu)
+        :DummyReader(fps,images.front().width(),images.front().height(),48000,2,5),pixels(images) {
+        if(gpu)for(const auto& image:images)surfaces.push_back(openshot::UploadVulkanImage(image));
+    }
+    std::shared_ptr<openshot::Frame> GetFrame(int64_t n) override {
+        auto frame=std::make_shared<openshot::Frame>(n,info.width,info.height,"transparent");
+        const auto i=size_t(std::max<int64_t>(1,n)-1)%pixels.size();
+        if(surfaces.empty())frame->AddImage(std::make_shared<QImage>(pixels[i]));else frame->AddDeferredImage(surfaces[i]);
+        AddGeneratorAudio(frame,n);frame->ResizeAudio(2,openshot::Frame::GetSamplesPerFrame(n,info.fps,48000,2),48000,openshot::LAYOUT_STEREO);return frame;
+    }
+};
+struct MappingBackend {
+    std::string backend=std::getenv("OPENSHOT_RENDER_BACKEND")?std::getenv("OPENSHOT_RENDER_BACKEND"):"";
+    std::string device=std::getenv("OPENSHOT_VULKAN_DEVICE")?std::getenv("OPENSHOT_VULKAN_DEVICE"):"";
+    explicit MappingBackend(bool gpu){openshot::ConfigureGpuEnvironment(gpu?"vulkan":"cpu",device);}
+    ~MappingBackend(){openshot::ConfigureGpuEnvironment(backend,device);}
+};
+void CheckClipPixels(const QImage& expected,const QImage& actual,int tolerance=3) {
+    REQUIRE(actual.size()==expected.size());int error=0,ex=0,ey=0;double sum=0;
+    for(int y=0;y<actual.height();++y)for(int x=0;x<actual.width()*4;++x){int d=std::abs(int(actual.constScanLine(y)[x])-int(expected.constScanLine(y)[x]));if(d>error){error=d;ex=x/4;ey=y;}sum+=d;}
+    INFO("worst="<<ex<<","<<ey<<" CPU="<<expected.pixelColor(ex,ey).name(QColor::HexArgb).toStdString()<<" GPU="<<actual.pixelColor(ex,ey).name(QColor::HexArgb).toStdString());
+    INFO("max="<<error<<" mean="<<sum/(actual.width()*actual.height()*4));CHECK(error<=tolerance);CHECK(sum/(actual.width()*actual.height()*4)<=.25);
+}
+}
+TEST_CASE("Vulkan FrameMapper preserves field weaving rate changes and audio", "[vulkan][hardware][clip-mapper]") {
+    if(!VulkanAvailable())return;
+    const auto base=PointEffectPixels(97,73);std::vector<QImage> images{base,base.mirrored(true,false),base.mirrored(false,true)};
+    for(auto rates:std::vector<std::pair<int,int>>{{24,30},{30,24},{25,30},{30,25},{24,24}})
+    for(auto mode:{openshot::PULLDOWN_NONE,openshot::PULLDOWN_CLASSIC,openshot::PULLDOWN_ADVANCED}) {
+        std::vector<QImage> expected;std::vector<std::vector<float>> audio;
+        for(bool gpu:{false,true}) {
+            MappingBackend backend(gpu);MappingTestReader reader(images,openshot::Fraction(rates.first,1),gpu);
+            openshot::FrameMapper mapper(&reader,openshot::Fraction(rates.second,1),mode,44100,1,openshot::LAYOUT_MONO);mapper.Open();
+            std::vector<std::shared_ptr<openshot::Frame>> frames;const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            for(int n:{1,2,3,4,5,9,8,7,1,19}){openshot::gpu_metrics::Scope scope(false);frames.push_back(mapper.GetFrame(n));if(gpu)REQUIRE(frames.back()->GetDeferredImage());}
+            if(gpu){auto m=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(m["uploads"]==before["uploads"]);CHECK(m["readbacks"]==before["readbacks"]);}
+            for(size_t i=0;i<frames.size();++i){auto frame=frames[i];auto pixels=frame->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+                if(!gpu){expected.push_back(pixels);audio.emplace_back(frame->GetAudioSamples(0),frame->GetAudioSamples(0)+frame->GetAudioSamplesCount());continue;}
+                INFO("rate="<<rates.first<<"->"<<rates.second<<" mode="<<mode<<" index="<<i);CheckClipPixels(expected[i],pixels,0);
+                REQUIRE(frame->GetAudioSamplesCount()==int(audio[i].size()));double error=0;for(int j=0;j<frame->GetAudioSamplesCount();++j)error=std::max(error,double(std::abs(frame->GetAudioSamples(0)[j]-audio[i][j])));CHECK(error<1e-6);
+            }
+            mapper.Close();
+        }
+    }
+}
+TEST_CASE("Vulkan clip modes preserve transformed CPU composition", "[vulkan][hardware][clip-mapper]") {
+    if(!VulkanAvailable())return;
+    auto pixels=PointEffectPixels(97,73);auto source=openshot::UploadVulkanImage(pixels);
+    for(int mode=0;mode<=openshot::COMPOSITE_LAST;++mode)for(bool transform:{false,true}) {
+        QImage expected;
+        for(bool gpu:{false,true}) {
+            MappingBackend backend(gpu);PatternReader reader(source,gpu);openshot::Clip clip(&reader);
+            clip.composite=static_cast<openshot::CompositeType>(mode);clip.alpha=openshot::Keyframe(.63);
+            if(transform){clip.rotation=openshot::Keyframe(13.2);clip.shear_x=openshot::Keyframe(.12);clip.scale_x=openshot::Keyframe(.81);clip.location_y=openshot::Keyframe(.07);}
+            auto background=std::make_shared<openshot::Frame>(4,97,73,"transparent");auto bg=pixels.mirrored(true,true);
+            if(gpu)background->AddDeferredImage(openshot::UploadVulkanImage(bg));else background->AddImage(std::make_shared<QImage>(bg));
+            clip.Open();auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());std::shared_ptr<openshot::Frame> result;
+            {openshot::gpu_metrics::Scope scope(false);result=clip.GetFrame(background,4);}
+            if(gpu){REQUIRE(result->GetDeferredImage());auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);}
+            auto actual=result->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+            if(!gpu)expected=actual;else{INFO("mode="<<mode<<" transform="<<transform);CheckClipPixels(expected,actual);}
+            clip.Close();
+        }
+    }
+}
+TEST_CASE("Vulkan clip waveform shortcut and disabled video preserve CPU pixels", "[vulkan][hardware][clip-mapper]") {
+    if(!VulkanAvailable())return;
+    auto pixels=PointEffectPixels(193,129);auto source=openshot::UploadVulkanImage(pixels);
+    for(int mode=-2;mode<=8;++mode) {
+        QImage expected;
+        for(bool gpu:{false,true}) {
+            MappingBackend backend(gpu);MappingTestReader reader({pixels},openshot::Fraction(24,1),gpu);openshot::Clip clip(&reader);
+            openshot::Brightness brightness(openshot::Keyframe(.2),openshot::Keyframe(2));
+            if(mode>=0){clip.Waveform(true);clip.WaveformMode(mode);clip.wave_color=openshot::Color("#c345a1d2");}
+            else {clip.has_video=openshot::Keyframe(0);if(mode==-1)clip.AddEffect(&brightness);}
+            clip.Open();auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());std::shared_ptr<openshot::Frame> frame;
+            {openshot::gpu_metrics::Scope scope(false);frame=clip.GetFrame(4);}
+            if(gpu){REQUIRE(frame->GetDeferredImage());auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);}
+            auto actual=frame->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+            if(!gpu)expected=actual;else{INFO("mode="<<mode);CheckClipPixels(expected,actual);}
+            clip.Close();
+        }
+    }
+}
+
+TEST_CASE("Vulkan frame-number overlays preserve Qt text and stay resident", "[vulkan][hardware][clip-mapper][clip-text]") {
+    if(!VulkanAvailable())return;EnsureVulkanTestApplication();
+    auto pixels=PointEffectPixels(193,129);auto source=openshot::UploadVulkanImage(pixels);
+    for(int display=1;display<=3;++display)for(int style=0;style<4;++style) {
+        std::vector<QImage> expected;
+        for(bool gpu:{false,true}) {
+            MappingBackend backend(gpu);PatternReader reader(source,gpu);openshot::Clip clip(&reader);
+            clip.display=static_cast<openshot::FrameDisplayType>(display);clip.alpha=openshot::Keyframe(.63);clip.Position(.75);clip.Start(.25);clip.End(4);
+            if(style==1){clip.location_x=openshot::Keyframe(.071);clip.location_y=openshot::Keyframe(.043);}
+            if(style==2){clip.rotation=openshot::Keyframe(13.2);clip.scale_x=openshot::Keyframe(.81);clip.location_y=openshot::Keyframe(.07);}
+            if(style==3){clip.corner_radius=openshot::Keyframe(.2);clip.composite=openshot::COMPOSITE_MULTIPLY;}
+            openshot::Timeline timeline(193,129,openshot::Fraction(24,1),48000,2,openshot::LAYOUT_STEREO);timeline.AddClip(&clip);clip.Open();
+            const auto cold=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            {openshot::gpu_metrics::Scope scope(false);clip.GetFrame(1);}
+            const auto before=openshot::stringToJson(openshot::GpuMetricsSnapshot());
+            if(gpu){CHECK(before["readbacks"]==cold["readbacks"]);CHECK(before["uploads"].asInt64()-cold["uploads"].asInt64()<=1);}
+            std::vector<std::shared_ptr<openshot::Frame>> frames;
+            for(int n:{2,9,11,19,1000007}){openshot::gpu_metrics::Scope scope(false);frames.push_back(clip.GetFrame(n));if(gpu)REQUIRE(frames.back()->GetDeferredImage());}
+            if(gpu){auto after=openshot::stringToJson(openshot::GpuMetricsSnapshot());CHECK(after["uploads"]==before["uploads"]);CHECK(after["readbacks"]==before["readbacks"]);}
+            for(size_t i=0;i<frames.size();++i){auto actual=frames[i]->GetImage()->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+                if(!gpu)expected.push_back(actual);else{INFO("display="<<display<<" style="<<style<<" index="<<i);
+                // Transformed unhinted glyph outlines differ slightly from Qt/FreeType's
+                // rasterizer. Keep the tight image tolerance for all other cases and
+                // retain the same mean-error bound for transformed text.
+                CheckClipPixels(expected[i],actual,style==2?20:3);}}
+            clip.Close();
+        }
+    }
 }

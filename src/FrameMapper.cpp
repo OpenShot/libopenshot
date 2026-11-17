@@ -6,7 +6,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2026 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -20,6 +20,10 @@
 #include "Clip.h"
 #include "MemoryTrim.h"
 #include "Logger.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanFrameImage.h"
+#include "VulkanCompositor.h"
+#endif
 
 using namespace std;
 using namespace openshot;
@@ -548,27 +552,30 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		frame->ChannelsLayout(mapped_frame->ChannelsLayout());
 
 
-		// Copy the image from the odd field
-		std::shared_ptr<Frame> odd_frame = mapped_frame;
-
-		if (odd_frame && odd_frame->has_image_data) {
+        std::shared_ptr<Frame> odd_frame=mapped_frame,even_frame;
+        const bool mixed=mapped.Odd.Frame!=mapped.Even.Frame;
+        if(mixed) even_frame=GetOrCreateFrame(mapped.Even.Frame);
+        bool resident=false;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-			// Progressive mapping needs no pixel access. Preserve immutable GPU
-			// storage while remapping the frame number and audio independently.
-			auto surface = odd_frame->GetDeferredImage();
-			if (surface && mapped.Odd.Frame == mapped.Even.Frame)
-				frame->AddDeferredImage(std::move(surface));
-			else
+        if(VulkanRenderingEnabled()) try {
+            auto surface=[](const std::shared_ptr<Frame>& source)->std::shared_ptr<const FrameImage> {
+                if(!source || !source->has_image_data)return {};
+                if(auto image=source->GetDeferredImage())return image;
+                return UploadVulkanImage(*source->GetImage());
+            };
+            auto odd=surface(odd_frame),even=mixed?surface(even_frame):nullptr;
+            auto image=mixed?WeaveVulkanImages(odd,even):odd;
+            if(image){frame->AddDeferredImage(image);resident=true;}
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan frame mapping CPU fallback: ")+error.what());
+        }
 #endif
-				frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()), true);
-		}
-		if (mapped.Odd.Frame != mapped.Even.Frame) {
-			// Add even lines (if different than the previous image)
-			std::shared_ptr<Frame> even_frame;
-			even_frame = GetOrCreateFrame(mapped.Even.Frame);
-			if (even_frame && even_frame->has_image_data)
-				frame->AddImage(std::make_shared<QImage>(*even_frame->GetImage()), false);
-		}
+        if(!resident) {
+            if(odd_frame && odd_frame->has_image_data)
+                frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()),true);
+            if(mixed && even_frame && even_frame->has_image_data)
+                frame->AddImage(std::make_shared<QImage>(*even_frame->GetImage()),false);
+        }
 
 		// Only treat the reader as audio-capable when the wrapped reader reports
 		// audio. Individual source frames can still be empty near boundaries, but

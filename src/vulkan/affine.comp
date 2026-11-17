@@ -245,9 +245,40 @@ void main() {
     vec2 center=vec2(pixel)+0.5;
     vec2 src=vec2(dot(p.matrix_x.xyz,vec3(center,1)),dot(p.matrix_y.xyz,vec3(center,1)));
     vec4 front=vec4(0);
-    if(all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)))) {
-        front=load_source(src/vec2(p.sizes.zw));
-        if(p.modes.w==0 && p.effect.x>0.0) {
+    bool inside=all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)));
+    if(p.modes.w==0 && (int(p.effect.z)&1)!=0){
+        int winding=0;
+        for(int edge=0;edge<int(p.effect.y);++edge){
+            int base=5*edge,top=int(data[base]),bottom=int(data[base+1]);if(pixel.y<top || pixel.y>bottom)continue;
+            int boundary=(int(data[base+2])+(pixel.y-top)*int(data[base+3]))>>16;
+            if(boundary>pixel.x)winding+=int(data[base+4]);
+        }
+        inside=winding!=0;
+    }
+    int clip_alpha=-1;
+    if(p.modes.w==0 && p.effect.w>0.0){
+        int area=0;
+        for(int edge=0;edge<int(p.effect.w);++edge){int base=5*int(p.effect.y)+4*edge;
+            vec2 a=vec2(value(base),value(base+1)),b=vec2(value(base+2),value(base+3));if(a.y!=b.y)area+=gray_edge(a,b,pixel);}
+        clip_alpha=clamp(abs(area>>9),0,255);inside=clip_alpha>0;
+    }
+    if(inside) {
+        if(p.modes.w==0 && (int(p.effect.z)&2)!=0){
+            int base=5*int(p.effect.y)+4*int(p.effect.w),blocks=int(data[base+2]),row=base+4+pixel.y*(1+2*blocks);
+            int first=int(data[row]),block=clamp((pixel.x-first)/2048,0,blocks-1),offset=pixel.x-first-block*2048;
+            ivec2 sample_fixed=ivec2(int(data[row+1+2*block]),int(data[row+2+2*block]))+offset*ivec2(int(data[base]),int(data[base+1]));
+            ivec2 q=sample_fixed>>16,f=(sample_fixed&65535)>>8,size=p.sizes.zw;
+            ivec4 a=ivec4(round(texelFetch(plane_y,clamp(q,ivec2(0),size-1),0)*255.0)),
+                b=ivec4(round(texelFetch(plane_y,clamp(q+ivec2(1,0),ivec2(0),size-1),0)*255.0)),
+                c=ivec4(round(texelFetch(plane_y,clamp(q+ivec2(0,1),ivec2(0),size-1),0)*255.0)),
+                d=ivec4(round(texelFetch(plane_y,clamp(q+ivec2(1,1),ivec2(0),size-1),0)*255.0));
+            ivec4 result;
+            if(data[base+3]!=0u)result=((((a*(256-f.y)+c*f.y)>>8)*(256-f.x))+(((b*(256-f.y)+d*f.y)>>8)*f.x))>>8;
+            else result=((((a*(256-f.x)+b*f.x)>>8)*(256-f.y))+(((c*(256-f.x)+d*f.x)>>8)*f.y))>>8;
+            front=vec4(result)/255.0;
+        } else front=load_source(src/vec2(p.sizes.zw));
+        if(clip_alpha>=0)front*=float(clip_alpha)/255.0;
+        else if(p.modes.w==0 && p.effect.x>0.0) {
             // Clip in source coordinates, before the affine transform, as Qt does.
             vec2 half_size=vec2(p.sizes.zw)*0.5;
             float radius=p.effect.x;

@@ -163,7 +163,7 @@ std::shared_ptr<EffectWork> NewEffectWork(const std::shared_ptr<const FrameImage
     return work;
 }
 struct EffectParameters {
-    int mode; // 1-13: affine/point effects; 14-63: spatial passes (effects.glsl)
+    int mode; // 1-13: affine/point effects; 14-66: spatial passes (effects.glsl)
     std::array<float,9> values{};
     const void* data=nullptr; // copied into the slot's shader buffer (binding 5)
     size_t data_bytes=0;
@@ -439,7 +439,10 @@ public:
         p.matrix_x[0]=inverse.m11();p.matrix_x[1]=inverse.m21();p.matrix_x[2]=inverse.dx();
         p.matrix_y[0]=inverse.m12();p.matrix_y[1]=inverse.m22();p.matrix_y[2]=inverse.dy();
         p.sizes[0]=width;p.sizes[1]=height;p.sizes[2]=src->width;p.sizes[3]=src->height;
-        p.extra[3]=std::clamp(opacity,0.0,1.0);
+        // Qt maps painter opacity through 0..256, then to an 8-bit
+        // composition coverage. Preserve that quantization before blending.
+        const int opacity256=int(std::clamp(opacity,0.0,1.0)*256.0);
+        p.extra[3]=float((opacity256*255)>>8)/255.0f;
         p.clear[3]=clear.alphaF();p.clear[0]=clear.redF()*p.clear[3];p.clear[1]=clear.greenF()*p.clear[3];p.clear[2]=clear.blueF()*p.clear[3];
         p.modes[1]=back?1:0;
         p.modes[2]=high_quality?1:0;
@@ -715,11 +718,83 @@ std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameI
 }
 std::shared_ptr<const FrameImage> RenderVulkanImage(std::shared_ptr<const FrameImage> source,
     std::shared_ptr<const FrameImage> background,int width,int height,const QTransform& matrix,
-    double opacity,const QColor& clear,bool high_quality,double corner_radius) {
+    double opacity,const QColor& clear,bool high_quality,double corner_radius,int composite) {
+    // QPainter blits translated images at integer destinations. Text uses
+    // its own fractional glyph placement and keeps the original transform.
+    auto raster=matrix;
+    if(raster.type()<=QTransform::TxTranslate)raster=QTransform::fromTranslate(qRound(raster.dx()),qRound(raster.dy()));
     EffectParameters rounded{0};
-    rounded.values[0] = float(std::clamp(corner_radius, 0.0, 0.5) *
-                              std::min(source->GetWidth(), source->GetHeight()));
-    return RenderImage(source,background,width,height,matrix,opacity,clear,high_quality,rounded.values[0] > 0 ? &rounded : nullptr);
+    rounded.values[0]=float(std::clamp(corner_radius,0.0,0.5)*std::min(source->GetWidth(),source->GetHeight()));
+    // QPainter truncates transformed path vertices to 26.6 before its
+    // aliased scan conversion. Use the same vector edges at image boundaries.
+    std::vector<int32_t> edges;
+    const std::array<QPointF,4> points{raster.map(QPointF(0,0)),raster.map(QPointF(source->GetWidth(),0)),
+        raster.map(QPointF(source->GetWidth(),source->GetHeight())),raster.map(QPointF(0,source->GetHeight()))};
+    bool bounded=rounded.values[0]==0;
+    for(auto p:points)bounded=bounded && std::isfinite(p.x()) && std::isfinite(p.y()) && std::abs(p.x())<16000 && std::abs(p.y())<16000;
+    if(bounded)for(size_t i=0;i<4;++i){
+        QPoint a(int(points[i].x()*64),int(points[i].y()*64)),b(int(points[(i+1)%4].x()*64),int(points[(i+1)%4].y()*64));
+        int direction=1;if(a.y()>b.y()){std::swap(a,b);direction=-1;}
+        int top=std::max(0,(a.y()+32)>>6),bottom=std::min(height-1,(b.y()-32)>>6);
+        if(top>bottom || a.y()==b.y())continue;
+        const double slope_value=double(b.x()-a.x())/(b.y()-a.y())*65536.0;
+        if(slope_value<INT32_MIN || slope_value>INT32_MAX){edges.clear();bounded=false;break;}
+        const int slope=int(slope_value);
+        int64_t start=32768+int64_t(a.x())*1024+((int64_t(slope)*(int64_t(top)*65536+32768-int64_t(a.y())*1024))>>16);
+        if(start<INT32_MIN || start>INT32_MAX){edges.clear();bounded=false;break;}
+        edges.insert(edges.end(),{top,bottom,int(start),slope,direction});
+    }
+    rounded.values[1]=float(edges.size()/5);rounded.values[2]=bounded?1.f:0.f;
+    std::vector<uint32_t> geometry;for(auto edge:edges)geometry.push_back(uint32_t(edge));
+    if(rounded.values[0]>0) {
+        QPainterPath path;path.addRoundedRect(QRectF(0,0,source->GetWidth(),source->GetHeight()),rounded.values[0],rounded.values[0]);path=matrix.map(path);
+        const auto bounds=path.controlPointRect();
+        if(std::isfinite(bounds.left()) && std::isfinite(bounds.top()) && std::isfinite(bounds.right()) && std::isfinite(bounds.bottom()) &&
+            std::max({std::abs(bounds.left()),std::abs(bounds.top()),std::abs(bounds.right()),std::abs(bounds.bottom())})<1000000) {
+            const auto outline=VulkanPathEdges(path,width,height);rounded.values[3]=float(outline.size()/4);
+            for(float value:outline){uint32_t word;std::memcpy(&word,&value,4);geometry.push_back(word);}
+        }
+    }
+    // Qt's transformed RGBA sampler advances 16.16 coordinates from each
+    // scanline/span, and truncates two 8-bit bilinear interpolation stages.
+    // Keep only compact row geometry on the host; all video samples stay on GPU.
+    auto image=std::dynamic_pointer_cast<const VulkanFrameImage>(source);
+    bool invertible=false;const auto inverse=raster.inverted(&invertible);
+    if(!high_quality && raster.type()>=QTransform::TxScale && image && image->IsPremultiplied() && invertible &&
+        reinterpret_cast<AVHWFramesContext*>(image->GetFrame()->hw_frames_ctx->data)->sw_format==AV_PIX_FMT_RGBA) {
+        const double dx=inverse.m11()*65536,dy=inverse.m12()*65536;
+        bool valid=std::isfinite(dx) && std::isfinite(dy) && dx>INT32_MIN && dx<INT32_MAX && dy>INT32_MIN && dy<INT32_MAX;
+        const int blocks=(width+2047)/2048;std::vector<uint32_t> rows;
+        if(valid) {
+            rows={uint32_t(int(dx)),uint32_t(int(dy)),uint32_t(blocks),
+#if defined(__SSE2__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
+                1u
+#else
+                0u
+#endif
+            };
+            for(int y=0;y<height && valid;++y) {
+                int first=width;
+                for(size_t edge=0;edge<edges.size();edge+=5)if(y>=edges[edge] && y<=edges[edge+1]) {
+                    const int64_t x=int64_t(edges[edge+2])+int64_t(y-edges[edge])*edges[edge+3];first=std::min(first,int(x>>16));
+                }
+                first=std::clamp(first,0,width);rows.push_back(uint32_t(first));
+                for(int block=0;block<blocks;++block) {
+                    const double x=first+block*2048+.5,cy=y+.5;
+                    const double fx=(inverse.m21()*cy+inverse.m11()*x+inverse.dx())*65536,
+                        fy=(inverse.m22()*cy+inverse.m12()*x+inverse.dy())*65536;
+                    if(!std::isfinite(fx) || !std::isfinite(fy) || fx<INT32_MIN+32768.0 || fx>INT32_MAX || fy<INT32_MIN+32768.0 || fy>INT32_MAX){valid=false;break;}
+                    rows.push_back(uint32_t(int(fx)-32768));rows.push_back(uint32_t(int(fy)-32768));
+                }
+            }
+        }
+        if(valid){rounded.values[2]+=2;geometry.insert(geometry.end(),rows.begin(),rows.end());}
+    }
+    rounded.data=geometry.data();rounded.data_bytes=geometry.size()*sizeof(uint32_t);
+    if(composite==0)
+        return RenderImage(source,background,width,height,raster,opacity,clear,high_quality,&rounded);
+    auto transformed=RenderImage(source,nullptr,width,height,raster,1.0,Qt::transparent,high_quality,&rounded);
+    return CompositeVulkanImage(transformed,background,composite,clear,opacity);
 }
 std::shared_ptr<const FrameImage> SaturateVulkanImage(std::shared_ptr<const FrameImage> source,
     const std::array<float,4>& saturation) {
@@ -937,7 +1012,7 @@ std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const Fra
     }
     return source;
 }
-std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height) {
+std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height,double flatness) {
     const QRect clip(0,0,width,height);
     // Match Qt's 0.25px Bezier flattening, including its special distance test
     // for subpixel curves. Scaling public toSubpathPolygons changes that test.
@@ -948,7 +1023,7 @@ std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height
         const double dx=d.x()-a.x(),dy=d.y()-a.y();double length=std::abs(dx)+std::abs(dy),distance;
         if(length>1) distance=std::abs(dx*(a.y()-b.y())-dy*(a.x()-b.x()))+std::abs(dx*(a.y()-c.y())-dy*(a.x()-c.x()));
         else { distance=std::abs(a.x()-b.x())+std::abs(a.y()-b.y())+std::abs(a.x()-c.x())+std::abs(a.y()-c.y());length=1; }
-        if(distance<.25*length || level==0) { line(a,d);return; }
+        if(distance<flatness*length || level==0) { line(a,d);return; }
         const auto ab=(a+b)*.5,bc=(b+c)*.5,cd=(c+d)*.5,abc=(ab+bc)*.5,bcd=(bc+cd)*.5,center=(abc+bcd)*.5;
         cubic(a,ab,abc,center,level-1);cubic(center,bcd,cd,d,level-1);
     };
@@ -972,16 +1047,40 @@ std::shared_ptr<const FrameImage> PaintVulkanCommands(std::shared_ptr<const Fram
     EffectParameters effect{63,{},commands.data(),commands.size()*sizeof(uint32_t)};
     return RenderPixelEffect(source,effect);
 }
-std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color) {
+std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color,double flatness) {
     if(path.isEmpty() || color.alpha()==0) return source;
     const QRect clip(0,0,source->GetWidth(),source->GetHeight());
     if(!path.controlPointRect().toRect().intersects(clip)) return source;
-    const auto edges=VulkanPathEdges(path,source->GetWidth(),source->GetHeight());
+    const auto edges=VulkanPathEdges(path,source->GetWidth(),source->GetHeight(),flatness);
     const auto bounds=path.boundingRect().adjusted(-1,-1,1,1);
     EffectParameters effect{57,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),
         float(bounds.left()),float(bounds.top()),float(bounds.right()),float(bounds.bottom()),0},edges.data(),edges.size()*sizeof(float)};
     effect.values[8]=float(edges.size()/4)+(path.fillRule()==Qt::OddEvenFill?.5f:0.0f);
     return RenderPixelEffect(source,effect);
+}
+std::shared_ptr<const FrameImage> CompositeVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> background,int composite,const QColor& clear,double opacity) {
+    if(composite<0 || composite>23) throw std::invalid_argument("Unsupported Vulkan composite mode");
+    source=PremultipliedRGBA(source);if(background)background=PremultipliedRGBA(background);
+    EffectParameters effect{64,{float(composite),float(clear.red()),float(clear.green()),float(clear.blue()),float(clear.alpha()),float((int(std::clamp(opacity,0.0,1.0)*256.0)*255)>>8)}};
+    return RenderImage(source,background,source->GetWidth(),source->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> PaintVulkanTextMask(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> coverage,int composite,const QTransform& transform,int clip_width,int clip_height,double corner_radius) {
+    source=PremultipliedRGBA(source);bool invertible=false;const auto m=transform.inverted(&invertible);
+    if(!invertible) return source;
+    std::vector<float> clip{float(m.m11()),float(m.m21()),float(m.dx()),float(m.m12()),float(m.m22()),float(m.dy()),
+        float(clip_width),float(clip_height),float(std::clamp(corner_radius,0.0,0.5)*std::min(clip_width,clip_height))};
+    if(clip[8]>0){QPainterPath path;path.addRoundedRect(QRectF(0,0,clip_width,clip_height),clip[8],clip[8]);
+        const auto edges=VulkanPathEdges(transform.map(path),source->GetWidth(),source->GetHeight());clip.insert(clip.end(),edges.begin(),edges.end());}
+    EffectParameters effect{66,{float(composite),float((clip.size()-9)/4)},clip.data(),clip.size()*sizeof(float)};
+    return RenderImage(source,coverage,source->GetWidth(),source->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
+}
+std::shared_ptr<const FrameImage> WeaveVulkanImages(std::shared_ptr<const FrameImage> odd,std::shared_ptr<const FrameImage> even) {
+    if(!odd) return even;if(!even || odd->GetWidth()!=even->GetWidth() || odd->GetHeight()!=even->GetHeight()) return odd;
+    odd=PremultipliedRGBA(odd);even=PremultipliedRGBA(even);
+    EffectParameters effect{65};
+    return RenderImage(odd,even,odd->GetWidth(),odd->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
 }
 std::shared_ptr<const FrameImage> SolidVulkanImage(int width,int height,const QColor& color) {
     EffectParameters effect{62,{float(color.red()),float(color.green()),float(color.blue()),float(color.alpha())}};
@@ -1066,6 +1165,7 @@ std::shared_ptr<const FrameImage> PaintVulkanGlyph(std::shared_ptr<const FrameIm
     source=PremultipliedRGBA(source);
     EffectParameters effect{59,{float(origin.x()),float(origin.y()),float(tile.width()),float(tile.height()),
         float(color.red()),float(color.green()),float(color.blue()),float(color.alpha()),float(tile.y())}};
+    const int32_t x=tile.x();effect.data=&x;effect.data_bytes=sizeof(x);
     return RenderImage(source,atlas,source->GetWidth(),source->GetHeight(),QTransform(),1.0,Qt::transparent,false,&effect);
 }
 // Shared Qt unpremultiplication lookup, including its platform-specific rounding.

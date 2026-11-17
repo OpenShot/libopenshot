@@ -27,7 +27,17 @@ std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameI
 std::shared_ptr<const FrameImage> RenderVulkanImage(
     std::shared_ptr<const FrameImage> source, std::shared_ptr<const FrameImage> background,
     int width, int height, const QTransform& source_to_output, double opacity,
-    const QColor& clear = Qt::transparent, bool high_quality = false, double corner_radius = 0.0);
+    const QColor& clear = Qt::transparent, bool high_quality = false, double corner_radius = 0.0, int composite = 0);
+/// Qt-compatible premultiplied compositing of equal-sized resident frames.
+std::shared_ptr<const FrameImage> CompositeVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> background,int composite,const QColor& clear=Qt::transparent,double opacity=1.0);
+/// Weave alternating scanlines; odd is the original full image, even replaces rows 0,2,...
+std::shared_ptr<const FrameImage> WeaveVulkanImages(std::shared_ptr<const FrameImage> odd,std::shared_ptr<const FrameImage> even);
+/// Paint an already transformed text coverage mask with Qt composition and clip rounding.
+std::shared_ptr<const FrameImage> PaintVulkanTextMask(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> coverage,int composite,const QTransform& transform,
+    int clip_width,int clip_height,double corner_radius);
+
 /// Apply common and per-channel saturation, preserving premultiplied alpha.
 std::shared_ptr<const FrameImage> SaturateVulkanImage(
     std::shared_ptr<const FrameImage> source, const std::array<float, 4>& saturation);
@@ -78,10 +88,10 @@ std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const Fr
 std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<std::vector<int32_t>>& axes);
 /// All spherical/fisheye models, straight-alpha CPU-compatible sampling and automatic mipmaps.
 std::shared_ptr<const FrameImage> SphericalVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
-std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height);
+std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height,double flatness=.25);
 std::shared_ptr<const FrameImage> PaintVulkanCommands(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& commands);
 /// Rasterize vector annotations from geometry, preserving the video surface on the device.
-std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color);
+std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color,double flatness=.25);
 /// Qt's axis-aligned rectangle fill, including its 16.16 subpixel coverage.
 std::shared_ptr<const FrameImage> FillVulkanRect(std::shared_ptr<const FrameImage> source,const QRectF& rect,const QColor& color);
 /// Match QPainter's rounded-rectangle traversal.
