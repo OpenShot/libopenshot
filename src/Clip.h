@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "AudioLocation.h"
 #include "ClipBase.h"
@@ -87,6 +88,7 @@ namespace openshot {
 	 * @endcode
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
+		friend class PitchShift;
 	protected:
 		/// Mutex for multiple threads
 		std::recursive_mutex getFrameMutex;
@@ -134,6 +136,13 @@ namespace openshot {
 		/// If we allocated a reader, we store it here to free it later
 		/// (reader member variable itself may have been replaced)
 		openshot::ReaderBase* allocated_reader;
+
+        // Audio-only prefix used by effects which need look-ahead. The context
+        // borrows the reader, but owns independent time mapping and effect state.
+        Json::Value AudioContextJson(const EffectBase* stop) const;
+        std::unique_ptr<Clip> CreateAudioContext(const Json::Value& settings,
+            std::vector<std::unique_ptr<EffectBase>>& owned_effects) const;
+        std::shared_ptr<Frame> GetAudioContextFrame(int64_t number);
 
 		/// Adjust frame number minimum value
 		int64_t adjust_frame_number_minimum(int64_t frame_number);

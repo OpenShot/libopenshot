@@ -281,6 +281,7 @@ typedef struct OpenShotByteBuffer {
 #endif
 
 /* Effects */
+%include "audio_effects/PitchShift.h"
 %include "effects/Bars.h"
 %include "effects/Blur.h"
 %include "effects/Brightness.h"

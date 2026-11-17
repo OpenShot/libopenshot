@@ -1446,6 +1446,76 @@ void Clip::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_nu
 	}
 }
 
+// Describe just the upstream audio graph. Video edits do not reset audio DSP.
+Json::Value Clip::AudioContextJson(const EffectBase* stop) const
+{
+    Json::Value root;
+    root["reader"] = reader ? reader->JsonValue() : Json::Value();
+    root["reader_address"] = std::to_string(reinterpret_cast<uintptr_t>(reader));
+    root["time"] = time.JsonValue();
+    root["has_audio"] = has_audio.JsonValue();
+    root["start"] = Start();
+    root["end"] = End();
+    root["position"] = Position();
+    root["effects"] = Json::Value(Json::arrayValue);
+    // Match the two passes in GetFrame, including effects moved after transforms.
+    for (bool before : {true, false}) {
+        for (const auto* effect : effects) {
+            if (effect->info.apply_before_clip != before) continue;
+            if (effect == stop) return root;
+            if (effect->info.has_audio) root["effects"].append(effect->JsonValue());
+        }
+    }
+    return root;
+}
+
+std::unique_ptr<Clip> Clip::CreateAudioContext(const Json::Value& settings,
+    std::vector<std::unique_ptr<EffectBase>>& owned_effects) const
+{
+    auto context = std::unique_ptr<Clip>(new Clip());
+    // Do not use Reader(): it changes the reader's parent and ownership metadata.
+    context->reader = reader;
+    context->info = reader->info;
+    context->time.SetJsonValue(settings["time"]);
+    context->has_audio.SetJsonValue(settings["has_audio"]);
+    context->Start(settings["start"].asDouble());
+    context->End(settings["end"].asDouble());
+    context->Position(settings["position"].asDouble());
+    for (const auto& json : settings["effects"]) {
+        std::unique_ptr<EffectBase> effect(EffectInfo().CreateEffect(json["type"].asString()));
+        if (!effect) continue;
+        effect->SetJsonValue(json);
+        effect->ParentClip(context.get());
+        context->effects.push_back(effect.get());
+        owned_effects.push_back(std::move(effect));
+    }
+    // is_open stays false: this context must never close the borrowed reader.
+    return context;
+}
+
+std::shared_ptr<Frame> Clip::GetAudioContextFrame(int64_t number)
+{
+    auto sample_number = number;
+    if (time.GetLength() > 1)
+        sample_number = adjust_timeline_framenumber(number);
+    else if (auto* mapper = dynamic_cast<FrameMapper*>(reader))
+        sample_number = mapper->AdjustFrameNumber(number);
+    const int samples = Frame::GetSamplesPerFrame(sample_number, reader->info.fps,
+        reader->info.sample_rate, reader->info.channels);
+    const auto first = static_cast<int64_t>(std::round(Start() * reader->info.fps.ToDouble())) + 1;
+    const auto last = static_cast<int64_t>(std::round(End() * reader->info.fps.ToDouble()));
+    if (number < first || number > last) {
+        auto frame = std::make_shared<Frame>(number, samples, reader->info.channels);
+        frame->SampleRate(reader->info.sample_rate);
+        frame->AddAudioSilence(samples);
+        return frame;
+    }
+    auto frame = GetOrCreateFrame(number);
+    apply_timemapping(frame);
+    for (auto* effect : effects) effect->GetFrame(frame, number);
+    return frame;
+}
+
 // Compare 2 floating point numbers for equality
 bool Clip::isNear(double a, double b)
 {

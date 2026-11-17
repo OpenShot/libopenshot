@@ -246,6 +246,10 @@ Point Keyframe::GetMaxPoint() const {
 
 // Get the value at a specific index
 double Keyframe::GetValue(int64_t index) const {
+    return GetValueAtFrame(static_cast<double>(index));
+}
+
+double Keyframe::GetValueAtFrame(double index) const {
 	if (Points.empty()) {
 		return 0;
 	}

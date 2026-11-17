@@ -26,3 +26,15 @@ License: LGPL-3.0-or-later
 Files: .gitmodules
 Copyright: OpenShot Studios, LLC
 License: LGPL-3.0-or-later
+
+Files: thirdparty/signalsmith/stretch/*
+Copyright: 2022 Geraint Luff / Signalsmith Audio Ltd.
+License: MIT
+
+Files: thirdparty/signalsmith/signalsmith-linear/*
+Copyright: 2025 Signalsmith Audio
+License: MIT
+
+Files: thirdparty/signalsmith/README.md
+Copyright: 2026 OpenShot Studios, LLC
+License: LGPL-3.0-or-later

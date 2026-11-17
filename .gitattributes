@@ -4,3 +4,6 @@
 
 * text=auto
 
+
+# Keep bundled upstream code separate from the implementation during PR review.
+thirdparty/signalsmith/** linguist-vendored
