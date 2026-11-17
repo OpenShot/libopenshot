@@ -188,9 +188,42 @@ void scope() {
     for(uint i=gl_LocalInvocationIndex;i<1024u;i+=256u)
         if(scope_histograms[i]!=0u) atomicAdd(data[i],scope_histograms[i]);
 }
+// Mesh records are sorted in CPU raster order. Search backward so folds use
+// the last covering triangle without data races or a separate coverage image.
+void distort(ivec2 pixel) {
+    int tile=(pixel.y/16)*int(p.effect.x)+pixel.x/16;
+    uint start=data[tile*2], count=data[tile*2+1];
+    vec4 result=vec4(0);
+    for (int i=int(count)-1; i>=0; --i) {
+        int t=int(data[start+uint(i)]);
+        if (pixel.x<int(data[t+12]) || pixel.x>int(data[t+13]) ||
+            pixel.y<int(data[t+14]) || pixel.y>int(data[t+15])) continue;
+        int span=t+16+(pixel.y-int(data[t+14]))*2;
+        if(pixel.x<int(data[span]) || pixel.x>int(data[span+1])) continue;
+        vec2 delta=vec2(pixel)+0.5-vec2(value(t),value(t+1));
+        float b=dot(delta,vec2(value(t+2),value(t+3)));
+        float c=dot(delta,vec2(value(t+4),value(t+5)));
+        vec2 uv=vec2(value(t+6),value(t+7))+b*vec2(value(t+8),value(t+9))
+                   +c*vec2(value(t+10),value(t+11));
+        vec2 pos=clamp(uv*vec2(p.sizes.zw)-0.5,vec2(0),vec2(p.sizes.zw)-1.0);
+        ivec2 a=ivec2(pos), last=p.sizes.zw-1;
+        vec2 fraction=pos-vec2(a);
+        vec4 upper=mix(texelFetch(plane_y,a,0),texelFetch(plane_y,min(a+ivec2(1,0),last),0),fraction.x);
+        vec4 lower=mix(texelFetch(plane_y,min(a+ivec2(0,1),last),0),
+                       texelFetch(plane_y,min(a+ivec2(1,1),last),0),fraction.x);
+        result=floor(mix(upper,lower,fraction.y)*255.0+0.5)/255.0;
+        break;
+    }
+    imageStore(output_img,pixel,result);
+}
 void main() {
     // Scopes count instead of writing an image; every invocation reaches the barriers.
     if(p.modes.w==8) { scope(); return; }
+    if(p.modes.w==9) {
+        ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
+        if(all(lessThan(pixel,p.sizes.xy))) distort(pixel);
+        return;
+    }
     ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
     if(any(greaterThanEqual(pixel,p.sizes.xy))) return;
     vec2 center=vec2(pixel)+0.5;

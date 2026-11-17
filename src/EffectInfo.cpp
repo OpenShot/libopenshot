@@ -110,6 +110,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "DenoiseImage")
 		return new DenoiseImage();
 
+	else if (effect_type == "Distort")
+		return new Distort();
+
 	else if (effect_type == "Wave")
 		return new Wave();
 
@@ -195,6 +198,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(SphericalProjection().JsonInfo());
 	root.append(Timer().JsonInfo());
 	root.append(DenoiseImage().JsonInfo());
+	root.append(Distort().JsonInfo());
 	root.append(Wave().JsonInfo());
 	/* Audio */
 	root.append(Noise().JsonInfo());
