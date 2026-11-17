@@ -12,18 +12,20 @@
 
 #include "Wave.h"
 #include "Exceptions.h"
+#include <algorithm>
+#include <cmath>
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Wave::Wave() : wavelength(0.06), amplitude(0.3), multiplier(0.2), shift_x(0.0), speed_y(0.2) {
+Wave::Wave() : wavelength(0.06), amplitude(0.3), multiplier(0.2), shift_x(0.0), speed_y(0.2), direction(0.0), warp_angle(0.0), displacement_angle(0.0) {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
 Wave::Wave(Keyframe wavelength, Keyframe amplitude, Keyframe multiplier, Keyframe shift_x, Keyframe speed_y)
-		: wavelength(wavelength), amplitude(amplitude), multiplier(multiplier), shift_x(shift_x), speed_y(speed_y)
+		: wavelength(wavelength), amplitude(amplitude), multiplier(multiplier), shift_x(shift_x), speed_y(speed_y), direction(0.0), warp_angle(0.0), displacement_angle(0.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -48,6 +50,82 @@ void Wave::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Wave::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+
+    // Directional Wave modes (0 preserves legacy rendering).
+    const int mode = static_cast<int>(
+        std::lround(direction.GetValue(frame_number)));
+
+    if (mode >= 1 && mode <= 3) {
+        auto image = frame->GetImage();
+
+        if (!image || image->isNull())
+            return frame;
+
+        const int width = image->width();
+        const int height = image->height();
+
+        const QImage original = image->copy();
+
+        const double pi = 3.14159265358979323846;
+        const double warp =
+            warp_angle.GetValue(frame_number) * pi / 180.0;
+        const double displacement =
+            displacement_angle.GetValue(frame_number) * pi / 180.0;
+
+        const double wc = std::cos(warp);
+        const double ws = std::sin(warp);
+        const double dc = std::cos(displacement);
+        const double ds = std::sin(displacement);
+
+        const double frequency = wavelength.GetValue(frame_number);
+        const double strength =
+            amplitude.GetValue(frame_number) *
+            multiplier.GetValue(frame_number) * 100.0;
+
+        const double phase =
+            frame_number * speed_y.GetValue(frame_number);
+
+        const double offset = shift_x.GetValue(frame_number);
+
+        const double cx = (width - 1) / 2.0;
+        const double cy = (height - 1) / 2.0;
+
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const double coordinate =
+                    (x - cx) * ws + (y - cy) * wc;
+
+                const double wave =
+                    (std::sin(coordinate * frequency + phase)
+                     + offset) * strength;
+
+                double dx = 0.0;
+                double dy = 0.0;
+
+                if (mode == 1) {
+                    dx = wave;
+                } else if (mode == 2) {
+                    dy = wave;
+                } else {
+                    dx = wave * dc;
+                    dy = wave * ds;
+                }
+
+                const double sample_x = std::max(
+                    0.0, std::min(static_cast<double>(width - 1), x + dx));
+                const double sample_y = std::max(
+                    0.0, std::min(static_cast<double>(height - 1), y + dy));
+
+                const int sx = static_cast<int>(std::lround(sample_x));
+                const int sy = static_cast<int>(std::lround(sample_y));
+
+                image->setPixel(x, y, original.pixel(sx, sy));
+            }
+        }
+
+        return frame;
+    }
+
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
@@ -110,6 +188,9 @@ Json::Value Wave::JsonValue() const {
 	root["multiplier"] = multiplier.JsonValue();
 	root["shift_x"] = shift_x.JsonValue();
 	root["speed_y"] = speed_y.JsonValue();
+	root["direction"] = direction.JsonValue();
+	root["warp_angle"] = warp_angle.JsonValue();
+	root["displacement_angle"] = displacement_angle.JsonValue();
 
 	// return JsonValue
 	return root;
@@ -149,6 +230,12 @@ void Wave::SetJsonValue(const Json::Value root) {
 		shift_x.SetJsonValue(root["shift_x"]);
 	if (!root["speed_y"].isNull())
 		speed_y.SetJsonValue(root["speed_y"]);
+	if (!root["direction"].isNull())
+		direction.SetJsonValue(root["direction"]);
+	if (!root["warp_angle"].isNull())
+		warp_angle.SetJsonValue(root["warp_angle"]);
+	if (!root["displacement_angle"].isNull())
+		displacement_angle.SetJsonValue(root["displacement_angle"]);
 }
 
 // Get all properties for a specific frame
@@ -163,6 +250,9 @@ std::string Wave::PropertiesJSON(int64_t requested_frame) const {
 	root["multiplier"] = add_property_json("Multiplier", multiplier.GetValue(requested_frame), "float", "", &multiplier, 0.0, 10.0, false, requested_frame);
 	root["shift_x"] = add_property_json("X Shift", shift_x.GetValue(requested_frame), "float", "", &shift_x, 0.0, 1000.0, false, requested_frame);
 	root["speed_y"] = add_property_json("Vertical speed", speed_y.GetValue(requested_frame), "float", "", &speed_y, 0.0, 300.0, false, requested_frame);
+	root["direction"] = add_property_json("Direction (0=Legacy, 1=Horizontal, 2=Vertical, 3=Custom Angle)", direction.GetValue(requested_frame), "int", "", &direction, 0, 3, false, requested_frame);
+	root["warp_angle"] = add_property_json("Warp Angle", warp_angle.GetValue(requested_frame), "float", "", &warp_angle, -180.0, 180.0, false, requested_frame);
+	root["displacement_angle"] = add_property_json("Displacement Angle", displacement_angle.GetValue(requested_frame), "float", "", &displacement_angle, -180.0, 180.0, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
