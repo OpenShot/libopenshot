@@ -58,7 +58,7 @@ namespace openshot
 	/// Get Audio Devices from JUCE
 	AudioDeviceList GetAudioDeviceNames();
 
-	/// Get current audio device or last attempted
+	/// Get current open audio device (empty if initialization failed)
 	AudioDeviceInfo GetCurrentAudioDevice();
 
 	/// Play the video
