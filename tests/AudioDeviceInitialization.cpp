@@ -50,7 +50,7 @@ public:
 class TestDeviceType : public juce::AudioIODeviceType {
     DeviceState& state;
 public:
-    TestDeviceType(DeviceState& state) : AudioIODeviceType("Test audio"), state(state) {}
+    explicit TestDeviceType(DeviceState& state) : AudioIODeviceType("Test audio"), state(state) {}
     void scanForDevices() override {}
     juce::StringArray getDeviceNames(bool input = false) const override {
         return input ? juce::StringArray() : juce::StringArray{"Default", "Speakers", "Broken"};
@@ -67,7 +67,7 @@ public:
 class TestManager : public juce::AudioDeviceManager {
     DeviceState& state;
 public:
-    TestManager(DeviceState& state) : state(state) {}
+    explicit TestManager(DeviceState& state) : state(state) {}
     void createAudioDeviceTypes(juce::OwnedArray<juce::AudioIODeviceType>& types) override {
         types.add(new TestDeviceType(state));
     }
@@ -149,7 +149,7 @@ TEST_CASE("Failures and repeated initialization cannot expose attempted metadata
     CHECK(failed.device.type.isEmpty());
     CHECK(failed.sample_rate == 0);
     manager.closeAudioDevice();
-    state.fail = state.silent = false;
+    state = DeviceState{};
     auto recovered = init();
     REQUIRE(recovered.error.empty());
     CHECK(recovered.device.name == "Speakers");
