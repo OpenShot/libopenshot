@@ -159,9 +159,9 @@ CVObjectMaskData TransformMaskToBox(
 
     const double xScale = targetMaskBox.width / sourceMaskBox.width;
     const double yScale = targetMaskBox.height / sourceMaskBox.height;
-    cv::Mat transform = (cv::Mat_<double>(2, 3) <<
+    const cv::Matx23d transform{
         xScale, 0.0, targetMaskBox.x - xScale * sourceMaskBox.x,
-        0.0, yScale, targetMaskBox.y - yScale * sourceMaskBox.y);
+        0.0, yScale, targetMaskBox.y - yScale * sourceMaskBox.y};
 
     cv::Mat source = DecodeBinaryMaskRLE(sourceMask);
     cv::Mat transformed;
