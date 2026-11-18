@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Internal audio initialization shared with deterministic device-manager tests.
 #ifndef OPENSHOT_AUDIO_DEVICE_INITIALIZATION_H
