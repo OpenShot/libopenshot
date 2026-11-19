@@ -46,9 +46,10 @@ namespace openshot
 		void init_effect_details();
 
 		/// Resolve a scaled displacement map image for the target frame dimensions.
-		std::shared_ptr<QImage> GetMapImage(std::shared_ptr<QImage> target_image, int64_t frame_number);
+		std::shared_ptr<QImage> GetMapImage(int width,int height,int64_t frame_number, std::shared_ptr<const FrameImage>* gpu_map=nullptr);
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		bool replace_image;	///< Replace the frame image with the processed displacement map for debugging.
 		bool invert;	///< Invert the displacement map before converting it to offsets.
 		Keyframe strength;	///< Overall strength multiplier for the displacement effect.

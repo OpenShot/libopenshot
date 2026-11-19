@@ -6,7 +6,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2026 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -42,6 +42,7 @@ namespace openshot {
 	class AudioResampler;
 	class EffectInfo;
 	class Frame;
+    class FrameImage;
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -114,6 +115,7 @@ namespace openshot {
         QSize source_raster_size; ///< Reader dimensions before clip effects/transforms
         double waveform_detail = 1.0; ///< Extra raster detail, held during live transforms
         std::shared_ptr<QImage> waveform_raster; ///< Last paused waveform, reused while dragging
+        std::shared_ptr<const FrameImage> waveform_surface; ///< GPU waveform retained during live transforms
         int64_t waveform_frame = 0;
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		int waveform_mode; ///< Audio visualization mode used when waveform is enabled

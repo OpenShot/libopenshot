@@ -12,6 +12,13 @@
 
 #include "ColorShift.h"
 #include "Exceptions.h"
+#include <cmath>
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 
 using namespace openshot;
 
@@ -47,6 +54,30 @@ void ColorShift::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> ColorShift::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    // CPU channel shifts first round the evaluated keyframe to float.
+    const auto offset = [](float value, int size) {
+        const int pixels = int(std::round(size * std::fmod(std::fabs(value), 1.0)));
+        return value < 0 ? -pixels : pixels;
+    };
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data)
+                surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(ShiftVulkanImage(surface, {
+                    offset(red_x.GetValue(frame_number), surface->GetWidth()), offset(red_y.GetValue(frame_number), surface->GetHeight()),
+                    offset(green_x.GetValue(frame_number), surface->GetWidth()), offset(green_y.GetValue(frame_number), surface->GetHeight()),
+                    offset(blue_x.GetValue(frame_number), surface->GetWidth()), offset(blue_y.GetValue(frame_number), surface->GetHeight()),
+                    offset(alpha_x.GetValue(frame_number), surface->GetWidth()), offset(alpha_y.GetValue(frame_number), surface->GetHeight())}));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan color shift CPU fallback: ") + error.what());
+        }
+    }
+#endif
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 	unsigned char *pixels = (unsigned char *) frame_image->bits();

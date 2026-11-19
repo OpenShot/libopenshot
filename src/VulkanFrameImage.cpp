@@ -230,6 +230,13 @@ AVBufferRef* UploadPool(UploadCache& cache, int width, int height) {
     return frames;
 }
 }
+std::shared_ptr<const FrameImage> AllocateVulkanImage(int width,int height) {
+    if(width<=0 || height<=0) throw std::invalid_argument("Invalid Vulkan image dimensions");
+    auto& cache=Uploads();const std::lock_guard<std::mutex> lock(cache.mutex);
+    auto gpu=AllocateFrame();
+    Check(av_hwframe_get_buffer(UploadPool(cache,width,height),gpu.get(),0),"Allocate generated image");
+    return std::make_shared<VulkanFrameImage>(gpu.get(),true);
+}
 std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image) {
     if (image.isNull()) throw std::invalid_argument("Cannot upload an empty image");
     auto& cache = Uploads();

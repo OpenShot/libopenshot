@@ -47,6 +47,8 @@ namespace openshot
 							  std::shared_ptr<QImage> mask_image, int64_t frame_number) const override;
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
+		bool MaskDrivesAmount(int64_t frame_number) const override { return UseCustomMaskBlend(frame_number); }
 		Keyframe brightness;	///< Brightness keyframe. A constant value here will prevent animation.
 		Keyframe contrast;		///< Contrast keyframe.
 		int mask_mode;			///< Mask behavior mode for this effect.

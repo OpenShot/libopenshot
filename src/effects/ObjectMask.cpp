@@ -30,6 +30,12 @@
 #include <algorithm>
 #include <fstream>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -121,13 +127,41 @@ void ObjectMask::init_effect_details()
 
 std::shared_ptr<Frame> ObjectMask::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
-    std::shared_ptr<QImage> frame_image = frame->GetImage();
-    if (!frame_image || frame_image->isNull() || draw_mask.GetValue(frame_number) != 1)
-        return frame;
+    // Disabled/missing analysis is a true passthrough, including resident GPU frames.
+    if(draw_mask.GetValue(frame_number)!=1) return frame;
+    auto mask_it=masksData.find(frame_number);
+    if(mask_it==masksData.end() || !mask_it->second.HasData()) return frame;
 
-    auto mask_it = masksData.find(frame_number);
-    if (mask_it == masksData.end() || !mask_it->second.HasData())
-        return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const auto fill=mask_color.GetColorRGBA(frame_number),stroke=stroke_color.GetColorRGBA(frame_number);
+                const QColor fill_color(fill[0],fill[1],fill[2],255*mask_alpha.GetValue(frame_number));
+                const QColor edge_color(stroke[0],stroke[1],stroke[2],255*stroke_alpha.GetValue(frame_number));
+                const int radius=int(std::round(stroke_width.GetValue(frame_number)));
+                std::vector<int> rows;
+                if(radius>0 && stroke_alpha.GetValue(frame_number)>0) {
+                    // OpenCV's ellipse uses rounded row extents, rather than a continuous disk.
+                    const auto kernel=cv::getStructuringElement(cv::MORPH_ELLIPSE,cv::Size(2*radius+1,2*radius+1));
+                    rows.resize(kernel.rows);
+                    for(int y=0;y<kernel.rows;++y) {
+                        int extent=0;for(int x=0;x<kernel.cols;++x) if(kernel.at<uchar>(y,x)) extent=std::max(extent,std::abs(x-radius));
+                        rows[y]=extent;
+                    }
+                }
+                frame->AddDeferredImage(ObjectMaskVulkanImage(surface,mask_it->second.width,mask_it->second.height,
+                    mask_it->second.rle,fill_color,edge_color,rows));return frame;
+            }
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan ObjectMask CPU fallback: ")+e.what());
+        }
+    }
+#endif
+    std::shared_ptr<QImage> frame_image=frame->GetImage();
+    if(!frame_image || frame_image->isNull()) return frame;
 
     QImage alpha_mask = AlphaMaskImageFromRLE(mask_it->second)
         .scaled(frame_image->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
@@ -243,6 +277,17 @@ std::shared_ptr<QImage> ObjectMask::TrackedObjectMask(std::shared_ptr<QImage> ta
     painter.end();
     return mask_image;
 }
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+std::shared_ptr<const FrameImage> ObjectMask::TrackedObjectMaskSurface(
+    std::shared_ptr<const FrameImage> target,int64_t frame_number) const {
+    if(!target) return {};
+    const auto mask=masksData.find(frame_number);
+    if(mask==masksData.end() || !mask->second.HasData())
+        return RenderVulkanImage(target,nullptr,target->GetWidth(),target->GetHeight(),QTransform(),0.0,Qt::black);
+    return ObjectMaskVulkanSurface(target,mask->second.width,mask->second.height,mask->second.rle,true);
+}
+#endif
 
 std::string ObjectMask::Json() const
 {

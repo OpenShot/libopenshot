@@ -14,6 +14,12 @@
 #include "Exceptions.h"
 #include <array>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
@@ -48,16 +54,31 @@ void Brightness::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Brightness::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	// Get the frame's image
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-	if (!frame_image)
-		return frame;
-
 	// Get keyframe values for this frame
 	const float brightness_value = brightness.GetValue(frame_number);
 	const float contrast_value = contrast.GetValue(frame_number);
 	const float contrast_factor = (259.0f * (contrast_value + 255.0f)) / (255.0f * (259.0f - contrast_value));
 	const int brightness_offset_i = static_cast<int>(255.0f * brightness_value);
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data)
+                surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(BrightnessVulkanImage(surface, contrast_factor, brightness_offset_i));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan brightness CPU fallback: ") + error.what());
+        }
+    }
+#endif
+	// Get the frame's image
+	std::shared_ptr<QImage> frame_image = frame->GetImage();
+	if (!frame_image)
+		return frame;
 
 	// Loop through pixels
 	unsigned char *pixels = reinterpret_cast<unsigned char *>(frame_image->bits());

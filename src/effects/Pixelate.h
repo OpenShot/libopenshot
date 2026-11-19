@@ -47,6 +47,8 @@ namespace openshot
 							  std::shared_ptr<QImage> mask_image, int64_t frame_number) const override;
 
 	public:
+        bool RendersOnVulkan() const override { return true; }
+        bool MaskDrivesAmount(int64_t number) const override { return UseCustomMaskBlend(number); }
 		Keyframe pixelization;	///< Amount of pixelization
 		Keyframe left;			///< Size of left margin
 		Keyframe top;			///< Size of top margin

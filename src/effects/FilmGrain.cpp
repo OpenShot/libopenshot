@@ -20,6 +20,12 @@
 #include <cmath>
 #include <cstdint>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -116,8 +122,17 @@ void FilmGrain::init_effect_details() {
 }
 
 std::shared_ptr<openshot::Frame> FilmGrain::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-	if (!frame_image)
+	std::shared_ptr<const FrameImage> surface;
+    int gpu_width=0,gpu_height=0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        surface=frame->GetDeferredImage();
+        if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+        if(surface) { gpu_width=surface->GetWidth();gpu_height=surface->GetHeight(); }
+    }
+#endif
+    std::shared_ptr<QImage> frame_image = surface ? nullptr : frame->GetImage();
+	if (!frame_image && !surface)
 		return frame;
 
 	const float amount_value = clamp01(static_cast<float>(amount.GetValue(frame_number)));
@@ -167,10 +182,8 @@ std::shared_ptr<openshot::Frame> FilmGrain::GetFrame(std::shared_ptr<openshot::F
 		return lut;
 	}();
 
-	unsigned char* pixels = reinterpret_cast<unsigned char*>(frame_image->bits());
-	const int width  = frame_image->width();
-	const int height = frame_image->height();
-	const int stride = frame_image->bytesPerLine();
+	const int width = surface ? gpu_width : frame_image->width();
+    const int height = surface ? gpu_height : frame_image->height();
 	const int pixel_count = width * height;
 	int reference_width  = width;
 	int reference_height = height;
@@ -187,6 +200,24 @@ std::shared_ptr<openshot::Frame> FilmGrain::GetFrame(std::shared_ptr<openshot::F
 	}
 	const float reference_scale_x = width  > 0 ? static_cast<float>(reference_width)  / static_cast<float>(width)  : 1.0f;
 	const float reference_scale_y = height > 0 ? static_cast<float>(reference_height) / static_cast<float>(height) : 1.0f;
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(surface) {
+        try {
+            std::vector<float> parameters={fine_frequency,soft_frequency,clump_frequency,softness_value,clump_value,
+                shadows_value,midtones_value,highlights_value,color_amount_value,color_variation_value,
+                smooth_temporal_mix,intensity_scale,reference_scale_x,reference_scale_y,float(time0),use_temporal_blend?1.0f:0.0f};
+            parameters.insert(parameters.end(),inv_alpha.begin(),inv_alpha.end());
+            frame->AddDeferredImage(FilmGrainVulkanImage(surface,parameters,base_seed));
+            return frame;
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan FilmGrain CPU fallback: ")+e.what());
+            frame_image=frame->GetImage();
+        }
+    }
+#endif
+    unsigned char* pixels=frame_image->bits();
+    const int stride=frame_image->bytesPerLine();
 
 	#pragma omp parallel for if(pixel_count >= 16384) schedule(static)
 	for (int y = 0; y < height; ++y) {

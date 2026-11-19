@@ -48,6 +48,8 @@ namespace openshot
 							  std::shared_ptr<QImage> mask_image, int64_t frame_number) const override;
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
+		bool MaskDrivesAmount(int64_t frame_number) const override { return UseCustomMaskBlend(frame_number); }
 		Keyframe hue;	///< Shift the hue coordinates (left or right)
 		int mask_mode;	///< Mask behavior mode for this effect.
 

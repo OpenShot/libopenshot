@@ -39,6 +39,8 @@ private:
 /// retain their own GPU storage. Mutable QImage access invalidates its cache key.
 std::shared_ptr<const FrameImage> UploadVulkanImage(const QImage& image);
 void ReleaseVulkanUploads();
+/// Allocate device storage without transferring any image pixels.
+std::shared_ptr<const FrameImage> AllocateVulkanImage(int width,int height);
 /// Reuses the scaling pipeline across frames. Outputs own independent storage.
 class VulkanFrameProcessor {
 public:

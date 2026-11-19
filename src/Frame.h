@@ -223,6 +223,8 @@ namespace openshot
 
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
+        /// Fill color used when lazily creating a frame without image data.
+        std::string GetBackgroundColor() const { return color; }
 
 		/// Set Pixel Aspect Ratio
 		openshot::Fraction GetPixelRatio() { return pixel_ratio; };

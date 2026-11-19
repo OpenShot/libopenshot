@@ -43,6 +43,7 @@ namespace openshot
 		bool HandlesMaskInternally() const override { return true; }
 
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		bool replace_image;		///< Replace the frame image with a grayscale image representing the mask. Great for debugging a mask.
 		bool fade_audio_hint;	///< Timeline-only hint requesting equal-power audio crossfade for overlapping clips when this Mask is used as a global transition.
 		Keyframe brightness;	///< Brightness keyframe to control the wipe / mask effect. A constant value here will prevent animation.

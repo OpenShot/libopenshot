@@ -41,6 +41,7 @@ namespace openshot {
 class AnalogTape : public EffectBase {
 private:
 	void init_effect_details();
+    std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool allow_gpu);
 	static inline uint32_t fnv1a_32(const std::string &s) {
 		uint32_t h = 2166136261u;
 		for (unsigned char c : s) {
@@ -99,6 +100,7 @@ private:
 	std::vector<float> Y, U, V, tmpY, tmpU, tmpV, dx;
 
 public:
+		bool RendersOnVulkan() const override { return true; }
 	Keyframe tracking; ///< tracking wobble amount
 	Keyframe bleed;    ///< color bleed amount
 	Keyframe softness; ///< luma blur radius

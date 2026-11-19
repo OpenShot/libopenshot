@@ -6,7 +6,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2026 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -21,6 +21,12 @@
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 #include "VulkanCompositor.h"
 #include "VulkanFrameImage.h"
+#include <QTextLayout>
+#include <QGlyphRun>
+#include <QRawFont>
+#include <QFontMetrics>
+#include <array>
+#include <cstring>
 #endif
 #include "QtImageReader.h"
 #include "QtTextReader.h"
@@ -809,7 +815,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
 			if (has_video.GetInt(number) == 0) {
 				// No video, so add transparent pixels
-				reader_copy->AddColor(QColor(Qt::transparent));
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+                bool cleared=false;
+                if(VulkanRenderingEnabled()) try {
+                    reader_copy->AddDeferredImage(SolidVulkanImage(reader_copy->GetWidth(),reader_copy->GetHeight(),Qt::transparent));cleared=true;
+                } catch(const std::exception& error) {Logger::Instance()->Log(std::string("Vulkan disabled-video CPU fallback: ")+error.what());}
+                if(!cleared)
+#endif
+                reader_copy->AddColor(QColor(Qt::transparent));
 			}
 			if (has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
 				// No audio, so include silence (also, mute audio if past end of reader)
@@ -1385,15 +1398,16 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
 		}
 		return;
 	}
-	if (composite == COMPOSITE_SOURCE_OVER) {
+	if (composite >= COMPOSITE_SOURCE_OVER && composite <= COMPOSITE_LAST) {
 		auto source = frame->GetDeferredImage();
 		auto background = background_frame->GetDeferredImage();
 		QColor clear;
 		if (std::dynamic_pointer_cast<const VulkanFrameImage>(source) &&
 			(std::dynamic_pointer_cast<const VulkanFrameImage>(background) || background_frame->GetBlankColor(clear))) {
 			try {
-				auto result = RenderVulkanImage(source, background, background_frame->GetWidth(),
-					background_frame->GetHeight(), QTransform(), 1.0, clear);
+				auto result = composite==COMPOSITE_SOURCE_OVER
+                    ? RenderVulkanImage(source,background,background_frame->GetWidth(),background_frame->GetHeight(),QTransform(),1.0,clear)
+                    : CompositeVulkanImage(source,background,composite,clear);
 				gpu_metrics::Record(gpu_metrics::RenderGpu);
 				background_frame->AddDeferredImage(result);
 				if (update_frame_image) frame->AddDeferredImage(result);
@@ -1524,6 +1538,128 @@ bool Clip::isNear(double a, double b)
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 namespace {
+struct FrameNumberFont {
+    struct Glyph {int x,baseline_x,baseline_y;};
+    std::shared_ptr<const FrameImage> atlas;
+    std::map<quint32,Glyph> glyphs;
+    int tile_width=0,tile_height=0;
+    std::array<int,64> phase_start{};
+    bool subpixel=false;
+};
+std::shared_ptr<const FrameImage> FrameNumberOverlay(std::shared_ptr<const FrameImage> source,
+    const QString& text,const QTransform& matrix,int composite,int clip_width,int clip_height,double corner_radius) {
+    // Avoid integer conversion overflow for malformed/extreme keyframes. The
+    // caller retains the existing Qt fallback for unsupported geometry.
+    auto checkedPoint=[](QPointF point) {
+        if(!std::isfinite(point.x()) || !std::isfinite(point.y()) ||
+           std::abs(point.x())>1000000 || std::abs(point.y())>1000000)
+            throw std::runtime_error("Frame-number transform exceeds Vulkan geometry range");
+        return point;
+    };
+    // This small CPU device resolves the same default font/DPI as QPainter's
+    // video canvas. It never contains video pixels.
+    QImage device(1,1,QImage::Format_RGBA8888_Premultiplied);
+    QPainter probe(&device);const QFont font=probe.font();probe.end();
+    const QFontMetrics metrics(font,&device);
+    struct Cache {std::mutex mutex;std::map<QString,FrameNumberFont> fonts;};
+    // GPU assets outlive driver/plugin teardown, like the image upload cache.
+    static auto* cache=new Cache;
+    std::lock_guard<std::mutex> lock(cache->mutex);
+    const QString key=font.key()+":"+QString::number(device.logicalDpiY());
+    auto found=cache->fonts.find(key);
+    if(found==cache->fonts.end()) {
+        const QString alphabet="0123456789 ()-+.e";FrameNumberFont asset;
+        for(QChar c:alphabet){const auto bounds=metrics.boundingRect(QString(c));asset.tile_width=std::max(asset.tile_width,bounds.width()+6);asset.tile_height=std::max(asset.tile_height,bounds.height()+6);}
+        QImage atlas(asset.tile_width*alphabet.size(),asset.tile_height*64,QImage::Format_RGBA8888_Premultiplied);atlas.fill(Qt::transparent);
+        QTextLayout layout(alphabet,font,&device);layout.beginLayout();auto line=layout.createLine();line.setLineWidth(100000);layout.endLayout();
+        const auto runs=line.glyphRuns();
+        if(runs.isEmpty())throw std::runtime_error("Unable to resolve frame-number font");
+        const auto ids=runs.front().rawFont().glyphIndexesForString(alphabet);
+        QPainter painter(&atlas);painter.setRenderHint(QPainter::TextAntialiasing,true);painter.setFont(font);painter.setPen(Qt::white);
+        for(int index=0;index<alphabet.size();++index) {
+            const auto bounds=metrics.boundingRect(QString(alphabet[index]));
+            FrameNumberFont::Glyph glyph{index*asset.tile_width,3-bounds.left(),3-bounds.top()};
+            asset.glyphs[ids[index]]=glyph;
+            for(int phase=0;phase<64;++phase)painter.drawText(QPointF(glyph.x+glyph.baseline_x+phase/64.0,phase*asset.tile_height+glyph.baseline_y),QString(alphabet[index]));
+        }
+        painter.end();
+        // Observe Qt's subpixel groups through the cached masks rather than
+        // assuming a platform-specific number of font rasterization phases.
+        for(int phase=0;phase<64;++phase){
+            asset.phase_start[phase]=phase;
+            for(int previous=0;previous<phase;++previous){
+                bool equal=true;
+                for(int row=0;row<asset.tile_height && equal;++row)
+                    equal=std::memcmp(atlas.constScanLine(phase*asset.tile_height+row),atlas.constScanLine(previous*asset.tile_height+row),asset.tile_width*4)==0;
+                if(equal){asset.phase_start[phase]=asset.phase_start[previous];break;}
+            }
+            if(asset.phase_start[phase]!=0)asset.subpixel=true;
+        }
+        asset.atlas=UploadVulkanImage(atlas);
+        if(cache->fonts.size()>=8)cache->fonts.erase(cache->fonts.begin());
+        found=cache->fonts.emplace(key,std::move(asset)).first;
+    }
+    const auto& asset=found->second;
+    // Translated text retains Qt's hinted glyphs and subpixel phases.
+    // General affine transforms rasterize unhinted outlines directly on GPU.
+    const bool translated=matrix.type()<=QTransform::TxTranslate;
+    const QPointF baseline=checkedPoint(translated?matrix.map(QPointF(20,20)):QPointF(20,20));
+    if(!translated) {
+        // Qt disables glyph hinting for transformed fonts. Preserve its shaped
+        // glyph positions and rasterize those outlines on the device instead
+        // of blurring the hinted bitmap atlas through an affine transform.
+        QTextLayout layout(text,font,&device);layout.beginLayout();auto line=layout.createLine();line.setLineWidth(100000);layout.endLayout();
+        QPainterPath outlines;outlines.setFillRule(Qt::WindingFill);
+#ifdef __APPLE__
+        // CoreText uses Qt's outline fallback for rotated text. Let Qt shape
+        // and position that path, avoiding FreeType's bitmap-cache snapping.
+        outlines.addText(QPointF(20,20),font,text);
+        // Qt subdivides in font coordinates before mapping the resulting
+        // vertices. Subdividing an already rotated curve chooses different
+        // segments and changes coverage at small glyph edges.
+        const double scale=std::max(std::hypot(matrix.m11(),matrix.m12()),std::hypot(matrix.m21(),matrix.m22()));
+        const auto bounds=outlines.controlPointRect();
+        const auto edges=VulkanPathEdges(outlines,std::max(1,int(std::ceil(bounds.right()+2))),
+            std::max(1,int(std::ceil(bounds.bottom()+2))),scale>0?.25/scale:.25);
+        QPainterPath polygon;polygon.setFillRule(Qt::WindingFill);QPointF previous;bool first=true;
+        for(size_t edge=0;edge<edges.size();edge+=4){
+            const QPointF a(edges[edge],edges[edge+1]),b(edges[edge+2],edges[edge+3]);
+            if(first || previous!=a)polygon.moveTo(a);
+            polygon.lineTo(b);previous=b;first=false;
+        }
+        outlines=matrix.map(polygon);
+#else
+        for(const auto& run:line.glyphRuns()) {
+            const auto ids=run.glyphIndexes();const auto positions=run.positions();
+            for(int i=0;i<ids.size();++i){
+                const auto anchor=checkedPoint(matrix.map(QPointF(20+positions[i].x(),20+positions[i].y()-line.ascent())));
+                const int fixed=int(anchor.x()*64),phase=fixed&63;
+                const double x=double(fixed>>6)+(fixed!=0 && asset.subpixel?(asset.phase_start[phase]+1)/64.0:0.0);
+                QTransform placed(matrix.m11(),matrix.m12(),matrix.m21(),matrix.m22(),x,((int(anchor.y()*64)+32)>>6));
+                outlines.addPath(placed.map(run.rawFont().pathForGlyph(ids[i])));
+            }
+        }
+#endif
+        auto coverage=SolidVulkanImage(source->GetWidth(),source->GetHeight(),Qt::transparent);
+        coverage=PaintVulkanPath(coverage,outlines,Qt::white,.0625);
+        return PaintVulkanTextMask(source,coverage,composite,matrix,clip_width,clip_height,corner_radius);
+    }
+    const QRect bounds=metrics.boundingRect(text).translated(int(std::floor(baseline.x())),int(std::floor(baseline.y()))).adjusted(-3,-3,3,3);
+    auto coverage=SolidVulkanImage(std::max(1,bounds.width()),std::max(1,bounds.height()),Qt::transparent);
+    QTextLayout layout(text,font,&device);layout.beginLayout();auto line=layout.createLine();line.setLineWidth(100000);layout.endLayout();
+    for(const auto& run:line.glyphRuns()) {
+        const auto ids=run.glyphIndexes();const auto positions=run.positions();
+        for(int i=0;i<ids.size();++i) {
+            const auto glyph=asset.glyphs.find(ids[i]);if(glyph==asset.glyphs.end())throw std::runtime_error("Unsupported frame-number glyph");
+            const int fixed=int((baseline.x()+positions[i].x()-bounds.left())*64),phase=fixed&63;
+            const QPoint origin((fixed>>6)-glyph->second.baseline_x,qRound(baseline.y()+positions[i].y()-line.ascent()-bounds.top())-glyph->second.baseline_y);
+            coverage=PaintVulkanGlyph(coverage,asset.atlas,QRect(glyph->second.x,phase*asset.tile_height,asset.tile_width,asset.tile_height),origin,Qt::white);
+        }
+    }
+    auto placed=translated?QTransform():matrix;placed.translate(bounds.left(),bounds.top());
+    coverage=RenderVulkanImage(coverage,nullptr,source->GetWidth(),source->GetHeight(),placed,1.0);
+    return PaintVulkanTextMask(source,coverage,composite,matrix,clip_width,clip_height,corner_radius);
+}
 std::shared_ptr<const VulkanFrameImage> VulkanSource(const std::shared_ptr<Frame>& frame) {
     if (!VulkanRenderingEnabled()) return {};
     auto source = std::dynamic_pointer_cast<const VulkanFrameImage>(frame->GetDeferredImage());
@@ -1582,12 +1718,20 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	}
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	if (composite == COMPOSITE_SOURCE_OVER && display == FRAME_DISPLAY_NONE) {
-		if (auto source = VulkanSource(frame)) {
+    {
+        if(auto source=VulkanSource(frame)) {
 			try {
-				frame->AddDeferredImage(RenderVulkanImage(source, nullptr, timeline_size.width(),
-					timeline_size.height(), get_transform(frame, timeline_size.width(), timeline_size.height()),
-					alpha.GetValue(frame->number), Qt::transparent, false, corner_radius.GetValue(frame->number)));
+                const auto matrix=get_transform(frame,timeline_size.width(),timeline_size.height());
+                auto result=RenderVulkanImage(source,nullptr,timeline_size.width(),timeline_size.height(),matrix,
+                    alpha.GetValue(frame->number),Qt::transparent,false,corner_radius.GetValue(frame->number),composite);
+                if(timeline && display!=FRAME_DISPLAY_NONE) {
+                    auto* t=static_cast<Timeline*>(timeline);std::stringstream text;
+                    if(display==FRAME_DISPLAY_CLIP)text<<frame->number;
+                    else if(display==FRAME_DISPLAY_TIMELINE)text<<round((Position()-Start())*t->info.fps.ToFloat())+frame->number;
+                    else if(display==FRAME_DISPLAY_BOTH)text<<round((Position()-Start())*t->info.fps.ToFloat())+frame->number<<" ("<<frame->number<<")";
+                    result=FrameNumberOverlay(result,QString::fromStdString(text.str()),matrix,composite,source->GetWidth(),source->GetHeight(),corner_radius.GetValue(frame->number));
+                }
+                frame->AddDeferredImage(result);
 				gpu_metrics::Record(gpu_metrics::RenderGpu);
 				return;
 			} catch (const std::exception& error) {
@@ -1704,11 +1848,17 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
     // throughout a preview drag. Decoded audio remains cached in the mapper.
     auto* parent_timeline = static_cast<Timeline*>(ParentTimeline());
     const bool transforming = parent_timeline && parent_timeline->IsClipTransforming(Id());
-    if (transforming && waveform_raster && waveform_frame == frame->number) {
-        // QImage's implicit sharing preserves upload identity while protecting
-        // the retained raster from later clip effects that edit mutable pixels.
-        frame->AddImage(std::make_shared<QImage>(*waveform_raster));
-        return;
+    if (transforming && waveform_frame == frame->number) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        if (VulkanRenderingEnabled() && waveform_surface) {
+            frame->AddDeferredImage(waveform_surface);
+            return;
+        }
+#endif
+        if (waveform_raster) {
+            frame->AddImage(std::make_shared<QImage>(*waveform_raster));
+            return;
+        }
     }
     if (!transforming) {
         const double maximum = std::max({1.0, double(scale_x.GetMaxPoint().co.Y), double(scale_y.GetMaxPoint().co.Y)});
@@ -1720,9 +1870,17 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	// Render the waveform through the audio visualization effect so clip shortcuts
 	// and explicit effects share the same rendering path.
 	auto visual_frame = std::make_shared<Frame>(*frame.get());
-	visual_frame->AddImage(std::make_shared<QImage>(
-        raster_size.width(), raster_size.height(), QImage::Format_RGBA8888_Premultiplied));
-	visual_frame->GetImage()->fill(Qt::transparent);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    bool cleared=false;
+    if(VulkanRenderingEnabled()) try {
+        visual_frame->AddDeferredImage(SolidVulkanImage(raster_size.width(),raster_size.height(),Qt::transparent));cleared=true;
+    } catch(const std::exception& error) {Logger::Instance()->Log(std::string("Vulkan waveform CPU fallback: ")+error.what());}
+    if(!cleared)
+#endif
+    {
+        visual_frame->AddImage(std::make_shared<QImage>(raster_size.width(),raster_size.height(),QImage::Format_RGBA8888_Premultiplied));
+        visual_frame->GetImage()->fill(Qt::transparent);
+    }
 
 	AudioVisualization visualization;
 	visualization.visualization_type = waveform_mode;
@@ -1744,9 +1902,18 @@ void Clip::apply_waveform(std::shared_ptr<Frame> frame, QSize timeline_size) {
 	visualization.background = AUDIO_VISUALIZATION_BACKGROUND_TRANSPARENT;
 	visualization.GetFrame(visual_frame, frame->number);
 
-    waveform_raster = std::make_shared<QImage>(*visual_frame->GetImage());
     waveform_frame = frame->number;
-	frame->AddImage(visual_frame->GetImage());
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (auto surface = visual_frame->GetDeferredImage()) {
+        waveform_surface = surface;
+        waveform_raster.reset();
+        frame->AddDeferredImage(surface);
+        return;
+    }
+    waveform_surface.reset();
+#endif
+    waveform_raster = std::make_shared<QImage>(*visual_frame->GetImage());
+    frame->AddImage(visual_frame->GetImage());
 }
 
 // Scale a source size to a target size (given a specific scale-type)

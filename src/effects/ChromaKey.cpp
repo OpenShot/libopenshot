@@ -18,10 +18,118 @@
 #endif
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 #include <cmath>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
+
+#if USE_BABL && defined(OPENSHOT_ENABLE_GPU_FRAME)
+namespace {
+// Babl's transfer functions and D50 matrix are library-dependent. Sample only
+// their one-dimensional color transforms, never video pixels, once per process.
+std::shared_ptr<const std::vector<float>> VulkanChromaConversions() {
+    static const auto table=[] {
+        babl_init();
+        auto values=std::make_shared<std::vector<float>>(800+1536+65536*3+2048*5);
+        const Babl* input=babl_format("R'G'B'A u8");
+        const Babl* hsv=babl_fish(input,babl_format("HSV float"));
+        const Babl* linear=babl_fish(input,babl_format("RGBA float"));
+        const Babl* xyz=babl_fish(babl_format("RGB float"),babl_format("CIE XYZ float"));
+        const Babl* ycbcr=babl_fish(input,babl_format("Y'CbCr double"));
+        for(int i=0;i<256;++i) {
+            unsigned char gray[4]={static_cast<unsigned char>(i),static_cast<unsigned char>(i),static_cast<unsigned char>(i),255};
+            float converted[4]{};
+            babl_process(hsv,gray,converted,1);(*values)[256+i]=converted[2];
+            babl_process(linear,gray,converted,1);(*values)[512+i]=converted[0];
+            (*values)[i]=i?255.0f/float(i):0.0f;
+        }
+        const float white[3]={0.964202880f,1.0f,0.824905400f};
+        for(int channel=0;channel<3;++channel) {
+            float basis[3]={0,0,0},converted[3];basis[channel]=1;
+            babl_process(xyz,basis,converted,1);
+            for(int row=0;row<3;++row) (*values)[768+row*3+channel]=converted[row]/white[row];
+            for(int i=0;i<256;++i) {
+                unsigned char rgb[4]={0,0,0,255};rgb[channel]=i;
+                double converted_cbcr[3];babl_process(ycbcr,rgb,converted_cbcr,1);
+                for(int component=0;component<2;++component) {
+                    const int32_t fixed=int32_t(std::llrint(converted_cbcr[component+1]*224.0*1048576.0));
+                    std::memcpy(&(*values)[800+(component*3+channel)*256+i],&fixed,sizeof(fixed));
+                }
+            }
+        }
+        // Saturation and HSL lightness depend only on the channel extrema.
+        // Retain Babl's final float rounding at hard threshold boundaries.
+        std::vector<unsigned char> extrema(65536*4);
+        std::vector<float> features(65536*3);
+        for(int low=0;low<256;++low) for(int high=0;high<256;++high) {
+            const int i=low*256+high;
+            extrema[i*4]=extrema[i*4+2]=low;extrema[i*4+1]=high;extrema[i*4+3]=255;
+        }
+        babl_process(hsv,extrema.data(),features.data(),65536);
+        for(int i=0;i<65536;++i) (*values)[2336+i*3]=features[i*3+1];
+        babl_process(babl_fish(input,babl_format("HSL float")),extrema.data(),features.data(),65536);
+        for(int i=0;i<65536;++i) {
+            (*values)[2336+i*3+1]=features[i*3+1];(*values)[2336+i*3+2]=features[i*3+2];
+        }
+        // Achromatic and primary-color rays need Babl's exact tiny CIE
+        // chroma/hue values: rounding them to zero changes hard keying.
+        std::vector<unsigned char> rays(2048*4),lab_bytes(2048*3);
+        std::vector<float> lch(2048*3),hue(2048*3);
+        for(int mask=0;mask<8;++mask) for(int value=0;value<256;++value) {
+            const int i=mask*256+value;
+            for(int channel=0;channel<3;++channel) rays[i*4+channel]=(mask&(1<<channel))?value:0;
+            rays[i*4+3]=255;
+        }
+        babl_process(babl_fish(input,babl_format("CIE LCH(ab) float")),rays.data(),lch.data(),2048);
+        babl_process(babl_fish(input,babl_format("CIE Lab u8")),rays.data(),lab_bytes.data(),2048);
+        babl_process(hsv,rays.data(),hue.data(),2048);
+        for(int i=0;i<2048;++i) {
+            const int dst=2336+65536*3+i*5;
+            (*values)[dst]=hue[i*3];
+            for(int c=0;c<3;++c) (*values)[dst+1+c]=lch[i*3+c];
+            (*values)[dst+4]=float(lab_bytes[i*3]|(lab_bytes[i*3+1]<<8)|(lab_bytes[i*3+2]<<16));
+        }
+        return values;
+    }();
+    return table;
+}
+std::array<float,3> VulkanChromaKeyFeatures(const std::array<int,3>& rgb,int method) {
+    const Babl* input=babl_format("R'G'B'A u8");
+    unsigned char key[4]={static_cast<unsigned char>(rgb[0]),static_cast<unsigned char>(rgb[1]),static_cast<unsigned char>(rgb[2]),255};
+    std::array<float,3> result{};
+    if(method==CHROMAKEY_CIE_DISTANCE || method==CHROMAKEY_YCBCR) {
+        unsigned char converted[4]{};
+        babl_process(babl_fish(input,babl_format(method==CHROMAKEY_CIE_DISTANCE?"CIE Lab u8":"Y'CbCr u8")),key,converted,1);
+        if(method==CHROMAKEY_YCBCR) return {float(converted[1]),float(converted[2]),0};
+        result[0]=float(converted[0]|(converted[1]<<8)|(converted[2]<<16));
+        const float a=float(converted[1])-127,b=float(converted[2])-127;
+        const float chroma=std::sqrt(a*a+b*b);
+        const float multiplier=1+0.5*(1-std::sqrt(chroma/(chroma+25)));
+        const float ap=a*multiplier;
+        const float pi=4*std::atan(1);
+        // CPU's key uses float atan2; its pixel uses the promoted int/float
+        // overload. Retain that distinction even for identical Lab values.
+        result[1]=std::atan2(b,ap)*180/pi;
+        const float pixel_h=std::atan2(int(b),ap)*180/pi;
+        result[2]=pixel_h-result[1];
+        return result;
+    }
+    const char* format=method==CHROMAKEY_HSL_S || method==CHROMAKEY_HSL_L?"HSL float":
+        method>=CHROMAKEY_CIE_LCH_L?"CIE LCH(ab) float":"HSV float";
+    float converted[3];babl_process(babl_fish(input,babl_format(format)),key,converted,1);
+    const int component=method==CHROMAKEY_HSVL_H || method==CHROMAKEY_CIE_LCH_L?0:
+        method==CHROMAKEY_HSV_S || method==CHROMAKEY_HSL_S || method==CHROMAKEY_CIE_LCH_C?1:2;
+    result[0]=converted[component];return result;
+}
+}
+#endif
 
 /// Blank constructor, useful when using Json to load the effect properties
 ChromaKey::ChromaKey() : fuzz(20.0), halo(10.0), method(CHROMAKEY_BASIC_SOFT) {
@@ -107,6 +215,33 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 	long mask_G = color.green.GetInt(frame_number);
 	long mask_B = color.blue.GetInt(frame_number);
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                int gpu_method=int(method);
+                std::shared_ptr<const std::vector<float>> conversions;
+                std::array<float,3> key_features{};
+#if USE_BABL
+                if(gpu_method>CHROMAKEY_BASIC && gpu_method<CHROMAKEY_BASIC_SOFT) {
+                    conversions=VulkanChromaConversions();
+                    key_features=VulkanChromaKeyFeatures({int(mask_R),int(mask_G),int(mask_B)},gpu_method);
+                }
+                else if(gpu_method!=CHROMAKEY_BASIC) gpu_method=CHROMAKEY_BASIC_SOFT;
+#else
+                if(gpu_method!=CHROMAKEY_BASIC) gpu_method=CHROMAKEY_BASIC_SOFT;
+#endif
+                frame->AddDeferredImage(ChromaKeyVulkanImage(surface,
+                    {int(mask_R),int(mask_G),int(mask_B)},threshold,halothreshold,gpu_method,conversions,key_features));
+                return frame;
+            }
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan chroma key CPU fallback: ")+error.what());
+        }
+    }
+#endif
 	// Get source image
 	std::shared_ptr<QImage> image = frame->GetImage();
 

@@ -21,6 +21,12 @@
 #include <cmath>
 #include <omp.h>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -91,8 +97,8 @@ void Displace::init_effect_details()
 	info.has_video = true;
 }
 
-std::shared_ptr<QImage> Displace::GetMapImage(std::shared_ptr<QImage> target_image, int64_t frame_number) {
-	if (!map_reader || !target_image || target_image->isNull())
+std::shared_ptr<QImage> Displace::GetMapImage(int width,int height,int64_t frame_number, std::shared_ptr<const FrameImage>* gpu_map) {
+	if (!map_reader || width<=0 || height<=0)
 		return {};
 
 	std::shared_ptr<QImage> source_map;
@@ -106,8 +112,8 @@ std::shared_ptr<QImage> Displace::GetMapImage(std::shared_ptr<QImage> target_ima
 
 			if (map_reader->info.has_single_image &&
 				cached_single_map_image &&
-				cached_single_map_width == target_image->width() &&
-				cached_single_map_height == target_image->height()) {
+				cached_single_map_width == width &&
+				cached_single_map_height == height) {
 				source_map = cached_single_map_image;
 				used_cached_scaled = true;
 			}
@@ -131,7 +137,12 @@ std::shared_ptr<QImage> Displace::GetMapImage(std::shared_ptr<QImage> target_ima
 				}
 
 				auto source_frame = map_reader->GetFrame(mapped_frame);
-				if (source_frame && source_frame->GetImage() && !source_frame->GetImage()->isNull())
+				#ifdef OPENSHOT_ENABLE_GPU_FRAME
+                if(gpu_map && source_frame && source_frame->GetDeferredImage())
+                    *gpu_map=source_frame->GetDeferredImage();
+                else
+#endif
+                if (source_frame && source_frame->GetImage() && !source_frame->GetImage()->isNull())
 					source_map = std::make_shared<QImage>(*source_frame->GetImage());
 			}
 		} catch (const std::exception& e) {
@@ -149,12 +160,12 @@ std::shared_ptr<QImage> Displace::GetMapImage(std::shared_ptr<QImage> target_ima
 
 	auto scaled_map = std::make_shared<QImage>(
 		source_map->scaled(
-			target_image->width(), target_image->height(),
+			width, height,
 			Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 	if (map_reader->info.has_single_image) {
 		cached_single_map_image = scaled_map;
-		cached_single_map_width = target_image->width();
-		cached_single_map_height = target_image->height();
+		cached_single_map_width = width;
+		cached_single_map_height = height;
 	}
 	return scaled_map;
 }
@@ -162,11 +173,39 @@ std::shared_ptr<QImage> Displace::GetMapImage(std::shared_ptr<QImage> target_ima
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Displace::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const int w=surface->GetWidth(),h=surface->GetHeight();
+                std::shared_ptr<const FrameImage> map;
+                auto pixels=GetMapImage(w,h,frame_number,&map);
+                if(!map && pixels) map=UploadVulkanImage(*pixels);
+                if(map) {
+                    map=ScaleEffectVulkanImage(map,w,h);
+                    std::array<uint32_t,256> adjusted{};
+                    const int b=int(255.0f*brightness.GetValue(frame_number));
+                    const float f=20.0f/std::max(.00001f,20.0f-float(contrast.GetValue(frame_number)));
+                    for(int g=0;g<256;++g) adjusted[g]=clamp_u8(int(f*((g+b)-128)+128));
+                    const float s=float(strength.GetValue(frame_number));
+                    frame->AddDeferredImage(DisplaceVulkanImage(surface,map,adjusted,
+                        float(horizontal.GetValue(frame_number))*w*s,float(vertical.GetValue(frame_number))*h*s,invert,replace_image));
+                }
+                return frame;
+            }
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan Displace CPU fallback: ")+e.what());
+        }
+    }
+#endif
+
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 	if (!frame_image || frame_image->isNull())
 		return frame;
 
-	auto map_image = GetMapImage(frame_image, frame_number);
+	auto map_image = GetMapImage(frame_image->width(),frame_image->height(),frame_number);
 	if (!map_image || map_image->isNull())
 		return frame;
 

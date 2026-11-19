@@ -57,7 +57,10 @@ namespace openshot
 		std::string FormatTimecode(double seconds, double fps) const;
 		std::string TimerLayoutText(int64_t frame_number) const;
 
+        std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool use_vulkan);
+
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		int mode;
 		int time_source;
 		int format;

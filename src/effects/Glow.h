@@ -35,6 +35,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		int mode;			///< Outer or inner glow mode.
 		Keyframe opacity;	///< Overall glow opacity.
 		Keyframe blur_radius;	///< Blur radius in pixels.

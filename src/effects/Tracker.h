@@ -48,6 +48,7 @@ namespace openshot
         double TimeScale;
 
     public:
+        bool RendersOnVulkan() const override { return true; }
         std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
         std::shared_ptr<TrackedObjectBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
 
@@ -68,6 +69,10 @@ namespace openshot
 
         /// Get the indexes and IDs of all visible objects in the given frame
         std::string GetVisibleObjects(int64_t frame_number) const override;
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+        std::shared_ptr<const FrameImage> TrackedObjectMaskSurface(std::shared_ptr<const FrameImage> target,int64_t frame_number) const override;
+#endif
 
         // Get and Set JSON methods
 

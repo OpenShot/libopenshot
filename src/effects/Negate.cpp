@@ -13,6 +13,12 @@
 #include "Negate.h"
 #include "Exceptions.h"
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 // Default constructor
@@ -33,6 +39,21 @@ Negate::Negate()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Negate::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data)
+                surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(NegateVulkanImage(surface));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan negate CPU fallback: ") + error.what());
+        }
+    }
+#endif
 	// Make a negative of the images pixels
 	frame->GetImage()->invertPixels();
 

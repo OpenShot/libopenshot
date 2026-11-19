@@ -19,6 +19,12 @@
 #include <algorithm>
 #include <cmath>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 AnalogTape::AnalogTape()
@@ -46,13 +52,30 @@ void AnalogTape::init_effect_details() {
 static inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
-																						int64_t frame_number) {
-	std::shared_ptr<QImage> img = frame->GetImage();
-	int w = img->width();
-	int h = img->height();
+																						int64_t frame_number) { return RenderFrame(frame,frame_number,true); }
+
+std::shared_ptr<Frame> AnalogTape::RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool allow_gpu) {
+	std::shared_ptr<const FrameImage> surface;
+    int gpu_width=0,gpu_height=0;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(allow_gpu && VulkanRenderingEnabled()) {
+        surface=frame->GetDeferredImage();
+        if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+        if(surface) { gpu_width=surface->GetWidth();gpu_height=surface->GetHeight(); }
+    }
+#endif
+    std::shared_ptr<QImage> img=surface?nullptr:frame->GetImage();
+    int w=surface?gpu_width:img->width();
+    int h=surface?gpu_height:img->height();
+    std::vector<uint32_t> gpu_parameters;
+    if(surface) gpu_parameters.resize(16+16*h);
+    auto parameter=[&](int index,float value) { std::memcpy(&gpu_parameters[index],&value,sizeof(float)); };
 	int Uw = (w + 1) / 2;
-	int stride = img->bytesPerLine() / 4;
-	uint32_t *base = reinterpret_cast<uint32_t *>(img->bits());
+	int stride = img?img->bytesPerLine()/4:0;
+	uint32_t *base = img?reinterpret_cast<uint32_t *>(img->bits()):nullptr;
+
+    dx.resize(h);
+    if(!surface) {
 
 	if (w != last_w || h != last_h) {
 		last_w = w;
@@ -107,6 +130,8 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		}
 	}
 
+    }
+
 	Fraction fps(1, 1);
 	Clip *clip = (Clip *)ParentClip();
 	Timeline *timeline = nullptr;
@@ -140,7 +165,7 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 	int r_y = std::round(lerp(0.0f, 2.0f, k_soft) * inverse_scale_x);
 	if (k_noise > 0.6f)
 		r_y = std::min(r_y, 1);
-	if (r_y > 0) {
+	if (!surface && r_y > 0) {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -153,6 +178,8 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 	int r_c = std::round(lerp(0.0f, 3.0f, k_bleed) * inverse_scale_x);
 	float sat = 1.0f - 0.30f * k_bleed;
 	float shift_h = shift * 0.5f;
+    if(!surface) {
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -187,6 +214,8 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 			box_blur_row(&V[y * Uw], &tmpV[y * Uw], Uw, r_c);
 		V.swap(tmpV);
 	}
+
+    }
 
 	uint32_t SEED = fnv1a_32(Id()) ^ (uint32_t)seed_offset;
 		uint32_t schedSalt = (uint32_t)(k_bands * 64.0f) ^
@@ -245,7 +274,7 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 	float a = float(t * ft - kf);
 
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for if(!surface)
 #endif
 	for (int y = 0; y < h; ++y) {
 		const int y_ref = static_cast<int>(std::round(static_cast<float>(y) * reference_scale_y));
@@ -266,7 +295,7 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		}
 
 		float sat_row = 1.0f - (1.0f - sat_band) * burstF;
-		if (burstF > 0.0f && sat_row != 1.0f) {
+		if (!surface && burstF > 0.0f && sat_row != 1.0f) {
 			float *urow = &U[y * Uw];
 			float *vrow = &V[y * Uw];
 			for (int xh = 0; xh < Uw; ++xh) {
@@ -293,6 +322,14 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		float rowSigma = sigmaY * (1 + (Nfixed - 1) * bandF +
 															(Nburst - 1) * burstF);
 		float k = 0.15f + 0.35f * hash01(SEED, uint32_t(frame_number), y_ref, 777);
+        if(surface) {
+            const int base=16+y*16;
+            parameter(base,sat_row);parameter(base+1,p);parameter(base+2,hum);
+            gpu_parameters[base+3]=s0;gpu_parameters[base+4]=s1;
+            parameter(base+5,lift);parameter(base+6,rowSigma);parameter(base+7,k);
+            gpu_parameters[base+9]=y_ref;
+            continue;
+        }
 		float sL = 0.0f, sR = 0.0f;
 		for (int x = 0; x < w; ++x) {
 			const int x_ref = static_cast<int>(std::round(static_cast<float>(x) * reference_scale_x));
@@ -328,6 +365,23 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 		dx[y] = base + skew;
 	}
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(surface) {
+        parameter(0,shift_h);parameter(1,sat);parameter(2,float(r_y));parameter(3,float(r_c));
+        parameter(4,a);parameter(5,decay);parameter(6,amp);parameter(7,reference_scale_x);
+        gpu_parameters[8]=reference_w;gpu_parameters[9]=uint32_t(frame_number);gpu_parameters[10]=SEED;
+        gpu_parameters[11]=uint32_t(gpu_parameters.size());
+        for(int y=0;y<h;++y) parameter(16+y*16+8,dx[y]);
+        try {
+            frame->AddDeferredImage(AnalogTapeVulkanImage(surface,gpu_parameters));return frame;
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan AnalogTape CPU fallback: ")+e.what());
+            // Re-enter the existing CPU algorithm with a materialized input.
+            return RenderFrame(frame,frame_number,false);
+        }
+    }
+#endif
+
 	auto remap_line = [&](const float *src, float *dst, int width, float scale) {
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -336,13 +390,13 @@ std::shared_ptr<Frame> AnalogTape::GetFrame(std::shared_ptr<Frame> frame,
 			float off = dx[y] * scale;
 			const float *s = src + y * width;
 			float *d = dst + y * width;
-			int start = std::max(0, int(std::ceil(-off)));
-			int end = std::min(width, int(std::floor(width - off)));
+			int start = std::clamp(int(std::ceil(-off)), 0, width);
+			int end = std::clamp(int(std::floor(width - off)), 0, width);
 			float xs = start + off;
 			int x0 = int(xs);
 			float t = xs - x0;
 			for (int x = start; x < end; ++x) {
-				int x1 = x0 + 1;
+				int x1 = std::min(x0 + 1, width - 1);
 				d[x] = s[x0] * (1 - t) + s[x1] * t;
 				xs += 1.0f;
 				x0 = int(xs);

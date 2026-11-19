@@ -88,3 +88,18 @@ TEST_CASE("AnalogTape stripe lifts bottom", "[effect][analogtape]") {
 	QColor bottom = out->GetImage()->pixelColor(10, 19);
 	CHECK(bottom.red() > top.red());
 }
+
+TEST_CASE("AnalogTape clamps tracking on images narrower than its offset", "[effect][analogtape]") {
+    for(int width:{1,2,3}) for(int height:{1,5}) {
+        AnalogTape effect;
+        effect.tracking=Keyframe(1.0);
+        effect.seed_offset=17;
+        for(int number:{1,2,9,31}) {
+            auto frame=makeGrayFrame(width,height);
+            effect.GetFrame(frame,number);
+            REQUIRE(frame->GetImage()->size()==QSize(width,height));
+            for(int y=0;y<height;++y) for(int x=0;x<width;++x)
+                CHECK(frame->GetImage()->pixelColor(x,y).alpha()==255);
+        }
+    }
+}

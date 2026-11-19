@@ -142,3 +142,14 @@ TEST_CASE("Shadow json round-trip preserves key properties", "[effect][shadow][j
 	CHECK(copy_json["color"]["green"]["Points"][0]["co"]["Y"].asDouble() == Approx(32.0));
 	CHECK(copy_json["color"]["blue"]["Points"][0]["co"]["Y"].asDouble() == Approx(48.0));
 }
+
+TEST_CASE("Shadow clamps blur edges on images smaller than its radius", "[effect][shadow][edge]") {
+    for(QSize size:{QSize(1,1),QSize(1,5),QSize(4,3)}) {
+        QImage pixels(size,QImage::Format_RGBA8888_Premultiplied);
+        pixels.fill(QColor(30,120,210,255));
+        auto frame=std::make_shared<Frame>();frame->AddImage(std::make_shared<QImage>(pixels));
+        Shadow effect;effect.blur_radius=Keyframe(32);effect.distance=Keyframe(0);
+        auto actual=effect.GetFrame(frame,1)->GetImage();
+        CHECK(*actual==pixels);
+    }
+}

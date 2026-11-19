@@ -39,6 +39,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		Keyframe red_x;	///< Shift the Red X coordinates (left or right)
 		Keyframe red_y;	///< Shift the Red Y coordinates (up or down)
 		Keyframe green_x;	///< Shift the Green X coordinates (left or right)

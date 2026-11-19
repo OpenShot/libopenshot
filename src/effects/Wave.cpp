@@ -13,6 +13,12 @@
 #include "Wave.h"
 #include "Exceptions.h"
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
@@ -48,6 +54,29 @@ void Wave::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Wave::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                std::vector<float> offsets(surface->GetHeight());
+                const double wl=wavelength.GetValue(frame_number),amp=amplitude.GetValue(frame_number),
+                    mult=multiplier.GetValue(frame_number),shift=shift_x.GetValue(frame_number),speed=speed_y.GetValue(frame_number);
+                for(int y=0;y<surface->GetHeight();++y) {
+                    float noise=(100+y*0.001)*mult, noise_amp=noise*amp;
+                    float wave=sin(y*wl+double(frame_number)*speed);
+                    offsets[y]=(wave+shift)*noise_amp;
+                }
+                frame->AddDeferredImage(WaveVulkanImage(surface,offsets));
+                return frame;
+            }
+        } catch(const std::exception& e) {
+            Logger::Instance()->Log(std::string("Vulkan Wave CPU fallback: ")+e.what());
+        }
+    }
+#endif
+
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 

@@ -32,7 +32,10 @@ namespace openshot
 		float envelope_;         // persistent IIR envelope state
 		int64_t last_frame_;     // detects seeks so we can reset envelope
 
+        std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool use_vulkan);
+
 	public:
+        bool RendersOnVulkan() const override { return true; }
 		Color low_color;         // generated color at minimum response
 		Color high_color;        // generated color at maximum response
 		Keyframe intensity;      // audio gain multiplier (0.0–10.0)

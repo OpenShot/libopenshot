@@ -3,6 +3,7 @@
 #include "VulkanLoader.h"
 #include "Logger.h"
 #include <string>
+#include <cstdlib>
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -23,6 +24,11 @@ bool Load() {
     HMODULE library = LoadLibraryExA("vulkan-1.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
     const auto symbol = [library](const char* name) { return reinterpret_cast<void*>(GetProcAddress(library, name)); };
 #elif defined(__APPLE__)
+    // Pixel sampling and mip-level selection are discontinuous: relaxed
+    // reciprocal/trig approximations can select an entirely different pixel
+    // or mip level near poles and boundaries. Set this before the first Vulkan
+    // instance, including temporary device enumeration. Respect user overrides.
+    setenv("MVK_CONFIG_FAST_MATH_ENABLED", "0", 0);
     // MoltenVK ships inside the app and is linked directly
     void* library = RTLD_DEFAULT;
     const auto symbol = [](const char* name) { return dlsym(RTLD_DEFAULT, name); };

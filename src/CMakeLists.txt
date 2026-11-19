@@ -454,7 +454,7 @@ if(ENABLE_GPU_FRAME)
   find_package(FFmpeg REQUIRED COMPONENTS avfilter)
   list(APPEND all_comps avfilter)
   target_sources(openshot PRIVATE VulkanFrameImage.cpp)
-  target_sources(openshot PRIVATE VulkanCompositor.cpp)
+  target_sources(openshot PRIVATE VulkanCompositor.cpp VulkanPainter.cpp)
   target_sources(openshot PRIVATE GpuDevices.cpp VulkanLoader.cpp)
   if(APPLE)
     enable_language(OBJCXX)
@@ -477,7 +477,8 @@ if(ENABLE_GPU_FRAME)
     add_custom_command(OUTPUT "${shader_header}"
       COMMAND "${GLSLANG_VALIDATOR}" -V -S comp --vn "openshot_${shader}_spv"
               -o "${shader_header}" "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp"
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp" VERBATIM)
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/${shader}.comp"
+              "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/effects.glsl" VERBATIM)
     list(APPEND VULKAN_SHADER_HEADERS "${shader_header}")
   endforeach()
   add_custom_target(openshot-vulkan-shaders DEPENDS ${VULKAN_SHADER_HEADERS})

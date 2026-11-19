@@ -41,6 +41,7 @@ namespace openshot
 
 
 	public:
+		bool RendersOnVulkan() const override { return true; }
 		Color color;		///< Color of bars
 		Keyframe left;		///< Size of left bar
 		Keyframe top;		///< Size of top bar

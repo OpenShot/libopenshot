@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 OpenShot Studios, LLC
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #version 450
+#extension GL_GOOGLE_include_directive : require
 layout(local_size_x=16, local_size_y=16) in;
 layout(binding=0) uniform sampler2D plane_y;
 layout(binding=1) uniform sampler2D plane_u;
@@ -9,6 +10,8 @@ layout(binding=3) uniform sampler2D background_tex;
 layout(binding=4, rgba8) uniform writeonly image2D output_img;
 // Effect parameters and tables (float bits), or scope counters.
 layout(std430,binding=5) buffer Data { uint data[]; };
+layout(std430,binding=7) buffer WorkGreen { uint work_g[]; };
+layout(std430,binding=8) buffer WorkBlue { uint work_b[]; };
 layout(binding=6) uniform sampler2D mask_tex;
 shared uint scope_histograms[1024];
 layout(push_constant) uniform Parameters {
@@ -109,7 +112,10 @@ vec4 load_source(vec2 uv) {
     if((p.modes.x&15)>=2) {
         vec4 front=clamp(sample_source(plane_y,uv),0.0,1.0);
         if((p.modes.x&15)==3) front.rgb*=front.a;
-        else front.rgb=min(front.rgb,vec3(front.a));
+        // Linear painting preserves the source bytes, as QPainter does.
+        // Effects such as AnalogTape and ColorShift can leave RGB above alpha;
+        // only bicubic resampling needs the overshoot clamp.
+        else if(p.modes.z!=0) front.rgb=min(front.rgb,vec3(front.a));
         return front;
     }
     float y=(sample_source(plane_y,uv).r-p.extra.y)*p.color_coeffs.x;
@@ -188,6 +194,63 @@ void scope() {
     for(uint i=gl_LocalInvocationIndex;i<1024u;i+=256u)
         if(scope_histograms[i]!=0u) atomicAdd(data[i],scope_histograms[i]);
 }
+// Point effects read/write integer premultiplied bytes. Keep their output out
+// of source-over compositing: ColorShift can move alpha independently of RGB.
+// Correct a native division at an integer boundary using its fused residual.
+// The CPU truncates a correctly rounded float quotient; an integer k is reached
+// half an ULP before k. FMA keeps this comparison independent of reciprocal
+// approximation on Metal, without moving any image pixels to the host.
+int hue_unpremultiply(int channel,float alpha) {
+    int q=int(float(channel)/alpha);
+    if(q>0) {
+        float k=float(q),half_ulp=(k-uintBitsToFloat(floatBitsToUint(k)-1u))*.5;
+        if(fma(-k,alpha,float(channel)) < -alpha*half_ulp)--q;
+    }
+    float k=float(q+1),half_ulp=(k-uintBitsToFloat(floatBitsToUint(k)-1u))*.5;
+    if(fma(-k,alpha,float(channel)) >= -alpha*half_ulp)++q;
+    return q;
+}
+void pixel_effect(ivec2 pixel) {
+    ivec4 c=ivec4(round(texelFetch(plane_y,pixel,0)*255.0));
+    if(p.modes.w==9 && c.a>0) {
+        ivec3 rgb=c.rgb;
+        if(c.a<255) rgb=ivec3(vec3(rgb)*(255.0/float(c.a)));
+        precise vec3 adjusted=p.effect.x*(vec3(rgb)-128.0)+128.0;
+        rgb=clamp(clamp(ivec3(adjusted),ivec3(0),ivec3(255))+int(p.effect.y),ivec3(0),ivec3(255));
+        if(c.a<255) rgb=ivec3(vec3(rgb)*(float(c.a)*(1.0/255.0)));
+        c.rgb=rgb;
+    }
+    if(p.modes.w==10) {
+        if(c.a==0) c.rgb=ivec3(0);
+        else {
+            float alpha=value(c.a);
+            ivec3 rgb=ivec3(hue_unpremultiply(c.r,alpha),hue_unpremultiply(c.g,alpha),hue_unpremultiply(c.b,alpha));
+            precise vec3 rotated=vec3(
+                rgb.r*p.effect.x+rgb.g*p.effect.y+rgb.b*p.effect.z,
+                rgb.r*p.effect.z+rgb.g*p.effect.x+rgb.b*p.effect.y,
+                rgb.r*p.effect.y+rgb.g*p.effect.z+rgb.b*p.effect.x);
+            rgb=clamp(ivec3(rotated),ivec3(0),ivec3(255));
+            precise vec3 premultiplied=vec3(rgb)*alpha;
+            c.rgb=ivec3(premultiplied);
+        }
+    }
+    if(p.modes.w==11) c.rgb=ivec3(c.a)-c.rgb;
+    if(p.modes.w==12) {
+        ivec4 bars=ivec4(p.effect);
+        // Preserve Bars' inclusive top row and its zero-width special case.
+        if((bars.y>0 && pixel.y<=bars.y) || (bars.w>0 && pixel.y>=p.sizes.y-bars.w) ||
+           (bars.x>0 && pixel.x<bars.x) || (bars.z>0 && pixel.x>=p.sizes.x-bars.z)) c=ivec4(p.clear);
+    }
+    if(p.modes.w==13) {
+        ivec4 dx=ivec4(p.effect.xz,p.clear.xz),dy=ivec4(p.effect.yw,p.clear.yw);
+        for(int channel=0;channel<4;++channel) {
+            ivec2 position=(pixel-ivec2(dx[channel],dy[channel])+p.sizes.zw)%p.sizes.zw;
+            c[channel]=int(round(texelFetch(plane_y,position,0)[channel]*255.0));
+        }
+    }
+    imageStore(output_img,pixel,vec4(c)/255.0);
+}
+#include "effects.glsl"
 // Mesh records are sorted in CPU raster order. Search backward so folds use
 // the last covering triangle without data races or a separate coverage image.
 void distort(ivec2 pixel) {
@@ -219,19 +282,52 @@ void distort(ivec2 pixel) {
 void main() {
     // Scopes count instead of writing an image; every invocation reaches the barriers.
     if(p.modes.w==8) { scope(); return; }
-    if(p.modes.w==9) {
+    if(p.modes.w==67) {
         ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
         if(all(lessThan(pixel,p.sizes.xy))) distort(pixel);
         return;
     }
     ivec2 pixel=ivec2(gl_GlobalInvocationID.xy);
     if(any(greaterThanEqual(pixel,p.sizes.xy))) return;
+    if(p.modes.w>=14) { spatial_effect(pixel); return; }
+    if(p.modes.w>=9) { pixel_effect(pixel); return; }
     vec2 center=vec2(pixel)+0.5;
     vec2 src=vec2(dot(p.matrix_x.xyz,vec3(center,1)),dot(p.matrix_y.xyz,vec3(center,1)));
     vec4 front=vec4(0);
-    if(all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)))) {
-        front=load_source(src/vec2(p.sizes.zw));
-        if(p.modes.w==0 && p.effect.x>0.0) {
+    bool inside=all(greaterThanEqual(src,vec2(0))) && all(lessThan(src,vec2(p.sizes.zw)));
+    if(p.modes.w==0 && (int(p.effect.z)&1)!=0){
+        int winding=0;
+        for(int edge=0;edge<int(p.effect.y);++edge){
+            int base=5*edge,top=int(data[base]),bottom=int(data[base+1]);if(pixel.y<top || pixel.y>bottom)continue;
+            int boundary=(int(data[base+2])+(pixel.y-top)*int(data[base+3]))>>16;
+            if(boundary>pixel.x)winding+=int(data[base+4]);
+        }
+        inside=winding!=0;
+    }
+    int clip_alpha=-1;
+    if(p.modes.w==0 && p.effect.w>0.0){
+        int area=0;
+        for(int edge=0;edge<int(p.effect.w);++edge){int base=5*int(p.effect.y)+4*edge;
+            vec2 a=vec2(value(base),value(base+1)),b=vec2(value(base+2),value(base+3));if(a.y!=b.y)area+=gray_edge(a,b,pixel);}
+        clip_alpha=clamp(abs(area>>9),0,255);inside=clip_alpha>0;
+    }
+    if(inside) {
+        if(p.modes.w==0 && (int(p.effect.z)&2)!=0){
+            int base=5*int(p.effect.y)+4*int(p.effect.w),blocks=int(data[base+2]),row=base+4+pixel.y*(1+2*blocks);
+            int first=int(data[row]),block=clamp((pixel.x-first)/2048,0,blocks-1),offset=pixel.x-first-block*2048;
+            ivec2 sample_fixed=ivec2(int(data[row+1+2*block]),int(data[row+2+2*block]))+offset*ivec2(int(data[base]),int(data[base+1]));
+            ivec2 q=sample_fixed>>16,f=(sample_fixed&65535)>>8,size=p.sizes.zw;
+            ivec4 a=ivec4(round(texelFetch(plane_y,clamp(q,ivec2(0),size-1),0)*255.0)),
+                b=ivec4(round(texelFetch(plane_y,clamp(q+ivec2(1,0),ivec2(0),size-1),0)*255.0)),
+                c=ivec4(round(texelFetch(plane_y,clamp(q+ivec2(0,1),ivec2(0),size-1),0)*255.0)),
+                d=ivec4(round(texelFetch(plane_y,clamp(q+ivec2(1,1),ivec2(0),size-1),0)*255.0));
+            ivec4 result;
+            if(data[base+3]!=0u)result=((((a*(256-f.y)+c*f.y)>>8)*(256-f.x))+(((b*(256-f.y)+d*f.y)>>8)*f.x))>>8;
+            else result=((((a*(256-f.x)+b*f.x)>>8)*(256-f.y))+(((c*(256-f.x)+d*f.x)>>8)*f.y))>>8;
+            front=vec4(result)/255.0;
+        } else front=load_source(src/vec2(p.sizes.zw));
+        if(clip_alpha>=0)front*=float(clip_alpha)/255.0;
+        else if(p.modes.w==0 && p.effect.x>0.0) {
             // Clip in source coordinates, before the affine transform, as Qt does.
             vec2 half_size=vec2(p.sizes.zw)*0.5;
             float radius=p.effect.x;
@@ -326,6 +422,10 @@ void main() {
     if(p.modes.w==7) {
         // EffectBase::BlendWithMask: mix input (background) and result by mask
         // gray. The table holds the factor, then its inverse, per gray value.
+        // ColorShift can move alpha independently; do not clamp its RGB to
+        // alpha as the resampling/compositing path normally does.
+        front=texelFetch(plane_y,pixel,0);
+        back=texelFetch(background_tex,pixel,0);
         ivec4 effected=ivec4(round(front*255.0)),original=ivec4(round(back*255.0));
         ivec4 mask=ivec4(round(texelFetch(mask_tex,pixel,0)*255.0));
         int gray=(mask.r*11+mask.g*16+mask.b*5)/32;

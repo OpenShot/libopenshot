@@ -12,6 +12,11 @@
 
 #include "Timer.h"
 #include "Exceptions.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
 #include "../Clip.h"
 #include "../Timeline.h"
 
@@ -250,7 +255,20 @@ std::string Timer::TimerLayoutText(int64_t frame_number) const
 	return prefix + timer_template + suffix;
 }
 
-std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
+    if(!frame) return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try { return RenderFrame(frame,frame_number,true); }
+        catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan Timer CPU fallback: ")+error.what());
+        }
+    }
+#endif
+    return RenderFrame(frame,frame_number,false);
+}
+
+std::shared_ptr<openshot::Frame> Timer::RenderFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number,bool use_vulkan)
 {
 	Clip* clip = (Clip*) ParentClip();
 	Timeline* timeline = NULL;
@@ -268,14 +286,28 @@ std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame
 		image_size = QSize(clip->Reader()->info.width, clip->Reader()->info.height);
 	}
 
-	if (!frame->has_image_data)
-		frame->AddColor(image_size.width(), image_size.height(), "#00000000");
+    std::shared_ptr<QImage> frame_image;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    auto surface=(use_vulkan && VulkanRenderingEnabled())?frame->GetDeferredImage():nullptr;
+    if((use_vulkan && VulkanRenderingEnabled()) && !surface) {
+        if(frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+        else surface=SolidVulkanImage(image_size.width(),image_size.height(),Qt::transparent);
+    }
+    const bool gpu=bool(surface);
+#else
+    const bool gpu=false;
+#endif
+    if(!gpu) {
+        if(!frame->has_image_data) frame->AddColor(image_size.width(),image_size.height(),"#00000000");
+        frame_image=frame->GetImage();
+        if(!frame_image || frame_image->isNull()) return frame;
+    }
+    int width=frame->GetWidth(),height=frame->GetHeight();
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(gpu) { width=surface->GetWidth();height=surface->GetHeight(); }
+#endif
 
-	std::shared_ptr<QImage> frame_image = frame->GetImage();
-	if (!frame_image || frame_image->isNull())
-		return frame;
-
-	const double scale_factor = frame_image->width() / 600.0;
+	const double scale_factor = width / 600.0;
 	const double font_size_value = std::max(1.0, font_size.GetValue(frame_number) * scale_factor);
 	const double stroke_width_value = std::max(0.0, stroke_width.GetValue(frame_number) * scale_factor);
 	const double padding_value = std::max(0.0, background_padding.GetValue(frame_number) * scale_factor);
@@ -322,9 +354,9 @@ std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame
 	double y = 0.0;
 	const int resolved_gravity = ClampGravity(gravity);
 	if (resolved_gravity == GRAVITY_TOP || resolved_gravity == GRAVITY_CENTER || resolved_gravity == GRAVITY_BOTTOM)
-		x = (frame_image->width() - rendered_box_width) / 2.0;
+		x = (width - rendered_box_width) / 2.0;
 	else if (resolved_gravity == GRAVITY_TOP_RIGHT || resolved_gravity == GRAVITY_RIGHT || resolved_gravity == GRAVITY_BOTTOM_RIGHT)
-		x = frame_image->width() - rendered_box_width - padding_value;
+		x = width - rendered_box_width - padding_value;
 
 	switch (resolved_gravity) {
 	case GRAVITY_TOP_LEFT:
@@ -334,18 +366,18 @@ std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame
 	case GRAVITY_LEFT:
 	case GRAVITY_CENTER:
 	case GRAVITY_RIGHT:
-		y = (frame_image->height() - box_height) / 2.0;
+		y = (height - box_height) / 2.0;
 		break;
 	case GRAVITY_BOTTOM_LEFT:
 	case GRAVITY_BOTTOM:
 	case GRAVITY_BOTTOM_RIGHT:
-		y = frame_image->height() - box_height;
+		y = height - box_height;
 		break;
 	default:
 		break;
 	}
-	x += frame_image->width() * (x_offset.GetValue(frame_number) / 100.0);
-	y += frame_image->height() * (y_offset.GetValue(frame_number) / 100.0);
+	x += width * (x_offset.GetValue(frame_number) / 100.0);
+	y += height * (y_offset.GetValue(frame_number) / 100.0);
 	x = std::round(x);
 	y = std::round(y);
 
@@ -357,17 +389,6 @@ std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame
 	text_x = std::round(text_x);
 	const double text_y = std::round(y + padding_value - text_bounds.top());
 
-	QPainter painter(frame_image.get());
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
-	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-
-	if (show_background) {
-		QColor background_qcolor(QString::fromStdString(background.GetColorHex(frame_number)));
-		background_qcolor.setAlphaF(std::max(0.0, std::min(1.0, background_alpha.GetValue(frame_number))));
-		painter.setPen(Qt::NoPen);
-		painter.setBrush(QBrush(background_qcolor));
-		painter.drawRoundedRect(QRectF(x, y, rendered_box_width, box_height), corner_value, corner_value);
-	}
 
 	QPainterPath path;
 	if (use_slot_layout) {
@@ -390,13 +411,36 @@ std::shared_ptr<openshot::Frame> Timer::GetFrame(std::shared_ptr<openshot::Frame
 	stroke_qcolor.setAlphaF(std::max(0.0, std::min(1.0, font_alpha.GetValue(frame_number))));
 	QPen pen(stroke_qcolor);
 	pen.setWidthF(stroke_width_value);
-	painter.setPen(stroke_width_value <= 0.0 ? Qt::NoPen : pen);
 
 	QColor font_qcolor(QString::fromStdString(color.GetColorHex(frame_number)));
 	font_qcolor.setAlphaF(std::max(0.0, std::min(1.0, font_alpha.GetValue(frame_number))));
-	painter.setBrush(QBrush(font_qcolor));
-	painter.drawPath(path);
-	painter.end();
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(gpu) {
+        if(show_background) {
+            QColor background_color(QString::fromStdString(background.GetColorHex(frame_number)));
+            background_color.setAlphaF(std::clamp(background_alpha.GetValue(frame_number),0.0,1.0));
+            const QRectF rect(x,y,rendered_box_width,box_height);
+            surface=corner_value<=0?FillVulkanRect(surface,rect,background_color):PaintVulkanPath(surface,RoundedRectVulkanPath(rect,corner_value),background_color);
+        }
+        surface=PaintVulkanPath(surface,path,font_qcolor);
+        if(stroke_width_value>0) surface=StrokeVulkanPath(surface,path,pen);
+        frame->AddDeferredImage(surface);return frame;
+    }
+#endif
+	QPainter painter(frame_image.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+
+	if (show_background) {
+		QColor background_qcolor(QString::fromStdString(background.GetColorHex(frame_number)));
+		background_qcolor.setAlphaF(std::max(0.0, std::min(1.0, background_alpha.GetValue(frame_number))));
+		painter.setPen(Qt::NoPen);
+		painter.setBrush(QBrush(background_qcolor));
+		painter.drawRoundedRect(QRectF(x, y, rendered_box_width, box_height), corner_value, corner_value);
+	}
+
+    painter.setPen(stroke_width_value<=0.0?QPen(Qt::NoPen):pen);
+    painter.setBrush(QBrush(font_qcolor));painter.drawPath(path);painter.end();
 
 	return frame;
 }

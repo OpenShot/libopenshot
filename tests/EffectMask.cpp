@@ -752,17 +752,21 @@ TEST_CASE("Sharpen mask mode vary strength differs from limit-to-area", "[effect
 
 	const std::string mask_path = create_uniform_mask_png(width, height, 128);
 
-	Sharpen post(Keyframe(1.6), Keyframe(3.0), Keyframe(0.05));
+	// Radius scales against 720p: 54 gives sigma 1.5 at this test size.
+	// A radius of 3 produces identity box passes and only tests rounding noise.
+	Sharpen post(Keyframe(1.6), Keyframe(54.0), Keyframe(0.05));
 	post.mask_mode = SHARPEN_MASK_LIMIT_TO_AREA;
 	post.MaskReader(new QtImageReader(mask_path));
 
-	Sharpen drive(Keyframe(1.6), Keyframe(3.0), Keyframe(0.05));
+	Sharpen drive(Keyframe(1.6), Keyframe(54.0), Keyframe(0.05));
 	drive.mask_mode = SHARPEN_MASK_VARY_STRENGTH;
 	drive.MaskReader(new QtImageReader(mask_path));
 
 	auto out_post = post.ProcessFrame(frame_post, 1);
 	auto out_drive = drive.ProcessFrame(frame_drive, 1);
 
+	REQUIRE(*out_post->GetImage() != input);
+	REQUIRE(*out_drive->GetImage() != input);
 	bool any_diff = false;
 	for (int y = 0; y < height && !any_diff; ++y) {
 		for (int x = 0; x < width; ++x) {

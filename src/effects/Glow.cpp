@@ -19,6 +19,12 @@
 #include <vector>
 #include <omp.h>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -35,6 +41,21 @@ namespace {
 			dst = src;
 			return;
 		}
+
+        // The fast sliding window below assumes two disjoint edge regions.
+        // Clamp explicitly when the blur is wider than a small preview image.
+        if(radius >= (w+1)/2) {
+            const float inverse=1.0f/float(2*radius+1);
+            for(int y=0;y<h;++y) {
+                float sum=src[y*w]*float(radius+1);
+                for(int i=1;i<=radius;++i) sum+=src[y*w+std::min(i,w-1)];
+                for(int x=0;x<w;++x) {
+                    dst[y*w+x]=sum*inverse;
+                    sum+=src[y*w+std::min(x+radius+1,w-1)]-src[y*w+std::max(x-radius,0)];
+                }
+            }
+            return;
+        }
 
 		const float inv = 1.0f / static_cast<float>((radius * 2) + 1);
 		#pragma omp parallel for schedule(static)
@@ -67,6 +88,19 @@ namespace {
 			dst = src;
 			return;
 		}
+
+        if(radius >= (h+1)/2) {
+            const float inverse=1.0f/float(2*radius+1);
+            for(int x=0;x<w;++x) {
+                float sum=src[x]*float(radius+1);
+                for(int i=1;i<=radius;++i) sum+=src[std::min(i,h-1)*w+x];
+                for(int y=0;y<h;++y) {
+                    dst[y*w+x]=sum*inverse;
+                    sum+=src[std::min(y+radius+1,h-1)*w+x]-src[std::max(y-radius,0)*w+x];
+                }
+            }
+            return;
+        }
 
 		const float inv = 1.0f / static_cast<float>((radius * 2) + 1);
 		#pragma omp parallel for schedule(static)
@@ -184,6 +218,27 @@ void Glow::init_effect_details()
 
 std::shared_ptr<openshot::Frame> Glow::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled() && (true)) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const int radius=std::max(0,blur_radius.GetInt(frame_number));
+                const float strength=std::clamp(float(opacity.GetValue(frame_number)),0.0f,1.0f);
+                const float spread_value=std::clamp(float(spread.GetValue(frame_number)),0.0f,1.0f);
+                const int expanded=std::max(0,int(std::lround(float(radius)*spread_value)));
+                const auto rgba=color.GetColorRGBA(frame_number);
+                QPoint offset;
+                frame->AddDeferredImage(HaloVulkanImage(surface,radius,expanded,offset,
+                    QColor(rgba[0],rgba[1],rgba[2],rgba[3]),strength,mode!=GLOW_MODE_OUTER));
+                return frame;
+            }
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan glow CPU fallback: ")+error.what());
+        }
+    }
+#endif
 	auto frame_image = frame->GetImage();
 	if (!frame_image || frame_image->isNull())
 		return frame;

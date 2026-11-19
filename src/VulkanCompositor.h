@@ -10,8 +10,12 @@
 #include <QColor>
 #include <QTransform>
 #include <QRectF>
+#include <QPainterPath>
+#include <QPen>
 namespace openshot {
 namespace color { struct SourceColor; }
+/// Generate a solid image entirely on the GPU, including the first frame.
+std::shared_ptr<const FrameImage> SolidVulkanImage(int width,int height,const QColor& color);
 /// Scale a decoded YUV surface to RGBA using its color description: YUV
 /// matrix and range, and for HDR or BT.2020 sources conversion to SDR BT.709
 /// matching color::SdrConverter on the CPU.
@@ -23,10 +27,88 @@ std::shared_ptr<const FrameImage> DecodeVulkanImage(std::shared_ptr<const FrameI
 std::shared_ptr<const FrameImage> RenderVulkanImage(
     std::shared_ptr<const FrameImage> source, std::shared_ptr<const FrameImage> background,
     int width, int height, const QTransform& source_to_output, double opacity,
-    const QColor& clear = Qt::transparent, bool high_quality = false, double corner_radius = 0.0);
+    const QColor& clear = Qt::transparent, bool high_quality = false, double corner_radius = 0.0, int composite = 0);
+/// Qt-compatible premultiplied compositing of equal-sized resident frames.
+std::shared_ptr<const FrameImage> CompositeVulkanImage(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> background,int composite,const QColor& clear=Qt::transparent,double opacity=1.0);
+/// Weave alternating scanlines; odd is the original full image, even replaces rows 0,2,...
+std::shared_ptr<const FrameImage> WeaveVulkanImages(std::shared_ptr<const FrameImage> odd,std::shared_ptr<const FrameImage> even);
+/// Paint an already transformed text coverage mask with Qt composition and clip rounding.
+std::shared_ptr<const FrameImage> PaintVulkanTextMask(std::shared_ptr<const FrameImage> source,
+    std::shared_ptr<const FrameImage> coverage,int composite,const QTransform& transform,
+    int clip_width,int clip_height,double corner_radius);
+
 /// Apply common and per-channel saturation, preserving premultiplied alpha.
 std::shared_ptr<const FrameImage> SaturateVulkanImage(
     std::shared_ptr<const FrameImage> source, const std::array<float, 4>& saturation);
+/// Byte-oriented color effects, matching the CPU's premultiplied RGBA math.
+std::shared_ptr<const FrameImage> BrightnessVulkanImage(
+    std::shared_ptr<const FrameImage> source, float contrast_factor, int brightness_offset);
+std::shared_ptr<const FrameImage> HueVulkanImage(
+    std::shared_ptr<const FrameImage> source, const std::array<float, 3>& rotation);
+std::shared_ptr<const FrameImage> NegateVulkanImage(std::shared_ptr<const FrameImage> source);
+/// Replace edge pixels with a premultiplied color; widths are left/top/right/bottom.
+std::shared_ptr<const FrameImage> BarsVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QColor& color, const std::array<int, 4>& widths);
+/// Wrapped integer offsets, interleaved x/y for red, green, blue and alpha.
+std::shared_ptr<const FrameImage> ShiftVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int, 8>& offsets);
+/// CPU-compatible basic, HSV/HSL, CIE and YCbCr keying. Conversion tables
+/// retain Babl's transfer functions and float rounding across frames.
+std::shared_ptr<const FrameImage> ChromaKeyVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& color,int fuzz,int halo,int method,
+    std::shared_ptr<const std::vector<float>> conversions=nullptr,const std::array<float,3>& key_features={});
+/// Qt-compatible area downsampling and nearest-neighbor source-over painting.
+std::shared_ptr<const FrameImage> PixelateVulkanImage(std::shared_ptr<const FrameImage> source,
+    const QRect& area,int width,int height);
+/// Geometry-only row parameters; pixels remain resident on the device.
+std::shared_ptr<const FrameImage> WaveVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& offsets);
+std::shared_ptr<const FrameImage> DeinterlaceVulkanImage(std::shared_ptr<const FrameImage> source,bool odd);
+/// Parameters: 16 grain controls, then 256 inverse-alpha values; seed is kept as uint32.
+std::shared_ptr<const FrameImage> FilmGrainVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters,uint32_t seed);
+/// Parameters: ten 256-entry response tables, five temporal controls, inverse alpha.
+/// Previous holds the original preceding input, never a filtered result.
+std::shared_ptr<const FrameImage> DenoiseVulkanImage(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> previous,
+    const std::vector<float>& parameters,int fine_radius,int coarse_radius);
+/// Qt-compatible smooth scaling of GPU effect inputs, including reader maps.
+std::shared_ptr<const FrameImage> ScaleEffectVulkanImage(std::shared_ptr<const FrameImage> source,int width,int height);
+std::shared_ptr<const FrameImage> DisplaceVulkanImage(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> map,
+    const std::array<uint32_t,256>& adjusted,float x,float y,bool invert,bool replace);
+/// Sixteen header words followed by sixteen words per row: noise, bands and tracking.
+std::shared_ptr<const FrameImage> AnalogTapeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& parameters);
+/// CPU-generated flare geometry and tint values; the overlay is generated and painted on the GPU.
+std::shared_ptr<const FrameImage> LensFlareVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
+/// Reconstruct a segmentation mask without uploading an expanded image; opaque selects grayscale on black.
+std::shared_ptr<const FrameImage> ObjectMaskVulkanSurface(std::shared_ptr<const FrameImage> reference,int width,int height,
+    const std::vector<uint32_t>& rle,bool opaque=false);
+/// Decode compact analysis RLE, scale its alpha and paint fill/elliptical stroke entirely on the GPU.
+std::shared_ptr<const FrameImage> ObjectMaskVulkanImage(std::shared_ptr<const FrameImage> source,int mask_width,int mask_height,
+    const std::vector<uint32_t>& rle,const QColor& fill,const QColor& stroke,const std::vector<int>& ellipse_rows);
+/// OpenCV-compatible 1/32-pixel rotation/translation and zoom, with opaque black borders.
+std::shared_ptr<const FrameImage> StabilizeVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<std::vector<int32_t>>& axes);
+/// All spherical/fisheye models, straight-alpha CPU-compatible sampling and automatic mipmaps.
+std::shared_ptr<const FrameImage> SphericalVulkanImage(std::shared_ptr<const FrameImage> source,const std::vector<float>& parameters);
+std::vector<float> VulkanPathEdges(const QPainterPath& path,int width,int height,double flatness=.25);
+std::shared_ptr<const FrameImage> PaintVulkanCommands(std::shared_ptr<const FrameImage> source,const std::vector<uint32_t>& commands);
+/// Rasterize vector annotations from geometry, preserving the video surface on the device.
+std::shared_ptr<const FrameImage> PaintVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QColor& color,double flatness=.25);
+/// Qt's axis-aligned rectangle fill, including its 16.16 subpixel coverage.
+std::shared_ptr<const FrameImage> FillVulkanRect(std::shared_ptr<const FrameImage> source,const QRectF& rect,const QColor& color);
+/// Match QPainter's rounded-rectangle traversal.
+QPainterPath RoundedRectVulkanPath(const QRectF& rect,double radius);
+/// Paint a closed solid path with Qt's wide or cosmetic stroke coverage.
+std::shared_ptr<const FrameImage> StrokeVulkanPath(std::shared_ptr<const FrameImage> source,const QPainterPath& path,const QPen& pen);
+/// Tint and paint a cached Qt glyph coverage asset without resampling.
+std::shared_ptr<const FrameImage> PaintVulkanGlyph(std::shared_ptr<const FrameImage> source,std::shared_ptr<const FrameImage> atlas,
+    const QRect& tile,const QPoint& origin,const QColor& color);
+/// Three separable box blurs and an entirely GPU-resident adaptive threshold.
+std::shared_ptr<const FrameImage> SharpenVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::array<int,3>& radii,float amount,float threshold,int mode,int channel);
+/// Shared alpha spread, offset, float blur and compositing for Shadow/Glow.
+std::shared_ptr<const FrameImage> HaloVulkanImage(std::shared_ptr<const FrameImage> source,
+    int radius,int spread,const QPoint& offset,const QColor& color,float opacity,bool inner);
+std::shared_ptr<const FrameImage> OutlineVulkanImage(std::shared_ptr<const FrameImage> source,
+    const std::vector<int>& kernel,const QColor& color);
 /// Copy a source rectangle into a transparent output, with optional resized canvas.
 std::shared_ptr<const FrameImage> CropVulkanImage(std::shared_ptr<const FrameImage> source,
     const QRectF& destination, const QRectF& copy, const QRect& canvas);

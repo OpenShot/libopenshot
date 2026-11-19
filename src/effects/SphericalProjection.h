@@ -34,6 +34,7 @@ private:
   void init_effect_details();
 
 public:
+    bool RendersOnVulkan() const override { return true; }
   // Enums
   enum InputModel {
     INPUT_EQUIRECT          = 0,

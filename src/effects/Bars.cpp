@@ -15,6 +15,12 @@
 
 #include <cstring>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 namespace {
@@ -59,6 +65,26 @@ void Bars::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Bars::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if (VulkanRenderingEnabled()) {
+        try {
+            auto surface = frame->GetDeferredImage();
+            if (!surface && ParentClip() && frame->has_image_data)
+                surface = UploadVulkanImage(*frame->GetImage());
+            if (surface) {
+                frame->AddDeferredImage(BarsVulkanImage(surface,
+                    QColor(QString::fromStdString(color.GetColorHex(frame_number))), {
+                        int(clamp_margin(left.GetValue(frame_number)) * surface->GetWidth()),
+                        int(clamp_margin(top.GetValue(frame_number)) * surface->GetHeight()),
+                        int(clamp_margin(right.GetValue(frame_number)) * surface->GetWidth()),
+                        int(clamp_margin(bottom.GetValue(frame_number)) * surface->GetHeight())}));
+                return frame;
+            }
+        } catch (const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan bars CPU fallback: ") + error.what());
+        }
+    }
+#endif
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 	const int width = frame_image->width();

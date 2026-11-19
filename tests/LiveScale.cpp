@@ -103,12 +103,14 @@ QImage pixels(Timeline& timeline) {
     return copy.GetImage()->convertToFormat(QImage::Format_RGBA8888);
 }
 
-Json::UInt64 uploads() {
+Json::UInt64 metric(const char* name) {
     Json::Value metrics;
     Json::Reader reader;
     REQUIRE(reader.parse(GpuMetricsSnapshot(), metrics));
-    return metrics["uploads"].asUInt64();
+    return metrics[name].asUInt64();
 }
+
+Json::UInt64 uploads() { return metric("uploads"); }
 
 using Source = std::function<std::unique_ptr<ReaderBase>()>;
 QImage fresh_pixels(const Clip& edited, const Source& source) {
@@ -280,6 +282,7 @@ TEST_CASE("Live video and waveform transforms preserve decoded frames and fresh 
     Source source = [] { return std::unique_ptr<ReaderBase>(new PatternReader()); };
     for (double scale : {2.0, 3.0, 1.0}) {
         const auto uploaded = uploads();
+        const auto readbacks = metric("readbacks");
         timeline.BeginClipTransform(clip.Id());
         edit(timeline, clip, scaled(scale));
         pixels(timeline);
@@ -287,6 +290,7 @@ TEST_CASE("Live video and waveform transforms preserve decoded frames and fresh 
         CHECK(mapper->GetFrame(1) == cached);
         CHECK(timeline.EndClipTransform(clip.Id()) == waveform);
         const auto live = pixels(timeline);
+        CHECK(metric("readbacks") == readbacks);
         if (!waveform) CHECK(uploads() == uploaded);
         CHECK(live == fresh_pixels(clip, source));
         CHECK(mapper->GetFrame(1) == cached);

@@ -29,6 +29,12 @@
 #include <QBrush>
 #include <QRectF>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace std;
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
@@ -74,16 +80,36 @@ void Tracker::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
-	// Sanity‐check
-	if (!frame) return frame;
-	auto frame_image = frame->GetImage();
-	if (!frame_image || frame_image->isNull()) return frame;
-	if (!trackedData) return frame;
-
-	// 2) Only proceed if we actually have a box and it's visible
-	if (!trackedData->Contains(frame_number) ||
-		trackedData->visible.GetValue(frame_number) != 1)
-		return frame;
+    if(!frame || !trackedData || !trackedData->Contains(frame_number) ||
+        trackedData->visible.GetValue(frame_number)!=1 || trackedData->draw_box.GetValue(frame_number)!=1)
+        return frame;
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const int w=surface->GetWidth(),h=surface->GetHeight();
+                const auto box=trackedData->GetBox(frame_number);
+                const QRectF rect((box.cx-box.width/2)*w,(box.cy-box.height/2)*h,box.width*w,box.height*h);
+                const auto stroke=trackedData->stroke.GetColorRGBA(frame_number),background=trackedData->background.GetColorRGBA(frame_number);
+                const float stroke_alpha=trackedData->stroke_alpha.GetValue(frame_number),background_alpha=trackedData->background_alpha.GetValue(frame_number),
+                    corner=trackedData->background_corner.GetValue(frame_number);
+                QPen pen(QColor(stroke[0],stroke[1],stroke[2],int(255*stroke_alpha)));
+                pen.setWidthF(trackedData->ScaledStrokeWidth(frame_number,w,h));
+                const auto path=RoundedRectVulkanPath(rect,corner);
+                const QColor fill(background[0],background[1],background[2],int(255*background_alpha));
+                auto result=corner<=0?FillVulkanRect(surface,rect,fill):PaintVulkanPath(surface,path,fill);
+                result=StrokeVulkanPath(result,path,pen);
+                frame->AddDeferredImage(result);return frame;
+            }
+        } catch(const std::exception& error) {
+            Logger::Instance()->Log(std::string("Vulkan Tracker CPU fallback: ")+error.what());
+        }
+    }
+#endif
+    auto frame_image=frame->GetImage();
+    if(!frame_image || frame_image->isNull()) return frame;
 
 	QPainter painter(frame_image.get());
 	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
@@ -125,6 +151,29 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	painter.end();
 	return frame;
 }
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+std::shared_ptr<const FrameImage> Tracker::TrackedObjectMaskSurface(std::shared_ptr<const FrameImage> target,int64_t frame_number) const {
+    if(!target) return {};
+    auto result=RenderVulkanImage(target,nullptr,target->GetWidth(),target->GetHeight(),QTransform(),0,Qt::black);
+    for(const auto& item:trackedObjects) {
+        const auto object=std::dynamic_pointer_cast<TrackedObjectBBox>(item.second);
+        if(!object || !object->Contains(frame_number) || object->visible.GetValue(frame_number)!=1) continue;
+        const auto box=object->GetBox(frame_number);
+        if(box.width<=0 || box.height<=0 || box.cx<0 || box.cy<0) continue;
+        const double w=box.width*target->GetWidth(),h=box.height*target->GetHeight(),
+            x=(box.cx-box.width/2.0)*target->GetWidth(),y=(box.cy-box.height/2.0)*target->GetHeight(),
+            corner=object->background_corner.GetValue(frame_number);
+        QPainterPath path;
+        if(std::abs(box.angle)>.0001f) {
+            path.addRoundedRect(QRectF(-w/2,-h/2,w,h),corner,corner);
+            QTransform transform;transform.translate(x+w/2,y+h/2);transform.rotate(box.angle);path=transform.map(path);
+        } else path.addRoundedRect(QRectF(x,y,w,h),corner,corner);
+        result=PaintVulkanPath(result,path,Qt::white);
+    }
+    return result;
+}
+#endif
 
 // Get the indexes and IDs of all visible objects in the given frame
 std::string Tracker::GetVisibleObjects(int64_t frame_number) const

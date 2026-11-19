@@ -13,6 +13,8 @@
 #include <memory>
 #include <QImage>
 #include <QColor>
+#include <QTemporaryDir>
+#include "QtImageReader.h"
 #include "Frame.h"
 #include "effects/Sharpen.h"
 #include "openshot_catch.h"
@@ -157,4 +159,19 @@ TEST_CASE("Chroma-only differs from All on colored image", "[effect][sharpen]")
     QColor out_chroma = chromac.GetFrame(f_chroma,1)->GetImage()->pixelColor(1,1);
 
     CHECK(out_chroma != out_all);
+}
+
+TEST_CASE("A black sharpening mask preserves colored transparent pixels", "[effect][sharpen][mask]") {
+    QTemporaryDir directory;
+    const auto path=directory.filePath("black-mask.png");
+    QImage mask(3,3,QImage::Format_RGBA8888_Premultiplied);mask.fill(Qt::black);
+    REQUIRE(mask.save(path));
+    for(int mode:{SHARPEN_MASK_LIMIT_TO_AREA,SHARPEN_MASK_VARY_STRENGTH}) for(double amount:{0.0,2.0}) {
+        QImage pixels(3,3,QImage::Format_RGBA8888_Premultiplied);pixels.fill(QColor(165,40,210,127));
+        auto frame=std::make_shared<Frame>();frame->AddImage(std::make_shared<QImage>(pixels));
+        Sharpen effect;effect.mask_mode=mode;effect.amount=Keyframe(amount);
+        effect.MaskReader(new QtImageReader(path.toStdString()));
+        auto actual=effect.ProcessFrame(frame,1)->GetImage();
+        CHECK(*actual==pixels);
+    }
 }

@@ -18,6 +18,12 @@
 #include <omp.h>
 #include <vector>
 
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "Logger.h"
+#endif
+
 using namespace openshot;
 
 SphericalProjection::SphericalProjection()
@@ -62,6 +68,30 @@ namespace {
 std::shared_ptr<openshot::Frame>
 SphericalProjection::GetFrame(std::shared_ptr<openshot::Frame> frame,
 								int64_t frame_number) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+    if(VulkanRenderingEnabled()) {
+        try {
+            auto surface=frame->GetDeferredImage();
+            if(!surface && ParentClip() && frame->has_image_data) surface=UploadVulkanImage(*frame->GetImage());
+            if(surface) {
+                const double deg=M_PI/180.0;
+                double yr=-yaw.GetValue(frame_number)*deg,pr=pitch.GetValue(frame_number)*deg,rr=-roll.GetValue(frame_number)*deg;
+                if(input_model==INPUT_EQUIRECT && invert==INVERT_BACK) yr+=M_PI;
+                const double sy=sin(yr),cy=cos(yr),sp=sin(pr),cp=cos(pr),out=fov.GetValue(frame_number)*deg,in=in_fov.GetValue(frame_number)*deg;
+                const double hx=tan(out*.5),vy=hx*surface->GetHeight()/surface->GetWidth();
+                int sampler=interpolation;
+                if(sampler==INTERP_AUTO) {
+                    const double coverage=projection_mode==MODE_RECT_SPHERE?2*M_PI:projection_mode==MODE_RECT_HEMISPHERE?M_PI:in;
+                    const double ratio=coverage/out;sampler=ratio<.8?INTERP_AUTO:ratio<=1.2?INTERP_BILINEAR:INTERP_BICUBIC;
+                }
+                frame->AddDeferredImage(SphericalVulkanImage(surface,{float(cy),float(sy*sp),float(sy*cp),0,float(cp),float(-sp),
+                    float(-sy),float(cy*sp),float(cy*cp),float(cos(rr)),float(sin(rr)*(cy*cp>=0?1:-1)),float(hx),float(vy),
+                    float(in),float(out),float(input_model),float(projection_mode),float(invert),float(sampler)}));return frame;
+            }
+        } catch(const std::exception& e) { Logger::Instance()->Log(std::string("Vulkan SphericalProjection CPU fallback: ")+e.what()); }
+    }
+#endif
+
 	auto img = frame->GetImage();
 	if (img->format() != QImage::Format_ARGB32)
 	*img = img->convertToFormat(QImage::Format_ARGB32);
@@ -367,7 +397,7 @@ SphericalProjection::GetFrame(std::shared_ptr<openshot::Frame> frame,
 	}
 	}
 
-	*img = output;
+	*img = output.convertToFormat(QImage::Format_RGBA8888_Premultiplied);
 	return frame;
 }
 
