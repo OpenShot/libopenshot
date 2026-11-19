@@ -38,6 +38,7 @@ set(OPENSHOT_TESTS
   GpuMetrics
   AdaptivePreroll
   AudioDeviceManager
+  AudioDeviceInitialization
   AudioRecorder
   AudioReaderSource
   AudioPlaybackThread

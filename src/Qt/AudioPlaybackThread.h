@@ -54,7 +54,7 @@ public:
 		/// Default sample rate (as detected)
 		double defaultSampleRate;
 
-		/// Current open audio device (or last attempted device - if none were successful)
+		/// Current open audio device (empty if initialization failed)
 		AudioDeviceInfo currentAudioDevice;
 
 		/// Override with default sample rate & channels (44100, 2) and no preferred audio device
@@ -133,7 +133,7 @@ public:
 			return AudioDeviceManagerSingleton::Instance()->defaultSampleRate;
 		}
 
-		/// Get active, open audio device (or last attempted device if none were successful)
+		/// Get active, open audio device (empty if initialization failed)
 		AudioDeviceInfo getCurrentAudioDevice()
 		{
 			return AudioDeviceManagerSingleton::Instance()->currentAudioDevice;
