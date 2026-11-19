@@ -13,6 +13,10 @@
 #ifndef OPENSHOT_IMAGE_READER_H
 #define OPENSHOT_IMAGE_READER_H
 
+#include <mutex>
+
+class QImage;
+
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
@@ -57,6 +61,10 @@ namespace openshot
 	private:
 		std::string path;
 		std::shared_ptr<Magick::Image> image;
+		std::shared_ptr<QImage> cached_image;
+		mutable std::mutex cache_mutex;
+		void OpenUnlocked();
+		void CloseUnlocked();
 		bool is_open;
 
 	public:
@@ -84,7 +92,7 @@ namespace openshot
 		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
 
 		/// Determine if reader is open or closed
-		bool IsOpen() override { return is_open; };
+		bool IsOpen() override;
 
 		/// Return the type name of the class
 		std::string Name() override { return "ImageReader"; };
