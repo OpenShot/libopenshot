@@ -668,7 +668,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> backgro
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume, bool muted)
+void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume, bool muted, Frame* audio_output)
 {
 	// Create timeline options (with details about this current frame request)
 	TimelineInfoStruct options{};
@@ -690,6 +690,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		"clip_frame_number", clip_frame_number);
 
 	/* COPY AUDIO - with correct volume */
+	if (!audio_output)
+		audio_output = new_frame.get();
 	if (!muted && source_clip->Reader()->info.has_audio) {
 		// Debug output
 		Logger::Instance()->AppendDebugMethod(
@@ -702,8 +704,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 		{
 			// Ensure timeline frame matches the source samples once per frame
-			if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount()){
-				new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
+			if (audio_output->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount()){
+				audio_output->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
 			}
 
 			// Apply transition-driven equal-power audio fades for clips covered by a Mask transition.
@@ -749,7 +751,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
-				new_frame->AddAudio(false, channel_mapping, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0);
+				audio_output->AddAudio(false, channel_mapping, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0);
 			}
 		}
 		else
@@ -773,10 +775,10 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 }
 
 // Track effects run once on the composed track, after clip transforms and transitions.
-void Timeline::compose_track(std::shared_ptr<Frame>& output, std::shared_ptr<Frame> frame,
+void Timeline::compose_track(const std::shared_ptr<Frame>& output, std::shared_ptr<Frame> frame,
                              const TrackSettings& track)
 {
-	if (!track.json.get("hidden", false).asBool())
+	if (track.has_video_effects && !track.json.get("hidden", false).asBool())
 		Clip::composite_frame(frame, output, false, COMPOSITE_SOURCE_OVER);
 
 	if (!track.json.get("muted", false).asBool() && frame->GetAudioSamplesCount() > 0) {
@@ -807,6 +809,10 @@ void Timeline::set_track(Json::Value track)
 			effect->SetJsonValue(data);
 			effects.push_back(std::move(effect));
 		}
+		settings.has_video_effects = std::any_of(effects.begin(), effects.end(),
+			[](const auto& effect) { return effect->info.has_video; });
+		settings.has_audio_effects = std::any_of(effects.begin(), effects.end(),
+			[](const auto& effect) { return effect->info.has_audio; });
 		settings.effects = std::move(effects);
 	}
 	settings.json = std::move(track);
@@ -1290,7 +1296,10 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 							track_frame->SampleRate(info.sample_rate);
 							track_frame->ChannelsLayout(info.channel_layout);
 						}
-						add_layer(track_frame, ci.clip, clip_frame_number, is_top_clip, max_volume_sum, muted);
+						// Audio-only effects leave video blending with lower tracks intact.
+						const auto& video_output = hidden || track->has_video_effects ? track_frame : new_frame;
+						add_layer(video_output, ci.clip, clip_frame_number, is_top_clip, max_volume_sum,
+						          muted && !track->has_audio_effects, track_frame.get());
 					} else {
 						add_layer(new_frame, ci.clip, clip_frame_number, is_top_clip, max_volume_sum, muted);
 					}

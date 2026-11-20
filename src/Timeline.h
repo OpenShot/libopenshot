@@ -166,13 +166,15 @@ namespace openshot {
 		struct TrackSettings {
 			Json::Value json;
 			std::vector<std::unique_ptr<EffectBase>> effects;
+			bool has_video_effects = false;
+			bool has_audio_effects = false;
 		};
 		std::map<std::string, TrackSettings> tracks;
 		std::unordered_map<int, const TrackSettings*> tracks_by_layer;
 		void set_track(Json::Value track);
 		void index_tracks();
 		void apply_json_to_tracks(const Json::Value& change);
-		void compose_track(std::shared_ptr<Frame>& output, std::shared_ptr<Frame> track_frame,
+		void compose_track(const std::shared_ptr<Frame>& output, std::shared_ptr<Frame> track_frame,
 		                   const TrackSettings& track);
 		openshot::CacheBase *final_cache; ///<Final cache of timeline frames
 		std::set<openshot::FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
@@ -187,7 +189,7 @@ namespace openshot {
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
 
 		/// Process a new layer of video or audio
-		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume, bool muted = false);
+		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume, bool muted = false, Frame* audio_output = nullptr);
 
 		/// Resolve equal-power audio gains for one clip under a transition on the current timeline frame.
 		std::pair<float, float> ResolveTransitionAudioGains(openshot::Clip* source_clip, int64_t timeline_frame_number, bool is_top_clip) const;
