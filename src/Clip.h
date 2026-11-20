@@ -90,6 +90,7 @@ namespace openshot {
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 		friend class PitchShift;
+		friend class Timeline;
 	protected:
 		/// Mutex for multiple threads
 		std::recursive_mutex getFrameMutex;
@@ -123,6 +124,7 @@ namespace openshot {
 		std::list<openshot::EffectBase*> effects; ///< List of clips on this timeline
 		bool is_open;	///< Is Reader opened
 		std::string parentObjectId; ///< Id of the bounding box that this clip is attached to
+		openshot::TimelineBase* registered_timeline = nullptr; ///< Timeline whose clip list contains this clip (separate from rendering context)
 		mutable std::shared_ptr<openshot::TrackedObjectBase> parentTrackedObject; ///< Tracked object this clip is attached to
 		mutable openshot::Clip* parentClipObject; ///< Clip object this clip is attached to
 		void ResolveParent() const; ///< Resolve the saved parent ID against the current timeline

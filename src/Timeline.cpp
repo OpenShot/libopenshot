@@ -397,6 +397,7 @@ void Timeline::AddClip(Clip* clip)
 
 	// Add clip to list
 	clips.push_back(clip);
+	clip->registered_timeline = this;
 
 	// Sort clips
 	sort_clips();
@@ -447,6 +448,7 @@ void Timeline::RemoveEffect(EffectBase* effect)
 void Timeline::ForgetClip(Clip* clip)
 {
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+	clip->registered_timeline = nullptr;
 	clips.remove(clip);
 	allocated_clips.erase(clip);
 	open_clips.erase(clip);
@@ -484,6 +486,7 @@ void Timeline::RemoveClip(Clip* clip)
 	update_open_clips(clip, false);
 	clips.remove(clip);
 	RefreshTrackedObjects();
+	clip->registered_timeline = nullptr;
 	clip->ParentTimeline(nullptr);
 	for (auto child : clips)
 		child->AttachToObject(child->GetAttachedId());
@@ -1000,6 +1003,7 @@ void Timeline::Clear()
 	for (auto clip : clips)
 	{
 		update_open_clips(clip, false);
+		clip->registered_timeline = nullptr;
 		clip->ParentTimeline(nullptr);
 
 		// Delete clip object (if timeline allocated it)

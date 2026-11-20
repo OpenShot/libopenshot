@@ -306,8 +306,8 @@ Clip::~Clip()
 {
 	// Python can release a borrowed clip before the timeline containing it.
 	// Its effects may already have been released too, so only forget the clip.
-	if (timeline)
-		static_cast<Timeline*>(timeline)->ForgetClip(this);
+	if (registered_timeline)
+		static_cast<Timeline*>(registered_timeline)->ForgetClip(this);
 
 	// Delete the reader if clip created it
 	if (allocated_reader) {

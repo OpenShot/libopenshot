@@ -18,6 +18,20 @@
 
 using namespace openshot;
 
+TEST_CASE("A clip with timeline context can outlive an unregistered timeline", "[parenting]") {
+	DummyReader reader;
+	auto clip = std::make_unique<Clip>(&reader);
+	{
+		Timeline context(32, 32, Fraction(60, 1), 48000, 2, LAYOUT_STEREO);
+		clip->ParentTimeline(&context);
+		CHECK(context.Clips().empty());
+		CHECK(clip->ParentTimeline() == &context);
+	}
+	// ParentTimeline supplies rendering/FPS context without registering a clip.
+	// Destruction must not call back into the already-destroyed context.
+	CHECK_NOTHROW(clip.reset());
+}
+
 TEST_CASE("Borrowed preview clips can be destroyed before their timeline", "[parenting]") {
 	DummyReader reader;
 	auto timeline = std::make_unique<Timeline>(32, 32, Fraction(24, 1), 48000, 2, LAYOUT_STEREO);
