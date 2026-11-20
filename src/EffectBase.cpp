@@ -120,6 +120,8 @@ Json::Value EffectBase::JsonValue() const {
 	root["has_tracked_object"] = info.has_tracked_object;
 	root["apply_before_clip"] = info.apply_before_clip;
 	root["order"] = Order();
+	if (stack_order >= 0) root["stack_order"] = stack_order;
+	if (clip_range.isObject()) root["clip_range"] = clip_range;
 	root["mask_invert"] = mask_invert;
 	root["mask_source_id"] = mask_source_id;
 	root["mask_time_mode"] = mask_time_mode;
@@ -186,6 +188,10 @@ void EffectBase::SetJsonValue(Json::Value root) {
 	SetBaseJsonValue(my_root);
 
 	// Set data from Json (if key is found)
+	if (my_root.isMember("stack_order"))
+		stack_order = my_root["stack_order"].isInt() ? my_root["stack_order"].asInt() : -1;
+	if (my_root.isMember("clip_range"))
+		clip_range = my_root["clip_range"];
 	if (!my_root["order"].isNull())
 		Order(my_root["order"].asInt());
 
@@ -838,4 +844,13 @@ std::string EffectBase::ParentClipId() const{
 
 EffectBase::~EffectBase() {
 	MaskReader(NULL);
+}
+
+bool EffectBase::InClipRange(int64_t frame, double fps) const {
+	if (!clip_range.isObject() || fps <= 0.0)
+		return true;
+	const auto& start = clip_range["start"];
+	const auto& end = clip_range["end"];
+	return (!start.isNumeric() || frame > std::llround(start.asDouble() * fps)) &&
+	       (!end.isNumeric() || frame <= std::llround(end.asDouble() * fps));
 }

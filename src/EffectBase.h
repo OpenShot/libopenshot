@@ -57,6 +57,8 @@ namespace openshot
 	class EffectBase : public ClipBase
 	{
 	private:
+		int stack_order = -1;
+		Json::Value clip_range;
 		int order; ///< The order to evaluate this effect. Effects are processed in this order (when more than one overlap).
 		ReaderBase* mask_reader = nullptr; ///< Optional common reader-based mask source.
 		std::string mask_source_id; ///< Optional effect ID that provides a generated mask source.
@@ -204,6 +206,9 @@ namespace openshot
 		void MaskSourceId(const std::string& new_mask_source_id);
 
 		/// Get the order that this effect should be executed.
+		int StackOrder() const { return stack_order; }
+		bool InClipRange(int64_t frame, double fps) const;
+
 		int Order() const { return order; }
 
 		/// Set the order that this effect should be executed.

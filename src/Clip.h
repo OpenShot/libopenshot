@@ -49,6 +49,11 @@ namespace openshot {
 	/// position, and then by effect order.
 	struct CompareClipEffects{
 		bool operator()( openshot::EffectBase* lhs, openshot::EffectBase* rhs){
+			if (lhs->StackOrder() >= 0 || rhs->StackOrder() >= 0) {
+				if (lhs->StackOrder() < 0) return false;
+				if (rhs->StackOrder() < 0) return true;
+				return lhs->StackOrder() < rhs->StackOrder();
+			}
 			if( lhs->Layer() < rhs->Layer() ) return true;
 			if( lhs->Layer() == rhs->Layer() && lhs->Position() < rhs->Position() ) return true;
 			if( lhs->Layer() == rhs->Layer() && lhs->Position() == rhs->Position() && lhs->Order() > rhs->Order() ) return true;
@@ -90,6 +95,7 @@ namespace openshot {
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 		friend class PitchShift;
+		friend class Timeline;
 	protected:
 		/// Mutex for multiple threads
 		std::recursive_mutex getFrameMutex;
@@ -153,6 +159,9 @@ namespace openshot {
 		void apply_background(std::shared_ptr<openshot::Frame> frame,
 		                      std::shared_ptr<openshot::Frame> background_frame,
 		                      bool update_frame_image = true);
+		static void composite_frame(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame,
+		                            bool update_frame_image, CompositeType composite);
+
 
 		/// Apply effects to the source frame (if any)
 		void apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, TimelineInfoStruct* options, bool before_keyframes);

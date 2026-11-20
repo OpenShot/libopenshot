@@ -1388,6 +1388,11 @@ void Clip::RemoveEffect(EffectBase* effect)
 void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
                             std::shared_ptr<openshot::Frame> background_frame,
                             bool update_frame_image) {
+	composite_frame(frame, background_frame, update_frame_image, composite);
+}
+
+void Clip::composite_frame(std::shared_ptr<Frame> frame, std::shared_ptr<Frame> background_frame,
+                           bool update_frame_image, CompositeType composite) {
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 	// Audio-only frames contribute audio in Timeline::add_layer, but have no
 	// image to composite. Do not materialize the GPU canvas for an empty layer.
@@ -1438,18 +1443,15 @@ void Clip::apply_background(std::shared_ptr<openshot::Frame> frame,
 // Apply effects to the source frame (if any)
 void Clip::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_number, TimelineInfoStruct* options, bool before_keyframes)
 {
-	for (auto effect : effects)
-	{
-		// Apply the effect to this frame
-		if (effect->info.apply_before_clip && before_keyframes) {
-			gpu_metrics::Reason gpu_reason("Effect");
-			effect->ProcessFrame(frame, frame->number);
-			if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
-		} else if (!effect->info.apply_before_clip && !before_keyframes) {
-			gpu_metrics::Reason gpu_reason("Effect");
-			effect->ProcessFrame(frame, frame->number);
-			if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
-		}
+	const auto* parent = static_cast<const Timeline*>(timeline);
+	const double fps = parent ? parent->info.fps.ToDouble() : reader->info.fps.ToDouble();
+	for (auto effect : effects) {
+		if (effect->info.apply_before_clip != before_keyframes ||
+		    !effect->InClipRange(frame->number, fps))
+			continue;
+		gpu_metrics::Reason gpu_reason("Effect");
+		effect->ProcessFrame(frame, frame->number);
+		if (effect->info.has_video) gpu_metrics::RecordRender(*frame);
 	}
 
 	if (timeline != NULL && options != NULL) {
@@ -1526,7 +1528,9 @@ std::shared_ptr<Frame> Clip::GetAudioContextFrame(int64_t number)
     }
     auto frame = GetOrCreateFrame(number);
     apply_timemapping(frame);
-    for (auto* effect : effects) effect->GetFrame(frame, number);
+    for (auto* effect : effects)
+        if (effect->InClipRange(number, reader->info.fps.ToDouble()))
+            effect->GetFrame(frame, number);
     return frame;
 }
 

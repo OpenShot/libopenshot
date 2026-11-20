@@ -464,6 +464,16 @@ openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
 	return nullptr;
 }
 
+EffectBase* Timeline::GetTrackEffect(const std::string& id)
+{
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+	for (const auto& entry : tracks)
+		for (const auto& effect : entry.second.effects)
+			if (effect->Id() == id)
+				return effect.get();
+	return nullptr;
+}
+
 // Return the list of effects on all clips
 std::list<openshot::EffectBase*> Timeline::ClipEffects() const {
 
@@ -658,7 +668,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> backgro
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume)
+void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume, bool muted)
 {
 	// Create timeline options (with details about this current frame request)
 	TimelineInfoStruct options{};
@@ -680,7 +690,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		"clip_frame_number", clip_frame_number);
 
 	/* COPY AUDIO - with correct volume */
-	if (source_clip->Reader()->info.has_audio) {
+	if (!muted && source_clip->Reader()->info.has_audio) {
 		// Debug output
 		Logger::Instance()->AppendDebugMethod(
 			"Timeline::add_layer (Copy Audio)",
@@ -760,6 +770,96 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		"source_frame->number", source_frame->number,
 		"new_frame->GetImage()->width()", new_frame->GetWidth(),
 		"new_frame->GetImage()->height()", new_frame->GetHeight());
+}
+
+// Track effects run once on the composed track, after clip transforms and transitions.
+void Timeline::compose_track(std::shared_ptr<Frame>& output, std::shared_ptr<Frame> frame,
+                             const TrackSettings& track)
+{
+	if (!track.json.get("hidden", false).asBool())
+		Clip::composite_frame(frame, output, false, COMPOSITE_SOURCE_OVER);
+
+	if (!track.json.get("muted", false).asBool() && frame->GetAudioSamplesCount() > 0) {
+		if (output->GetAudioSamplesCount() != frame->GetAudioSamplesCount())
+			output->ResizeAudio(info.channels, frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
+		for (int channel = 0; channel < info.channels; ++channel)
+			output->AddAudio(false, channel, 0, frame->GetAudioSamples(channel), frame->GetAudioSamplesCount(), 1.0);
+	}
+}
+
+void Timeline::set_track(Json::Value track)
+{
+	const std::string id = track["id"].asString();
+	if (id.empty() || !track["number"].isInt())
+		return;
+	auto& settings = tracks[id];
+	const Json::Value& previous = settings.json;
+	const Json::Value& next = track;
+	if (previous["effects"] != next["effects"]) {
+		std::vector<std::unique_ptr<EffectBase>> effects;
+		for (const auto& data : next["effects"]) {
+			if (!data.isObject() || !data["type"].isString())
+				continue;
+			std::unique_ptr<EffectBase> effect(EffectInfo().CreateEffect(data["type"].asString()));
+			if (!effect)
+				continue;
+			effect->ParentTimeline(this);
+			effect->SetJsonValue(data);
+			effects.push_back(std::move(effect));
+		}
+		settings.effects = std::move(effects);
+	}
+	settings.json = std::move(track);
+}
+
+void Timeline::index_tracks()
+{
+	tracks_by_layer.clear();
+	for (const auto& entry : tracks)
+		tracks_by_layer[entry.second.json["number"].asInt()] = &entry.second;
+}
+
+void Timeline::apply_json_to_tracks(const Json::Value& change)
+{
+	const auto& key = change["key"];
+	const auto& value = change["value"];
+	const auto operation = change["type"].asString();
+
+	if (key.size() == 1 && operation == "insert") {
+		set_track(value);
+	} else if (key.size() == 2 && key[1u].isObject()) {
+		const auto id = key[1u]["id"].asString();
+		if (operation == "delete") {
+			tracks.erase(id);
+		} else if (operation == "update" && value.isObject()) {
+			auto it = tracks.find(id);
+			Json::Value data = it == tracks.end() ? Json::Value(Json::objectValue) : it->second.json;
+			data["id"] = id;
+			for (const auto& name : value.getMemberNames())
+				data[name] = value[name];
+			set_track(std::move(data));
+		}
+	} else if (key.size() == 4 && key[2u] == "effects" && operation == "update" && value.isObject()) {
+		auto it = tracks.find(key[1u]["id"].asString());
+		if (it == tracks.end())
+			return;
+		const auto id = key[3u]["id"].asString();
+		for (auto& data : it->second.json["effects"]) {
+			if (data["id"].asString() != id)
+				continue;
+			for (const auto& name : value.getMemberNames())
+				data[name] = value[name];
+			if (auto* effect = GetTrackEffect(id))
+				effect->SetJsonValue(value);
+			break;
+		}
+	} else {
+		return;
+	}
+
+	index_tracks();
+	final_cache->Clear();
+	BumpCacheEpoch();
 }
 
 // Update the list of 'opened' clips
@@ -944,6 +1044,8 @@ void Timeline::Clear()
 	// Clear all effects
 	effects.clear();
 	allocated_effects.clear();
+	tracks_by_layer.clear();
+	tracks.clear();
 
 	// Delete all FrameMappers
 	for (auto mapper : allocated_frame_mappers)
@@ -1110,17 +1212,37 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				}
 			}
 
+			const auto track_at = [this](int layer) -> const TrackSettings* {
+				auto it = tracks_by_layer.find(layer);
+				return it == tracks_by_layer.end() ? nullptr : it->second;
+			};
+
 			// Compute max_volume across all overlapping clips once
 			float max_volume_sum = 0.0f;
 			for (const auto& ci : clip_infos) {
 				if (!ci.intersects) continue;
+				const auto* track = track_at(ci.clip->Layer());
+				if (track && track->json.get("muted", false).asBool()) continue;
 				if (ci.clip->Reader() && ci.clip->Reader()->info.has_audio &&
 				    ci.clip->has_audio.GetInt(ci.frame_number) != 0) {
 					max_volume_sum += static_cast<float>(ci.clip->volume.GetValue(ci.frame_number));
 				}
 			}
 
-			// Compose intersecting clips in a single pass
+			std::shared_ptr<Frame> track_frame;
+			const TrackSettings* active_track = nullptr;
+			auto flush_track = [&] {
+				if (!track_frame) return;
+				for (const auto& effect : active_track->effects) {
+					gpu_metrics::Reason gpu_reason("Effect");
+					track_frame = effect->ProcessFrame(track_frame, requested_frame);
+					if (effect->info.has_video) gpu_metrics::RecordRender(*track_frame);
+				}
+				compose_track(new_frame, track_frame, *active_track);
+				track_frame.reset();
+			};
+
+			// Compose intersecting clips in layer order.
 			for (const auto& ci : clip_infos) {
 				// Debug output
 				Logger::Instance()->AppendDebugMethod(
@@ -1151,7 +1273,27 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 							"clip_frame_number", clip_frame_number);
 
 					// Add clip's frame as layer
-					add_layer(new_frame, ci.clip, clip_frame_number, is_top_clip, max_volume_sum);
+					const auto* track = track_at(layer);
+					const bool hidden = track && track->json.get("hidden", false).asBool();
+					const bool muted = track && track->json.get("muted", false).asBool();
+					if (track != active_track) {
+						flush_track();
+						active_track = track;
+					}
+					if (hidden && muted)
+						continue;
+					if (hidden || (track && !track->effects.empty())) {
+						if (!track_frame) {
+							track_frame = std::make_shared<Frame>(requested_frame, preview_width,
+								preview_height, "#00000000", samples_in_frame, info.channels);
+							track_frame->AddAudioSilence(samples_in_frame);
+							track_frame->SampleRate(info.sample_rate);
+							track_frame->ChannelsLayout(info.channel_layout);
+						}
+						add_layer(track_frame, ci.clip, clip_frame_number, is_top_clip, max_volume_sum, muted);
+					} else {
+						add_layer(new_frame, ci.clip, clip_frame_number, is_top_clip, max_volume_sum, muted);
+					}
 
 				} else {
 					// Debug output
@@ -1162,6 +1304,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				}
 
 			} // end clip loop
+			flush_track();
 
 			// Debug output
 			Logger::Instance()->AppendDebugMethod(
@@ -1278,6 +1421,10 @@ Json::Value Timeline::JsonValue() const {
 		root["clips"].append(existing_clip->JsonValue());
 	}
 
+	root["layers"] = Json::Value(Json::arrayValue);
+	for (const auto& entry : tracks)
+		root["layers"].append(entry.second.json);
+
 	// Add array of effects
 	root["effects"] = Json::Value(Json::arrayValue);
 
@@ -1391,6 +1538,14 @@ void Timeline::SetJsonValue(const Json::Value root) {
 		}
 	}
 
+	if (root.isMember("layers")) {
+		tracks_by_layer.clear();
+		tracks.clear();
+		for (const auto& track : root["layers"])
+			set_track(track);
+		index_tracks();
+	}
+
 	if (!root["duration"].isNull()) {
 		// Update duration of timeline
 		info.duration = root["duration"].asDouble();
@@ -1433,6 +1588,9 @@ void Timeline::ApplyJsonDiff(std::string value) {
 			if (change_key == "clips")
 				// Apply to CLIPS
 				apply_json_to_clips(std::move(change));
+
+			else if (change_key == "layers")
+				apply_json_to_tracks(change);
 
 			else if (change_key == "effects")
 				// Apply to EFFECTS
@@ -1582,7 +1740,11 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 				{
 					if (e->Id() == effect_id) {
 						// Apply the change to the effect directly
+						const bool order_changed = change["value"].isMember("stack_order") ||
+						                           change["value"].isMember("order");
 						apply_json_to_effects(std::move(change), e);
+						if (order_changed)
+							existing_clip->sort_effects();
 
 						// Effect-only diffs must clear the owning clip cache.
 						if (existing_clip->GetCache()) {

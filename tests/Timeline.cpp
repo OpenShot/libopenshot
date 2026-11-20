@@ -336,13 +336,14 @@ private:
 	bool is_open = false;
 	CacheMemory cache;
 	float sample_value = 0.0f;
+	QColor video_color;
 
 public:
 	TimelineConstantAudioReader(int width, int height,
 	                            int fps_num, int fps_den,
 	                            int sample_rate, int channels,
-	                            int64_t length_frames, float fill_sample)
-		: sample_value(fill_sample) {
+	                            int64_t length_frames, float fill_sample, QColor color = {})
+		: sample_value(fill_sample), video_color(color) {
 		info.has_video = true;
 		info.has_audio = true;
 		info.width = width;
@@ -365,6 +366,7 @@ public:
 	std::shared_ptr<openshot::Frame> GetFrame(int64_t number) override {
 		const int sample_count = Frame::GetSamplesPerFrame(number, info.fps, info.sample_rate, info.channels);
 		auto frame = std::make_shared<Frame>(number, info.width, info.height, "#000000", sample_count, info.channels);
+		if (video_color.isValid()) frame->AddColor(video_color);
 		std::vector<float> samples(sample_count, sample_value);
 		for (int channel = 0; channel < info.channels; ++channel)
 			frame->AddAudio(true, channel, 0, samples.data(), sample_count, 1.0f);
@@ -2464,4 +2466,86 @@ TEST_CASE("Live transforms keep decoded cache and invalidate rendered frames", "
     timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"live"}],"value":{"start":0.5}}])");
     CHECK_FALSE(mapped->GetCache()->Contains(10));
     timeline.Close();
+}
+
+TEST_CASE("Track effects render after composition and survive JSON updates", "[timeline][track-effects]")
+{
+	const Fraction fps(30, 1);
+	const int sample_rate = 48000;
+	TimelineConstantAudioReader background(32, 24, fps.num, fps.den, sample_rate, 2, 90, 0.5f, QColor("#305070"));
+	TimelineConstantAudioReader foreground(32, 24, fps.num, fps.den, sample_rate, 2, 90, 0.5f, QColor("#305070"));
+	Clip lower(&background);
+	Clip upper(&foreground);
+	Timeline timeline(32, 24, fps, sample_rate, 2, LAYOUT_STEREO);
+	lower.Id("lower");
+	lower.Layer(1);
+	lower.End(3.0);
+	upper.Id("upper");
+	upper.Layer(2);
+	upper.Position(1.0);
+	upper.End(2.0);
+	upper.mixing = VOLUME_MIX_NONE;
+	lower.mixing = VOLUME_MIX_NONE;
+
+	Negate negative;
+	negative.Id("track-negate");
+	Json::Value project;
+	Json::Value track;
+	track["id"] = "upper-track";
+	track["number"] = 2;
+	track["effects"].append(negative.JsonValue());
+	project["layers"].append(track);
+	timeline.SetJsonValue(project);
+	timeline.AddClip(&lower);
+	timeline.AddClip(&upper);
+	timeline.Open();
+
+	const auto original = timeline.GetFrame(29)->GetImage()->pixelColor(16, 12);
+	const auto processed_frame = timeline.GetFrame(35);
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	if (std::getenv("OPENSHOT_TEST_REQUIRE_VULKAN"))
+		REQUIRE(processed_frame->GetDeferredImage());
+#endif
+	const auto processed = processed_frame->GetImage()->pixelColor(16, 12);
+	CHECK(processed != original);
+	CHECK(timeline.GetFrame(35)->GetAudioSamples(0)[0] == Approx(1.0));
+	REQUIRE(timeline.GetTrackEffect("track-negate"));
+	CHECK(timeline.JsonValue()["layers"][0u]["effects"][0u]["id"].asString() == "track-negate");
+
+	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"}],"value":{"hidden":true}}])");
+	CHECK(timeline.GetFrame(35)->GetImage()->pixelColor(16, 12) == original);
+	CHECK(timeline.GetFrame(35)->GetAudioSamples(0)[0] == Approx(1.0));
+	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"}],"value":{"hidden":false,"muted":true}}])");
+	CHECK(timeline.GetFrame(35)->GetImage()->pixelColor(16, 12) == processed);
+	CHECK(timeline.GetFrame(35)->GetAudioSamples(0)[0] == Approx(0.5));
+	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"}],"value":{"effects":[]}}])");
+	CHECK(timeline.GetFrame(35)->GetImage()->pixelColor(16, 12) == original);
+	CHECK(timeline.GetTrackEffect("track-negate") == nullptr);
+}
+
+TEST_CASE("Clip effect trim follows clip media coordinates", "[timeline][track-effects]")
+{
+	const Fraction fps(30, 1);
+	const int sample_rate = 48000;
+	TimelineConstantAudioReader reader(32, 24, fps.num, fps.den, sample_rate, 2, 150, 0.0f, QColor("#305070"));
+	Clip clip(&reader);
+	Negate effect;
+	effect.Id("negate");
+	effect.SetJson(R"({"clip_range":{"start":2.0,"end":3.0}})");
+	Timeline timeline(32, 24, fps, sample_rate, 2, LAYOUT_STEREO);
+	clip.Id("clip");
+	clip.Start(1.0);
+	clip.End(4.0);
+	clip.Position(0.5);
+	clip.AddEffect(&effect);
+	timeline.AddClip(&clip);
+	timeline.Open();
+
+	const auto original = timeline.GetFrame(45)->GetImage()->pixelColor(16, 12);
+	const auto effected = timeline.GetFrame(46)->GetImage()->pixelColor(16, 12);
+	CHECK(original != effected);
+	CHECK(timeline.GetFrame(75)->GetImage()->pixelColor(16, 12) == effected);
+	CHECK(timeline.GetFrame(76)->GetImage()->pixelColor(16, 12) == original);
+	timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"clip"},"effects",{"id":"negate"}],"value":{"clip_range":null}}])");
+	CHECK(timeline.GetFrame(45)->GetImage()->pixelColor(16, 12) == effected);
 }

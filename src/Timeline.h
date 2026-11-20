@@ -13,6 +13,7 @@
 #ifndef OPENSHOT_TIMELINE_H
 #define OPENSHOT_TIMELINE_H
 
+#include <unordered_map>
 #include <list>
 #include <memory>
 #include <set>
@@ -162,6 +163,17 @@ namespace openshot {
 		std::set<openshot::Clip*> allocated_clips; ///<List of clips that were allocated by this timeline
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
 		std::set<openshot::EffectBase*> allocated_effects; ///<List of effects that were allocated by this timeline
+		struct TrackSettings {
+			Json::Value json;
+			std::vector<std::unique_ptr<EffectBase>> effects;
+		};
+		std::map<std::string, TrackSettings> tracks;
+		std::unordered_map<int, const TrackSettings*> tracks_by_layer;
+		void set_track(Json::Value track);
+		void index_tracks();
+		void apply_json_to_tracks(const Json::Value& change);
+		void compose_track(std::shared_ptr<Frame>& output, std::shared_ptr<Frame> track_frame,
+		                   const TrackSettings& track);
 		openshot::CacheBase *final_cache; ///<Final cache of timeline frames
 		std::set<openshot::FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
@@ -175,7 +187,7 @@ namespace openshot {
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
 
 		/// Process a new layer of video or audio
-		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume);
+		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume, bool muted = false);
 
 		/// Resolve equal-power audio gains for one clip under a transition on the current timeline frame.
 		std::pair<float, float> ResolveTransitionAudioGains(openshot::Clip* source_clip, int64_t timeline_frame_number, bool is_top_clip) const;
@@ -305,6 +317,9 @@ namespace openshot {
 
 		/// Look up a clip effect by ID
 		openshot::EffectBase* GetClipEffect(const std::string& id);
+
+		/// Look up an effect on a track output by effect ID.
+		openshot::EffectBase* GetTrackEffect(const std::string& id);
 
 		/// Look up a timeline effect by ID
 		openshot::EffectBase* GetEffect(const std::string& id);
