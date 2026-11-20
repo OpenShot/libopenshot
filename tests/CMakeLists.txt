@@ -75,6 +75,7 @@ set(OPENSHOT_TESTS
   ScreenCaptureReader
   SphericalMetadata
   Timeline
+  ObjectParents
   VideoCacheThread
   # Effects
   AudioVisualization
@@ -264,3 +265,9 @@ catch_discover_tests(
 # Export target list for coverage use
 set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
 set(UNIT_TEST_NAMES ${CATCH2_TEST_NAMES} PARENT_SCOPE)
+
+# Parenting fixtures use the same protobuf schema as saved detection data.
+if($CACHE{HAVE_OPENCV})
+  find_package(Protobuf REQUIRED)
+  target_link_libraries(openshot-ObjectParents-test protobuf::libprotobuf)
+endif()

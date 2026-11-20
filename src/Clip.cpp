@@ -304,6 +304,11 @@ ReaderBase* Clip::CreateReader(std::string path, bool inspect_reader)
 // Destructor
 Clip::~Clip()
 {
+	// Python can release a borrowed clip before the timeline containing it.
+	// Its effects may already have been released too, so only forget the clip.
+	if (timeline)
+		static_cast<Timeline*>(timeline)->ForgetClip(this);
+
 	// Delete the reader if clip created it
 	if (allocated_reader) {
 		delete allocated_reader;
@@ -324,34 +329,35 @@ Clip::~Clip()
 // Attach clip to bounding box
 void Clip::AttachToObject(std::string object_id)
 {
-	// Search for the tracked object on the timeline
-	Timeline* parentTimeline = static_cast<Timeline *>(ParentTimeline());
+	parentObjectId = object_id;
+	ResolveParent();
+}
 
-	if (parentTimeline) {
-		// Create a smart pointer to the tracked object from the timeline
-		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(object_id);
-		Clip* clipObject = parentTimeline->GetClip(object_id);
+void Clip::ResolveParent() const
+{
+	parentTrackedObject.reset();
+	parentClipObject = nullptr;
+	if (!timeline || parentObjectId.empty())
+		return;
 
-		// Check for valid tracked object
-		if (trackedObject){
-			SetAttachedObject(trackedObject);
-            parentClipObject = NULL;
-		}
-		else if (clipObject) {
-			SetAttachedClip(clipObject);
-            parentTrackedObject = nullptr;
-		}
+	auto parent_timeline = static_cast<Timeline*>(timeline);
+	parentTrackedObject = parent_timeline->GetTrackedObject(parentObjectId);
+	if (parentTrackedObject && parentTrackedObject->ParentClip() == this)
+		parentTrackedObject.reset();
+	if (!parentTrackedObject) {
+		auto clip = parent_timeline->GetClip(parentObjectId);
+		if (clip != this)
+			parentClipObject = clip;
 	}
 }
 
-// Set the pointer to the trackedObject this clip is attached to
+// Store IDs so pointer-based attachment also follows removal and replacement.
 void Clip::SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
-	parentTrackedObject = trackedObject;
+	AttachToObject(trackedObject ? trackedObject->Id() : "");
 }
 
-// Set the pointer to the clip this clip is attached to
 void Clip::SetAttachedClip(Clip* clipObject){
-	parentClipObject = clipObject;
+	AttachToObject(clipObject ? clipObject->Id() : "");
 }
 
 /// Set the current reader
@@ -467,6 +473,10 @@ void Clip::End(float value) {
 // Set associated Timeline pointer
 void Clip::ParentTimeline(openshot::TimelineBase* new_timeline) {
 	timeline = new_timeline;
+	parentClipObject = nullptr;
+	parentTrackedObject.reset();
+	for (auto effect : effects)
+		effect->ParentTimeline(new_timeline);
 
 	// Clear cache (it might have changed)
 	final_cache.Clear();
@@ -583,20 +593,14 @@ openshot::EffectBase* Clip::GetEffect(const std::string& id)
 
 // Return the associated ParentClip (if any)
 openshot::Clip* Clip::GetParentClip() {
-    if (!parentObjectId.empty() && (!parentClipObject && !parentTrackedObject)) {
-        // Attach parent clip OR object to this clip
-        AttachToObject(parentObjectId);
-    }
-    return parentClipObject;
+	ResolveParent();
+	return parentClipObject;
 }
 
-// Return the associated Parent Tracked Object (if any)
+// Return the current tracked object, or ignore an unavailable parent.
 std::shared_ptr<openshot::TrackedObjectBase> Clip::GetParentTrackedObject() {
-    if (!parentObjectId.empty() && (!parentClipObject && !parentTrackedObject)) {
-        // Attach parent clip OR object to this clip
-        AttachToObject(parentObjectId);
-    }
-    return parentTrackedObject;
+	ResolveParent();
+	return parentTrackedObject;
 }
 
 // Get file extension
@@ -930,8 +934,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["waveform_mode"]["choices"].append(add_property_choice_json("Particles", AUDIO_VISUALIZATION_PARTICLES, waveform_mode));
 	root["waveform_mode"]["choices"].append(add_property_choice_json("VU Meter", AUDIO_VISUALIZATION_VU_METER, waveform_mode));
 
-	// Add the parentClipObject's properties
-	if (parentClipObject)
+	// Add the current parent clip's properties
+	if (GetAttachedClip())
 	{
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
@@ -1210,8 +1214,9 @@ void Clip::SetJsonValue(Json::Value root) {
 	ensure_default_keyframe(margin, 0.0);
 	if (!root["effects"].isNull()) {
 
-		// Clear existing effects
-		effects.clear();
+		// Detach old effects and their tracked parents before loading replacements.
+		while (!effects.empty())
+			RemoveEffect(effects.front());
 
 		// loop through effects
 		for (const auto existing_effect : root["effects"]) {
@@ -1378,7 +1383,21 @@ void Clip::AddEffect(EffectBase* effect)
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
+	if (std::find(effects.begin(), effects.end(), effect) == effects.end())
+		return;
 	effects.remove(effect);
+	for (const auto& entry : effect->trackedObjects) {
+		if (entry.second)
+			entry.second->ParentClip(nullptr);
+	}
+	effect->ParentClip(nullptr);
+	effect->ParentTimeline(nullptr);
+	if (auto parent_timeline = static_cast<Timeline*>(ParentTimeline())) {
+		parent_timeline->GetTrackedObjectsIds();
+		for (auto child : parent_timeline->Clips())
+			child->AttachToObject(child->GetAttachedId());
+		parent_timeline->ClearAllCache();
+	}
 
 	// Clear cache (it might have changed)
 	final_cache.Clear();

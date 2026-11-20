@@ -154,6 +154,9 @@ namespace openshot {
 	 */
 	class Timeline : public openshot::TimelineBase, public openshot::ReaderBase {
 	private:
+		friend class Clip;
+		/// Forget a borrowed clip during its destruction, without touching its effects.
+		void ForgetClip(openshot::Clip* clip);
 		bool is_open; ///<Is Timeline Open?
 		bool auto_map_clips; ///< Auto map framerates and sample rates to all clips
 		std::list<openshot::Clip*> clips; ///<List of clips on this timeline
@@ -172,7 +175,10 @@ namespace openshot {
         std::atomic<uint64_t> cache_clear_completed{0}; ///< Last refresh completed under getFrameMutex.
 		std::atomic<uint64_t> cache_epoch; ///< Cache invalidation epoch for external observers.
 
-		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
+		mutable std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
+
+		/// Rebuild tracked objects from effects currently attached to live clips.
+		void RefreshTrackedObjects() const;
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume);
