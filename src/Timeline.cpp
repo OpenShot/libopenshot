@@ -237,8 +237,29 @@ Timeline::~Timeline() {
 	}
 }
 
+// Resolve tracked objects from the current effect graph, including objects reloaded
+// after an effect was added. The registry must never keep removed objects alive.
+void Timeline::RefreshTrackedObjects() const {
+	for (const auto& entry : tracked_objects)
+		entry.second->ParentClip(nullptr);
+	tracked_objects.clear();
+	for (auto clip : clips) {
+		for (auto effect : clip->Effects()) {
+			for (const auto& entry : effect->trackedObjects) {
+				if (entry.second) {
+					entry.second->ParentClip(clip);
+					tracked_objects[entry.second->Id()] = entry.second;
+				}
+			}
+		}
+	}
+}
+
 // Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
 void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+	if (!trackedObject)
+		return;
 
 	// Search for the tracked object on the map
 	auto iterator = tracked_objects.find(trackedObject->Id());
@@ -257,6 +278,8 @@ void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> tra
 
 // Return tracked object pointer by it's id
 std::shared_ptr<openshot::TrackedObjectBase> Timeline::GetTrackedObject(std::string id) const{
+	const std::lock_guard<std::recursive_mutex> guard(const_cast<Timeline*>(this)->getFrameMutex);
+	RefreshTrackedObjects();
 
 	// Search for the tracked object on the map
 	auto iterator = tracked_objects.find(id);
@@ -274,6 +297,8 @@ std::shared_ptr<openshot::TrackedObjectBase> Timeline::GetTrackedObject(std::str
 
 // Return the ID's of the tracked objects as a list of strings
 std::list<std::string> Timeline::GetTrackedObjectsIds() const{
+	const std::lock_guard<std::recursive_mutex> guard(const_cast<Timeline*>(this)->getFrameMutex);
+	RefreshTrackedObjects();
 
 	// Create a list of strings
 	std::list<std::string> trackedObjects_ids;
@@ -290,6 +315,8 @@ std::list<std::string> Timeline::GetTrackedObjectsIds() const{
 #ifdef USE_OPENCV
 // Return the trackedObject's properties as a JSON string
 std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_number) const {
+	const std::lock_guard<std::recursive_mutex> guard(const_cast<Timeline*>(this)->getFrameMutex);
+	RefreshTrackedObjects();
 
 	// Initialize the JSON object
 	Json::Value trackedObjectJson;
@@ -297,7 +324,8 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 	// Search for the tracked object on the map
 	auto iterator = tracked_objects.find(id);
 
-	if (iterator != tracked_objects.end())
+	if (iterator != tracked_objects.end() &&
+		!std::static_pointer_cast<TrackedObjectBBox>(iterator->second)->BoxVec.empty())
 	{
 		// Id found, Get the object pointer and cast it as a TrackedObjectBBox
 		std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(iterator->second);
@@ -369,6 +397,7 @@ void Timeline::AddClip(Clip* clip)
 
 	// Add clip to list
 	clips.push_back(clip);
+	clip->registered_timeline = this;
 
 	// Sort clips
 	sort_clips();
@@ -396,6 +425,11 @@ void Timeline::RemoveEffect(EffectBase* effect)
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
 
+	// JSON effect deletions can target an effect belonging to a clip.
+	auto owner = std::find(clips.begin(), clips.end(), effect->ParentClip());
+	if (owner != clips.end())
+		(*owner)->RemoveEffect(effect);
+
 	effects.remove(effect);
 
 	// Delete effect object (if timeline allocated it)
@@ -409,13 +443,57 @@ void Timeline::RemoveEffect(EffectBase* effect)
 	sort_effects();
 }
 
+// A borrowed clip can die before its timeline (for example a region preview).
+// Do not dereference the clip's effect list while its owner is being destroyed.
+void Timeline::ForgetClip(Clip* clip)
+{
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+	clip->registered_timeline = nullptr;
+	clips.remove(clip);
+	allocated_clips.erase(clip);
+	open_clips.erase(clip);
+	closing_clips.remove(clip);
+	for (auto it = tracked_objects.begin(); it != tracked_objects.end();) {
+		if (it->second->ParentClip() == clip) {
+			it->second->ParentClip(nullptr);
+			it = tracked_objects.erase(it);
+		} else {
+			++it;
+		}
+	}
+	ClearAllCache();
+	sort_clips();
+}
+
 // Remove an openshot::Clip to the timeline
 void Timeline::RemoveClip(Clip* clip)
 {
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
 
+	if (std::find(clips.begin(), clips.end(), clip) == clips.end())
+		return;
+
+	bool has_children = false;
+	for (auto child : clips) {
+		if (child == clip)
+			continue;
+		auto object = child->GetParentTrackedObject();
+		if (child->GetParentClip() == clip || (object && object->ParentClip() == clip))
+			has_children = true;
+	}
+
+	update_open_clips(clip, false);
 	clips.remove(clip);
+	RefreshTrackedObjects();
+	clip->registered_timeline = nullptr;
+	clip->ParentTimeline(nullptr);
+	for (auto child : clips)
+		child->AttachToObject(child->GetAttachedId());
+	if (has_children)
+		ClearAllCache();
+	else
+		InvalidateCacheForClip(clip);
 	
 	// Delete clip object (if timeline allocated it)
 	if (allocated_clips.count(clip)) {
@@ -917,10 +995,16 @@ void Timeline::Clear()
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
     live_transform_scales.clear();
 
+	for (const auto& entry : tracked_objects)
+		entry.second->ParentClip(nullptr);
+	tracked_objects.clear();
+
 	// Close all open clips
 	for (auto clip : clips)
 	{
 		update_open_clips(clip, false);
+		clip->registered_timeline = nullptr;
+		clip->ParentTimeline(nullptr);
 
 		// Delete clip object (if timeline allocated it)
 		bool allocated = allocated_clips.count(clip);
@@ -1329,8 +1413,9 @@ void Timeline::SetJsonValue(const Json::Value root) {
 		path = root["path"].asString();
 
 	if (!root["clips"].isNull()) {
-		// Clear existing clips
-		clips.clear();
+		// Remove old clips through the same cleanup path as an individual deletion.
+		while (!clips.empty())
+			RemoveClip(clips.front());
 
 		// loop through clips
 		for (const Json::Value existing_clip : root["clips"]) {
@@ -1409,6 +1494,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 	if (was_open)
 		Open();
 
+	RefreshTrackedObjects();
 	// Timeline content changed: notify cache clients to rescan active window.
 	BumpCacheEpoch();
 }
