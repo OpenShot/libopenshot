@@ -1240,6 +1240,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			auto flush_track = [&] {
 				if (!track_frame) return;
 				for (const auto& effect : active_track->effects) {
+					if (!effect->InClipRange(requested_frame, info.fps.ToDouble()))
+						continue;
 					gpu_metrics::Reason gpu_reason("Effect");
 					track_frame = effect->ProcessFrame(track_frame, requested_frame);
 					if (effect->info.has_video) gpu_metrics::RecordRender(*track_frame);

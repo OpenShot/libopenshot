@@ -2518,6 +2518,16 @@ TEST_CASE("Track effects render after composition and survive JSON updates", "[t
 	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"}],"value":{"hidden":false,"muted":true}}])");
 	CHECK(timeline.GetFrame(35)->GetImage()->pixelColor(16, 12) == processed);
 	CHECK(timeline.GetFrame(35)->GetAudioSamples(0)[0] == Approx(0.5));
+	// Track ranges use timeline frames, even when the underlying clip starts later.
+	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"},"effects",{"id":"track-negate"}],"value":{"clip_range":{"start":1.2,"end":1.4}}}])");
+	CHECK(timeline.GetFrame(36)->GetImage()->pixelColor(16, 12) == original);
+	CHECK(timeline.GetFrame(37)->GetImage()->pixelColor(16, 12) == processed);
+	CHECK(timeline.GetFrame(42)->GetImage()->pixelColor(16, 12) == processed);
+	CHECK(timeline.GetFrame(43)->GetImage()->pixelColor(16, 12) == original);
+	auto layers = timeline.JsonValue()["layers"];
+	CHECK(layers[0u]["effects"][0u]["clip_range"]["end"].asDouble() == Approx(1.4));
+	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"},"effects",{"id":"track-negate"}],"value":{"clip_range":null}}])");
+	CHECK(timeline.GetFrame(35)->GetImage()->pixelColor(16, 12) == processed);
 	timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"upper-track"}],"value":{"effects":[]}}])");
 	CHECK(timeline.GetFrame(35)->GetImage()->pixelColor(16, 12) == original);
 	CHECK(timeline.GetTrackEffect("track-negate") == nullptr);
