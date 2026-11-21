@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @brief Unit tests for clip and tracked-object parenting
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @ref License
+ */
+
+// Copyright (c) 2008-2026 OpenShot Studios, LLC
+//
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "openshot_catch.h"
