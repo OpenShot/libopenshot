@@ -35,7 +35,7 @@ jobs:
       FFMPEG_VERSION: ${{ matrix.ffmpeg }}
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Select audio branch
         id: audio-branch
         shell: bash
@@ -53,7 +53,7 @@ jobs:
           echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check out audio dependency
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: OpenShot/libopenshot-audio
           ref: ${{ steps.audio-branch.outputs.ref }}

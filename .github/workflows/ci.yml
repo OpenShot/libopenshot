@@ -32,7 +32,7 @@ jobs:
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           # Work around a codecov issue detecting commit SHAs
           # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
@@ -55,7 +55,7 @@ jobs:
           echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout OpenShotAudio
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: OpenShot/libopenshot-audio
           ref: ${{ steps.audio-branch.outputs.ref }}
@@ -63,7 +63,7 @@ jobs:
 
       - name: Checkout Resvg
         if: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: RazrFalcon/resvg
           path: resvg
@@ -174,7 +174,7 @@ jobs:
       - name: Preserve repository line endings
         run: git config --global core.autocrlf input
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select audio branch
         id: audio-branch
@@ -193,14 +193,14 @@ jobs:
           echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout OpenShotAudio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: OpenShot/libopenshot-audio
           ref: ${{ steps.audio-branch.outputs.ref }}
           path: audio
 
       - name: Checkout Catch2
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: catchorg/Catch2
           ref: v3.8.1
@@ -266,7 +266,7 @@ jobs:
     name: Linux ARM64 build and tests
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Select audio branch
         id: audio-branch
         shell: bash
@@ -284,7 +284,7 @@ jobs:
           echo "libopenshot-audio: using $ref" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check out audio dependency
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: OpenShot/libopenshot-audio
           ref: ${{ steps.audio-branch.outputs.ref }}
