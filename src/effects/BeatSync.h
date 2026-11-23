@@ -35,6 +35,8 @@ namespace openshot
         std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool use_vulkan);
 
 	public:
+        bool NeedsAudioForVideo() const override { return true; }
+
         bool RendersOnVulkan() const override { return true; }
 		Color low_color;         // generated color at minimum response
 		Color high_color;        // generated color at maximum response

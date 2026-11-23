@@ -606,7 +606,10 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 			int64_t effect_start_frame  = static_cast<int64_t>(std::llround(effect->Start() * fpsD)) + 1;
 			int64_t effect_frame_number = timeline_frame_number - effect_start_position + effect_start_frame;
 
-			if (!options->is_top_clip)
+			if ((!options->video_enabled && !effect->info.has_audio) ||
+                (!options->audio_enabled && !effect->info.has_video))
+                continue;
+            if (!options->is_top_clip)
 				continue; // skip effect, if overlapped/covered by another clip on same layer
 
 			if (options->is_before_clip_keyframes != effect->info.apply_before_clip)
@@ -674,6 +677,20 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	TimelineInfoStruct options{};
 	options.is_top_clip = is_top_clip;
 	options.is_before_clip_keyframes = true;
+    const auto track = tracks_by_layer.find(source_clip->Layer());
+    if (track != tracks_by_layer.end()) {
+        options.video_enabled = !track->second->json.get("hidden", false).asBool();
+        options.audio_enabled = !track->second->json.get("muted", false).asBool();
+        // Track video effects may use audio as an input (e.g. audio visualization).
+        if (options.video_enabled && track->second->needs_audio_for_video)
+            options.audio_enabled = true;
+    }
+
+    if (options.video_enabled && std::any_of(effects.begin(), effects.end(),
+        [source_clip](const auto* effect) {
+            return effect->Layer() == source_clip->Layer() && effect->NeedsAudioForVideo();
+        }))
+        options.audio_enabled = true;
 
 	// Get the clip's frame, composited on top of the current timeline frame
 	std::shared_ptr<Frame> source_frame;
@@ -813,7 +830,9 @@ void Timeline::set_track(Json::Value track)
 			[](const auto& effect) { return effect->info.has_video; });
 		settings.has_audio_effects = std::any_of(effects.begin(), effects.end(),
 			[](const auto& effect) { return effect->info.has_audio; });
-		settings.effects = std::move(effects);
+		settings.needs_audio_for_video = std::any_of(effects.begin(), effects.end(),
+            [](const auto& effect) { return effect->NeedsAudioForVideo(); });
+        settings.effects = std::move(effects);
 	}
 	settings.json = std::move(track);
 }
@@ -1240,6 +1259,10 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			auto flush_track = [&] {
 				if (!track_frame) return;
 				for (const auto& effect : active_track->effects) {
+                    if ((active_track->json.get("hidden", false).asBool() && !effect->info.has_audio) ||
+                        (active_track->json.get("muted", false).asBool() &&
+                         !active_track->needs_audio_for_video && !effect->info.has_video))
+                        continue;
 					if (!effect->InClipRange(requested_frame, info.fps.ToDouble()))
 						continue;
 					gpu_metrics::Reason gpu_reason("Effect");
@@ -1301,7 +1324,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 						// Audio-only effects leave video blending with lower tracks intact.
 						const auto& video_output = hidden || track->has_video_effects ? track_frame : new_frame;
 						add_layer(video_output, ci.clip, clip_frame_number, is_top_clip, max_volume_sum,
-						          muted && !track->has_audio_effects, track_frame.get());
+						          muted && !track->needs_audio_for_video, track_frame.get());
 					} else {
 						add_layer(new_frame, ci.clip, clip_frame_number, is_top_clip, max_volume_sum, muted);
 					}

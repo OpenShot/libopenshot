@@ -862,7 +862,7 @@ void FFmpegReader::Close() {
 		}
 
 		// Close the video codec
-		if (info.has_video) {
+		if (pCodecCtx) {
 			if(avcodec_is_open(pCodecCtx)) {
 				avcodec_flush_buffers(pCodecCtx);
 			}
@@ -885,7 +885,7 @@ void FFmpegReader::Close() {
 		}
 
 		// Close the audio codec
-		if (info.has_audio) {
+		if (aCodecCtx) {
 			if(avcodec_is_open(aCodecCtx)) {
 				avcodec_flush_buffers(aCodecCtx);
 			}
@@ -1336,6 +1336,31 @@ bool FFmpegReader::GetIsDurationKnown() {
 }
 
 std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
+    return GetFrameWithStreams(requested_frame, true, true);
+}
+
+std::shared_ptr<Frame> FFmpegReader::GetFrameWithStreams(int64_t requested_frame, bool video, bool audio) {
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+    if (video != decode_video || audio != decode_audio) {
+        // Partial frames and decoder/resampler history belong to this stream selection.
+        if (is_open) { Close(); Open(); }
+        decode_video = video;
+        decode_audio = audio;
+    }
+    StreamMask mask(info, video, audio);
+    if (!info.has_video && !info.has_audio) {
+        if (!is_open) throw ReaderClosed("The FFmpegReader is closed.", path);
+        auto frame = std::make_shared<Frame>(requested_frame, info.width, info.height, "#00000000",
+            Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels);
+        frame->SampleRate(info.sample_rate);
+        frame->ChannelsLayout(info.channel_layout);
+        frame->AddAudioSilence(frame->GetAudioSamplesCount());
+        return frame;
+    }
+    return GetFrameInternal(requested_frame);
+}
+
+std::shared_ptr<Frame> FFmpegReader::GetFrameInternal(int64_t requested_frame) {
 	last_seek_max_frame = -1;
 	seek_stagnant_count = 0;
 	// Check for open reader (or throw exception)

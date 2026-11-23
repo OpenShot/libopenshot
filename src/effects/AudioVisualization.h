@@ -71,6 +71,8 @@ namespace openshot
         std::shared_ptr<Frame> RenderFrame(std::shared_ptr<Frame> frame,int64_t frame_number,bool use_vulkan);
 
 	public:
+        bool NeedsAudioForVideo() const override { return true; }
+
         bool RendersOnVulkan() const override { return true; }
 		int visualization_type;
 		int style;

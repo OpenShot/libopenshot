@@ -120,6 +120,9 @@ namespace openshot
 		virtual bool MaskDrivesAmount(int64_t frame_number) const { return false; }
 
 	public:
+        /// Whether visible video from this effect needs decoded audio, even when output is muted.
+        virtual bool NeedsAudioForVideo() const { return false; }
+
 		/// Parent effect (which properties will set this effect properties)
 		EffectBase* parentEffect;
 

@@ -31,7 +31,9 @@ namespace openshot {
 	 */
 	struct TimelineInfoStruct
 	{
-		bool is_top_clip;				 ///< Is clip on top (if overlapping another clip)
+		bool video_enabled = true; ///< Whether this track contributes video
+        bool audio_enabled = true; ///< Whether this track contributes audio
+        bool is_top_clip;				 ///< Is clip on top (if overlapping another clip)
 		bool is_before_clip_keyframes;	///< Is this before clip keyframes are applied
 	};
 

@@ -74,13 +74,26 @@ namespace openshot
 	 */
 	class ReaderBase
 	{
+        friend class Clip;
 	protected:
+        bool decode_video = true;
+        bool decode_audio = true;
 		/// Mutex for multiple threads
 		std::recursive_mutex getFrameMutex;
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 		int max_decode_width; ///< Optional maximum decoded frame width (0 disables the limit)
 		int max_decode_height; ///< Optional maximum decoded frame height (0 disables the limit)
 		bool apply_orientation_metadata; ///< Apply source orientation metadata while reading frames
+        struct StreamMask {
+            ReaderInfo& info;
+            bool video, audio;
+            StreamMask(ReaderInfo& info, bool video, bool audio)
+                : info(info), video(info.has_video), audio(info.has_audio) {
+                info.has_video = info.has_video && video;
+                info.has_audio = info.has_audio && audio;
+            }
+            ~StreamMask() { info.has_video = video; info.has_audio = audio; }
+        };
 
 	public:
 
@@ -131,6 +144,11 @@ namespace openshot
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
 		virtual std::shared_ptr<openshot::Frame> GetFrame(int64_t number) = 0;
+
+        /// Request only streams needed by this render, without changing source metadata.
+        virtual std::shared_ptr<openshot::Frame> GetFrameWithStreams(int64_t number, bool video, bool audio) {
+            return GetFrame(number);
+        }
 
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;

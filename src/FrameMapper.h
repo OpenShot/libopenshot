@@ -191,6 +191,11 @@ namespace openshot
 	 * \endcode
 	 */
 	class FrameMapper : public ReaderBase {
+    private:
+        std::shared_ptr<openshot::Frame> GetFrameInternal(int64_t number);
+    public:
+        std::shared_ptr<openshot::Frame> GetFrameWithStreams(int64_t number, bool video, bool audio) override;
+
         friend class PitchShift;
         friend class Clip;
 

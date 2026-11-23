@@ -107,6 +107,11 @@ namespace openshot {
 	namespace color { class SdrConverter; }
 
 	class FFmpegReader : public ReaderBase {
+    private:
+        std::shared_ptr<openshot::Frame> GetFrameInternal(int64_t number);
+    public:
+        std::shared_ptr<openshot::Frame> GetFrameWithStreams(int64_t number, bool video, bool audio) override;
+
 	private:
 		std::string path;
 #ifdef OPENSHOT_ENABLE_GPU_FRAME

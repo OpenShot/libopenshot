@@ -412,7 +412,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 			"samples_in_frame", samples_in_frame);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		new_frame = reader->GetFrame(number);
+		new_frame = reader->GetFrameWithStreams(number, decode_video, decode_audio);
 
 		// Return real frame
 		return new_frame;
@@ -438,8 +438,25 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
-{
+std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame) {
+    return GetFrameWithStreams(requested_frame, true, true);
+}
+
+std::shared_ptr<Frame> FrameMapper::GetFrameWithStreams(int64_t requested_frame, bool video, bool audio) {
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+    if (video != decode_video || audio != decode_audio) {
+        // Partial frames and decoder/resampler history belong to this stream selection.
+        final_cache.Clear();
+        previous_frame = 0;
+        if (avr) { SWR_CLOSE(avr); SWR_FREE(&avr); avr = nullptr; }
+        decode_video = video;
+        decode_audio = audio;
+    }
+    StreamMask mask(info, video, audio);
+    return GetFrameInternal(requested_frame);
+}
+
+std::shared_ptr<Frame> FrameMapper::GetFrameInternal(int64_t requested_frame) {
 	// Check final cache, and just return the frame (if it's available)
 	std::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
 	if (final_frame) return final_frame;

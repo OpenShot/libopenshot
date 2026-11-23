@@ -168,6 +168,7 @@ namespace openshot {
 			std::vector<std::unique_ptr<EffectBase>> effects;
 			bool has_video_effects = false;
 			bool has_audio_effects = false;
+            bool needs_audio_for_video = false;
 		};
 		std::map<std::string, TrackSettings> tracks;
 		std::unordered_map<int, const TrackSettings*> tracks_by_layer;

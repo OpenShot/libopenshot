@@ -500,7 +500,19 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		std::shared_ptr<Frame> frame = NULL;
 
 		// Generate clip frame
-		frame = GetOrCreateFrame(clip_frame_number);
+		const bool video = (!options || options->video_enabled) && has_video.GetInt(clip_frame_number) != 0;
+        const bool audio = (!options || options->audio_enabled) && has_audio.GetInt(clip_frame_number) != 0;
+        // Video effects and waveforms can consume audio even when output audio is muted.
+        const bool audio_input = has_audio.GetInt(clip_frame_number) != 0 &&
+            (audio || (video && (Waveform() || std::any_of(effects.begin(), effects.end(),
+                [](const auto* effect) { return effect->NeedsAudioForVideo(); }))));
+        TimelineInfoStruct clip_options{};
+        if (options) {
+            clip_options = *options;
+            clip_options.audio_enabled = audio_input;
+            options = &clip_options;
+        }
+        frame = GetOrCreateFrame(clip_frame_number, true, video, audio_input);
 
 		// Get frame size and frame #
 		int64_t timeline_frame_number = clip_frame_number;
@@ -513,7 +525,13 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		}
 
 		// Get time mapped frame object (used to increase speed, change direction, etc...)
-		apply_timemapping(frame);
+		apply_timemapping(frame, video, audio_input);
+        if (!video) {
+            // Run audio DSP without waveform generation, image effects, or transforms.
+            apply_effects(frame, timeline_frame_number, options, true);
+            apply_effects(frame, timeline_frame_number, options, false);
+            return frame;
+        }
 
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 		// Audio-only/disabled-video layers have nothing to paint in the basic
@@ -612,12 +630,15 @@ std::string Clip::get_file_extension(std::string path)
 }
 
 // Adjust the audio and image of a time mapped frame
-void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
+void Clip::apply_timemapping(std::shared_ptr<Frame> frame, bool video, bool audio)
 {
 	// Check for valid reader
 	if (!reader)
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+
+    if (!audio)
+        return;
 
 	// Check for a valid time map curve
 	if (time.GetLength() > 1)
@@ -686,7 +707,7 @@ void Clip::apply_timemapping(std::shared_ptr<Frame> frame)
 		int remaining_samples = source_sample_count;
 		int source_pos = 0;
 		while (remaining_samples > 0) {
-			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false);
+			std::shared_ptr<Frame> source_frame = GetOrCreateFrame(location.frame, false, video, audio);
 			int frame_sample_count = source_frame->GetAudioSamplesCount() - location.sample_start;
 
             // Inform FrameMapper of the direction for THIS mapper frame
@@ -776,7 +797,7 @@ int64_t Clip::adjust_frame_number_minimum(int64_t frame_number)
 }
 
 // Get or generate a blank frame
-std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
+std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time, bool video, bool audio)
 {
 	try {
 		// Init to requested frame
@@ -801,7 +822,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		if (reader->info.has_single_image) gpu_metrics::Record(gpu_metrics::ImageSource);
-		auto reader_frame = reader->GetFrame(clip_frame_number);
+		auto reader_frame = reader->GetFrameWithStreams(clip_frame_number, video, audio);
 		if (reader_frame) {
             source_raster_size = QSize(reader_frame->GetWidth(), reader_frame->GetHeight());
 			// Override frame # (due to time-mapping might change it)
@@ -824,7 +845,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number, bool enable_time)
 #endif
                 reader_copy->AddColor(QColor(Qt::transparent));
 			}
-			if (has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
+			if (!audio || has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
 				// No audio, so include silence (also, mute audio if past end of reader)
 				reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
 			}
@@ -1446,6 +1467,9 @@ void Clip::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_nu
 	const auto* parent = static_cast<const Timeline*>(timeline);
 	const double fps = parent ? parent->info.fps.ToDouble() : reader->info.fps.ToDouble();
 	for (auto effect : effects) {
+        if (options && ((!options->video_enabled && !effect->info.has_audio) ||
+                        (!options->audio_enabled && !effect->info.has_video)))
+            continue;
 		if (effect->info.apply_before_clip != before_keyframes ||
 		    !effect->InClipRange(frame->number, fps))
 			continue;
@@ -1526,8 +1550,11 @@ std::shared_ptr<Frame> Clip::GetAudioContextFrame(int64_t number)
         frame->AddAudioSilence(samples);
         return frame;
     }
-    auto frame = GetOrCreateFrame(number);
-    apply_timemapping(frame);
+    // Lookahead DSP must inherit the parent's stream selection, rather than
+    // reopening hidden video decoding while fetching neighboring audio.
+    const bool video = reader->decode_video;
+    auto frame = GetOrCreateFrame(number, true, video, true);
+    apply_timemapping(frame, video, true);
     for (auto* effect : effects)
         if (effect->InClipRange(number, reader->info.fps.ToDouble()))
             effect->GetFrame(frame, number);

@@ -188,7 +188,7 @@ namespace openshot {
 		static std::string get_file_extension(std::string path);
 
 		/// Get a frame object or create a blank one
-		std::shared_ptr<openshot::Frame> GetOrCreateFrame(int64_t number, bool enable_time=true);
+		std::shared_ptr<openshot::Frame> GetOrCreateFrame(int64_t number, bool enable_time=true, bool video=true, bool audio=true);
 
 		/// Determine the frames-per-second context used for timeline playback
 		double resolve_timeline_fps() const;
@@ -200,7 +200,7 @@ namespace openshot {
 		int64_t trim_extent_frames(double fps_value) const;
 
 		/// Adjust the audio and image of a time mapped frame
-		void apply_timemapping(std::shared_ptr<openshot::Frame> frame);
+		void apply_timemapping(std::shared_ptr<openshot::Frame> frame, bool video=true, bool audio=true);
 
 		/// Compare 2 floating point numbers and return true if they are extremely close
 		bool isNear(double a, double b);

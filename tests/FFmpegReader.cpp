@@ -1192,3 +1192,88 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		// Ignore older FFmpeg versions which don't support AV1
 	}
 }
+
+namespace {
+int64_t DecoderOutputCount(const AVCodecContext* context) {
+    if (!context) return 0;
+#if LIBAVCODEC_VERSION_MAJOR >= 60
+    return context->frame_num;
+#else
+    return context->frame_number;
+#endif
+}
+}
+
+TEST_CASE("Stream selection skips decoding and restores cached streams", "[reader][stream-selection]") {
+    FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+    reader.Open();
+    REQUIRE(reader.info.has_video);
+    REQUIRE(reader.info.has_audio);
+    auto audio = reader.GetFrameWithStreams(45, false, true);
+    REQUIRE(audio);
+    CHECK(DecoderOutputCount(reader.pCodecCtx) == 0);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) > 0);
+    CHECK(reader.info.has_video);
+    CHECK(reader.info.has_audio);
+    auto video = reader.GetFrameWithStreams(45, true, false);
+    REQUIRE(video);
+    CHECK(video->has_image_data);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) == 0);
+    CHECK(DecoderOutputCount(reader.pCodecCtx) > 0);
+    auto full = reader.GetFrame(45);
+    REQUIRE(full);
+    CHECK(full->has_image_data);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) > 0);
+    CHECK(DecoderOutputCount(reader.pCodecCtx) > 0);
+    reader.GetFrameWithStreams(45, false, false);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) == 0);
+    CHECK(DecoderOutputCount(reader.pCodecCtx) == 0);
+    reader.Close();
+}
+
+TEST_CASE("Track stream toggles reach mapped decoders without editing clips", "[timeline][stream-selection]") {
+    FFmpegReader reader(std::string(TEST_MEDIA_PATH) + "sintel_trailer-720p.mp4");
+    reader.Open();
+    Clip clip(&reader);
+    clip.Id("stream-clip");
+    clip.Layer(1);
+    clip.End(3.0);
+    SECTION("Ordinary clip") {}
+    SECTION("Pitch-shift lookahead stays audio-only while hidden") {
+        clip.SetJson(R"({"effects":[{"type":"PitchShift","id":"pitch","pitch":{"Points":[{"co":{"X":1,"Y":5}}]}}]})");
+    }
+    Timeline timeline(160, 90, Fraction(30, 1), 48000, 2, LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.SetJson(R"({"layers":[{"id":"track","number":1,"hidden":true,"effects":[{"type":"Negate","id":"negate"}]}]})");
+    timeline.Open();
+    REQUIRE(timeline.GetFrame(45));
+    CHECK(DecoderOutputCount(reader.pCodecCtx) == 0);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) > 0);
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"track"}],"value":{"hidden":false,"muted":true}}])");
+    REQUIRE(timeline.GetFrame(45));
+    CHECK(DecoderOutputCount(reader.pCodecCtx) > 0);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) == 0);
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"track"}],"value":{"hidden":false,"muted":false}}])");
+    REQUIRE(timeline.GetFrame(45));
+    CHECK(DecoderOutputCount(reader.pCodecCtx) > 0);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) > 0);
+    // Muting output must retain audio consumed by visible track visualizations.
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"track"}],"value":{"muted":true,"effects":[{"type":"AudioVisualization","id":"visualization"}]}}])");
+    auto visualization = timeline.GetFrame(45);
+    REQUIRE(visualization);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) > 0);
+    for (int channel = 0; channel < visualization->GetAudioChannelsCount(); ++channel) {
+        const auto* samples = visualization->GetAudioSamples(channel);
+        CHECK(std::all_of(samples, samples + visualization->GetAudioSamplesCount(),
+            [](float sample) { return std::abs(sample) < 0.000001f; }));
+    }
+    const auto video_count = DecoderOutputCount(reader.pCodecCtx);
+    const auto audio_count = DecoderOutputCount(reader.aCodecCtx);
+    timeline.ApplyJsonDiff(R"([{"type":"update","key":["layers",{"id":"track"}],"value":{"muted":true,"hidden":true}}])");
+    REQUIRE(timeline.GetFrame(46));
+    CHECK(DecoderOutputCount(reader.pCodecCtx) == video_count);
+    CHECK(DecoderOutputCount(reader.aCodecCtx) == audio_count);
+    CHECK(clip.has_video.GetInt(45) == -1);
+    CHECK(clip.has_audio.GetInt(45) == -1);
+    timeline.Close();
+}
