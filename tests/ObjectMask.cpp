@@ -22,6 +22,10 @@
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
 #include "VulkanCompositor.h"
 #include "VulkanFrameImage.h"
+#include "GpuDevices.h"
+extern "C" {
+#include <libavutil/buffer.h>
+}
 #endif
 #ifdef USE_OPENCV
 #include "CVObjectMask.h"
@@ -238,9 +242,13 @@ TEST_CASE("Object Mask sources follow clip geometry after transforms", "[effect]
 				std::abs(linked_cpu->pixelColor(x, y).red() - expected.pixelColor(x, y).red()));
 	CHECK(cpu_error <= 1); // Common mask blending truncates floating-point values.
 
-
 #ifdef OPENSHOT_ENABLE_GPU_FRAME
-	if (VulkanRenderingEnabled()) {
+	// Loading Vulkan does not guarantee a usable GPU (for example on CI).
+	// Always run the CPU assertions above; only run GPU assertions with a device.
+	AVBufferRef* device = nullptr;
+	const bool gpu_available = VulkanRenderingEnabled() && CreateSharedVulkanDevice(&device) >= 0;
+	av_buffer_unref(&device);
+	if (gpu_available) {
 		auto surface = consumer.ResolveGeneratedMaskSurface(SolidVulkanImage(80, 80, Qt::black), 1);
 		REQUIRE(surface);
 		const auto gpu = surface->Materialize();
