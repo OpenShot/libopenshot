@@ -90,6 +90,7 @@ namespace openshot {
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 		friend class PitchShift;
+		friend class EffectBase;
 		friend class Timeline;
 	protected:
 		/// Mutex for multiple threads
@@ -211,6 +212,7 @@ namespace openshot {
 		/// Location units retained by imported projects: "auto", "canvas", or "geometry".
 		/// Auto uses geometry-relative units for Crop and canvas-relative units otherwise.
 		std::string location_coordinate_system;
+		bool scale_none_legacy; ///< Preserve historical raster-based SCALE_NONE sizing for imported clips.
 		openshot::AnchorType anchor;	 ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
