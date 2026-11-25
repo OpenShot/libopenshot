@@ -92,6 +92,7 @@ void Clip::init_settings()
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
 	location_coordinate_system = "auto";
+	scale_none_legacy = false;
 	anchor = ANCHOR_CANVAS;
 	display = FRAME_DISPLAY_NONE;
 	mixing = VOLUME_MIX_NONE;
@@ -1012,6 +1013,7 @@ Json::Value Clip::JsonValue() const {
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["location_coordinate_system"] = location_coordinate_system;
+	root["scale_none_legacy"] = scale_none_legacy;
 	root["anchor"] = anchor;
 	root["display"] = display;
 	root["mixing"] = mixing;
@@ -1134,6 +1136,8 @@ void Clip::SetJsonValue(Json::Value root) {
 		if (location_coordinate_system != "canvas" && location_coordinate_system != "geometry")
 			location_coordinate_system = "auto";
 	}
+	if (root["scale_none_legacy"].isBool())
+		scale_none_legacy = root["scale_none_legacy"].asBool();
 	if (!root["anchor"].isNull())
 		anchor = (AnchorType) root["anchor"].asInt();
 	if (!root["display"].isNull())
@@ -1985,11 +1989,11 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
             const double detail = Waveform() ? waveform_detail : static_cast<QtTextReader*>(source)->DetailScale();
 			source_size = QSize(std::max(1, int(std::round(source_size.width() / detail))),
 			                    std::max(1, int(std::round(source_size.height() / detail))));
-        } else if (location_coordinate_system == "auto" && !source_raster_size.isEmpty() &&
+        } else if (!scale_none_legacy && !source_raster_size.isEmpty() &&
                    (dynamic_cast<QtImageReader*>(source) || dynamic_cast<FFmpegReader*>(source))) {
             // Reader detail may change after a drag; SCALE_NONE must retain its
             // logical source size instead of applying the extra raster scale twice.
-            // Imported canvas/geometry projects retain their historical bounds.
+            // The independent compatibility flag preserves imported project bounds.
             auto* parent = static_cast<Timeline*>(timeline);
             const double preview = parent && parent->info.width > 0 ? width / double(parent->info.width) : 1.0;
             source_size = QSize(std::max(1, int(std::round(source_size.width() * source->info.width * preview / source_raster_size.width()))),

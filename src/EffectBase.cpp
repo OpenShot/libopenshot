@@ -490,15 +490,74 @@ int64_t EffectBase::MapMaskFrameNumber(int64_t frame_number) {
 	return std::max(int64_t(1), mapped_frame);
 }
 
+bool EffectBase::GeneratedMaskTransform(EffectBase* source, int64_t frame_number,
+	int width, int height, QSize& source_size, QTransform& transform) {
+	// Pre-transform consumers already receive source-sized pixels. Preserve the
+	// existing reader and bounding-box mask coordinate conventions as well.
+	if (info.apply_before_clip || source->info.class_name != "ObjectMask")
+		return false;
+	auto* source_clip = dynamic_cast<Clip*>(source->ParentClip());
+	if (!source_clip || !source_clip->Reader())
+		return false;
+
+	// Read source geometry, never the processed clip: GetFrame() would recurse
+	// through this consumer when both effects belong to the same clip.
+	auto source_frame = source_clip->GetOrCreateFrame(frame_number, true);
+	if (!source_frame || source_frame->GetWidth() <= 0 || source_frame->GetHeight() <= 0)
+		return false;
+	source_size = QSize(source_frame->GetWidth(), source_frame->GetHeight());
+	transform = source_clip->get_transform(source_frame, width, height);
+	return true;
+}
+
+std::shared_ptr<const FrameImage> EffectBase::ResolveGeneratedMaskSurface(
+	std::shared_ptr<const FrameImage> target, int64_t frame_number) {
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	auto* source = ResolveMaskSourceEffect();
+	if (!source || !target)
+		return {};
+	QSize source_size;
+	QTransform transform;
+	if (!GeneratedMaskTransform(source, frame_number, target->GetWidth(), target->GetHeight(), source_size, transform))
+		return source->TrackedObjectMaskSurface(target, frame_number);
+
+	auto source_canvas = SolidVulkanImage(source_size.width(), source_size.height(), Qt::black);
+	auto mask = source->TrackedObjectMaskSurface(source_canvas, frame_number);
+	if (!mask)
+		return {};
+	return RenderVulkanImage(mask, nullptr, target->GetWidth(), target->GetHeight(),
+		transform, 1.0, Qt::black);
+#else
+	return {};
+#endif
+}
+
 std::shared_ptr<QImage> EffectBase::GetMaskImage(std::shared_ptr<QImage> target_image, int64_t frame_number) {
 	if (!target_image || target_image->isNull())
 		return {};
 
 	EffectBase* source_effect = ResolveMaskSourceEffect();
 	if (source_effect) {
-		auto generated_mask = source_effect->TrackedObjectMask(target_image, frame_number);
-		if (generated_mask && !generated_mask->isNull())
-			return generated_mask;
+		QSize source_size;
+		QTransform transform;
+		const bool transformed = GeneratedMaskTransform(source_effect, frame_number,
+			target_image->width(), target_image->height(), source_size, transform);
+		auto source_canvas = transformed
+			? std::make_shared<QImage>(source_size, QImage::Format_RGBA8888_Premultiplied)
+			: target_image;
+		auto generated_mask = source_effect->TrackedObjectMask(source_canvas, frame_number);
+		if (generated_mask && !generated_mask->isNull()) {
+			if (!transformed)
+				return generated_mask;
+			auto canvas = std::make_shared<QImage>(target_image->size(), QImage::Format_RGBA8888_Premultiplied);
+			canvas->fill(Qt::black);
+			QPainter painter(canvas.get());
+			painter.setRenderHint(QPainter::SmoothPixmapTransform, !transform.isIdentity());
+			painter.setTransform(transform);
+			painter.drawImage(0, 0, *generated_mask);
+			painter.end();
+			return canvas;
+		}
 
 		auto empty_mask = std::make_shared<QImage>(
 			target_image->width(), target_image->height(), QImage::Format_RGBA8888_Premultiplied);
@@ -764,7 +823,7 @@ std::shared_ptr<openshot::Frame> EffectBase::ProcessFrame(std::shared_ptr<opensh
 				// Generated masks only need the target size, not its pixels.
 				std::shared_ptr<const FrameImage> mask;
                 if (auto* source_effect=ResolveMaskSourceEffect()) {
-                    mask=source_effect->TrackedObjectMaskSurface(original_surface,frame_number);
+                    mask=ResolveGeneratedMaskSurface(original_surface,frame_number);
                     if(!mask) {
                         auto generated=GetMaskImage(std::make_shared<QImage>(width,height,QImage::Format_RGBA8888_Premultiplied),frame_number);
                         if(generated && !generated->isNull()) mask=UploadVulkanImage(*generated);

@@ -2091,6 +2091,7 @@ TEST_CASE("Imported locations match historical rendered image bounds", "[libopen
         clip.Layer(1);
         clip.scale = test.scale;
         clip.location_coordinate_system = test.coordinates;
+        clip.scale_none_legacy = true;
         clip.location_x = Keyframe(0.25);
         clip.location_y = Keyframe(0.1);
         clip.scale_x = Keyframe(0.5);
@@ -2114,5 +2115,51 @@ TEST_CASE("Imported locations match historical rendered image bounds", "[libopen
             CHECK(bounds.bottom() == Approx(test.bounds[index][3]).margin(1));
         }
         timeline.Close();
+    }
+}
+
+TEST_CASE("Scale None sizing is independent of imported location units", "[libopenshot][clip][scale-none-compat]") {
+    const std::string coordinates = GENERATE("auto", "canvas", "geometry");
+    const bool legacy = GENERATE(false, true);
+    const double scale = GENERATE(.5, 2.0);
+    const int preview_width = GENERATE(200, 400);
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const auto path = directory.filePath("source.png");
+    QImage source(80, 40, QImage::Format_RGBA8888_Premultiplied);
+    source.fill(Qt::red);
+    REQUIRE(source.save(path));
+    Clip clip(path.toStdString());
+    clip.scale = SCALE_NONE;
+    clip.location_coordinate_system = coordinates;
+    clip.scale_none_legacy = legacy;
+    clip.scale_x = Keyframe(scale);
+    clip.scale_y = Keyframe(scale);
+    clip.End(1.0);
+    Timeline timeline(400, 400, Fraction(24, 1), 44100, 2, LAYOUT_STEREO);
+    timeline.AddClip(&clip);
+    timeline.SetMaxSize(preview_width, preview_width);
+    timeline.Open();
+    const auto bounds = red_bounds(*timeline.GetFrame(1)->GetImage());
+    const double preview_ratio = preview_width / 400.0;
+    // Historical sizing includes the reader's detail scale a second time.
+    const double applied_scale = legacy ? scale * scale : scale;
+    CHECK(bounds.width() == Approx(80 * preview_ratio * applied_scale).margin(1));
+    CHECK(bounds.height() == Approx(40 * preview_ratio * applied_scale).margin(1));
+    timeline.Close();
+}
+
+TEST_CASE("Scale None compatibility survives JSON and partial updates", "[libopenshot][clip][scale-none-compat]") {
+    Clip clip;
+    CHECK_FALSE(clip.scale_none_legacy);
+    for (bool legacy : {true, false}) {
+        clip.scale_none_legacy = legacy;
+        Clip restored;
+        restored.SetJson(clip.Json());
+        CHECK(restored.scale_none_legacy == legacy);
+        restored.SetJson("{\"location_coordinate_system\":\"geometry\",\"scale\":0}");
+        CHECK(restored.scale_none_legacy == legacy);
+        restored.SetJson("{\"scale_none_legacy\":\"invalid\"}");
+        CHECK(restored.scale_none_legacy == legacy);
     }
 }
