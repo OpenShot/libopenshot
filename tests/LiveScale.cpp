@@ -115,7 +115,9 @@ Json::UInt64 uploads() { return metric("uploads"); }
 using Source = std::function<std::unique_ptr<ReaderBase>()>;
 QImage fresh_pixels(const Clip& edited, const Source& source) {
     auto reader = source();
-    Clip clip(reader.get());
+    reader->Open();
+    Clip clip;
+    clip.Reader(reader.get());
     auto data = edited.JsonValue();
     data.removeMember("reader");
     clip.SetJsonValue(data);
@@ -190,9 +192,15 @@ TEST_CASE("Live artwork scaling matches fresh detail without discarding reusable
                 image.setPixelColor(x, y, (x / 12 + y / 12) % 2 ? Qt::white : Qt::black);
         REQUIRE(image.save(path));
     }
-    Source source = [path] { return std::unique_ptr<ReaderBase>(new QtImageReader(path.toStdString())); };
+    // Inspect each independent reader once. The inspecting reader and Clip
+    // constructors would otherwise open/close the same SVG repeatedly, loading
+    // system fonts every time, before the timeline even renders a frame.
+    Source source = [path] { return std::unique_ptr<ReaderBase>(new QtImageReader(path.toStdString(), false)); };
     auto reader = source();
-    Clip clip(reader.get());
+    reader->Open();
+    Clip clip;
+    clip.Reader(reader.get());
+    clip.End(reader->info.duration);
     clip.Id("artwork");
     clip.scale = GENERATE(SCALE_FIT, SCALE_NONE);
     Timeline timeline(192, 192, Fraction(30, 1), 48000, 2, LAYOUT_STEREO);
