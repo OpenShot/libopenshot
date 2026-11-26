@@ -43,6 +43,7 @@ set(OPENSHOT_TESTS
   AudioReaderSource
   AudioPlaybackThread
   AnimatedCurve
+  AudioReactiveKeyframes
   AudioWaveformer
   CameraCaptureReader
   CacheDisk
