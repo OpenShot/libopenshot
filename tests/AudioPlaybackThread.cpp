@@ -14,13 +14,36 @@
 #include "DummyReader.h"
 #include "QtPlayer.h"
 #include "Frame.h"
+#include <atomic>
 #include <chrono>
 #include <thread>
 
 namespace openshot {
-// Exercise the real native transport worker with its device closed. This seam
-// adds no runtime API and does not need a sound card or emit audio.
+// Exercise the real native transport worker with its device closed. A silent
+// callback pump acknowledges JUCE stop requests without a sound card or timeout.
 struct AudioPlaybackThreadTestAccess {
+    class SilentCallbacks {
+        juce::AudioTransportSource& transport;
+        std::atomic<bool> running{true};
+        std::thread worker;
+    public:
+        explicit SilentCallbacks(juce::AudioTransportSource& source) : transport(source) {
+            transport.prepareToPlay(256, 48000);
+            worker = std::thread([this] {
+                juce::AudioBuffer<float> buffer(2, 256);
+                juce::AudioSourceChannelInfo block(&buffer, 0, 256);
+                while (running.load()) {
+                    transport.getNextAudioBlock(block);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            });
+        }
+        ~SilentCallbacks() {
+            running.store(false);
+            worker.join();
+            transport.releaseResources();
+        }
+    };
     class SilentRenderer : public RendererBase {
         void render(std::shared_ptr<QImage>) override {}
     public:
@@ -36,6 +59,7 @@ struct AudioPlaybackThreadTestAccess {
         player.Reader(&reader);
         auto* audio = player.p->audioPlayback;
         auto* original = audio->source;
+        SilentCallbacks callbacks(audio->transport);
         for (int iteration = 0; iteration < 3; ++iteration) {
             player.Play();
             player.Play();
@@ -57,6 +81,7 @@ struct AudioPlaybackThreadTestAccess {
         AudioPlaybackThread audio(nullptr);
         audio.Reader(&reader);
         const AudioReaderSource* original = audio.source;
+        SilentCallbacks callbacks(audio.transport);
         for (int iteration = 0; iteration < 3; ++iteration) {
             audio.Play();
             audio.startThread();
