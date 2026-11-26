@@ -472,21 +472,25 @@ TEST_CASE( "SizeOrdering_x264_CRF", "[libopenshot][ffmpegwriter][filesize]" )
 		return in.tellg();
 	};
 
-	auto encode = [&](const std::string& out_name, int crf, int audio_bitrate) -> std::streamoff {
+	auto encode = [&](const std::string& out_name, int crf) -> std::streamoff {
 		FFmpegWriter w(out_name);
-		w.SetAudioOptions(true, "aac", 48000, 2, LAYOUT_STEREO, audio_bitrate);
-		w.SetVideoOptions(true, "libx264", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, crf);
+		// Isolate video CRF: audio bitrate must not influence size ordering.
+		w.SetAudioOptions(false, "", 48000, 2, LAYOUT_STEREO, 128000);
+		w.SetVideoOptions(true, "libx264", Fraction(24,1), 320, 180, Fraction(1,1), false, false, crf);
 		w.PrepareStreams();
 		w.SetOption(VIDEO_STREAM, "crf", std::to_string(crf));
 		w.Open();
-		w.WriteFrame(&reader, 1, 120);
+		// Keep moving content without encoding a multi-second HD sequence.
+		w.WriteFrame(&reader, 1, 32);
 		w.Close();
-		return file_size(out_name);
+		const auto size = file_size(out_name);
+		REQUIRE(size > 0);
+		return size;
 	};
 
-	const auto low_size = encode("SizeOrdering_x264_CRF_low.mp4", 30, 96000);
-	const auto med_size = encode("SizeOrdering_x264_CRF_med.mp4", 23, 128000);
-	const auto high_size = encode("SizeOrdering_x264_CRF_high.mp4", 20, 160000);
+	const auto low_size = encode("SizeOrdering_x264_CRF_low.mp4", 30);
+	const auto med_size = encode("SizeOrdering_x264_CRF_med.mp4", 23);
+	const auto high_size = encode("SizeOrdering_x264_CRF_high.mp4", 20);
 
 	CHECK(low_size < med_size);
 	CHECK(med_size < high_size);
@@ -508,21 +512,24 @@ TEST_CASE( "SizeOrdering_vp9_CRF", "[libopenshot][ffmpegwriter][filesize]" )
 		return in.tellg();
 	};
 
-	auto encode = [&](const std::string& out_name, int crf, int audio_bitrate) -> std::streamoff {
+	auto encode = [&](const std::string& out_name, int crf) -> std::streamoff {
 		FFmpegWriter w(out_name);
-		w.SetAudioOptions(true, "libvorbis", 48000, 2, LAYOUT_STEREO, audio_bitrate);
-		w.SetVideoOptions(true, "libvpx-vp9", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, crf);
+		w.SetAudioOptions(false, "", 48000, 2, LAYOUT_STEREO, 128000);
+		w.SetVideoOptions(true, "libvpx-vp9", Fraction(24,1), 320, 180, Fraction(1,1), false, false, crf);
 		w.PrepareStreams();
 		w.SetOption(VIDEO_STREAM, "crf", std::to_string(crf));
 		w.Open();
-		w.WriteFrame(&reader, 1, 120);
+		// Enough motion for distinct VP9 sizes; eight frames can tie.
+		w.WriteFrame(&reader, 1, 32);
 		w.Close();
-		return file_size(out_name);
+		const auto size = file_size(out_name);
+		REQUIRE(size > 0);
+		return size;
 	};
 
-	const auto low_size = encode("SizeOrdering_vp9_CRF_low.webm", 46, 96000);
-	const auto med_size = encode("SizeOrdering_vp9_CRF_med.webm", 34, 128000);
-	const auto high_size = encode("SizeOrdering_vp9_CRF_high.webm", 26, 160000);
+	const auto low_size = encode("SizeOrdering_vp9_CRF_low.webm", 46);
+	const auto med_size = encode("SizeOrdering_vp9_CRF_med.webm", 34);
+	const auto high_size = encode("SizeOrdering_vp9_CRF_high.webm", 26);
 
 	CHECK(low_size < med_size);
 	CHECK(med_size < high_size);
