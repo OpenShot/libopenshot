@@ -77,7 +77,7 @@ namespace openshot
         return devs.getNames();
     }
 
-    // Get current audio device or last attempted (if none succeeded)
+    // Get current open audio device (empty if initialization failed)
     AudioDeviceInfo QtPlayer::GetCurrentAudioDevice() {
         return p->audioPlayback->getCurrentAudioDevice();
     }

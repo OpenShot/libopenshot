@@ -37,6 +37,7 @@ extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
 }
 #include "../VulkanLoader.h"
+#include "../VulkanQueue.h"
 
 namespace openshot {
 namespace {
@@ -263,7 +264,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
         target.context = context;
         target.width = width;
         target.height = height;
-        target.family = vk->queue_family_comp_index;
+        target.family = VulkanComputeQueueFamily(vk);
         vkGetDeviceQueue(target.device, target.family, 0, &target.queue);
         auto gl = context->functions();
         auto extra = context->extraFunctions();
@@ -559,7 +560,7 @@ struct VulkanOpenGLPresenter::Impl : QObject, FramePresenter {
                 (renderer ? reinterpret_cast<const char*>(renderer) : "unknown") +
                 "; Vulkan: " + properties.properties.deviceName + ")");
         }
-        if (vk->queue_family_comp_index < 0)
+        if (VulkanComputeQueueFamily(vk) < 0)
             return unavailable("Vulkan device lacks a compute queue");
 
         bool locked = false, copySubmitted = false;

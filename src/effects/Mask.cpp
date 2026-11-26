@@ -70,7 +70,7 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
             std::shared_ptr<const FrameImage> mask;
             if(surface) {
                 if(auto* source=ResolveMaskSourceEffect()) {
-                    mask=source->TrackedObjectMaskSurface(surface,frame_number);
+                    mask=ResolveGeneratedMaskSurface(surface,frame_number);
                     if(!mask) mask=SolidVulkanImage(surface->GetWidth(),surface->GetHeight(),Qt::black);
                 } else mask=ResolveReaderMaskSurface(surface->GetWidth(),surface->GetHeight(),frame_number);
             }

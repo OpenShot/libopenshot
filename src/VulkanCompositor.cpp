@@ -31,6 +31,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 #include "VulkanLoader.h"
+#include "VulkanQueue.h"
 // SPIR-V generated from src/vulkan/*.comp at build time.
 #include "affine.comp.h"
 #include "encode_nv12.comp.h"
@@ -286,9 +287,9 @@ public:
         device_context=reinterpret_cast<AVHWDeviceContext*>(device_ref->data);
         vkcontext=reinterpret_cast<AVVulkanDeviceContext*>(device_context->hwctx);
         device=vkcontext->act_dev;
-        queue_family=vkcontext->queue_family_comp_index;
-        if(queue_family<0) throw std::runtime_error("No Vulkan compute queue");
         try {
+            queue_family=VulkanComputeQueueFamily(vkcontext);
+            if(queue_family<0) throw std::runtime_error("No Vulkan compute queue");
             vkGetDeviceQueue(device,queue_family,0,&queue);
             VkCommandPoolCreateInfo ci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
             ci.queueFamilyIndex=queue_family; ci.flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;

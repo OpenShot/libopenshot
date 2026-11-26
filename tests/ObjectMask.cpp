@@ -16,6 +16,17 @@
 #include "Frame.h"
 #include "Json.h"
 #include "effects/ObjectMask.h"
+#include "Clip.h"
+#include "effects/Mask.h"
+#include "effects/Negate.h"
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+#include "VulkanCompositor.h"
+#include "VulkanFrameImage.h"
+#include "GpuDevices.h"
+extern "C" {
+#include <libavutil/buffer.h>
+}
+#endif
 #ifdef USE_OPENCV
 #include "CVObjectMask.h"
 #endif
@@ -23,8 +34,10 @@
 #include <QColor>
 #include <QFile>
 #include <QImage>
+#include <QPainter>
 #include <QTemporaryDir>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 
@@ -150,3 +163,110 @@ TEST_CASE("CVObjectMask validates a single EfficientSAM ONNX model path", "[effe
 	CHECK(error.find("Failed to load ONNX model") != std::string::npos);
 }
 #endif
+
+// Compare generated masks with the same artwork rendered as an ordinary clip.
+// This catches stretching onto the canvas without the clip's letterbox/transform.
+namespace {
+class ObjectMaskConsumer : public Mask {
+public:
+	using EffectBase::ResolveMaskImage;
+	using EffectBase::ResolveGeneratedMaskSurface;
+};
+}
+
+TEST_CASE("Object Mask sources follow clip geometry after transforms", "[effect][object_mask][alignment]") {
+	QTemporaryDir directory;
+	REQUIRE(directory.isValid());
+	const auto data_path = directory.filePath("mask.pb");
+	create_object_mask_data(data_path);
+	ObjectMask provider;
+	provider.Id("object-mask-source");
+	provider.draw_mask = Keyframe(0);
+	REQUIRE(provider.LoadObjMaskData(data_path.toStdString()));
+
+	const auto native_canvas = std::make_shared<QImage>(40, 20, QImage::Format_RGBA8888_Premultiplied);
+	const auto artwork = provider.TrackedObjectMask(native_canvas, 1);
+	const auto artwork_path = directory.filePath("mask.png");
+	REQUIRE(artwork->save(artwork_path));
+	Clip clip(artwork_path.toStdString());
+	clip.Open();
+	clip.AddEffect(&provider);
+	ObjectMaskConsumer consumer;
+	consumer.ParentClip(&clip);
+	consumer.MaskSourceId(provider.Id());
+
+	SECTION("letterbox") {}
+	SECTION("position") { clip.location_x = Keyframe(.2); clip.location_y = Keyframe(-.1); }
+	SECTION("rotation") { clip.rotation = Keyframe(90); }
+	SECTION("scale") { clip.scale_x = Keyframe(.5); clip.scale_y = Keyframe(.5); }
+	SECTION("gravity") { clip.gravity = GRAVITY_BOTTOM; }
+	SECTION("crop to fill") { clip.scale = SCALE_CROP; }
+	SECTION("Scale None") { clip.scale = SCALE_NONE; }
+	SECTION("legacy Scale None") { clip.scale = SCALE_NONE; clip.scale_none_legacy = true; }
+
+	const auto target = std::make_shared<QImage>(80, 80, QImage::Format_RGBA8888_Premultiplied);
+	consumer.info.apply_before_clip = true;
+	// The default path retains the existing source-space mapping.
+	CHECK(*consumer.ResolveMaskImage(native_canvas, 1) == *artwork);
+	consumer.info.apply_before_clip = false;
+
+	auto background = std::make_shared<Frame>(1, 80, 80, "#000000");
+	const auto backend = qgetenv("OPENSHOT_RENDER_BACKEND");
+	qputenv("OPENSHOT_RENDER_BACKEND", "cpu");
+	auto reference_frame = clip.GetFrame(background, 1);
+	if (backend.isNull()) qunsetenv("OPENSHOT_RENDER_BACKEND");
+	else qputenv("OPENSHOT_RENDER_BACKEND", backend);
+	QImage expected(80, 80, QImage::Format_RGBA8888_Premultiplied);
+	expected.fill(Qt::black);
+	QPainter painter(&expected);
+	painter.drawImage(0, 0, *reference_frame->GetImage());
+	painter.end();
+	const auto actual = consumer.ResolveMaskImage(target, 1);
+	REQUIRE(actual);
+	CHECK(*actual == expected);
+
+	Negate linked_effect;
+	linked_effect.ParentClip(&clip);
+	linked_effect.MaskSourceId(provider.Id());
+	linked_effect.info.apply_before_clip = false;
+	qputenv("OPENSHOT_RENDER_BACKEND", "cpu");
+	auto cpu_frame = std::make_shared<Frame>(1, 80, 80, "#000000");
+	linked_effect.ProcessFrame(cpu_frame, 1);
+	if (backend.isNull()) qunsetenv("OPENSHOT_RENDER_BACKEND");
+	else qputenv("OPENSHOT_RENDER_BACKEND", backend);
+	const auto linked_cpu = cpu_frame->GetImage();
+	int cpu_error = 0;
+	for (int y = 0; y < 80; ++y)
+		for (int x = 0; x < 80; ++x)
+			cpu_error = std::max(cpu_error,
+				std::abs(linked_cpu->pixelColor(x, y).red() - expected.pixelColor(x, y).red()));
+	CHECK(cpu_error <= 1); // Common mask blending truncates floating-point values.
+
+#ifdef OPENSHOT_ENABLE_GPU_FRAME
+	// Loading Vulkan does not guarantee a usable GPU (for example on CI).
+	// Always run the CPU assertions above; only run GPU assertions with a device.
+	AVBufferRef* device = nullptr;
+	const bool gpu_available = VulkanRenderingEnabled() && CreateSharedVulkanDevice(&device) >= 0;
+	av_buffer_unref(&device);
+	if (gpu_available) {
+		auto surface = consumer.ResolveGeneratedMaskSurface(SolidVulkanImage(80, 80, Qt::black), 1);
+		REQUIRE(surface);
+		const auto gpu = surface->Materialize();
+		auto gpu_frame = std::make_shared<Frame>(1, 80, 80, "#000000");
+		gpu_frame->AddDeferredImage(SolidVulkanImage(80, 80, Qt::black));
+		const auto readbacks = VulkanFrameReadbackCount();
+		linked_effect.ProcessFrame(gpu_frame, 1);
+		REQUIRE(gpu_frame->GetDeferredImage());
+		CHECK(VulkanFrameReadbackCount() == readbacks);
+		const auto linked_pixels = gpu_frame->GetDeferredImage()->Materialize();
+		int maximum_error = 0;
+		for (int y = 0; y < 80; ++y)
+			for (int x = 0; x < 80; ++x)
+				for (const auto* pixels : {&gpu, &linked_pixels})
+					maximum_error = std::max(maximum_error,
+						std::abs(pixels->pixelColor(x, y).red() - expected.pixelColor(x, y).red()));
+		CHECK(maximum_error <= 2);
+	}
+#endif
+	clip.Close();
+}

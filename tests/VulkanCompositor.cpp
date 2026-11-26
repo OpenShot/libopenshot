@@ -7,6 +7,7 @@
 #define CATCH_CONFIG_EXTERNAL_INTERFACES
 #include "openshot_catch.h"
 #include "VulkanCompositor.h"
+#include "VulkanQueue.h"
 #include "VulkanFrameImage.h"
 #include "VulkanEncodeConverter.h"
 #include "ColorManagement.h"
@@ -3174,4 +3175,34 @@ TEST_CASE("Vulkan distort keeps triangle edges covered at HD and 4K", "[vulkan][
             CheckVulkanEffect(effect,pixels,source,1,2);
         }
     }
+}
+
+TEST_CASE("Vulkan compute queues must be enabled and support compute", "[vulkan][queue]") {
+    AVVulkanDeviceContext context{};
+#if LIBAVUTIL_VERSION_MAJOR >= 60
+    CHECK(openshot::VulkanComputeQueueFamily(&context) == -1);
+    context.nb_qf = 4;
+    context.qf[0].idx = 2;
+    context.qf[0].num = 1;
+    context.qf[0].flags = VK_QUEUE_TRANSFER_BIT;
+    context.qf[1].idx = 3;
+    context.qf[1].num = 0;
+    context.qf[1].flags = VK_QUEUE_COMPUTE_BIT;
+    context.qf[2].idx = 7;
+    context.qf[2].num = 1;
+    context.qf[2].flags = VK_QUEUE_COMPUTE_BIT;
+    context.qf[3].idx = 5;
+    context.qf[3].num = 1;
+    context.qf[3].flags = VK_QUEUE_COMPUTE_BIT;
+    CHECK(openshot::VulkanComputeQueueFamily(&context) == 7);
+    context.qf[2].idx = -1;
+    CHECK(openshot::VulkanComputeQueueFamily(&context) == 5);
+    context.qf[3].num = 0;
+    CHECK(openshot::VulkanComputeQueueFamily(&context) == -1);
+#else
+    context.queue_family_comp_index = -1;
+    CHECK(openshot::VulkanComputeQueueFamily(&context) == -1);
+    context.queue_family_comp_index = 7;
+    CHECK(openshot::VulkanComputeQueueFamily(&context) == 7);
+#endif
 }

@@ -19,6 +19,7 @@
 #include "TrackedObjectBase.h"
 
 #include <QImage>
+#include <QTransform>
 #include <memory>
 #include <map>
 #include <string>
@@ -77,6 +78,14 @@ namespace openshot
 		/// Find the effect named by mask_source_id.
 		EffectBase* ResolveMaskSourceEffect();
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
+
+		/// Map source-space Object Mask pixels into a post-transform effect's canvas.
+		bool GeneratedMaskTransform(EffectBase* source, int64_t frame_number,
+			int width, int height, QSize& source_size, QTransform& transform);
+
+		/// Generated mask with the same coordinate mapping on CPU and Vulkan.
+		std::shared_ptr<const FrameImage> ResolveGeneratedMaskSurface(
+			std::shared_ptr<const FrameImage> target, int64_t frame_number);
 
 		/// Create a reader instance from reader JSON.
 		ReaderBase* CreateReaderFromJson(const Json::Value& reader_json) const;

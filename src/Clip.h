@@ -95,6 +95,7 @@ namespace openshot {
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 		friend class PitchShift;
+		friend class EffectBase;
 		friend class Timeline;
 	protected:
 		/// Mutex for multiple threads
@@ -129,8 +130,10 @@ namespace openshot {
 		std::list<openshot::EffectBase*> effects; ///< List of clips on this timeline
 		bool is_open;	///< Is Reader opened
 		std::string parentObjectId; ///< Id of the bounding box that this clip is attached to
-		std::shared_ptr<openshot::TrackedObjectBase> parentTrackedObject; ///< Tracked object this clip is attached to
-		openshot::Clip* parentClipObject; ///< Clip object this clip is attached to
+		openshot::TimelineBase* registered_timeline = nullptr; ///< Timeline whose clip list contains this clip (separate from rendering context)
+		mutable std::shared_ptr<openshot::TrackedObjectBase> parentTrackedObject; ///< Tracked object this clip is attached to
+		mutable openshot::Clip* parentClipObject; ///< Clip object this clip is attached to
+		void ResolveParent() const; ///< Resolve the saved parent ID against the current timeline
 
 		/// Final cache object used to hold final frames (currently unused for clip frame caching)
 		CacheMemory final_cache;
@@ -217,6 +220,7 @@ namespace openshot {
 		/// Location units retained by imported projects: "auto", "canvas", or "geometry".
 		/// Auto uses geometry-relative units for Crop and canvas-relative units otherwise.
 		std::string location_coordinate_system;
+		bool scale_none_legacy; ///< Preserve historical raster-based SCALE_NONE sizing for imported clips.
 		openshot::AnchorType anchor;	 ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
@@ -265,9 +269,9 @@ namespace openshot {
 		/// Set the pointer to the clip this clip is attached to
 		void SetAttachedClip(Clip* clipObject);
 		/// Return a pointer to the trackedObject this clip is attached to
-		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return parentTrackedObject; };
+		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { ResolveParent(); return parentTrackedObject; };
 		/// Return a pointer to the clip this clip is attached to
-		Clip* GetAttachedClip() const { return parentClipObject; };
+		Clip* GetAttachedClip() const { ResolveParent(); return parentClipObject; };
 
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
