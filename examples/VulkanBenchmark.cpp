@@ -36,6 +36,7 @@
 
 #include "FFmpegReader.h"
 #include "Frame.h"
+#include "VulkanQueue.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -1033,7 +1034,7 @@ public:
 		prepared_overlay_ = PrepareOverlayImage(options_, layout_, overlay_image);
 		output_width_ = layout_.output_width;
 		output_height_ = layout_.output_height;
-		compute_queue_family_ = vulkan_device_context_->queue_family_comp_index;
+		compute_queue_family_ = openshot::VulkanComputeQueueFamily(vulkan_device_context_);
 		if (compute_queue_family_ < 0)
 			throw std::runtime_error("No Vulkan compute queue family available");
 
@@ -1074,7 +1075,7 @@ public:
 		prepared_overlay_ = PrepareOverlayImage(options_, layout_, overlay_image);
 		output_width_ = layout_.output_width;
 		output_height_ = layout_.output_height;
-		compute_queue_family_ = vulkan_device_context_->queue_family_comp_index;
+		compute_queue_family_ = openshot::VulkanComputeQueueFamily(vulkan_device_context_);
 		if (compute_queue_family_ < 0)
 			throw std::runtime_error("No Vulkan compute queue family available");
 
