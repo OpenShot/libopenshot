@@ -22,15 +22,15 @@ void KalmanTracker::init_kf(
 
 	measurement = Mat::zeros(measureNum, 1, CV_32F);
 
-	kf.transitionMatrix = (Mat_<float>(8, 8) << 1, 0, 0, 0, 1, 0, 0, 0,
-
-						   0, 1, 0, 0, 0, 1, 0, 0,
-						   0, 0, 1, 0, 0, 0, 1, 0,
-						   0, 0, 0, 1, 0, 0, 0, 1,
-						   0, 0, 0, 0, 1, 0, 0, 0,
-						   0, 0, 0, 0, 0, 1, 0, 0,
-						   0, 0, 0, 0, 0, 0, 1, 0,
-						   0, 0, 0, 0, 0, 0, 0, 1);
+	kf.transitionMatrix = Mat(Matx<float, 8, 8>{
+		1, 0, 0, 0, 1, 0, 0, 0,
+		0, 1, 0, 0, 0, 1, 0, 0,
+		0, 0, 1, 0, 0, 0, 1, 0,
+		0, 0, 0, 1, 0, 0, 0, 1,
+		0, 0, 0, 0, 1, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 0,
+		0, 0, 0, 0, 0, 0, 0, 1});
 
 	setIdentity(kf.measurementMatrix);
 	setIdentity(kf.processNoiseCov, Scalar::all(1e-1));
