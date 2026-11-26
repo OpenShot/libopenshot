@@ -31,6 +31,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 #include "VulkanLoader.h"
+#include "VulkanQueue.h"
 // SPIR-V generated from src/vulkan/*.comp at build time.
 #include "affine.comp.h"
 #include "encode_nv12.comp.h"
@@ -287,18 +288,7 @@ public:
         vkcontext=reinterpret_cast<AVVulkanDeviceContext*>(device_context->hwctx);
         device=vkcontext->act_dev;
         try {
-#if LIBAVUTIL_VERSION_MAJOR >= 60
-            // FFmpeg 8+ lists enabled queue families in preference order.
-            for(int i=0;i<vkcontext->nb_qf;++i) {
-                const auto& family=vkcontext->qf[i];
-                if(family.idx>=0 && family.num>0 && (family.flags&VK_QUEUE_COMPUTE_BIT)) {
-                    queue_family=family.idx;
-                    break;
-                }
-            }
-#else
-            queue_family=vkcontext->queue_family_comp_index;
-#endif
+            queue_family=VulkanComputeQueueFamily(vkcontext);
             if(queue_family<0) throw std::runtime_error("No Vulkan compute queue");
             vkGetDeviceQueue(device,queue_family,0,&queue);
             VkCommandPoolCreateInfo ci{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
