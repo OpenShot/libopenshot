@@ -12,6 +12,12 @@
 
 #include "CameraCaptureReader.h"
 
+#if defined(__APPLE__)
+namespace openshot {
+	AudioDeviceList GetMacAVFoundationVideoDevices();
+}
+#endif
+
 #if defined(__linux__)
 #include "CameraCaptureV4L2.h"
 #include <fcntl.h>
@@ -187,7 +193,7 @@ AudioDeviceList CameraCaptureReader::GetDeviceNames(CameraCaptureBackend backend
 	}
 #elif defined(__APPLE__)
 	if (backend == CAMERA_CAPTURE_MAC_AVFOUNDATION) {
-		input_format_name = "avfoundation";
+		return GetMacAVFoundationVideoDevices();
 	}
 #endif
 	if (!input_format_name) {
@@ -212,11 +218,6 @@ AudioDeviceList CameraCaptureReader::GetDeviceNames(CameraCaptureBackend backend
 			const std::string label = device->device_description
 				? device->device_description
 				: device->device_name;
-		#if defined(__APPLE__)
-			if (backend == CAMERA_CAPTURE_MAC_AVFOUNDATION && label.find("Capture screen") != std::string::npos) {
-				continue;
-			}
-		#endif
 			devices.emplace_back(label, name);
 		}
 	}
