@@ -193,6 +193,48 @@ TEST_CASE("Camera capture default backend follows platform", "[libopenshot][came
 #endif
 }
 
+#if defined(__APPLE__)
+TEST_CASE("macOS camera discovery returns FFmpeg name selectors",
+	"[libopenshot][cameracapturereader][avfoundation]")
+{
+	const auto devices = CameraCaptureReader::GetDeviceNames(CAMERA_CAPTURE_MAC_AVFOUNDATION);
+	// Exercise the native helper even on headless runners with no camera.
+	if (devices.empty()) {
+		WARN("No macOS cameras discovered; hardware discovery could not be verified");
+	}
+	for (const auto& device : devices) {
+		INFO("Camera: " << device.first);
+		CHECK_FALSE(device.first.empty());
+		CHECK(device.second == device.first);
+		CameraCaptureSettings settings;
+		settings.device = device.second;
+		CameraCaptureReader reader(settings);
+		CHECK_FALSE(reader.IsOpen());
+	}
+	CHECK(CameraCaptureReader::GetDeviceNames(CAMERA_CAPTURE_V4L2).empty());
+	CHECK(CameraCaptureReader::GetDeviceNames(CAMERA_CAPTURE_WINDOWS_DSHOW).empty());
+}
+
+TEST_CASE("macOS camera settings pass names and explicit inputs to FFmpeg",
+	"[libopenshot][cameracapturereader][avfoundation]")
+{
+	for (const auto& input : {std::string("OpenShot Test Camera"), std::string("0:none")}) {
+		CameraCaptureSettings settings;
+		settings.device = input;
+		// Reject the AVOption before capture starts, without hardware or TCC consent.
+		settings.options["pixel_format"] = "openshot_invalid_pixel_format";
+		CameraCaptureReader reader(settings);
+		try {
+			reader.Open();
+			FAIL("FFmpeg must reject an invalid pixel format");
+		} catch (const InvalidFile& error) {
+			CHECK(error.file_path == (input == "0:none" ? input : input + ":none"));
+		}
+		CHECK_FALSE(reader.IsOpen());
+	}
+}
+#endif
+
 #if defined(__linux__)
 #include "CameraCaptureV4L2.h"
 

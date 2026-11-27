@@ -199,6 +199,13 @@ target_sources(openshot PRIVATE
   ${QT_PLAYER_SOURCES}
   )
 
+if(APPLE)
+  enable_language(OBJCXX)
+  set_property(TARGET openshot PROPERTY OBJCXX_STANDARD 17)
+  target_sources(openshot PRIVATE CameraCaptureAVFoundation.mm)
+  target_link_libraries(openshot PRIVATE "-framework AVFoundation" "-framework Foundation")
+endif()
+
 # Set SONAME and other library properties
 set_target_properties(openshot PROPERTIES
   AUTOMOC ON
@@ -457,9 +464,7 @@ if(ENABLE_GPU_FRAME)
   target_sources(openshot PRIVATE VulkanCompositor.cpp VulkanPainter.cpp)
   target_sources(openshot PRIVATE GpuDevices.cpp VulkanLoader.cpp)
   if(APPLE)
-    enable_language(OBJCXX)
     target_sources(openshot PRIVATE MacVulkanInterop.mm MacVulkanInterop.h Qt/VulkanOpenGLPresenterMac.mm Qt/VulkanOpenGLPresenter.h)
-    set_property(TARGET openshot PROPERTY OBJCXX_STANDARD 17)
     target_link_libraries(openshot PRIVATE "-framework Foundation" "-framework CoreFoundation" objc "-framework Metal" "-framework CoreVideo" "-framework IOSurface" "-framework OpenGL")
   else()
     target_sources(openshot PRIVATE Qt/VulkanOpenGLPresenter.cpp Qt/VulkanOpenGLPresenter.h)
