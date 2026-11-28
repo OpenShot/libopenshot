@@ -443,10 +443,26 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
-				   name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate" || name == "rc_max_rate" ||
+				   name == "preserve_alpha" || name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate" || name == "rc_max_rate" ||
 				   name == "rc_buffer_size" || name == "crf" || name == "cqp" || name == "qp" || name == "allow_b_frames")) {
 		// Check for specific named options
-		if (name == "g")
+        if (name == "preserve_alpha") {
+            if (stream == VIDEO_STREAM && (value == "1" || value == "true")) {
+                const AVCodec* codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
+                if (codec) {
+                    if (const auto* formats = ffmpeg_codec_pix_fmts(codec, c)) {
+                        for (const auto* format = formats; *format != AV_PIX_FMT_NONE; ++format) {
+                            const auto* descriptor = av_pix_fmt_desc_get(*format);
+                            if (descriptor && (descriptor->flags & AV_PIX_FMT_FLAG_ALPHA)) {
+                                c->pix_fmt = *format;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if (name == "g")
 			// Set gop_size
 			convert >> c->gop_size;
 

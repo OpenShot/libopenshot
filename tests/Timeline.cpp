@@ -36,6 +36,9 @@
 #include "effects/Mask.h"
 #include "effects/Negate.h"
 #include "effects/Saturation.h"
+#include "FFmpegWriter.h"
+#include "FFmpegReader.h"
+#include <QTemporaryDir>
 
 using namespace openshot;
 
@@ -2558,4 +2561,82 @@ TEST_CASE("Clip effect trim follows clip media coordinates", "[timeline][track-e
 	CHECK(timeline.GetFrame(76)->GetImage()->pixelColor(16, 12) == original);
 	timeline.ApplyJsonDiff(R"([{"type":"update","key":["clips",{"id":"clip"},"effects",{"id":"negate"}],"value":{"clip_range":null}}])");
 	CHECK(timeline.GetFrame(45)->GetImage()->pixelColor(16, 12) == effected);
+}
+
+TEST_CASE("Timeline canvas honors RGBA and animated background curves", "[libopenshot][timeline][background]")
+{
+    Timeline timeline(8, 8, Fraction(24, 1), 48000, 2, LAYOUT_STEREO);
+    timeline.Open();
+    SECTION("Legacy empty alpha remains opaque black") {
+        CHECK(timeline.GetFrame(1)->GetImage()->pixelColor(0, 0) == QColor(0, 0, 0, 255));
+    }
+    SECTION("Explicit transparent black is not replaced by opaque black") {
+        timeline.color = Color(0, 0, 0, 0);
+        CHECK(timeline.GetFrame(1)->GetImage()->pixelColor(0, 0).alpha() == 0);
+    }
+    SECTION("Partial alpha is preserved with RGB") {
+        timeline.color = Color(255, 0, 128, 128);
+        const auto pixel = timeline.GetFrame(1)->GetImage()->pixelColor(0, 0);
+        CHECK(pixel.red() == 255);
+        CHECK(pixel.green() == 0);
+        CHECK(std::abs(pixel.blue() - 128) <= 1); // Premultiplied image rounding.
+        CHECK(pixel.alpha() == 128);
+    }
+    SECTION("Background and opacity animate independently") {
+        timeline.color = Color(255, 255, 255, 255);
+        timeline.color.red.AddPoint(3, 0, LINEAR);
+        timeline.color.green.AddPoint(3, 0, LINEAR);
+        timeline.color.blue.AddPoint(3, 0, LINEAR);
+        timeline.color.alpha.AddPoint(3, 0, LINEAR);
+        CHECK(timeline.GetFrame(1)->GetImage()->pixelColor(0, 0) == QColor(255, 255, 255, 255));
+        CHECK(timeline.GetFrame(2)->GetImage()->pixelColor(0, 0).alpha() == 128);
+        CHECK(timeline.GetFrame(3)->GetImage()->pixelColor(0, 0).alpha() == 0);
+    }
+    timeline.Close();
+}
+
+TEST_CASE("Timeline transparency survives a PNG video export", "[libopenshot][timeline][background][alpha-export]")
+{
+    QTemporaryDir directory;
+    REQUIRE(directory.isValid());
+    const auto path = directory.filePath("transparent.mov").toStdString();
+    Timeline timeline(8, 8, Fraction(24, 1), 48000, 2, LAYOUT_STEREO);
+    timeline.color = Color(0, 0, 0, 0);
+    timeline.color.alpha.AddPoint(2, 128, LINEAR);
+    timeline.Open();
+    FFmpegWriter writer(path);
+    writer.SetVideoOptions(true, "png", Fraction(24, 1), 8, 8, Fraction(1, 1), false, false, 1000000);
+    writer.PrepareStreams();
+    writer.SetOption(VIDEO_STREAM, "preserve_alpha", "1");
+    writer.Open();
+    writer.WriteFrame(timeline.GetFrame(1));
+    writer.WriteFrame(timeline.GetFrame(2));
+    writer.Close();
+    timeline.Close();
+    FFmpegReader reader(path);
+    reader.Open();
+    CHECK(reader.GetFrame(1)->GetImage()->pixelColor(0, 0).alpha() == 0);
+    CHECK(reader.GetFrame(2)->GetImage()->pixelColor(0, 0).alpha() == 128);
+    reader.Close();
+}
+
+TEST_CASE("Clips retain partial opacity over a transparent canvas", "[libopenshot][timeline][background]")
+{
+    QTemporaryDir directory;
+    const QString path = directory.filePath("opaque.png");
+    QImage image(8, 8, QImage::Format_RGBA8888);
+    image.fill(Qt::red);
+    REQUIRE(image.save(path));
+    QtImageReader reader(path.toStdString());
+    Clip clip(&reader);
+    clip.End(1.0);
+    clip.alpha = Keyframe(0.5);
+    Timeline timeline(8, 8, Fraction(24, 1), 48000, 2, LAYOUT_STEREO);
+    timeline.color = Color(0, 0, 0, 0);
+    timeline.AddClip(&clip);
+    timeline.Open();
+    const int alpha = timeline.GetFrame(1)->GetImage()->pixelColor(4, 4).alpha();
+    CHECK(alpha >= 127);
+    CHECK(alpha <= 128);
+    timeline.Close();
 }

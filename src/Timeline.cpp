@@ -1260,7 +1260,11 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels);
 
 			// Create blank frame (which will become the requested frame)
-			std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(requested_frame, preview_width, preview_height, "#000000", samples_in_frame, info.channels));
+			std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(requested_frame, preview_width, preview_height,
+                QColor(color.red.GetInt(requested_frame), color.green.GetInt(requested_frame),
+                       color.blue.GetInt(requested_frame),
+                       color.alpha.GetCount() ? color.alpha.GetInt(requested_frame) : 255)
+                    .name(QColor::HexArgb).toStdString(), samples_in_frame, info.channels));
 			new_frame->AddAudioSilence(samples_in_frame);
 			new_frame->SampleRate(info.sample_rate);
 			new_frame->ChannelsLayout(info.channel_layout);
@@ -1272,11 +1276,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 					"info.width", info.width,
 					"info.height", info.height);
 
-			// Add Background Color to 1st layer (if animated or not black)
-			if ((color.red.GetCount() > 1 || color.green.GetCount() > 1 || color.blue.GetCount() > 1) ||
-				(color.red.GetValue(requested_frame) != 0.0 || color.green.GetValue(requested_frame) != 0.0 ||
-				 color.blue.GetValue(requested_frame) != 0.0))
-				new_frame->AddColor(preview_width, preview_height, color.GetColorHex(requested_frame));
+            // Seed the canvas with the complete animated RGBA color above.
+            // Empty alpha curves in older projects retain their opaque background.
 
 			// Debug output
 			Logger::Instance()->AppendDebugMethod(
